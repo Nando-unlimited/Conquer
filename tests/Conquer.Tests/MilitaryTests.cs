@@ -286,6 +286,64 @@ public class MilitaryTests(WorldFixture world)
     }
 
     [Fact]
+    public void EveryNationStartsWithATemplateOfTwoWarriors()
+    {
+        var s = GameSession.Create(_map, 3, seed: 7, computerRivals: false);
+        Assert.All(s.Players, p =>
+        {
+            var template = Assert.Single(p.Templates);
+            Assert.Equal("Plantilla I", template.Name);
+            Assert.Equal([BattalionType.Warriors, BattalionType.Warriors], template.Battalions);
+        });
+    }
+
+    [Fact]
+    public void TemplatesAreEditedWithinTheirLimits()
+    {
+        var (s, _, _) = TwoNations();
+        Assert.True(s.CreateTemplate(0).Ok);
+        var template = s.Human.Templates[^1];
+        Assert.Equal("Plantilla II", template.Name);
+        Assert.Equal([BattalionType.Warriors], template.Battalions);
+
+        Assert.False(s.AddToTemplate(0, template.Id, BattalionType.Archers).Ok); // archery not known yet
+        s.Human.Learn(Tech.Archery);
+        for (int i = 1; i < MilitaryRules.MaxBattalionsPerRegiment; i++) Assert.True(s.AddToTemplate(0, template.Id, BattalionType.Archers).Ok);
+        Assert.False(s.AddToTemplate(0, template.Id, BattalionType.Warriors).Ok); // full
+
+        Assert.True(s.DuplicateTemplate(0, template.Id).Ok);
+        Assert.Equal(template.Battalions, s.Human.Templates[^1].Battalions);
+        for (int i = 0; i < MilitaryRules.MaxBattalionsPerRegiment - 1; i++) Assert.True(s.RemoveFromTemplate(0, template.Id, 0).Ok);
+        Assert.False(s.RemoveFromTemplate(0, template.Id, 0).Ok); // at least one battalion
+
+        foreach (var t in s.Human.Templates.Skip(1).ToList()) Assert.True(s.DeleteTemplate(0, t.Id).Ok);
+        Assert.False(s.DeleteTemplate(0, s.Human.Templates[0].Id).Ok); // at least one template
+    }
+
+    [Fact]
+    public void ATemplateTrainsAWholeRegimentAtOnce()
+    {
+        var (s, a, _) = TwoNations();
+        var city = s.CityIn(a)!;
+        a.Population = 2000;
+        s.Human.Stockpile[ResourceType.Wood] = s.Human.Stockpile[ResourceType.Gold] = 500;
+        s.Human.Learn(Tech.Archery);
+        var template = s.Human.Templates[0];
+        s.AddToTemplate(0, template.Id, BattalionType.Archers);
+
+        Assert.Equal(20, template.TrainingDays); // the archers are the slowest
+        Assert.True(s.TrainTemplate(0, city.Id, template.Id).Ok);
+        Assert.Equal(2000 - 300, a.Population);
+        Assert.Equal(500 - 90, s.Human.Stockpile[ResourceType.Wood]);
+        Assert.Equal(500 - 50, s.Human.Stockpile[ResourceType.Gold]);
+
+        RunHours(s, 24 * 20);
+        var regiment = Assert.Single(s.Units, u => u.IsMilitary && u.OwnerId == 0);
+        Assert.Equal([BattalionType.Warriors, BattalionType.Warriors, BattalionType.Archers], regiment.Battalions.Select(b => b.Type));
+        Assert.Equal(300, regiment.Citizens);
+    }
+
+    [Fact]
     public void FormationsHaveRomanAndModernNames()
     {
         Assert.Equal("Legión III", Formations.UnitName(CommandLevels.Regiment, 3, ArmyEra.Classical));

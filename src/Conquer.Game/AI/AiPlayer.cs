@@ -237,7 +237,7 @@ internal sealed partial class AiPlayer
     /// <summary>How good a province is to live in: food it can grow, plus known deposits and sea access.</summary>
     private double SiteScore(Province p)
     {
-        double food = Math.Min(p.Capacity, 40000) * p.Info.FoodYield / 100;
+        double food = Math.Min(p.Capacity, 40000) * p.FoodYield / 100;
         double deposits = Resources.Deposits.Where(r => p.HasDeposit(r) && _player.Knows(r)).Sum(r => p.Deposits[(int)r]) * 10;
         double coast = p.Neighbors.Any(n => Map.Provinces[n].IsWater) ? 20 : 0;
         return food + deposits + coast;

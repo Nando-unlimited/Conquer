@@ -16,6 +16,7 @@ public sealed partial class GameSession
     /// <summary>Provinces where each player's units are in supply, recomputed every day.</summary>
     private readonly Dictionary<int, HashSet<int>> _supplied = [];
     private readonly Dictionary<(int Player, int Level), int> _unitNumbers = [];
+    private int _nextTemplateId;
 
     public IReadOnlyList<Battle> Battles => _battles;
 
@@ -173,16 +174,19 @@ public sealed partial class GameSession
 
     // ------------------------------------------------------------------ training
 
-    public CommandResult CanTrain(City city, BattalionType type)
+    public CommandResult CanTrain(City city, BattalionType type) =>
+        CanRaiseTroops(city, type.Info().Men, type.Info().Cost, type.Info().Requires);
+
+    /// <summary>Whether a city can raise troops: the advances are known, it is free, has the men to spare and the nation can pay.</summary>
+    private CommandResult CanRaiseTroops(City city, int men, Economy.ResourceCost cost, IEnumerable<Tech> requires)
     {
-        var info = type.Info();
         var player = Players[city.OwnerId];
         var p = Map.Provinces[city.ProvinceId];
-        var missing = info.Requires.Where(t => !player.Techs.Contains(t)).ToList();
+        var missing = requires.Where(t => !player.Techs.Contains(t)).ToList();
         if (missing.Count > 0) return CommandResult.Fail("Requiere " + string.Join(" y ", missing.Select(t => t.Info().Name.ToLowerInvariant())) + ".");
         if (p.IsOccupied) return CommandResult.Fail("La ciudad estÃ¡ ocupada por el enemigo.");
-        if (p.Population - info.Men < GameRules.MinCityPopulation) return CommandResult.Fail($"Hacen falta {info.Men + GameRules.MinCityPopulation} habitantes.");
-        if (!player.Stockpile.Has(info.Cost)) return CommandResult.Fail($"Cuesta {info.Cost}.");
+        if (p.Population - men < GameRules.MinCityPopulation) return CommandResult.Fail($"Hacen falta {men + GameRules.MinCityPopulation} habitantes.");
+        if (!player.Stockpile.Has(cost)) return CommandResult.Fail($"Cuesta {cost}.");
         return CommandResult.Success();
     }
 
@@ -231,12 +235,91 @@ public sealed partial class GameSession
             {
                 if (--order.DaysLeft > 0) continue;
                 city.Training.Remove(order);
-                var unit = order.Battalion is BattalionType type
-                    ? AddRegiment(player.Id, city.ProvinceId, type)
+                var unit = order.Battalion is BattalionType type ? AddRegiment(player.Id, city.ProvinceId, type)
+                    : order.TemplateBattalions.Count > 0 ? AddRegiment(player.Id, city.ProvinceId, [.. order.TemplateBattalions])
                     : AddHeadquarters(player.Id, city.ProvinceId, order.HeadquartersLevel);
                 if (player.IsHuman) Notify(player.Id, $"Nueva unidad en {city.Name}: {unit.Name} ({order.Name(player.ArmyEra).ToLowerInvariant()}).");
             }
         }
+    }
+
+    // ------------------------------------------------------------------ templates
+
+    public RegimentTemplate? TemplateById(Player player, int templateId) => player.Templates.FirstOrDefault(t => t.Id == templateId);
+
+    internal RegimentTemplate AddTemplate(Player player, IEnumerable<BattalionType> battalions)
+    {
+        int number = player.Templates.Count == 0 ? 1 : player.Templates.Max(t => t.Number) + 1;
+        var template = new RegimentTemplate(_nextTemplateId++, number, battalions);
+        player.Templates.Add(template);
+        return template;
+    }
+
+    /// <summary>A new template with a single warrior battalion, to be filled in.</summary>
+    public CommandResult CreateTemplate(int playerId)
+    {
+        var template = AddTemplate(Players[playerId], [BattalionType.Warriors]);
+        return CommandResult.Success($"{template.Name} creada.");
+    }
+
+    public CommandResult DuplicateTemplate(int playerId, int templateId)
+    {
+        if (TemplateById(Players[playerId], templateId) is not { } source) return CommandResult.Fail("Plantilla no válida.");
+        var copy = AddTemplate(Players[playerId], source.Battalions);
+        return CommandResult.Success($"{copy.Name} copiada de {source.Name}.");
+    }
+
+    public CommandResult DeleteTemplate(int playerId, int templateId)
+    {
+        var player = Players[playerId];
+        if (TemplateById(player, templateId) is not { } template) return CommandResult.Fail("Plantilla no válida.");
+        if (player.Templates.Count == 1) return CommandResult.Fail("Hace falta al menos una plantilla.");
+        player.Templates.Remove(template);
+        return CommandResult.Success($"{template.Name} borrada.");
+    }
+
+    public CommandResult CanAddToTemplate(Player player, RegimentTemplate template, BattalionType type)
+    {
+        if (template.Battalions.Count >= MilitaryRules.MaxBattalionsPerRegiment)
+            return CommandResult.Fail($"Como mucho {Formations.BattalionCount(MilitaryRules.MaxBattalionsPerRegiment, player.ArmyEra)} por regimiento.");
+        var missing = type.Info().Requires.Where(t => !player.Techs.Contains(t)).ToList();
+        if (missing.Count > 0) return CommandResult.Fail("Requiere " + string.Join(" y ", missing.Select(t => t.Info().Name.ToLowerInvariant())) + ".");
+        return CommandResult.Success();
+    }
+
+    public CommandResult AddToTemplate(int playerId, int templateId, BattalionType type)
+    {
+        var player = Players[playerId];
+        if (TemplateById(player, templateId) is not { } template) return CommandResult.Fail("Plantilla no válida.");
+        var check = CanAddToTemplate(player, template, type);
+        if (!check.Ok) return check;
+        template.Battalions.Add(type);
+        return CommandResult.Success();
+    }
+
+    public CommandResult RemoveFromTemplate(int playerId, int templateId, int index)
+    {
+        if (TemplateById(Players[playerId], templateId) is not { } template) return CommandResult.Fail("Plantilla no válida.");
+        if (template.Battalions.Count == 1) return CommandResult.Fail("Una plantilla necesita al menos un batallón.");
+        if (index < 0 || index >= template.Battalions.Count) return CommandResult.Fail("Tropa no válida.");
+        template.Battalions.RemoveAt(index);
+        return CommandResult.Success();
+    }
+
+    public CommandResult CanTrainTemplate(City city, RegimentTemplate template) =>
+        CanRaiseTroops(city, template.Men, template.Cost, template.Requires);
+
+    /// <summary>Pays for every battalion of a template at once; they train side by side and form one regiment.</summary>
+    public CommandResult TrainTemplate(int playerId, int cityId, int templateId)
+    {
+        if (CityById(cityId) is not { } city || city.OwnerId != playerId) return CommandResult.Fail("Ciudad no válida.");
+        if (TemplateById(Players[playerId], templateId) is not { } template) return CommandResult.Fail("Plantilla no válida.");
+        var check = CanTrainTemplate(city, template);
+        if (!check.Ok) return check;
+        Players[playerId].Stockpile.TrySpend(template.Cost);
+        Map.Provinces[city.ProvinceId].Population -= template.Men;
+        city.Training.Add(new TrainingOrder(template));
+        return CommandResult.Success($"Regimiento de la {template.Name} en instrucción: {template.TrainingDays} días.");
     }
 
     // ------------------------------------------------------------------ organisation
@@ -478,7 +561,7 @@ public sealed partial class GameSession
         }
         fire *= 1 + CommandBonus(unit);
         if (!IsInSupply(unit)) fire *= MilitaryRules.OutOfSupplyEfficiency;
-        if (!attacking) fire *= MilitaryRules.TerrainDefense(province.Biome);
+        if (!attacking) fire *= MilitaryRules.DefenseMultiplier(province);
         return fire * (1 + (_random.NextDouble() * 2 - 1) * MilitaryRules.CombatRandomness);
     }
 

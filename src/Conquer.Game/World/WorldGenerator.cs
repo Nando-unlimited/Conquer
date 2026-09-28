@@ -26,6 +26,15 @@ public static class WorldGenerator
         progress?.Invoke("Repartiendo recursos...");
         ResourceGenerator.Place(provinces, settings.Seed);
 
-        return new WorldMap(Width, Height, settings.Kind, settings.Seed, terrain.Elevation, biomes, ids, provinces);
+        progress?.Invoke("Trazando ríos...");
+        var rivers = RiverGenerator.Trace(terrain.Elevation, biomes, Width, Height, settings.Seed);
+        // Each province remembers the biggest river that runs through it.
+        foreach (var r in rivers)
+        {
+            var p = provinces[ids[(int)r.Y1 * Width + (int)r.X1]];
+            if (!p.IsWater) p.RiverFlow = Math.Max(p.RiverFlow, r.Flow);
+        }
+
+        return new WorldMap(Width, Height, settings.Kind, settings.Seed, terrain.Elevation, biomes, ids, provinces, rivers);
     }
 }

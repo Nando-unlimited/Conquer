@@ -2,6 +2,16 @@
 
 Todos los cambios del juego, del más reciente al más antiguo. Cada versión es un commit cuyo título es su número.
 
+## [1.10.0] - 2026-09-28
+
+### Añadido
+- **Plantillas de regimiento**, como en Hearts of Iron. En la nueva pestaña **Plantillas** de la pantalla de la nación diseñas regimientos de 1 a 6 batallones: añades los que conoces y quitas los que sobran.
+  - Puedes crear, duplicar y borrar plantillas.
+  - Cada una muestra sus hombres, días de instrucción, ataque, defensa, organización, velocidad y coste.
+- En la pestaña Ejército de tus ciudades se entrena un **regimiento entero** a partir de una plantilla: pagas todo a la vez, los hombres salen de la ciudad y sus batallones se instruyen juntos (tarda lo que el más lento). Los batallones sueltos se siguen pudiendo entrenar.
+- Cada nación empieza con una plantilla de dos cohortes de guerreros.
+- La IA diseña su propia plantilla con su mejor infantería y su tropa más ofensiva, solo con tropas cuyos materiales tiene, y la recorta al tamaño que su ciudad puede dar.
+
 ## [1.9.0] - 2026-09-28
 
 ### Cambiado

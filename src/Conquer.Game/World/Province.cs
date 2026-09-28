@@ -17,6 +17,8 @@ public sealed class Province
     public double AreaKm2 { get; internal set; }
     public float MeanElevation { get; internal set; }
     public int[] Neighbors { get; internal set; } = [];
+    /// <summary>Water carried by the biggest river or stream through the province (0 without one).</summary>
+    public float RiverFlow { get; internal set; }
 
     /// <summary>Daily output of each deposit when the province is fully worked; zero when absent.</summary>
     public float[] Deposits { get; } = new float[Resources.All.Length];
@@ -66,8 +68,14 @@ public sealed class Province
     public bool IsOwned => OwnerId >= 0;
     public bool IsOccupied => OwnerId >= 0 && ControllerId != OwnerId;
 
-    /// <summary>Citizens the province's land can feed.</summary>
-    public double Capacity => AreaKm2 * Info.Carrying;
+    /// <summary>A great river runs through it (streams are drawn but change nothing).</summary>
+    public bool HasRiver => RiverFlow >= GameRules.GreatRiverFlow;
+
+    /// <summary>Food a worker grows here compared with average land: its biome's, more on a river's floodplain.</summary>
+    public double FoodYield => Info.FoodYield * (HasRiver ? GameRules.RiverFertility : 1);
+
+    /// <summary>Citizens the province's land can feed; rivers make it feed more.</summary>
+    public double Capacity => AreaKm2 * Info.Carrying * (HasRiver ? GameRules.RiverFertility : 1);
 
     /// <summary>The province has this deposit and it is not yet exhausted.</summary>
     public bool HasDeposit(ResourceType r) => Deposits[(int)r] > 0 && Reserves[(int)r] > 0;

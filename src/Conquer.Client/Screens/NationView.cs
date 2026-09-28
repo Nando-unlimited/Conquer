@@ -18,6 +18,7 @@ public enum NationTab
     Provinces,
     Science,
     Army,
+    Templates,
     Diplomacy,
 }
 
@@ -28,7 +29,7 @@ public enum NationTab
 public sealed partial class NationView
 {
     private const float RowHeight = 34;
-    private static readonly string[] TabNames = ["Resumen", "Ciudades", "Provincias", "Ciencia", "Ejército", "Diplomacia"];
+    private static readonly string[] TabNames = ["Resumen", "Ciudades", "Provincias", "Ciencia", "Ejército", "Plantillas", "Diplomacia"];
     /// <summary>Colours of the mood levels, worst first.</summary>
     private static readonly Rgba[] MoodLevelColors = [Theme.Bad, new(0xFFE0A050), new(0xFFB9C08A), Theme.Good];
 
@@ -68,7 +69,7 @@ public sealed partial class NationView
         ui.Text(area.X + 20, area.Y + 14, _player.Name, Theme.Accent, FontSize.Large, bold: true);
         float tx = area.X + 40 + ui.Font.Measure(_player.Name, FontSize.Large, true);
         for (int i = 0; i < TabNames.Length; i++)
-            if (ui.Button(new Rect(tx + i * 116, area.Y + 12, 110, 32), TabNames[i], active: (int)Tab == i)) Tab = (NationTab)i;
+            if (ui.Button(new Rect(tx + i * 108, area.Y + 12, 102, 32), TabNames[i], active: (int)Tab == i)) Tab = (NationTab)i;
         if (ui.Button(new Rect(area.Right - 120, area.Y + 12, 100, 32), "Cerrar", tooltip: "Cerrar (N o Esc)")) Visible = false;
 
         var content = new Rect(area.X + 20, area.Y + 60, area.W - 40, area.H - 76);
@@ -79,6 +80,7 @@ public sealed partial class NationView
             case NationTab.Provinces: Provinces(ui, content); break;
             case NationTab.Science: Science(ui, content); break;
             case NationTab.Army: Army(ui, content); break;
+            case NationTab.Templates: Templates(ui, content); break;
             case NationTab.Diplomacy: Diplomacy(ui, content); break;
         }
     }

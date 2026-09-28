@@ -119,6 +119,7 @@ public sealed partial class GameScreen : IScreen
         _hoverProvince = MapRenderer.ProvinceAt(Map, mouseMap, _camera.Zoom);
 
         _renderer.Draw(_camera, _selectedProvince, _hoverProvince, _app.PixelScale);
+        DrawRivers();
         DrawCities();
         DrawMigrations();
         DrawUnits();
@@ -286,6 +287,29 @@ public sealed partial class GameScreen : IScreen
     }
 
     // ------------------------------------------------------------------ map markers
+
+    private static readonly Rgba RiverColor = new(0xFF3F7FC8);
+
+    /// <summary>
+    /// Rivers as blue lines, wider the more water they carry. Zoomed out only the great rivers show;
+    /// the smaller ones appear as you zoom in.
+    /// </summary>
+    private void DrawRivers()
+    {
+        float zoom = _camera.Zoom;
+        double minFlow = GameRules.MinRiverFlow * Math.Max(1, Math.Pow(6 / zoom, 1.5));
+        float scale = Math.Clamp(zoom / 4, 0.35f, 1.6f);
+        foreach (var r in Map.Rivers)
+        {
+            if (r.Flow < minFlow) continue;
+            var a = _camera.MapToScreen(new Vector2(r.X1, r.Y1));
+            var b = _camera.MapToScreen(new Vector2(r.X2, r.Y2));
+            if (!OnScreen(a, 20) && !OnScreen(b, 20)) continue;
+            if (Vector2.DistanceSquared(a, b) > 400 * zoom * zoom) continue; // the two ends landed on opposite sides of the date line
+            float width = (0.7f + 1.3f * MathF.Log10(r.Flow / GameRules.MinRiverFlow)) * scale;
+            Batch.Line(a, b, RiverColor.WithAlpha(0.9f), Math.Max(0.8f, width));
+        }
+    }
 
     private Vector2 Center(int provinceId)
     {
@@ -489,6 +513,15 @@ public sealed partial class GameScreen : IScreen
         if (city != null) Line(x, ref y, "Terreno", p.Info.Name);
         Line(x, ref y, "Superficie", $"{p.AreaKm2:N0} km²");
         Line(x, ref y, "Altitud media", $"{p.MeanElevation:N0} m");
+        if (p.RiverFlow > 0)
+        {
+            var row = new Rect(x, y, w, 24);
+            Line(x, ref y, "Río", p.HasRiver ? "Gran río" : "Arroyo", p.HasRiver ? RiverColor : Theme.TextDim);
+            if (Ui.Hover(row))
+                Ui.Tooltip(p.HasRiver
+                    ? $"Tierra fértil: +{GameRules.RiverFertility - 1:P0} de comida y de capacidad.\nQuien ataque debe cruzarlo: el defensor dispara un {MilitaryRules.RiverDefense - 1:P0} más."
+                    : "Un arroyo: no cambia nada. Solo los grandes ríos fertilizan la tierra y protegen de los ataques.");
+        }
 
         if (!p.IsClaimable)
         {
@@ -527,7 +560,7 @@ public sealed partial class GameScreen : IScreen
         y += 6;
         Ui.Text(x, y, "Recursos", Theme.Text, FontSize.Normal, bold: true);
         y += 24;
-        double fed = p.Info.FoodYield * GameRules.FoodPerWorker;
+        double fed = p.FoodYield * GameRules.FoodPerWorker;
         Line(x, ref y, "Comida", $"{fed * 1000:0} por mil hab./día");
         if (p.Info.WoodYield > 0) Line(x, ref y, "Madera", $"{p.Info.WoodYield:0.#} por mil hab./día");
         foreach (var r in Resources.Deposits.Where(r => p.Deposits[(int)r] > 0 && Human.Knows(r)))
@@ -739,6 +772,7 @@ public sealed partial class GameScreen : IScreen
         var p = Map.Provinces[_hoverProvince];
         string owner = !p.IsClaimable ? "No reclamable" : p.IsOwned ? _session.Players[p.OwnerId].Name : "Sin dueño";
         string text = $"{p.Info.Name}  ·  {owner}";
+        if (p.HasRiver) text += "  ·  gran río";
         if (p.IsOwned) text += $"\n{p.Population:N0} habitantes";
         if (p.IsOwned && p.Population >= 1) text += $"\nHumor {p.Mood:0} ({GameRules.MoodName(p.Mood)})  ·  Fertilidad {p.Fertility:P0}";
         if (_renderer.Mode == MapMode.Resources)

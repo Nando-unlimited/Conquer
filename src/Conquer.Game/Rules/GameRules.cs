@@ -39,6 +39,12 @@ public static class GameRules
     /// levels will change it: larger pockets on easy, smaller on hard.
     /// </summary>
     public const double DepositSizeMultiplier = 1;
+    /// <summary>Runoff a stretch of land must gather to become a river (in cells of rainy land at the equator).</summary>
+    public const float MinRiverFlow = 60;
+    /// <summary>Rivers from this flow on are great rivers: only they make land fertile and hard to cross.</summary>
+    public const float GreatRiverFlow = 300;
+    /// <summary>A river's floodplain grows this many times the food, and feeds this many times the people.</summary>
+    public const double RiverFertility = 1.25;
     /// <summary>Workers beyond the land's capacity still produce this share of normal food.</summary>
     public const double OvercrowdedFoodShare = 0.3;
 

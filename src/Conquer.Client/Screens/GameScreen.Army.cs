@@ -98,7 +98,7 @@ public sealed partial class GameScreen
         var p = Map.Provinces[battle.ProvinceId];
         return $"Batalla por {_session.CityIn(p)?.Name ?? p.Info.Name} ({GameSession.FormatHours(_session.Date.Hours - battle.StartHours)})\n" +
                Side("Atacante", battle.AttackerId, attackers) + "\n" + Side("Defensor", battle.DefenderId, defenders) +
-               $"\nTerreno: defensa ×{MilitaryRules.TerrainDefense(p.Biome):0.##}";
+               $"\nDefensa por el terreno{(p.HasRiver ? " y el río" : "")}: ×{MilitaryRules.DefenseMultiplier(p):0.##}";
     }
 
     private void Bar(Rect r, double share, Rgba color)
@@ -296,8 +296,24 @@ public sealed partial class GameScreen
     private void ArmyPanel(City city, float x, ref float y, float w)
     {
         var era = Human.ArmyEra;
+        Ui.Text(x, y, $"Entrenar {Formations.LevelPlural(CommandLevels.Regiment, era)}", Theme.Text, bold: true);
+        y += 26;
+        foreach (var template in Human.Templates.Take(4))
+        {
+            var can = _session.CanTrainTemplate(city, template);
+            string tip = $"{template.Name}: {template.Composition}.\n{template.Men} hombres de la ciudad. Ataque {template.Attack:0.#}, defensa {template.Defense:0.#}." +
+                         $"\nCoste: {template.Cost}. Tarda {template.TrainingDays} días." + (can.Ok ? "" : "\n" + can.Message);
+            if (Ui.Button(new Rect(x, y, w, 28), $"{template.Name}  ·  {Formations.BattalionCount(template.Battalions.Count, era)}  ·  {template.TrainingDays} d",
+                    can.Ok, tooltip: tip, size: FontSize.Small))
+                Show(_session.TrainTemplate(Human.Id, city.Id, template.Id));
+            y += 32;
+        }
+        Ui.Text(x, y, Human.Templates.Count > 4 ? "Más plantillas en la pestaña Plantillas de la nación (N)." : "Diseña plantillas en la pestaña Plantillas de la nación (N).",
+            Theme.TextDim, FontSize.Small);
+        y += 28;
+
         string plural = Formations.BattalionPlural(era);
-        Ui.Text(x, y, $"Entrenar {plural}", Theme.Text, bold: true);
+        Ui.Text(x, y, $"Entrenar {plural} {(era == ArmyEra.Modern ? "sueltos" : "sueltas")}", Theme.Text, bold: true);
         y += 26;
         foreach (var type in Battalions.All.Where(t => t.Info().Requires.All(Human.Techs.Contains)))
         {

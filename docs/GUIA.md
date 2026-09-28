@@ -124,13 +124,16 @@ Las formaciones y sus nombres en cada época: batallón → regimiento (la unida
 | `BattalionWord`, `BattalionPlural`, `BattalionCount`, `BattalionName` | El batallón: cohorte (ala si es montado) o batallón; «Cohorte de arqueros», «3 cohortes». |
 | `UnitName(nivel, número, época)`, `Roman(n)` | «Legión III», «Vexilación I»; en época moderna «3.er Regimiento», «1.ª Brigada», «II Cuerpo». |
 
+### `Military/Templates.cs`
+`RegimentTemplate`: diseño de regimiento como en Hearts of Iron: qué batallones lleva (1 a 6). Las ciudades entrenan regimientos enteros a partir de él. `Name` («Plantilla II»), `Men`, `Cost` (la suma de sus batallones), `TrainingDays` (el del batallón más lento, porque se instruyen a la vez), `Requires`, `Attack`, `Defense`, `MaxOrganisation`, `Speed`, `AnyMounted` y `Composition` («2 × Guerreros, 1 × Arqueros») lo resumen.
+
 ### `Military/Command.cs`
 La cadena de mando, la instrucción y las batallas.
 
 | Elemento | Qué es |
 | --- | --- |
 | `CommandLevelInfo`, `CommandLevels` | Los cinco niveles de cuartel general como en HOI3: brigada, división, cuerpo, ejército y grupo de ejércitos, con su alcance (150 a 2.500 km), subordinados (4 o 5), personal, coste y días. El nivel 0 es el regimiento. Los nombres salen de `Formations`. |
-| `TrainingOrder` | Lo que entrena una ciudad: un batallón o un cuartel general, con los días que le quedan; `Name(época)` lo nombra («Cohorte de arqueros»). |
+| `TrainingOrder` | Lo que entrena una ciudad: un batallón, un regimiento entero de una plantilla (`TemplateName`, `TemplateBattalions`) o un cuartel general, con los días que le quedan; `Name(época)` lo nombra («Cohorte de arqueros»). |
 | `Battle` | Una batalla por una provincia: quién ataca, quién defiende, los regimientos atacantes (que esperan en sus provincias) y cuándo empezó. |
 
 ### `Rules/Modifiers.cs`
@@ -172,7 +175,7 @@ Los objetos de una partida.
 
 | Elemento | Qué es |
 | --- | --- |
-| `Player` | Jugador: id, nombre, color, si es humano, almacén, provincias que posee, capital, balance del último día (`LastDayNet`), si pasa hambre y cuántos días duraría su comida (`FoodReserveDays`).; avances conocidos (`Techs`) y la suma de sus efectos (`Bonuses`), avance en investigación (`Researching`), época de su ejército (`ArmyEra`), puntos puestos en cada avance (`ResearchProgress`), ciencia guardada sin investigación (`SpareScience`) y ciencia del último día. recursos que conoce (`KnownResources`, `Knows(recurso)`); `Learn(avance)` añade un avance y sus efectos y revela sus recursos |
+| `Player` | Jugador: id, nombre, color, si es humano, almacén, provincias que posee, capital, balance del último día (`LastDayNet`), si pasa hambre y cuántos días duraría su comida (`FoodReserveDays`).; avances conocidos (`Techs`) y la suma de sus efectos (`Bonuses`), avance en investigación (`Researching`), época de su ejército (`ArmyEra`), puntos puestos en cada avance (`ResearchProgress`), ciencia guardada sin investigación (`SpareScience`) y ciencia del último día. recursos que conoce (`KnownResources`, `Knows(recurso)`); `Learn(avance)` añade un avance y sus efectos y revela sus recursos; sus plantillas de regimiento (`Templates`) |
 | `City` | Ciudad: id, nombre, dueño, provincia, fecha de fundación y hasta cuándo dura su fiesta (`FestivalUntilHours`, `HasFestival(ahora)`).; lo que está entrenando (`Training`). |
 | `Unit` | Unidad en el mapa: colonos, regimiento o cuartel general. Tipo, dueño (`Owner`), provincia, número, nombre (según el nivel, el número y la época de su nación), batallones (regimiento), nivel (cuartel), cuartel del que depende (`CommanderId`), provincia que ataca (`AttackingProvinceId`) y ruta pendiente (`Path`). `Citizens` son los colonos, el personal o los hombres de sus brigadas; `Speed`, la de su brigada más lenta; `OrganisationShare`/`StrengthShare`, su estado; `CommandLevel` y `Symbol`, para la cadena de mando y la ficha. `HoursToNext`/`StepHours` miden el tramo actual; `StepProgress` da el avance (0..1) para dibujarla entre provincias. |
 | `Migration` | Grupo de migrantes en camino: origen, destino, personas, salida, llegada, si es forzada y el humor que llevan (`Mood`). `Progress(ahora)` da el avance del viaje. |
@@ -193,7 +196,7 @@ El corazón del juego: una partida en marcha. Es una clase parcial: el ejército
 | Función | Qué hace |
 | --- | --- |
 | `CommandResult` | Resultado de una orden: `Ok` y un mensaje para el jugador. |
-| `Create(map, jugadores, semilla, rivales)` | Nueva partida (los tests pueden quitar los rivales): limpia las provincias (dueño, controlador, población, ciudad, humor, fertilidad, edificios y bolsas de recurso llenas según `DepositSizeMultiplier`), crea jugadores con sus recursos iniciales y una unidad de colonos cada uno en sitios fértiles y alejados, y crea las IA. |
+| `Create(map, jugadores, semilla, rivales)` | Nueva partida (los tests pueden quitar los rivales): limpia las provincias (dueño, controlador, población, ciudad, humor, fertilidad, edificios y bolsas de recurso llenas según `DepositSizeMultiplier`), crea jugadores con sus recursos iniciales, una plantilla de dos cohortes de guerreros y una unidad de colonos cada uno en sitios fértiles y alejados, y crea las IA. |
 | `UnitById`, `CityById`, `CityIn(provincia)` | Búsquedas. |
 | `CapacityOf(provincia)` | Habitantes que puede alimentar una provincia, contando la bonificación de ciudad y los avances de su dueño (Irrigación) y sus edificios (Acueducto). |
 | `BonusesOf(provincia)` | Mejoras que se aplican a una provincia: las de los avances de su dueño más las de sus edificios. |
@@ -241,8 +244,12 @@ El ejército dentro de la partida.
 | `MoveUnit(...)`, `UnitStepHours(...)` | Orden de mover (la ruta evita tierras vedadas; el tiempo depende de la velocidad de la unidad). |
 | `MoveUnits()` | Cada hora cada unidad avanza; un regimiento que entra donde hay tropas enemigas ataca, y si no las hay la ocupa (`EnterProvince`). |
 | `Occupy(provincia, jugador)` | La provincia pasa a manos del jugador (o vuelve a su dueño) y los civiles y cuarteles enemigos huyen. |
-| `CanTrain`/`Train`, `CanRaiseHeadquarters`/`RaiseHeadquarters` | Pagan y ponen en instrucción un batallón o un cuartel; los hombres salen de la ciudad. |
-| `DailyTraining(jugador)` | Las órdenes de instrucción avanzan; al terminar aparece el regimiento (con ese batallón) o el cuartel en la ciudad. |
+| `CanTrain`/`Train`, `CanRaiseHeadquarters`/`RaiseHeadquarters`, `CanRaiseTroops(...)` | Pagan y ponen en instrucción un batallón o un cuartel; los hombres salen de la ciudad. `CanRaiseTroops` comprueba avances, ocupación, habitantes y coste. |
+| `TemplateById`, `AddTemplate(...)` | Busca una plantilla del jugador y crea una nueva con el siguiente número (también la usan la IA y los tests). |
+| `CreateTemplate`, `DuplicateTemplate`, `DeleteTemplate` | Plantilla nueva (con una cohorte de guerreros), copia de otra, o borrarla (siempre queda al menos una). |
+| `CanAddToTemplate`/`AddToTemplate`, `RemoveFromTemplate` | Añaden un batallón conocido (hasta 6) o quitan uno (queda al menos uno). |
+| `CanTrainTemplate`/`TrainTemplate(...)` | Pagan todos los batallones de una plantilla a la vez; se instruyen juntos y forman un solo regimiento. |
+| `DailyTraining(jugador)` | Las órdenes de instrucción avanzan; al terminar aparece el regimiento (con ese batallón o con los de la plantilla) o el cuartel en la ciudad. |
 | `CanMerge`/`Merge`, `Split` | Unen dos regimientos de la misma provincia (hasta 6 batallones) o separan un batallón en un regimiento nuevo. |
 | `CanAttach`/`Attach`, `Detach` | Ponen una unidad bajo el mando de un cuartel del nivel superior (5 como mucho) o la quitan. |
 | `InCommandRange(unidad)`, `CommandBonus(unidad)` | Si su cuartel la alcanza, y la bonificación de toda la cadena enlazada. |
@@ -305,7 +312,8 @@ El ejército de un rival.
 | Función | Qué hace |
 | --- | --- |
 | `ClassifyNewRegiments()` | Los regimientos nuevos de una sola cohorte de guerreros cubren primero los puestos de «reclamadores» (uno por ciudad, más uno); el resto forma el ejército. |
-| `BuildArmy()`, `Spare(coste)` | Desde el día 180 entrena el mejor batallón que pueda pagar hasta tener 2 por ciudad (4 en guerra), sin gastar la reserva. |
+| `BuildArmy()`, `Spare(coste)` | Desde el día 180, hasta tener 2 batallones por ciudad (4 en guerra), entrena regimientos enteros de su plantilla, del tamaño que su ciudad puede dar (2 a 4 batallones), o si no el mejor batallón suelto; sin gastar la reserva. |
+| `ArmyTemplate(tamaño)`, `CanSupply(tipo)` | Su plantilla: dos de su infantería más resistente, su tropa más ofensiva y otra de infantería, recortada al tamaño; solo con tropas cuyos materiales (cobre, hierro…) tiene o produce. |
 | `OrganiseArmy()`, `RaiseAndAttach(...)`, `HighestHeadquarters` | Une regimientos pequeños (hasta 4 batallones), forma cuarteles de brigada, división y cuerpo cuando hacen falta y asigna a todos. |
 | `FollowTroops(cuartel)` | El cuartel va adonde están sus unidades si alguna queda fuera de alcance. |
 | `GuideSoldier(unidad)` | En guerra: acude a sus ciudades atacadas, ataca la provincia enemiga vecina más débil (si supera 1,3 veces su defensa) o marcha hacia tierra enemiga que su suministro alcance; descansa si está desorganizada. |
@@ -411,7 +419,7 @@ Punto de entrada. Pone el formato de números en español y lee los argumentos.
 
 | Elemento | Qué es |
 | --- | --- |
-| `StartOptions.Parse(args)` | Opciones de línea de comandos para pruebas: `--new random|earth`, `--seed`, `--players`, `--days` (funda la capital y avanza N días), `--zoom`, `--mode terrain|political|population|mood|fertility|resources`, `--nation summary|cities|provinces|science|army|diplomacy` (abre la pantalla de la nación), `--panel buildings|army|regiment` (una pestaña de la provincia seleccionada, o un regimiento de muestra) y `--screenshot fichero.png` (guarda una captura del juego y se cierra). |
+| `StartOptions.Parse(args)` | Opciones de línea de comandos para pruebas: `--new random|earth`, `--seed`, `--players`, `--days` (funda la capital y avanza N días), `--zoom`, `--mode terrain|political|population|mood|fertility|resources`, `--nation summary|cities|provinces|science|army|templates|diplomacy` (abre la pantalla de la nación), `--panel buildings|army|regiment` (una pestaña de la provincia seleccionada, o un regimiento de muestra) y `--screenshot fichero.png` (guarda una captura del juego y se cierra). |
 | `QuickStart` | Partida que empieza directamente, sin menús. |
 
 ### `ConquerApp.cs`
@@ -473,14 +481,15 @@ El ejército en pantalla.
 | `UnitPanel(...)`, `UnitState(...)` | Panel de la unidad: tipo, nación, ubicación, estado y botones (fundar, reclamar, licenciar, detener). |
 | `RegimentDetails(...)` | Suministro, velocidad, mando, cada batallón con sus barras (y «Separar») y botones para unir otros regimientos de la provincia. |
 | `HeadquartersDetails(...)`, `CommandLine(...)`, `AttachButtons(...)` | Alcance y subordinados de un cuartel, de quién depende la unidad y botones para asignarla a un cuartel cercano o quitarla. |
-| `ArmyPanel(ciudad)` | Pestaña Ejército de una ciudad: batallones que puedes entrenar (los de avances sin descubrir no aparecen), cuarteles generales y lo que está en instrucción, con los nombres de la época. |
+| `ArmyPanel(ciudad)` | Pestaña Ejército de una ciudad: regimientos que puedes entrenar de tus plantillas (las cuatro primeras), batallones que puedes entrenar (los de avances sin descubrir no aparecen), cuarteles generales y lo que está en instrucción, con los nombres de la época. |
 
 ### `Screens/NationView.Military.cs`
-Pestañas Ejército y Diplomacia de la pantalla de la nación.
+Pestañas Ejército, Plantillas y Diplomacia de la pantalla de la nación.
 
 | Función | Qué hace |
 | --- | --- |
 | `Army(...)`, `UnitActivity(...)`, `Plural(...)` | Orden de batalla: cada cuartel con sus unidades en árbol y después los regimientos sin cuartel, con ubicación, hombres, organización, suministro, estado y «Ver». |
+| `Templates(...)` | Diseñador de regimientos: tus plantillas a la izquierda (nueva, duplicar, borrar); a la derecha los batallones de la elegida (hasta 6, con «Quitar»), botones para añadir los que conoces y lo que cuesta y cómo lucha un regimiento de ese diseño. |
 | `Diplomacy(...)` | Cada nación: paz o guerra (y desde cuándo), su poder militar frente al tuyo, provincias, lo tomado y perdido, y los botones de declarar la guerra o proponer la paz. |
 
 ### `Screens/NationView.cs`
@@ -488,7 +497,7 @@ Pantalla de la nación (botón «Nación» o tecla N). El tiempo sigue corriendo
 
 | Elemento | Qué es |
 | --- | --- |
-| `NationTab` | Pestañas: `Summary` (Resumen), `Cities` (Ciudades), `Provinces` (Provincias), `Science` (Ciencia), `Army` (Ejército) y `Diplomacy` (Diplomacia). |
+| `NationTab` | Pestañas: `Summary` (Resumen), `Cities` (Ciudades), `Provinces` (Provincias), `Science` (Ciencia), `Army` (Ejército), `Templates` (Plantillas) y `Diplomacy` (Diplomacia). |
 | `NationView(partida, jugador, verProvincia, verUnidad, mostrar)` | Recibe qué hacer al pulsar «Ver» (centrar el mapa en una provincia o una unidad) y cómo mostrar el resultado de las órdenes. |
 | `Frame(ui, área)` | Dibuja el panel opaco con las pestañas y el botón Cerrar. |
 | `Summary(...)` | Resumen: población (total, asentada, en unidades, migrando), fertilidad media, humor medio con su barra por niveles (`MoodBar`), territorio, ciencia por día e investigación actual, comida con sus días de reserva y el resto de recursos conocidos con su almacén, balance diario y lo que queda en sus bolsas. |
@@ -594,7 +603,7 @@ Uso: ver el README.
 | --- | --- |
 | `WorldGenerationTests.cs` | Ambos mapas salen con unas 25.000 provincias y todos los píxeles asignados. |
 | `GameplayTests.cs` | Inicio sin territorio y con los recursos correctos; fundar la capital; océanos y polos no reclamables; las unidades terrestres no entran al mar pero sí cruzan hielo; nada cruza el mar; provincias mayores en desiertos, polos y océanos; solo las unidades militares reclaman; velocidad de 10 km/h; migración diaria; migración forzada con su coste; consumo de comida; la capital gana humor y fertilidad; el hambre los hunde; los migrantes forzados llegan descontentos; las provincias descontentas no pagan impuestos; la fertilidad acelera el crecimiento; las reservas de comida alegran; las fiestas cuestan oro y duran un mes; las estadísticas de la nación suman bien; cada yacimiento es una bolsa finita que empieza llena; las bolsas se agotan y dejan de producir; las ciudades producen ciencia que descubre avances; los avances piden sus requisitos; la ciencia sin investigación se guarda; los avances mejoran la economía; los edificios cuestan y tardan, tienen sus requisitos y mejoran su provincia; al principio solo se conocen los recursos antiguos y los avances revelan los demás; los recursos desconocidos no se explotan; la IA se expande e investiga. `WorldFixture` genera un único mundo para todos. |
-| `MilitaryTests.cs` | Instrucción de batallones (hombres, recursos y días); batallones que piden su avance (o sus dos avances); unir (hasta 6), separar y velocidad del batallón más lento; no se entra en tierras ajenas sin guerra; ocupar tierra enemiga sin defensa; un ataque fuerte gana y uno débil se rompe; defensores rodeados destruidos; la paz devuelve lo ocupado; la IA solo acepta la paz pasado un tiempo; desgaste sin suministro; recuperación y refuerzos desde la capital; bonificación de mando en cadena y alcance; nombres romanos y modernos de las formaciones; una vexilación manda 4 regimientos como mucho. |
+| `MilitaryTests.cs` | Instrucción de batallones (hombres, recursos y días); batallones que piden su avance (o sus dos avances); unir (hasta 6), separar y velocidad del batallón más lento; no se entra en tierras ajenas sin guerra; ocupar tierra enemiga sin defensa; un ataque fuerte gana y uno débil se rompe; defensores rodeados destruidos; la paz devuelve lo ocupado; la IA solo acepta la paz pasado un tiempo; desgaste sin suministro; recuperación y refuerzos desde la capital; bonificación de mando en cadena y alcance; nombres romanos y modernos de las formaciones; una vexilación manda 4 regimientos como mucho; cada nación empieza con una plantilla de dos guerreros; las plantillas se editan dentro de sus límites; una plantilla entrena un regimiento entero a la vez. |
 | `ReleaseTests.cs` | La versión del `.csproj` coincide con la primera entrada del `CHANGELOG.md`. |
 
 ---

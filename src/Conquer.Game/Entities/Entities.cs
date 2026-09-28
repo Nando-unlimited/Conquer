@@ -41,6 +41,9 @@ public sealed class Player
     /// <summary>Whether its formations have Roman or modern names.</summary>
     public ArmyEra ArmyEra => Formations.EraOf(Techs);
 
+    /// <summary>Its regiment designs; every nation starts with one of two warrior battalions.</summary>
+    public List<RegimentTemplate> Templates { get; } = [];
+
     public void Learn(Tech tech)
     {
         if (!Techs.Add(tech)) return;

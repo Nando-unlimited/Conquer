@@ -25,6 +25,7 @@ internal sealed partial class AiPlayer
     /// <summary>Lone warriors that claim free land; every other regiment belongs to the army.</summary>
     private readonly HashSet<int> _claimers = [];
     private readonly HashSet<int> _knownRegiments = [];
+    private RegimentTemplate? _armyTemplate;
 
     private IEnumerable<Unit> Army => _session.Units.Where(u => u.OwnerId == _player.Id && u.IsMilitary && !_claimers.Contains(u.Id));
 
@@ -41,23 +42,55 @@ internal sealed partial class AiPlayer
                 _claimers.Add(unit.Id);
     }
 
-    /// <summary>Trains the best battalion it can afford until the army reaches 2 battalions per city (4 at war).</summary>
+    /// <summary>
+    /// Until the army reaches 2 battalions per city (4 at war), trains whole regiments from its template
+    /// when it can afford one, and otherwise the best single battalion it can.
+    /// </summary>
     private void BuildArmy()
     {
         var cities = _session.Cities.Where(c => c.OwnerId == _player.Id).ToList();
         if (cities.Count == 0 || _session.Date.Days < 180) return;
         int target = cities.Count * (_session.EnemiesOf(_player.Id).Any() ? 4 : 2);
-        int battalions = Army.Sum(u => u.Battalions.Count) + cities.Sum(c => c.Training.Count(o => o.Battalion is BattalionType t && t != BattalionType.Warriors));
+        int battalions = Army.Sum(u => u.Battalions.Count)
+            + cities.Sum(c => c.Training.Sum(o => o.TemplateBattalions.Count + (o.Battalion is BattalionType t && t != BattalionType.Warriors ? 1 : 0)));
         if (battalions >= target) return;
 
         var city = cities.OrderByDescending(c => Map.Provinces[c.ProvinceId].Population).First();
         if (Map.Provinces[city.ProvinceId].Population < 400) return;
+        // A regiment as big as the city can spare (keeping 100 people beyond the minimum), from 2 to 4 battalions.
+        int size = Math.Clamp((int)((Map.Provinces[city.ProvinceId].Population - GameRules.MinCityPopulation - 100) / 100), 0, BattalionsPerRegiment);
+        if (size >= 2 && ArmyTemplate(size) is var template && Spare(template.Cost)
+            && _session.TrainTemplate(_player.Id, city.Id, template.Id).Ok) return;
         var best = Battalions.All
             .Where(t => _session.CanTrain(city, t).Ok && Spare(t.Info().Cost))
             .OrderByDescending(t => t.Info().Attack + t.Info().Defense)
             .Cast<BattalionType?>().FirstOrDefault();
         if (best is BattalionType type) _session.Train(_player.Id, city.Id, type);
     }
+
+    /// <summary>
+    /// Its regiment design, kept up to date with what it knows and can supply: two of its sturdiest
+    /// infantry, its hardest-hitting troop and one more infantry, cut down to the size the city can spare.
+    /// </summary>
+    private RegimentTemplate ArmyTemplate(int size)
+    {
+        var known = Battalions.All.Where(t => t.Info().Requires.All(_player.Techs.Contains) && CanSupply(t)).ToList();
+        var infantry = known.Where(t => !t.Info().Mounted).MaxBy(t => t.Info().Defense);
+        var striker = known.MaxBy(t => t.Info().Attack);
+        BattalionType[] design = [.. new[] { infantry, infantry, striker, infantry }.Take(size)];
+        _armyTemplate ??= _session.AddTemplate(_player, design);
+        if (!_armyTemplate.Battalions.SequenceEqual(design))
+        {
+            _armyTemplate.Battalions.Clear();
+            _armyTemplate.Battalions.AddRange(design);
+        }
+        return _armyTemplate;
+    }
+
+    /// <summary>Whether it has, or produces, the materials beyond wood and gold that a battalion needs (copper, iron…): twice the amount in store, or enough within 90 days.</summary>
+    private bool CanSupply(BattalionType type) => type.Info().Cost.Items
+        .Where(i => i.Type is not (ResourceType.Wood or ResourceType.Gold))
+        .All(i => _player.Stockpile[i.Type] >= i.Amount * 2 || _player.LastDayNet[(int)i.Type] * 90 >= i.Amount);
 
     /// <summary>Whether it can pay and still keep enough wood and gold for settlers and warriors.</summary>
     private bool Spare(ResourceCost cost) => cost.Items.All(i =>

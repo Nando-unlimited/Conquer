@@ -1,6 +1,7 @@
 using Conquer.Game.AI;
 using Conquer.Game.Buildings;
 using Conquer.Game.Economy;
+using Conquer.Game.Military;
 using Conquer.Game.Entities;
 using Conquer.Game.Rules;
 using Conquer.Game.Science;
@@ -90,6 +91,7 @@ public sealed partial class GameSession
             player.Stockpile[ResourceType.Wood] = GameRules.StartingWood;
             session.Players.Add(player);
             session.AddUnit(i, UnitType.Settlers, starts[i], GameRules.StartingCitizens);
+            session.AddTemplate(player, [BattalionType.Warriors, BattalionType.Warriors]);
             if (!player.IsHuman && computerRivals) session._ais.Add(new AiPlayer(session, player, seed + 100 + i));
         }
 
@@ -237,7 +239,7 @@ public sealed partial class GameSession
             double crowded = Math.Max(0, pop - capacity);
             double output = GameRules.MoodProductivity(p.Mood);
             var bonus = BonusesOf(p);
-            net[(int)ResourceType.Food] += GameRules.FoodPerWorker * p.Info.FoodYield * (worked + crowded * GameRules.OvercrowdedFoodShare) * output * (1 + bonus.Food);
+            net[(int)ResourceType.Food] += GameRules.FoodPerWorker * p.FoodYield * (worked + crowded * GameRules.OvercrowdedFoodShare) * output * (1 + bonus.Food);
             net[(int)ResourceType.Wood] += p.Info.WoodYield / 1000 * worked * output * (1 + bonus.Wood);
             if (p.Mood >= GameRules.UnrestMood) net[(int)ResourceType.Gold] += GameRules.TaxGoldPerCitizen * pop * output * (1 + bonus.Taxes);
             double workforce = Math.Min(1, pop / GameRules.DepositFullWorkers);

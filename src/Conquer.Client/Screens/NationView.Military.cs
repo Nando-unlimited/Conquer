@@ -1,7 +1,9 @@
 using Conquer.Client.Graphics;
 using Conquer.Client.UI;
 using Conquer.Game.Entities;
+using Conquer.Game.Economy;
 using Conquer.Game.Military;
+using Conquer.Game.Rules;
 using Conquer.Game.Simulation;
 
 namespace Conquer.Client.Screens;
@@ -98,6 +100,116 @@ public sealed partial class NationView
         if (_session.InBattle(unit)) return "Defendiendo";
         if (unit.IsMoving && unit.Destination is int dest) return $"Hacia {_session.CityIn(_session.Map.Provinces[dest])?.Name ?? _session.Map.Provinces[dest].Info.Name}";
         return "En reserva";
+    }
+
+    // ------------------------------------------------------------------ templates
+
+    private int _selectedTemplateId = -1;
+
+    /// <summary>
+    /// The regiment designer: the nation's templates on the left (new, duplicate, delete); on the right
+    /// the chosen one's battalions (up to six), buttons to add the battalions it knows, and what a
+    /// regiment of that design costs and how it fights.
+    /// </summary>
+    private void Templates(Ui ui, Rect r)
+    {
+        var era = _player.ArmyEra;
+        if (_session.TemplateById(_player, _selectedTemplateId) is not { } template)
+        {
+            template = _player.Templates[0];
+            _selectedTemplateId = template.Id;
+        }
+
+        const float ListW = 240;
+        float y = r.Y;
+        ui.Text(r.X, y, "Plantillas", Theme.Text, bold: true);
+        y += 28;
+        foreach (var t in _player.Templates)
+        {
+            if (y > r.Bottom - 130) break;
+            if (ui.Button(new Rect(r.X, y, ListW, 30), $"{t.Name}  ({Formations.BattalionCount(t.Battalions.Count, era)})", active: t.Id == template.Id, size: FontSize.Small))
+                _selectedTemplateId = t.Id;
+            y += 34;
+        }
+        y += 8;
+        if (ui.Button(new Rect(r.X, y, ListW, 30), "Nueva plantilla", size: FontSize.Small))
+        {
+            _show(_session.CreateTemplate(_player.Id));
+            _selectedTemplateId = _player.Templates[^1].Id;
+        }
+        y += 34;
+        if (ui.Button(new Rect(r.X, y, ListW, 30), "Duplicar", size: FontSize.Small))
+        {
+            _show(_session.DuplicateTemplate(_player.Id, template.Id));
+            _selectedTemplateId = _player.Templates[^1].Id;
+        }
+        y += 34;
+        if (ui.Button(new Rect(r.X, y, ListW, 30), "Borrar", _player.Templates.Count > 1, tooltip: "Hace falta al menos una plantilla.", size: FontSize.Small))
+            _show(_session.DeleteTemplate(_player.Id, template.Id));
+
+        // The chosen template.
+        float x = r.X + ListW + 30, w = r.Right - x;
+        y = r.Y;
+        ui.Text(x, y, template.Name, Theme.Accent, FontSize.Large, bold: true);
+        ui.Text(x + ui.Font.Measure(template.Name, FontSize.Large, true) + 16, y + 8,
+            $"{Formations.LevelName(CommandLevels.Regiment, era)} de {Formations.BattalionCount(template.Battalions.Count, era)}", Theme.TextDim, FontSize.Small);
+        y += 40;
+        for (int i = 0; i < MilitaryRules.MaxBattalionsPerRegiment; i++)
+        {
+            var slot = new Rect(x, y, w * 0.6f, 32);
+            ui.Batch.Rect(slot.X, slot.Y, slot.W, slot.H, Theme.Button.WithAlpha(0.35f));
+            if (i < template.Battalions.Count)
+            {
+                var info = template.Battalions[i].Info();
+                ui.Text(slot.X + 10, slot.Y + 6, Formations.BattalionName(info, era), Theme.Text);
+                string stats = $"A {info.Attack:0.#} · D {info.Defense:0.#} · {info.Men} h";
+                ui.Text(slot.Right - 90 - ui.Font.Measure(stats, FontSize.Small), slot.Y + 9, stats, Theme.TextDim, FontSize.Small);
+                if (ui.Button(new Rect(slot.Right - 80, slot.Y + 4, 74, 24), "Quitar", template.Battalions.Count > 1, size: FontSize.Small))
+                    _show(_session.RemoveFromTemplate(_player.Id, template.Id, i));
+            }
+            else ui.Text(slot.X + 10, slot.Y + 8, "hueco libre", Theme.TextDisabled, FontSize.Small);
+            y += 36;
+        }
+
+        y += 10;
+        ui.Text(x, y, "Añadir", Theme.Text, bold: true);
+        y += 26;
+        var known = Battalions.All.Where(t => t.Info().Requires.All(_player.Techs.Contains)).ToList();
+        float bw = (w * 0.6f - 12) / 3;
+        for (int i = 0; i < known.Count; i++)
+        {
+            var type = known[i];
+            var can = _session.CanAddToTemplate(_player, template, type);
+            var button = new Rect(x + i % 3 * (bw + 6), y + i / 3 * 34, bw, 30);
+            if (ui.Button(button, "+ " + type.Info().Name, can.Ok, tooltip: can.Ok ? Formations.BattalionName(type.Info(), era) : can.Message, size: FontSize.Small))
+                _show(_session.AddToTemplate(_player.Id, template.Id, type));
+        }
+
+        // What a regiment of this design is like.
+        float sx = x + w * 0.6f + 30, sw = r.Right - sx;
+        float sy = r.Y + 40;
+        ui.Text(sx, sy, "Regimiento", Theme.Accent, bold: true);
+        sy += 28;
+        Row(ui, sx, ref sy, sw, "Hombres", $"{template.Men:N0}");
+        Row(ui, sx, ref sy, sw, "Instrucción", $"{template.TrainingDays} días");
+        Row(ui, sx, ref sy, sw, "Ataque", $"{template.Attack:0.#}");
+        Row(ui, sx, ref sy, sw, "Defensa", $"{template.Defense:0.#}");
+        Row(ui, sx, ref sy, sw, "Organización", $"{template.MaxOrganisation:0}");
+        Row(ui, sx, ref sy, sw, "Velocidad", $"{template.Speed * GameRules.CitizenSpeedKmh:0.#} km/h");
+        sy += 6;
+        ui.Text(sx, sy, "Coste", Theme.TextDim);
+        sy += 22;
+        foreach (var (type, amount) in template.Cost.Items)
+            Row(ui, sx + 12, ref sy, sw - 12, type.Name(), $"{amount:0}");
+        sy += 10;
+        var notes = new List<string> { $"Se entrena entero en la pestaña Ejército de tus ciudades; sus {Formations.BattalionPlural(era)} se instruyen a la vez." };
+        if (template.AnyMounted) notes.Add("Los montados atacan a la mitad en bosques, pantanos y montañas.");
+        foreach (var note in notes)
+            foreach (var line in ui.Font.Wrap(note, sw, FontSize.Small))
+            {
+                ui.Text(sx, sy, line, Theme.TextDim, FontSize.Small);
+                sy += ui.Font.LineHeight(FontSize.Small);
+            }
     }
 
     // ------------------------------------------------------------------ diplomacy

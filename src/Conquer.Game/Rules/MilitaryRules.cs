@@ -32,6 +32,12 @@ public static class MilitaryRules
 
     public static bool IsRough(Biome biome) => TerrainDefense(biome) > 1;
 
+    /// <summary>Defenders of a province with a river fire this much harder: the attackers have to cross it.</summary>
+    public const double RiverDefense = 1.25;
+
+    /// <summary>How much harder a province is to take: its terrain, and its river if it has one.</summary>
+    public static double DefenseMultiplier(Province province) => TerrainDefense(province.Biome) * (province.HasRiver ? RiverDefense : 1);
+
     // Chain of command
     /// <summary>Combat and recovery bonus of a regiment whose own HQ is within range.</summary>
     public const double CommandBonus = 0.1;

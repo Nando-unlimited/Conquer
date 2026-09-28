@@ -32,10 +32,13 @@ public static class CommandLevels
     public static CommandLevelInfo Info(int level) => Table[level - 1];
 }
 
-/// <summary>Something a city is training: a battalion, or an HQ of the given level.</summary>
+/// <summary>Something a city is training: a battalion, a whole regiment from a template, or an HQ of the given level.</summary>
 public sealed class TrainingOrder
 {
     public BattalionType? Battalion { get; }
+    /// <summary>A whole regiment trained from a template: its name and battalions.</summary>
+    public string? TemplateName { get; }
+    public IReadOnlyList<BattalionType> TemplateBattalions { get; } = [];
     public int HeadquartersLevel { get; }
     public int DaysLeft { get; set; }
     public int TotalDays { get; }
@@ -46,15 +49,23 @@ public sealed class TrainingOrder
         DaysLeft = TotalDays = battalion.Info().TrainingDays;
     }
 
+    public TrainingOrder(RegimentTemplate template)
+    {
+        TemplateName = template.Name;
+        TemplateBattalions = [.. template.Battalions];
+        DaysLeft = TotalDays = template.TrainingDays;
+    }
+
     public TrainingOrder(int headquartersLevel)
     {
         HeadquartersLevel = headquartersLevel;
         DaysLeft = TotalDays = CommandLevels.Info(headquartersLevel).TrainingDays;
     }
 
-    /// <summary>"Cohorte de arqueros", "Cuartel general de vexilación"… in the era's names.</summary>
-    public string Name(ArmyEra era) => Battalion is BattalionType b
-        ? Formations.BattalionName(b.Info(), era)
+    /// <summary>"Cohorte de arqueros", "Legión (Plantilla II)", "Cuartel general de vexilación"… in the era's names.</summary>
+    public string Name(ArmyEra era) =>
+        Battalion is BattalionType b ? Formations.BattalionName(b.Info(), era)
+        : TemplateName != null ? $"{Formations.LevelName(CommandLevels.Regiment, era)} ({TemplateName})"
         : $"Cuartel general de {Formations.LevelName(HeadquartersLevel, era).ToLowerInvariant()}";
 }
 

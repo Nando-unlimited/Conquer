@@ -6,6 +6,9 @@ public enum MapKind
     Earth,
 }
 
+/// <summary>A stretch of river between two map points, with the water it carries (grows downstream).</summary>
+public readonly record struct RiverSegment(float X1, float Y1, float X2, float Y2, float Flow);
+
 /// <summary>
 /// An equirectangular raster of the planet split into provinces. X wraps around (longitude),
 /// Y runs from the north pole (row 0) to the south pole.
@@ -22,9 +25,13 @@ public sealed class WorldMap
     public Biome[] Biomes { get; }
     public int[] ProvinceIds { get; }
     public IReadOnlyList<Province> Provinces { get; }
+    /// <summary>Every river on the map, as short segments from each point to the next one downstream.</summary>
+    public IReadOnlyList<RiverSegment> Rivers { get; }
 
-    public WorldMap(int width, int height, MapKind kind, int seed, short[] elevation, Biome[] biomes, int[] provinceIds, IReadOnlyList<Province> provinces)
+    public WorldMap(int width, int height, MapKind kind, int seed, short[] elevation, Biome[] biomes, int[] provinceIds,
+        IReadOnlyList<Province> provinces, IReadOnlyList<RiverSegment>? rivers = null)
     {
+        Rivers = rivers ?? [];
         Width = width;
         Height = height;
         Kind = kind;
