@@ -86,8 +86,10 @@ public sealed class Migration
     public long ArriveHours { get; }
     /// <summary>Paid for by the player rather than moving on its own.</summary>
     public bool Forced { get; }
+    /// <summary>Mood the migrants bring; it blends with the residents' mood when they arrive.</summary>
+    public double Mood { get; }
 
-    public Migration(int id, int ownerId, int from, int to, int people, long departHours, long arriveHours, bool forced)
+    public Migration(int id, int ownerId, int from, int to, int people, long departHours, long arriveHours, bool forced, double mood)
     {
         Id = id;
         OwnerId = ownerId;
@@ -97,6 +99,7 @@ public sealed class Migration
         DepartHours = departHours;
         ArriveHours = arriveHours;
         Forced = forced;
+        Mood = mood;
     }
 
     public double Progress(long nowHours) =>

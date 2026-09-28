@@ -49,6 +49,42 @@ public static class GameRules
     public const double ForcedMigrationGoldPerTen = 1;
 
     public static double ForcedMigrationCost(int citizens) => Math.Ceiling(citizens / 10.0) * ForcedMigrationGoldPerTen;
+
+    // Mood (0 to 100). Each day a province's mood closes part of the gap to the sum of its mood factors.
+    public const double StartingMood = 60;
+    public const double BaseMood = 50;
+    public const double CityMood = 10;
+    public const double CapitalMood = 15;
+    /// <summary>Provinces lose a mood point per this many km from the capital, up to <see cref="MaxDistanceMoodPenalty"/>.</summary>
+    public const double KmPerMoodPoint = 50;
+    public const double MaxDistanceMoodPenalty = 20;
+    /// <summary>Penalty once a province holds twice what its land feeds (proportionally less below that).</summary>
+    public const double MaxOvercrowdingMoodPenalty = 20;
+    public const double StarvingMood = -40;
+    /// <summary>Forced migrants arrive this much unhappier than the province they were taken from.</summary>
+    public const double ForcedMigrantMoodPenalty = 20;
+    public const double MoodChangePerDay = 0.1;
+    /// <summary>Below this mood a province is in unrest and pays no taxes.</summary>
+    public const double UnrestMood = 25;
+
+    // Fertility (birth-rate multiplier, 1 = normal). It follows mood and food, more slowly than mood.
+    public const double FertilityChangePerDay = 0.03;
+    /// <summary>Share of normal fertility left while the nation starves.</summary>
+    public const double StarvingFertility = 0.2;
+
+    /// <summary>Output multiplier of a province's workers: 0.75 when furious, 1 at mood 50, 1.25 when delighted.</summary>
+    public static double MoodProductivity(double mood) => 0.75 + mood / 200;
+
+    /// <summary>Fertility a province tends to: 0.5 at mood 0, 1 at mood 50, 1.5 at mood 100; hunger cuts it.</summary>
+    public static double TargetFertility(double mood, bool starving) => (0.5 + mood / 100) * (starving ? StarvingFertility : 1);
+
+    public static string MoodName(double mood) => mood switch
+    {
+        < UnrestMood => "Descontento",
+        < 45 => "Inquieto",
+        < 65 => "Tranquilo",
+        _ => "Contento",
+    };
 }
 
 public enum UnitType

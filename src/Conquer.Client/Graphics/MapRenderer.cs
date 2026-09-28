@@ -9,6 +9,8 @@ public enum MapMode
     Terrain,
     Political,
     Population,
+    Mood,
+    Fertility,
 }
 
 /// <summary>
@@ -243,6 +245,14 @@ public sealed class MapRenderer : IDisposable
                     if (p.IsOwned && p.Population > 0) color = PopulationColor(p.Population / p.AreaKm2);
                     else if (p.IsClaimable) color = new Rgba(0xFF808080).WithAlpha(0.55f);
                     break;
+                case MapMode.Mood:
+                    if (p.IsOwned && p.Population > 0) color = ScaleColor(p.Mood / 100);
+                    else if (p.IsClaimable) color = new Rgba(0xFF808080).WithAlpha(0.55f);
+                    break;
+                case MapMode.Fertility:
+                    if (p.IsOwned && p.Population > 0) color = ScaleColor(p.Fertility - 0.5);
+                    else if (p.IsClaimable) color = new Rgba(0xFF808080).WithAlpha(0.55f);
+                    break;
             }
             _colorData[o] = color.R;
             _colorData[o + 1] = color.G;
@@ -259,6 +269,15 @@ public sealed class MapRenderer : IDisposable
         float t = (float)Math.Clamp((Math.Log10(Math.Max(density, 0.01)) + 2) / 4, 0, 1);
         byte r = (byte)(255 - 90 * t), g = (byte)(230 * (1 - t)), b = (byte)(60 * (1 - t));
         return new Rgba(0xD0000000u | ((uint)r << 16) | ((uint)g << 8) | b);
+    }
+
+    /// <summary>Red at 0, yellow at 0.5, green at 1 (mood and fertility modes).</summary>
+    private static Rgba ScaleColor(double value)
+    {
+        float t = (float)Math.Clamp(value, 0, 1);
+        float r = t < 0.5f ? 215 : 215 - 300 * (t - 0.5f);
+        float g = t < 0.5f ? 60 + 300 * t : 210 - 60 * (t - 0.5f);
+        return new Rgba(0xD0000000u | ((uint)r << 16) | ((uint)g << 8) | 50u);
     }
 
     /// <param name="pixelScale">Framebuffer pixels per window pixel (high-DPI screens).</param>

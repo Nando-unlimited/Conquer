@@ -38,6 +38,8 @@ dotnet run --project src/Conquer.Client -c Release -- --new earth
 | `tools/Conquer.EarthData` | Genera `src/Conquer.Game/Assets/earth.gz` (mapa de la Tierra real) a partir de datos públicos. |
 | `tests/Conquer.Tests` | Pruebas de la generación del mundo y de las reglas. |
 
+Qué hace cada fichero y cada función: [docs/GUIA.md](docs/GUIA.md).
+
 ## Versiones
 
 Cada cambio sube la versión en `src/Conquer.Client/Conquer.Client.csproj` y añade una entrada al principio de

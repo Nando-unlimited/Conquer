@@ -77,7 +77,7 @@ public sealed class GameScreen : IScreen
         AdvanceTime(dt);
         CollectNotifications();
 
-        if (_mapDirty || (_renderer.Mode == MapMode.Population && _session.Date.Days != _lastRefreshDay))
+        if (_mapDirty || (_renderer.Mode >= MapMode.Population &&_session.Date.Days != _lastRefreshDay))
         {
             _renderer.Refresh(_session);
             _mapDirty = false;
@@ -136,7 +136,7 @@ public sealed class GameScreen : IScreen
                     break;
                 case Key.Space: SetSpeed(_speed == 0 ? _lastSpeed : 0); break;
                 case >= Key.Number1 and <= Key.Number5: SetSpeed(key - Key.Number1 + 1); break;
-                case Key.Tab: _renderer.Mode = (MapMode)(((int)_renderer.Mode + 1) % 3); _mapDirty = true; break;
+                case Key.Tab: _renderer.Mode = (MapMode)(((int)_renderer.Mode + 1) % Enum.GetValues<MapMode>().Length); _mapDirty = true; break;
                 case Key.Home: CenterOnHome(); break;
                 case Key.KeypadAdd or Key.Equal: _camera.ZoomAt(_camera.Screen / 2, 1.25f); break;
                 case Key.KeypadSubtract or Key.Minus: _camera.ZoomAt(_camera.Screen / 2, 0.8f); break;
@@ -343,7 +343,10 @@ public sealed class GameScreen : IScreen
         x += 32;
         Ui.Text(x, 8, Human.Name, Theme.Text, FontSize.Normal, bold: true);
         double population = Human.Provinces.Sum(id => Map.Provinces[id].Population);
-        Ui.Text(x, 30, $"{population:N0} habitantes", Theme.TextDim, FontSize.Small);
+        double mood = _session.AverageMood(Human);
+        Ui.Text(x, 30, $"{population:N0} hab. · humor {mood:0}", MoodColor(mood, Theme.TextDim), FontSize.Small);
+        if (Ui.Hover(new Rect(x, 28, 150, 20)))
+            Ui.Tooltip($"{population:N0} habitantes\nHumor medio: {mood:0} ({GameRules.MoodName(mood)})");
         x += 150;
 
         Ui.Text(x, 8, _session.Date.ToString(), Theme.Text);
@@ -411,6 +414,19 @@ public sealed class GameScreen : IScreen
         Ui.Text(x, y, label, Theme.TextDim);
         Ui.Text(x + 130, y, value, valueColor ?? Theme.Text);
         y += 24;
+    }
+
+    private static Rgba MoodColor(double mood, Rgba normal) =>
+        mood < GameRules.UnrestMood ? Theme.Bad : mood >= 65 ? Theme.Good : normal;
+
+    /// <summary>Current mood, where it is heading and why, and what it does to the province.</summary>
+    private string MoodTooltip(Province p)
+    {
+        var factors = _session.MoodFactors(p).Select(f => $"{f.Points:+0;-0;0}  {f.Reason}");
+        string text = $"Humor {p.Mood:0}; tiende a {_session.TargetMood(p):0}.\n" + string.Join("\n", factors) +
+                      $"\nProducción ×{GameRules.MoodProductivity(p.Mood):0.00}";
+        if (p.Mood < GameRules.UnrestMood) text += "\nDescontento: no paga impuestos.";
+        return text;
     }
 
     private void Paragraph(float x, ref float y, float w, string text, Rgba color, FontSize size = FontSize.Small)
@@ -494,6 +510,17 @@ public sealed class GameScreen : IScreen
             var owner = _session.Players[p.OwnerId];
             Line(x, ref y, "Dueño", owner.Name, new Rgba(owner.Color));
             Line(x, ref y, "Población", $"{p.Population:N0} / {_session.CapacityOf(p):N0}");
+            if (p.Population >= 1)
+            {
+                var row = new Rect(x, y, w, 24);
+                Line(x, ref y, "Humor", $"{p.Mood:0} · {GameRules.MoodName(p.Mood)}", MoodColor(p.Mood, Theme.Text));
+                if (Ui.Hover(row)) Ui.Tooltip(MoodTooltip(p));
+                row = new Rect(x, y, w, 24);
+                Line(x, ref y, "Fertilidad", $"{p.Fertility:P0}", p.Fertility < 0.75 ? Theme.Bad : p.Fertility >= 1.15 ? Theme.Good : Theme.Text);
+                if (Ui.Hover(row))
+                    Ui.Tooltip("Nacimientos respecto a lo normal. Sube con el buen humor, cae con el hambre y cambia despacio.\n" +
+                               $"Tiende a {GameRules.TargetFertility(p.Mood, owner.IsStarving):P0}.");
+            }
             int incoming = _session.Migrations.Where(m => m.ToProvinceId == p.Id).Sum(m => m.People);
             if (incoming > 0) Line(x, ref y, "En camino", $"{incoming:N0} migrantes");
         }
@@ -561,9 +588,9 @@ public sealed class GameScreen : IScreen
     private void DrawBottomBar()
     {
         var s = _app.ScreenSize;
-        var bar = new Rect(8, s.Y - 52, 372, 44);
+        var bar = new Rect(8, s.Y - 52, 612, 44);
         Ui.Panel(bar);
-        string[] names = ["Terreno", "Político", "Población"];
+        string[] names = ["Terreno", "Político", "Población", "Humor", "Fertilidad"];
         for (int i = 0; i < names.Length; i++)
         {
             if (Ui.Button(new Rect(bar.X + 6 + i * 120, bar.Y + 6, 114, 32), names[i], active: (int)_renderer.Mode == i, tooltip: "Modo de mapa (Tab)"))
@@ -604,6 +631,7 @@ public sealed class GameScreen : IScreen
         string owner = !p.IsClaimable ? "No reclamable" : p.IsOwned ? _session.Players[p.OwnerId].Name : "Sin dueño";
         string text = $"{p.Info.Name}  ·  {owner}";
         if (p.IsOwned) text += $"\n{p.Population:N0} habitantes";
+        if (p.IsOwned && p.Population >= 1) text += $"\nHumor {p.Mood:0} ({GameRules.MoodName(p.Mood)})  ·  Fertilidad {p.Fertility:P0}";
         if (_choosingMigrationTarget) text += "\nClic para enviar aquí a los migrantes";
         Ui.Tooltip(text);
     }

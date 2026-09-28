@@ -2,6 +2,17 @@
 
 Todos los cambios del juego, del más reciente al más antiguo. Cada versión es un commit cuyo título es su número.
 
+## [1.1.0] - 2026-09-28
+
+### Añadido
+- **Humor** de la población (0 a 100) en cada provincia. Cada día se acerca poco a poco al que piden sus condiciones: base 50, +10 si hay ciudad, +15 en la capital, −1 por cada 50 km de distancia a la capital (hasta −20), hasta −20 por hacinamiento y −40 si la nación pasa hambre.
+- La gente contenta produce más: el humor multiplica la producción de comida, madera, oro y yacimientos entre ×0,75 (humor 0) y ×1,25 (humor 100).
+- Por debajo de 25 la provincia está descontenta y no paga impuestos. Avisa cuando una de tus ciudades se descontenta o vuelve a la calma.
+- Los migrantes llevan su humor consigo y lo mezclan con el de los vecinos al llegar. Los de una migración forzada llegan 20 puntos más descontentos.
+- **Fertilidad** en cada provincia: multiplica los nacimientos (100 % es lo normal). Sigue al humor, del 50 % al 150 %, y cae al 20 % con hambre; cambia más despacio que el humor.
+- Humor y fertilidad en el panel de la provincia (con el desglose de causas al pasar el ratón), en el tooltip del mapa y el humor medio en la barra superior.
+- Modos de mapa **Humor** y **Fertilidad**.
+
 ## [1.0.2] - 2026-09-28
 
 ### Cambiado

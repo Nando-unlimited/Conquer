@@ -231,6 +231,82 @@ public class GameplayTests(WorldFixture world)
     }
 
     [Fact]
+    public void TheCapitalGrowsHappierAndMoreFertile()
+    {
+        var s = NewSession();
+        var (a, _) = GrasslandPair();
+        s.FoundCity(0, s.AddUnit(0, UnitType.Settlers, a.Id, 300).Id);
+        double target = GameRules.BaseMood + GameRules.CityMood + GameRules.CapitalMood;
+
+        Assert.Equal(target, s.TargetMood(a));
+        RunHours(s, 24 * 60);
+        Assert.InRange(a.Mood, target - 1, target);
+        Assert.True(a.Fertility > 1.05, $"fertility {a.Fertility}");
+    }
+
+    [Fact]
+    public void HungerMakesPeopleUnhappyAndLessFertile()
+    {
+        var s = NewSession();
+        var (a, _) = GrasslandPair();
+        s.FoundCity(0, s.AddUnit(0, UnitType.Settlers, a.Id, 300).Id);
+        a.Population = 10 * s.CapacityOf(a); // far more mouths than the land feeds
+        s.Human.Stockpile[ResourceType.Food] = 0;
+
+        RunHours(s, 24 * 30);
+        Assert.True(s.Human.IsStarving);
+        Assert.Contains(s.MoodFactors(a), f => f.Reason == "Hambre");
+        Assert.True(a.Mood < GameRules.UnrestMood, $"mood {a.Mood}");
+        Assert.True(a.Fertility < 1, $"fertility {a.Fertility}");
+    }
+
+    [Fact]
+    public void ForcedMigrantsArriveUnhappy()
+    {
+        var s = NewSession();
+        var (a, b) = GrasslandPair();
+        s.FoundCity(0, s.AddUnit(0, UnitType.Settlers, a.Id, 300).Id);
+        s.Claim(0, s.AddUnit(0, UnitType.Warriors, b.Id, 100).Id);
+        double originMood = a.Mood;
+
+        Assert.True(s.ForceMigration(0, a.Id, b.Id, 150).Ok);
+        var m = Assert.Single(s.Migrations);
+        Assert.Equal(originMood - GameRules.ForcedMigrantMoodPenalty, m.Mood);
+        RunHours(s, (int)(m.ArriveHours - s.Date.Hours));
+        Assert.True(b.Mood < originMood - GameRules.ForcedMigrantMoodPenalty / 2, $"mood {b.Mood}");
+    }
+
+    [Fact]
+    public void ProvincesInUnrestPayNoTaxes()
+    {
+        var s = NewSession();
+        var (a, _) = GrasslandPair();
+        s.FoundCity(0, s.AddUnit(0, UnitType.Settlers, a.Id, 300).Id);
+        RunHours(s, 24);
+        Assert.True(s.Human.LastDayNet[(int)ResourceType.Gold] > 0);
+
+        a.Mood = GameRules.UnrestMood - 10;
+        RunHours(s, 24);
+        Assert.Equal(0, s.Human.LastDayNet[(int)ResourceType.Gold]);
+    }
+
+    [Fact]
+    public void FertilityDrivesPopulationGrowth()
+    {
+        double GrowthOverADay(double fertility)
+        {
+            var s = NewSession();
+            var (a, _) = GrasslandPair();
+            s.FoundCity(0, s.AddUnit(0, UnitType.Settlers, a.Id, 300).Id);
+            a.Fertility = fertility;
+            RunHours(s, 24);
+            return a.Population - 300;
+        }
+
+        Assert.True(GrowthOverADay(1.5) > 2 * GrowthOverADay(0.5));
+    }
+
+    [Fact]
     public void ComputerRivalsFoundCitiesAndExpand()
     {
         var s = NewSession(players: 4);

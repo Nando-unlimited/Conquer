@@ -56,6 +56,8 @@ public sealed class GameSession
             p.OwnerId = -1;
             p.Population = 0;
             p.CityId = null;
+            p.Mood = GameRules.StartingMood;
+            p.Fertility = 1;
         }
         var session = new GameSession(map, seed);
         var names = PlayerNames.Pick(playerCount, session._random);
@@ -82,6 +84,48 @@ public sealed class GameSession
 
     /// <summary>Citizens a province's land can feed, including the bonus of a city.</summary>
     public double CapacityOf(Province p) => p.Capacity * (p.CityId.HasValue ? GameRules.CityCapacityMultiplier : 1);
+
+    /// <summary>
+    /// What pushes a province's mood up or down, as (reason, points). Their sum, clamped to 0..100,
+    /// is the mood the province drifts toward.
+    /// </summary>
+    public List<(string Reason, double Points)> MoodFactors(Province p)
+    {
+        var factors = new List<(string, double)> { ("Base", GameRules.BaseMood) };
+        if (p.CityId.HasValue) factors.Add(("Vida en la ciudad", GameRules.CityMood));
+        if (p.OwnerId < 0) return factors;
+        var owner = Players[p.OwnerId];
+        if (owner.CapitalCityId is int capitalId && CityById(capitalId) is { } capital)
+        {
+            if (capital.ProvinceId == p.Id)
+                factors.Add(("Capital", GameRules.CapitalMood));
+            else
+            {
+                double km = Map.DistanceKm(Map.Provinces[capital.ProvinceId], p);
+                factors.Add(("Lejos de la capital", -Math.Min(GameRules.MaxDistanceMoodPenalty, km / GameRules.KmPerMoodPoint)));
+            }
+        }
+        double capacity = CapacityOf(p);
+        if (p.Population > capacity)
+            factors.Add(("Hacinamiento", -GameRules.MaxOvercrowdingMoodPenalty * Math.Min(1, p.Population / capacity - 1)));
+        if (owner.IsStarving) factors.Add(("Hambre", GameRules.StarvingMood));
+        return factors;
+    }
+
+    public double TargetMood(Province p) => Math.Clamp(MoodFactors(p).Sum(f => f.Points), 0, 100);
+
+    /// <summary>Mood of a player's people, weighted by the population of each province.</summary>
+    public double AverageMood(Player player)
+    {
+        double people = 0, sum = 0;
+        foreach (int id in player.Provinces)
+        {
+            var p = Map.Provinces[id];
+            people += p.Population;
+            sum += p.Population * p.Mood;
+        }
+        return people > 0 ? sum / people : GameRules.StartingMood;
+    }
 
     // ------------------------------------------------------------------ time
 
@@ -136,14 +180,14 @@ public sealed class GameSession
             var target = Map.Provinces[m.ToProvinceId];
             if (target.OwnerId == m.OwnerId)
             {
-                target.Population += m.People;
+                Settle(target, m.People, m.Mood);
                 if (m.Forced && m.OwnerId == HumanPlayerId)
                     Notify(m.OwnerId, $"{m.People} ciudadanos han llegado a su nuevo hogar.");
             }
             else if (Players[m.OwnerId].CapitalCityId is int capital && CityById(capital) is { } city)
             {
                 // The destination was lost on the way; the migrants settle in the capital instead.
-                Map.Provinces[city.ProvinceId].Population += m.People;
+                Settle(Map.Provinces[city.ProvinceId], m.People, m.Mood);
             }
         }
     }
@@ -164,11 +208,12 @@ public sealed class GameSession
             double capacity = CapacityOf(p);
             double worked = Math.Min(pop, capacity);
             double crowded = Math.Max(0, pop - capacity);
-            net[(int)ResourceType.Food] += GameRules.FoodPerWorker * p.Info.FoodYield * (worked + crowded * GameRules.OvercrowdedFoodShare);
-            net[(int)ResourceType.Wood] += p.Info.WoodYield / 1000 * worked;
-            net[(int)ResourceType.Gold] += GameRules.TaxGoldPerCitizen * pop;
+            double output = GameRules.MoodProductivity(p.Mood);
+            net[(int)ResourceType.Food] += GameRules.FoodPerWorker * p.Info.FoodYield * (worked + crowded * GameRules.OvercrowdedFoodShare) * output;
+            net[(int)ResourceType.Wood] += p.Info.WoodYield / 1000 * worked * output;
+            if (p.Mood >= GameRules.UnrestMood) net[(int)ResourceType.Gold] += GameRules.TaxGoldPerCitizen * pop * output;
             double workforce = Math.Min(1, pop / GameRules.DepositFullWorkers);
-            foreach (var r in Resources.Deposits) net[(int)r] += p.Deposits[(int)r] * workforce;
+            foreach (var r in Resources.Deposits) net[(int)r] += p.Deposits[(int)r] * workforce * output;
         }
 
         double eaters = population
@@ -192,6 +237,7 @@ public sealed class GameSession
         {
             var p = Map.Provinces[id];
             if (p.Population <= 0) continue;
+            UpdateMoodAndFertility(p, starving);
             if (starving)
             {
                 p.Population *= 1 - GameRules.StarvationRate;
@@ -199,10 +245,26 @@ public sealed class GameSession
             else
             {
                 double capacity = CapacityOf(p);
-                double rate = GameRules.GrowthRate * (p.CityId.HasValue ? GameRules.CityGrowthMultiplier : 1);
+                double rate = GameRules.GrowthRate * p.Fertility * (p.CityId.HasValue ? GameRules.CityGrowthMultiplier : 1);
                 if (p.Population < capacity)
                     p.Population += p.Population * rate * (1 - p.Population / capacity);
             }
+        }
+    }
+
+    /// <summary>Mood closes part of the gap to its target each day; fertility follows mood and food, more slowly.</summary>
+    private void UpdateMoodAndFertility(Province p, bool starving)
+    {
+        double before = p.Mood;
+        p.Mood += (TargetMood(p) - p.Mood) * GameRules.MoodChangePerDay;
+        p.Fertility += (GameRules.TargetFertility(p.Mood, starving) - p.Fertility) * GameRules.FertilityChangePerDay;
+
+        if (p.OwnerId == HumanPlayerId && CityIn(p) is { } city)
+        {
+            if (before >= GameRules.UnrestMood && p.Mood < GameRules.UnrestMood)
+                Notify(p.OwnerId, $"{city.Name} está descontenta y deja de pagar impuestos.");
+            else if (before < GameRules.UnrestMood && p.Mood >= GameRules.UnrestMood)
+                Notify(p.OwnerId, $"{city.Name} vuelve a estar en calma.");
         }
     }
 
@@ -258,7 +320,7 @@ public sealed class GameSession
                 budget -= people;
                 source.Population -= people;
                 long arrive = Date.Hours + Math.Max(1, (long)Math.Ceiling(hours[target]));
-                Migrations.Add(new Migration(_nextMigrationId++, player.Id, sourceId, target, people, Date.Hours, arrive, forced: false));
+                Migrations.Add(new Migration(_nextMigrationId++, player.Id, sourceId, target, people, Date.Hours, arrive, forced: false, source.Mood));
             }
         }
     }
@@ -308,7 +370,7 @@ public sealed class GameSession
         var city = new City(_nextCityId++, CityNames.Next(_usedCityNames, _random), playerId, p.Id, Date.Hours);
         Cities.Add(city);
         p.CityId = city.Id;
-        p.Population += unit.Citizens;
+        Settle(p, unit.Citizens, GameRules.StartingMood);
         RemoveUnit(unit);
 
         bool capital = player.CapitalCityId is null;
@@ -367,7 +429,7 @@ public sealed class GameSession
         if (UnitById(unitId) is not { } unit || unit.OwnerId != playerId) return CommandResult.Fail("Unidad no válida.");
         var p = Map.Provinces[unit.ProvinceId];
         if (p.OwnerId != playerId) return CommandResult.Fail("Solo puede asentarse en una provincia propia.");
-        p.Population += unit.Citizens;
+        Settle(p, unit.Citizens, GameRules.StartingMood);
         RemoveUnit(unit);
         return CommandResult.Success();
     }
@@ -396,7 +458,8 @@ public sealed class GameSession
         Players[playerId].Stockpile[ResourceType.Gold] -= GameRules.ForcedMigrationCost(people);
         Map.Provinces[fromId].Population -= people;
         long arrive = Date.Hours + Math.Max(1, (long)Math.Ceiling(hours));
-        Migrations.Add(new Migration(_nextMigrationId++, playerId, fromId, toId, people, Date.Hours, arrive, forced: true));
+        double mood = Math.Max(0, Map.Provinces[fromId].Mood - GameRules.ForcedMigrantMoodPenalty);
+        Migrations.Add(new Migration(_nextMigrationId++, playerId, fromId, toId, people, Date.Hours, arrive, forced: true, mood));
         return CommandResult.Success($"{people} ciudadanos en camino; llegarán en {FormatHours(hours)}.");
     }
 
@@ -425,6 +488,15 @@ public sealed class GameSession
     {
         Units.Remove(unit);
         _unitsById.Remove(unit.Id);
+    }
+
+    /// <summary>Moves people into a province, blending their mood with the residents' by headcount.</summary>
+    private static void Settle(Province p, double people, double mood)
+    {
+        double total = p.Population + people;
+        if (total <= 0) return;
+        p.Mood = (p.Mood * p.Population + mood * people) / total;
+        p.Population = total;
     }
 
     private void Notify(int playerId, string text) => Notifications.Add(new Notification(Date.Hours, playerId, text));
