@@ -26,6 +26,15 @@ public static class Resources
         ResourceType.Aluminium, ResourceType.Rubber, ResourceType.Gold, ResourceType.Silver,
     ];
 
+    /// <summary>
+    /// Resources every nation knows from the start. The rest stay hidden, and cannot be mined,
+    /// until an advance reveals them (<see cref="Science.TechInfo.Reveals"/>).
+    /// </summary>
+    public static readonly ResourceType[] KnownFromStart =
+    [
+        ResourceType.Food, ResourceType.Wood, ResourceType.Copper, ResourceType.Gold, ResourceType.Silver,
+    ];
+
     public static string Name(this ResourceType type) => type switch
     {
         ResourceType.Food => "Comida",

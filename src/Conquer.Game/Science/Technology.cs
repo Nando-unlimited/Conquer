@@ -1,3 +1,4 @@
+using Conquer.Game.Economy;
 using Conquer.Game.Rules;
 
 namespace Conquer.Game.Science;
@@ -8,6 +9,7 @@ public enum Tech
     Agriculture,
     Carpentry,
     Mining,
+    IronWorking,
     Writing,
     Mythology,
     Irrigation,
@@ -17,7 +19,11 @@ public enum Tech
 
 /// <param name="Cost">Science points needed to discover it.</param>
 /// <param name="Requires">Advances that must be known before researching it.</param>
-public sealed record TechInfo(string Name, double Cost, Tech[] Requires, string Description, Modifiers Effects);
+/// <param name="Reveals">Resources its owner can see and mine from then on.</param>
+public sealed record TechInfo(string Name, double Cost, Tech[] Requires, string Description, Modifiers Effects, ResourceType[]? Reveals = null)
+{
+    public ResourceType[] Reveals { get; } = Reveals ?? [];
+}
 
 public static class Techs
 {
@@ -27,7 +33,9 @@ public static class Techs
     {
         [Tech.Agriculture] = new("Agricultura", 60, [], "+20 % de comida.", new() { Food = 0.2 }),
         [Tech.Carpentry] = new("Carpintería", 60, [], "+50 % de madera.", new() { Wood = 0.5 }),
-        [Tech.Mining] = new("Minería", 100, [], "+50 % de producción de los yacimientos (se agotan antes).", new() { Deposits = 0.5 }),
+        [Tech.Mining] = new("Minería", 100, [], "Descubre el carbón. +50 % de producción de los yacimientos (se agotan antes).",
+            new() { Deposits = 0.5 }, [ResourceType.Coal]),
+        [Tech.IronWorking] = new("Trabajo del hierro", 200, [Tech.Mining], "Descubre el hierro.", Modifiers.None, [ResourceType.Iron]),
         [Tech.Writing] = new("Escritura", 80, [], "+30 % de ciencia.", new() { Science = 0.3 }),
         [Tech.Mythology] = new("Mitología", 100, [], "+5 de humor en todas tus provincias.", new() { Mood = 5 }),
         [Tech.Irrigation] = new("Irrigación", 250, [Tech.Agriculture], "La tierra alimenta un 25 % más de gente.", new() { Capacity = 0.25 }),

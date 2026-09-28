@@ -262,7 +262,7 @@ public sealed class GameSession
             if (p.Mood >= GameRules.UnrestMood) net[(int)ResourceType.Gold] += GameRules.TaxGoldPerCitizen * pop * output * (1 + bonus.Taxes);
             double workforce = Math.Min(1, pop / GameRules.DepositFullWorkers);
             foreach (var r in Resources.Deposits)
-                if (p.HasDeposit(r)) net[(int)r] += Extract(p, r, p.Deposits[(int)r] * workforce * output * (1 + bonus.Deposits));
+                if (p.HasDeposit(r) && player.Knows(r)) net[(int)r] += Extract(p, r, p.Deposits[(int)r] * workforce * output * (1 + bonus.Deposits));
         }
 
         double eaters = population
@@ -377,7 +377,8 @@ public sealed class GameSession
         if (info.RequiresTech is Tech tech && !Players[p.OwnerId].Techs.Contains(tech))
             return CommandResult.Fail($"Requiere {tech.Info().Name.ToLowerInvariant()}.");
         if (info.CityOnly && !p.CityId.HasValue) return CommandResult.Fail("Solo en provincias con ciudad.");
-        if (info.NeedsDeposit && !Resources.Deposits.Any(p.HasDeposit)) return CommandResult.Fail("Requiere un yacimiento sin agotar.");
+        if (info.NeedsDeposit && !Resources.Deposits.Any(r => p.HasDeposit(r) && Players[p.OwnerId].Knows(r)))
+            return CommandResult.Fail("Requiere un yacimiento conocido y sin agotar.");
         return CommandResult.Success();
     }
 

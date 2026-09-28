@@ -150,6 +150,8 @@ public sealed class MapRenderer : IDisposable
     public MapMode Mode { get; set; } = MapMode.Terrain;
     /// <summary>In resources mode, the only resource shown; null shows each province's main deposit.</summary>
     public ResourceType? ResourceFilter { get; set; }
+    /// <summary>Resources the viewer knows; the rest are never drawn.</summary>
+    public Func<ResourceType, bool> IsResourceKnown { get; set; } = _ => true;
 
     /// <summary>Pixel data prepared off the main thread (it takes a moment for 6.5 million pixels).</summary>
     public sealed record Prepared(byte[] Ids, byte[] Terrain);
@@ -279,19 +281,19 @@ public sealed class MapRenderer : IDisposable
     }
 
     /// <summary>
-    /// Resources mode: the colour of the province's richest remaining deposit, or with a filter, that
+    /// Resources mode: the colour of the province's richest remaining deposit the viewer knows, or with a filter, that
     /// resource brighter the more is left (log scale). Grey where there is nothing.
     /// </summary>
     private Rgba DepositColor(Province p)
     {
         var none = new Rgba(0xFF606060).WithAlpha(0.6f);
-        if (ResourceFilter is ResourceType only)
+        if (ResourceFilter is ResourceType only && IsResourceKnown(only))
         {
             if (!p.HasDeposit(only)) return none;
             float t = (float)Math.Clamp(Math.Log10(p.Reserves[(int)only]) / 5.5, 0.25, 1);
             return ResourceColor(only).WithAlpha(0.35f + 0.6f * t);
         }
-        var main = Resources.Deposits.Where(p.HasDeposit).OrderByDescending(r => p.Deposits[(int)r] / Richness(r)).Cast<ResourceType?>().FirstOrDefault();
+        var main = Resources.Deposits.Where(r => p.HasDeposit(r) && IsResourceKnown(r)).OrderByDescending(r => p.Deposits[(int)r] / Richness(r)).Cast<ResourceType?>().FirstOrDefault();
         return main is ResourceType r ? ResourceColor(r).WithAlpha(0.9f) : none;
     }
 

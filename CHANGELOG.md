@@ -2,6 +2,18 @@
 
 Todos los cambios del juego, del más reciente al más antiguo. Cada versión es un commit cuyo título es su número.
 
+## [1.7.0] - 2026-09-28
+
+### Cambiado
+- **Recursos ocultos**: al principio solo se conocen la comida, la madera, el cobre, el oro y la plata. Los demás recursos no aparecen en la barra superior, el panel de la provincia, el mapa de recursos, los tooltips ni la pantalla de la nación, y sus yacimientos no se explotan, hasta que un avance los descubre.
+- **Minería** descubre el carbón.
+- El petróleo, el caucho, el aluminio y el silicio seguirán ocultos hasta que existan los avances de épocas posteriores que los descubran.
+- La mina solo se puede construir sobre un yacimiento que conozcas.
+- Los rivales del ordenador tampoco ven ni explotan lo que no conocen.
+
+### Añadido
+- Nuevo avance **Trabajo del hierro** (200, requiere Minería): descubre el hierro.
+
 ## [1.6.0] - 2026-09-28
 
 ### Añadido

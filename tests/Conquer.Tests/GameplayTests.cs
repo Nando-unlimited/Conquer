@@ -389,6 +389,7 @@ public class GameplayTests(WorldFixture world)
         var s = NewSession();
         var p = _map.Provinces.First(p => p.IsClaimable && p.Neighbors.Length > 3 && p.HasDeposit(ResourceType.Iron));
         s.FoundCity(0, s.AddUnit(0, UnitType.Settlers, p.Id, 300).Id);
+        s.Human.Learn(Tech.IronWorking);
         p.Population = GameRules.DepositFullWorkers;
         p.Reserves[(int)ResourceType.Iron] = 1.5; // less than a day's output
 
@@ -526,6 +527,40 @@ public class GameplayTests(WorldFixture world)
         Assert.Equal(Math.Min(100, target + 10), s.TargetMood(a));
         Assert.Equal(capacity * 1.25, s.CapacityOf(a), 6);
         Assert.Equal(science * 1.5, s.SciencePerDay(s.Human), 6);
+    }
+
+    [Fact]
+    public void OnlyAncientResourcesAreKnownAtTheStart()
+    {
+        var s = NewSession();
+        Assert.True(s.Human.Knows(ResourceType.Copper));
+        Assert.True(s.Human.Knows(ResourceType.Gold));
+        Assert.True(s.Human.Knows(ResourceType.Silver));
+        foreach (var hidden in new[] { ResourceType.Coal, ResourceType.Iron, ResourceType.Oil, ResourceType.Rubber, ResourceType.Aluminium, ResourceType.Silicon })
+            Assert.False(s.Human.Knows(hidden), $"{hidden} should start hidden");
+
+        s.Human.Learn(Tech.Mining);
+        Assert.True(s.Human.Knows(ResourceType.Coal));
+        s.Human.Learn(Tech.IronWorking);
+        Assert.True(s.Human.Knows(ResourceType.Iron));
+    }
+
+    [Fact]
+    public void UnknownResourcesAreNotMined()
+    {
+        var s = NewSession();
+        var p = _map.Provinces.First(p => p.IsClaimable && p.Neighbors.Length > 3 && p.HasDeposit(ResourceType.Iron));
+        s.FoundCity(0, s.AddUnit(0, UnitType.Settlers, p.Id, 300).Id);
+        p.Population = GameRules.DepositFullWorkers;
+        double full = p.Reserves[(int)ResourceType.Iron];
+
+        RunHours(s, 24);
+        Assert.Equal(0, s.Human.LastDayNet[(int)ResourceType.Iron]);
+        Assert.Equal(full, p.Reserves[(int)ResourceType.Iron]);
+
+        s.Human.Learn(Tech.IronWorking);
+        RunHours(s, 24);
+        Assert.True(s.Human.LastDayNet[(int)ResourceType.Iron] > 0);
     }
 
     [Fact]

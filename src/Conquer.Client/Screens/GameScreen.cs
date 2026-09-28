@@ -52,6 +52,7 @@ public sealed class GameScreen : IScreen
         _camera = new Camera(session.Map.Width, session.Map.Height) { Screen = app.ScreenSize };
         session.OwnershipChanged += _ => _mapDirty = true;
         _nation = new NationView(session, session.Human, ViewProvince, Show);
+        _renderer.IsResourceKnown = session.Human.Knows;
 
         var settlers = session.Units.First(u => u.OwnerId == GameSession.HumanPlayerId);
         _selectedUnitId = settlers.Id;
@@ -379,7 +380,7 @@ public sealed class GameScreen : IScreen
         }
         x += 200;
 
-        foreach (var r in Resources.All)
+        foreach (var r in Resources.All.Where(Human.Knows))
         {
             double amount = Human.Stockpile[r];
             double net = Human.LastDayNet[(int)r];
@@ -570,7 +571,7 @@ public sealed class GameScreen : IScreen
         double fed = p.Info.FoodYield * GameRules.FoodPerWorker;
         Line(x, ref y, "Comida", $"{fed * 1000:0} por mil hab./día");
         if (p.Info.WoodYield > 0) Line(x, ref y, "Madera", $"{p.Info.WoodYield:0.#} por mil hab./día");
-        foreach (var r in Resources.Deposits.Where(r => p.Deposits[(int)r] > 0))
+        foreach (var r in Resources.Deposits.Where(r => p.Deposits[(int)r] > 0 && Human.Knows(r)))
         {
             var row = new Rect(x, y, w, 24);
             double left = p.Reserves[(int)r];
@@ -732,7 +733,8 @@ public sealed class GameScreen : IScreen
     private void DrawResourceFilter(Rect modes)
     {
         const float Bw = 96;
-        var panel = new Rect(modes.X, modes.Y - 50, 12 + (Resources.Deposits.Length + 1) * (Bw + 4) - 4, 44);
+        var known = Resources.Deposits.Where(Human.Knows).ToList();
+        var panel = new Rect(modes.X, modes.Y - 50, 12 + (known.Count + 1) * (Bw + 4) - 4, 44);
         Ui.Panel(panel);
         float x = panel.X + 6;
         if (Ui.Button(new Rect(x, panel.Y + 6, Bw, 32), "Todos", active: _renderer.ResourceFilter is null,
@@ -741,7 +743,7 @@ public sealed class GameScreen : IScreen
             _renderer.ResourceFilter = null;
             _mapDirty = true;
         }
-        foreach (var r in Resources.Deposits)
+        foreach (var r in known)
         {
             x += Bw + 4;
             var rect = new Rect(x, panel.Y + 6, Bw, 32);
@@ -780,7 +782,7 @@ public sealed class GameScreen : IScreen
         if (p.IsOwned) text += $"\n{p.Population:N0} habitantes";
         if (p.IsOwned && p.Population >= 1) text += $"\nHumor {p.Mood:0} ({GameRules.MoodName(p.Mood)})  ·  Fertilidad {p.Fertility:P0}";
         if (_renderer.Mode == MapMode.Resources)
-            foreach (var r in Resources.Deposits.Where(r => p.Deposits[(int)r] > 0))
+            foreach (var r in Resources.Deposits.Where(r => p.Deposits[(int)r] > 0 && Human.Knows(r)))
                 text += p.HasDeposit(r) ? $"\n{r.Name()}: {p.Deposits[(int)r]:0.0}/día, quedan {Compact(p.Reserves[(int)r])}" : $"\n{r.Name()}: agotado";
         if (_choosingMigrationTarget) text += "\nClic para enviar aquí a los migrantes";
         Ui.Tooltip(text);

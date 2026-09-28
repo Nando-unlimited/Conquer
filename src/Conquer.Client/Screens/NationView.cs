@@ -132,7 +132,7 @@ public sealed class NationView
         if (ui.Hover(new Rect(x + colW - 90, y, 90, 20)))
             ui.Tooltip("Lo que queda en los yacimientos de tus provincias. Cada bolsa se agota al explotarla.");
         y += 22;
-        foreach (var res in Resources.All.Where(res => res != ResourceType.Food))
+        foreach (var res in Resources.All.Where(res => res != ResourceType.Food && _player.Knows(res)))
         {
             double net = _player.LastDayNet[(int)res];
             ui.Text(x, y, res.Name(), Theme.TextDim);

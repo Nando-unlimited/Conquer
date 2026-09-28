@@ -28,13 +28,20 @@ public sealed class Player
     public Tech? Researching { get; set; }
     /// <summary>Science points put into each advance; kept when research switches to another one.</summary>
     public double[] ResearchProgress { get; } = new double[Science.Techs.All.Length];
+    /// <summary>Resources the nation can see and mine: those known from the start plus those its advances reveal.</summary>
+    public HashSet<ResourceType> KnownResources { get; } = [.. Resources.KnownFromStart];
+
+    public bool Knows(ResourceType resource) => KnownResources.Contains(resource);
+
     /// <summary>Science earned while nothing was being researched; it goes into the next advance chosen.</summary>
     public double SpareScience { get; set; }
     public double LastDayScience { get; set; }
 
     public void Learn(Tech tech)
     {
-        if (Techs.Add(tech)) Bonuses += tech.Info().Effects;
+        if (!Techs.Add(tech)) return;
+        Bonuses += tech.Info().Effects;
+        KnownResources.UnionWith(tech.Info().Reveals);
     }
 
     public Player(int id, string name, uint color, bool isHuman)

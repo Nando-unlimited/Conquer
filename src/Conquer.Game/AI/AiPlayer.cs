@@ -30,7 +30,7 @@ internal sealed class AiPlayer
     ];
     /// <summary>Food first, then the advances that pay for themselves.</summary>
     private static readonly Tech[] ResearchOrder =
-        [Tech.Agriculture, Tech.Writing, Tech.Mining, Tech.Irrigation, Tech.Carpentry, Tech.Mythology, Tech.Currency, Tech.Medicine];
+        [Tech.Agriculture, Tech.Writing, Tech.Mining, Tech.IronWorking, Tech.Irrigation, Tech.Carpentry, Tech.Mythology, Tech.Currency, Tech.Medicine];
     private readonly GameSession _session;
     private readonly Player _player;
     private readonly Random _random;
@@ -218,11 +218,11 @@ internal sealed class AiPlayer
         p.IsClaimable && (p.OwnerId < 0 || p.OwnerId == _player.Id) && !p.CityId.HasValue &&
         !p.Neighbors.Any(n => Map.Provinces[n].CityId.HasValue);
 
-    /// <summary>How good a province is to live in: food it can grow, plus deposits and sea access.</summary>
+    /// <summary>How good a province is to live in: food it can grow, plus known deposits and sea access.</summary>
     private double SiteScore(Province p)
     {
         double food = Math.Min(p.Capacity, 40000) * p.Info.FoodYield / 100;
-        double deposits = Resources.Deposits.Where(p.HasDeposit).Sum(r => p.Deposits[(int)r]) * 10;
+        double deposits = Resources.Deposits.Where(r => p.HasDeposit(r) && _player.Knows(r)).Sum(r => p.Deposits[(int)r]) * 10;
         double coast = p.Neighbors.Any(n => Map.Provinces[n].IsWater) ? 20 : 0;
         return food + deposits + coast;
     }
