@@ -275,7 +275,7 @@ public sealed class GameSession
             return CommandResult.Success();
         }
         if (Pathfinder.FindPath(unit.ProvinceId, targetProvinceId) is not { } route)
-            return CommandResult.Fail("No hay camino hasta allí.");
+            return CommandResult.Fail("No hay camino por tierra hasta allí.");
         var (path, hours) = route;
         unit.Path.Clear();
         unit.Path.AddRange(path);
@@ -391,7 +391,7 @@ public sealed class GameSession
     {
         var check = CanForceMigration(playerId, fromId, toId, people);
         if (!check.Ok) return check;
-        if (Pathfinder.FindPath(fromId, toId) is not { } route) return CommandResult.Fail("No hay camino hasta allí.");
+        if (Pathfinder.FindPath(fromId, toId) is not { } route) return CommandResult.Fail("No hay camino por tierra hasta allí.");
         double hours = route.Hours;
         Players[playerId].Stockpile[ResourceType.Gold] -= GameRules.ForcedMigrationCost(people);
         Map.Provinces[fromId].Population -= people;
@@ -437,11 +437,17 @@ public sealed class GameSession
         return rest == 0 ? $"{days} d" : $"{days} d {rest} h";
     }
 
-    /// <summary>Habitable, fertile provinces as far from each other as the map allows.</summary>
+    /// <summary>
+    /// Habitable, fertile provinces as far from each other as the map allows, on landmasses big
+    /// enough to expand over (land units can't cross the sea).
+    /// </summary>
     private List<int> PickStartProvinces(int count)
     {
+        const int MinLandmassProvinces = 200;
+        var landmassSize = LandmassSizes();
         var candidates = Map.Provinces
             .Where(p => p.IsClaimable && p.Info.FoodYield >= 1.0 && p.Info.Carrying >= 6 && p.Neighbors.Length > 2)
+            .Where(p => landmassSize[p.Id] >= MinLandmassProvinces)
             .Select(p => p.Id)
             .OrderBy(_ => _random.Next())
             .ToList();
@@ -456,5 +462,33 @@ public sealed class GameSession
                 if (chosen.Count == count) return chosen;
             }
         }
+    }
+
+    /// <summary>For each province, how many provinces its land-connected mass has (0 for water).</summary>
+    private int[] LandmassSizes()
+    {
+        var size = new int[Map.Provinces.Count];
+        var stack = new Stack<int>();
+        var members = new List<int>();
+        foreach (var start in Map.Provinces)
+        {
+            if (start.IsWater || size[start.Id] > 0) continue;
+            members.Clear();
+            size[start.Id] = -1;
+            stack.Push(start.Id);
+            while (stack.Count > 0)
+            {
+                int id = stack.Pop();
+                members.Add(id);
+                foreach (int n in Map.Provinces[id].Neighbors)
+                {
+                    if (size[n] != 0 || Map.Provinces[n].IsWater) continue;
+                    size[n] = -1;
+                    stack.Push(n);
+                }
+            }
+            foreach (int id in members) size[id] = members.Count;
+        }
+        return size;
     }
 }

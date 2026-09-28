@@ -72,7 +72,7 @@ public class GameplayTests(WorldFixture world)
     }
 
     [Fact]
-    public void OceansAndPolesCannotBeClaimedButCanBeCrossed()
+    public void OceansAndPolesCannotBeClaimed()
     {
         var s = NewSession();
         var ocean = _map.Provinces.First(p => p.Biome == Biome.Ocean);
@@ -84,9 +84,57 @@ public class GameplayTests(WorldFixture world)
         Assert.False(s.Claim(0, warriors.Id).Ok);
         Assert.False(ocean.IsOwned);
         Assert.False(ice.IsOwned);
+    }
 
-        var land = _map.Provinces.First(p => p.IsClaimable);
-        Assert.NotNull(s.Pathfinder.FindPath(ocean.Id, land.Id));
+    [Fact]
+    public void LandUnitsCannotEnterTheSeaButCanCrossPolarIce()
+    {
+        var s = NewSession();
+        var coast = _map.Provinces.First(p => p.IsClaimable && p.Neighbors.Any(n => _map.Provinces[n].Biome == Biome.ShallowSea));
+        var sea = coast.Neighbors.First(n => _map.Provinces[n].IsWater);
+        var warriors = s.AddUnit(0, UnitType.Warriors, coast.Id, 100);
+
+        Assert.False(s.MoveUnit(0, warriors.Id, sea).Ok);
+        Assert.False(warriors.IsMoving);
+
+        var ice = _map.Provinces.First(p => p.Biome == Biome.PolarIce && p.Neighbors.Any(n => _map.Provinces[n].IsClaimable));
+        var iceShore = ice.Neighbors.First(n => _map.Provinces[n].IsClaimable);
+        Assert.NotNull(s.Pathfinder.FindPath(iceShore, ice.Id));
+    }
+
+    /// <summary>Two claimable provinces on land masses that only the sea connects.</summary>
+    private (Province A, Province B) ProvincesAcrossTheSea()
+    {
+        var reachable = Reach(_map.Provinces.First(p => p.Biome == Biome.Grassland).Id);
+        var a = _map.Provinces.First(p => reachable.Contains(p.Id) && p.Biome == Biome.Grassland);
+        var b = _map.Provinces.First(p => p.IsClaimable && p.Info.Carrying > 1 && !reachable.Contains(p.Id));
+        return (a, b);
+    }
+
+    private HashSet<int> Reach(int start)
+    {
+        var seen = new HashSet<int> { start };
+        var stack = new Stack<int>([start]);
+        while (stack.Count > 0)
+            foreach (int n in _map.Provinces[stack.Pop()].Neighbors)
+                if (!_map.Provinces[n].IsWater && seen.Add(n)) stack.Push(n);
+        return seen;
+    }
+
+    [Fact]
+    public void NothingWalksAcrossTheSea()
+    {
+        var s = NewSession();
+        var (a, b) = ProvincesAcrossTheSea();
+        var settlers = s.AddUnit(0, UnitType.Settlers, a.Id, 300);
+        s.FoundCity(0, settlers.Id);
+        a.Population = 5000;
+        s.Claim(0, s.AddUnit(0, UnitType.Warriors, b.Id, 100).Id);
+
+        Assert.Null(s.Pathfinder.FindPath(a.Id, b.Id));
+        Assert.False(s.ForceMigration(0, a.Id, b.Id, 100).Ok);
+        RunHours(s, 24 * 5);
+        Assert.DoesNotContain(s.Migrations, m => m.ToProvinceId == b.Id);
     }
 
     [Fact]

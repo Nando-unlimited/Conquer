@@ -4,15 +4,19 @@ using Conquer.Game.World;
 namespace Conquer.Game.Simulation;
 
 /// <summary>
-/// Travel over the province graph. Every province can be crossed, including oceans and polar ice;
-/// a step between neighbours takes the distance between their centres divided by the walking speed,
-/// scaled by how easy both terrains are to cross.
+/// Travel over land through the province graph. Seas and lakes are closed (only naval units may
+/// sail them); polar ice can be crossed although it cannot be claimed. A step between neighbours
+/// takes the distance between their centres divided by the walking speed, scaled by how easy both
+/// terrains are to cross.
 /// </summary>
 public sealed class Pathfinder
 {
     private readonly WorldMap _map;
 
     public Pathfinder(WorldMap map) => _map = map;
+
+    /// <summary>Whether land travellers (units and migrants) may enter the province.</summary>
+    public bool CanEnter(int province) => !_map.Provinces[province].IsWater;
 
     public double StepHours(int from, int to)
     {
@@ -26,6 +30,7 @@ public sealed class Pathfinder
     public (List<int> Path, double Hours)? FindPath(int from, int to)
     {
         if (from == to) return ([], 0);
+        if (!CanEnter(to)) return null;
         int n = _map.Provinces.Count;
         var cost = new double[n];
         Array.Fill(cost, double.PositiveInfinity);
@@ -40,6 +45,7 @@ public sealed class Pathfinder
             if (priority - Heuristic(current, to) > cost[current] + 1e-9) continue;
             foreach (int next in _map.Provinces[current].Neighbors)
             {
+                if (!CanEnter(next)) continue;
                 double c = cost[current] + StepHours(current, next);
                 if (c >= cost[next]) continue;
                 cost[next] = c;
@@ -82,6 +88,7 @@ public sealed class Pathfinder
             if (targets != null && targets.Contains(current) && --remaining == 0) break;
             foreach (int next in _map.Provinces[current].Neighbors)
             {
+                if (!CanEnter(next)) continue;
                 double c = h + StepHours(current, next);
                 if (c >= hours[next] || c > maxHours) continue;
                 hours[next] = c;

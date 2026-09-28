@@ -2,6 +2,13 @@
 
 Todos los cambios del juego, del más reciente al más antiguo. Cada versión es un commit cuyo título es su número.
 
+## [1.0.2] - 2026-09-28
+
+### Cambiado
+- Solo las unidades navales pueden ir por el mar. Colonos y guerreros viajan únicamente por tierra (el hielo polar se puede cruzar, pero no los mares ni los lagos).
+- Los migrantes tampoco cruzan el mar: las provincias al otro lado no reciben migración automática y no se les puede enviar migración forzada.
+- Todos los jugadores empiezan en una masa de tierra lo bastante grande para expandirse.
+
 ## [1.0.1] - 2026-09-28
 
 ### Cambiado

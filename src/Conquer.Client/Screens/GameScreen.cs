@@ -442,7 +442,7 @@ public sealed class GameScreen : IScreen
         y += 8;
 
         if (unit.OwnerId != Human.Id) return;
-        Paragraph(x, ref y, w, "Clic derecho en el mapa para mover la unidad. Viaja a 10 km/h, más despacio por montañas, selvas y hielo.", Theme.TextDim);
+        Paragraph(x, ref y, w, "Clic derecho en el mapa para mover la unidad. Viaja a 10 km/h por tierra, más despacio por montañas, selvas y hielo; no puede entrar en el mar.", Theme.TextDim);
         y += 10;
 
         if (unit.Info.CanFoundCity)
@@ -484,7 +484,7 @@ public sealed class GameScreen : IScreen
         {
             y += 6;
             Paragraph(x, ref y, w, p.IsWater
-                ? "Aguas abiertas: no se pueden reclamar, pero las unidades pueden cruzarlas."
+                ? "Aguas abiertas: no se pueden reclamar y solo las unidades navales pueden navegarlas."
                 : "Hielo polar: inhabitable. No se puede reclamar, pero sí atravesar.", Theme.TextDim);
             return;
         }
