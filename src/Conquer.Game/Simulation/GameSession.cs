@@ -105,6 +105,9 @@ public sealed class GameSession
                 factors.Add(("Lejos de la capital", -Math.Min(GameRules.MaxDistanceMoodPenalty, km / GameRules.KmPerMoodPoint)));
             }
         }
+        if (CityIn(p) is { } city && city.HasFestival(Date.Hours)) factors.Add(("Fiestas", GameRules.FestivalMood));
+        double reserve = GameRules.FoodReserveMood * Math.Min(1, owner.FoodReserveDays / GameRules.FoodReserveFullDays);
+        if (reserve >= 0.5) factors.Add(("Reservas de comida", reserve));
         double capacity = CapacityOf(p);
         if (p.Population > capacity)
             factors.Add(("Hacinamiento", -GameRules.MaxOvercrowdingMoodPenalty * Math.Min(1, p.Population / capacity - 1)));
@@ -232,6 +235,8 @@ public sealed class GameSession
                 Notify(player.Id, "¡Se acabó la comida! La población empieza a morir de hambre.");
         }
         player.IsStarving = starving;
+        double dailyFood = GameRules.FoodPerCitizen * eaters;
+        player.FoodReserveDays = dailyFood > 0 ? player.Stockpile[ResourceType.Food] / dailyFood : 0;
 
         foreach (int id in player.Provinces)
         {
@@ -432,6 +437,25 @@ public sealed class GameSession
         Settle(p, unit.Citizens, GameRules.StartingMood);
         RemoveUnit(unit);
         return CommandResult.Success();
+    }
+
+    public CommandResult CanHoldFestival(City city)
+    {
+        if (city.HasFestival(Date.Hours)) return CommandResult.Fail($"Ya está de fiesta ({FormatHours(city.FestivalUntilHours - Date.Hours)} más).");
+        double cost = GameRules.FestivalCost(Map.Provinces[city.ProvinceId].Population);
+        if (Players[city.OwnerId].Stockpile[ResourceType.Gold] < cost) return CommandResult.Fail($"Cuesta {cost:0} de oro.");
+        return CommandResult.Success();
+    }
+
+    /// <summary>The player pays gold for a festival that lifts the city's mood for <see cref="GameRules.FestivalDays"/> days.</summary>
+    public CommandResult HoldFestival(int playerId, int cityId)
+    {
+        if (CityById(cityId) is not { } city || city.OwnerId != playerId) return CommandResult.Fail("Ciudad no válida.");
+        var check = CanHoldFestival(city);
+        if (!check.Ok) return check;
+        Players[playerId].Stockpile[ResourceType.Gold] -= GameRules.FestivalCost(Map.Provinces[city.ProvinceId].Population);
+        city.FestivalUntilHours = Date.Hours + GameRules.FestivalDays * 24;
+        return CommandResult.Success($"{city.Name} celebra fiestas durante {GameRules.FestivalDays} días.");
     }
 
     public CommandResult CanForceMigration(int playerId, int fromId, int toId, int people)

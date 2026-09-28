@@ -8,12 +8,16 @@ namespace Conquer.Game.AI;
 
 /// <summary>
 /// A computer rival. It settles a good site quickly, then keeps a few warriors claiming the best
-/// free land along its borders, and sends out new settlers once its cities have grown.
+/// free land along its borders, sends out new settlers once its cities have grown and pays for
+/// festivals when a city grows restless.
 /// Deterministic: all choices come from its own seeded Random.
 /// </summary>
 internal sealed class AiPlayer
 {
     private const int MaxCities = 8;
+    /// <summary>Cities below this mood get a festival.</summary>
+    private const double FestivalMood = 45;
+    private const double GoldKeptForRecruiting = 30;
     private readonly GameSession _session;
     private readonly Player _player;
     private readonly Random _random;
@@ -45,7 +49,23 @@ internal sealed class AiPlayer
         }
         foreach (int id in _targets.Keys.Where(id => _session.UnitById(id) is null).ToList()) _targets.Remove(id);
 
-        if (dailyDecisions) Recruit();
+        if (dailyDecisions)
+        {
+            HoldFestivals();
+            Recruit();
+        }
+    }
+
+    /// <summary>Restless cities get a festival when there is gold to spare after keeping enough to recruit.</summary>
+    private void HoldFestivals()
+    {
+        foreach (var city in _session.Cities.Where(c => c.OwnerId == _player.Id).ToList())
+        {
+            var p = Map.Provinces[city.ProvinceId];
+            if (p.Mood >= FestivalMood) continue;
+            if (_player.Stockpile[ResourceType.Gold] - GameRules.FestivalCost(p.Population) >= GoldKeptForRecruiting)
+                _session.HoldFestival(_player.Id, city.Id);
+        }
     }
 
     private void GuideSettlers(Unit unit)

@@ -63,6 +63,14 @@ public static class GameRules
     public const double StarvingMood = -40;
     /// <summary>Forced migrants arrive this much unhappier than the province they were taken from.</summary>
     public const double ForcedMigrantMoodPenalty = 20;
+    /// <summary>Full food-reserve bonus once the stockpile lasts <see cref="FoodReserveFullDays"/> days (proportionally less below).</summary>
+    public const double FoodReserveMood = 10;
+    public const double FoodReserveFullDays = 30;
+    /// <summary>Festivals lift a city's mood for a while in exchange for gold.</summary>
+    public const double FestivalMood = 20;
+    public const int FestivalDays = 30;
+    public const double FestivalGoldPerHundred = 2;
+    public const double MinFestivalCost = 10;
     public const double MoodChangePerDay = 0.1;
     /// <summary>Below this mood a province is in unrest and pays no taxes.</summary>
     public const double UnrestMood = 25;
@@ -71,6 +79,9 @@ public static class GameRules
     public const double FertilityChangePerDay = 0.03;
     /// <summary>Share of normal fertility left while the nation starves.</summary>
     public const double StarvingFertility = 0.2;
+
+    public static double FestivalCost(double population) =>
+        Math.Max(MinFestivalCost, Math.Ceiling(population / 100) * FestivalGoldPerHundred);
 
     /// <summary>Output multiplier of a province's workers: 0.75 when furious, 1 at mood 50, 1.25 when delighted.</summary>
     public static double MoodProductivity(double mood) => 0.75 + mood / 200;

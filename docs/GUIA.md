@@ -72,6 +72,9 @@ Todas las constantes de equilibrio (por día de juego salvo que se diga otra cos
 | `KmPerMoodPoint`, `MaxDistanceMoodPenalty` | −1 de humor por cada 50 km a la capital, hasta −20. |
 | `MaxOvercrowdingMoodPenalty`, `StarvingMood` | Hasta −20 por hacinamiento (al doble de la capacidad) y −40 por hambre. |
 | `ForcedMigrantMoodPenalty` | Los migrantes forzados llegan 20 puntos más descontentos que su provincia de origen. |
+| `FoodReserveMood`, `FoodReserveFullDays` | Hasta +10 de humor por reservas de comida, completo con comida para 30 días. |
+| `FestivalMood`, `FestivalDays`, `FestivalGoldPerHundred`, `MinFestivalCost` | Fiestas: +20 de humor durante 30 días por 2 de oro cada 100 habitantes (mínimo 10). |
+| `FestivalCost(población)` | Oro que cuestan unas fiestas en una ciudad de ese tamaño. |
 | `MoodChangePerDay`, `FertilityChangePerDay` | Parte de la distancia a su objetivo que recorren cada día el humor (10 %) y la fertilidad (3 %). |
 | `UnrestMood` | Por debajo de 25 la provincia está descontenta y no paga impuestos. |
 | `StarvingFertility` | Parte de la fertilidad que queda con hambre (20 %). |
@@ -98,8 +101,8 @@ Los objetos de una partida.
 
 | Elemento | Qué es |
 | --- | --- |
-| `Player` | Jugador: id, nombre, color, si es humano, almacén, provincias que posee, capital, balance del último día (`LastDayNet`) y si pasa hambre. |
-| `City` | Ciudad: id, nombre, dueño, provincia y fecha de fundación. |
+| `Player` | Jugador: id, nombre, color, si es humano, almacén, provincias que posee, capital, balance del último día (`LastDayNet`), si pasa hambre y cuántos días duraría su comida (`FoodReserveDays`). |
+| `City` | Ciudad: id, nombre, dueño, provincia, fecha de fundación y hasta cuándo dura su fiesta (`FestivalUntilHours`, `HasFestival(ahora)`). |
 | `Unit` | Unidad en el mapa: tipo, dueño, provincia, ciudadanos y ruta pendiente (`Path`). `HoursToNext`/`StepHours` miden el tramo actual; `StepProgress` da el avance (0..1) para dibujarla entre provincias. |
 | `Migration` | Grupo de migrantes en camino: origen, destino, personas, salida, llegada, si es forzada y el humor que llevan (`Mood`). `Progress(ahora)` da el avance del viaje. |
 | `Notification` | Mensaje para un jugador (fecha, jugador, texto). |
@@ -122,13 +125,13 @@ El corazón del juego: una partida en marcha.
 | `Create(map, jugadores, semilla)` | Nueva partida: limpia las provincias, crea jugadores con sus recursos iniciales y una unidad de colonos cada uno en sitios fértiles y alejados, y crea las IA. |
 | `UnitById`, `CityById`, `CityIn(provincia)` | Búsquedas. |
 | `CapacityOf(provincia)` | Habitantes que puede alimentar una provincia, contando la bonificación de ciudad. |
-| `MoodFactors(provincia)` | Lista de (causa, puntos) que forman el humor objetivo: base, ciudad, capital o distancia a ella, hacinamiento y hambre. |
+| `MoodFactors(provincia)` | Lista de (causa, puntos) que forman el humor objetivo: base, ciudad, capital o distancia a ella, fiestas, reservas de comida, hacinamiento y hambre. |
 | `TargetMood(provincia)` | Suma de esos factores, entre 0 y 100. |
 | `AverageMood(jugador)` | Humor medio de su población, ponderado por habitantes. |
 | `Step()` | Avanza una hora: mueve unidades, hace llegar migrantes; a medianoche economía y migración; cada 6 h piensan las IA. |
 | `MoveUnits()` | Avanza cada unidad por su ruta y la cambia de provincia al terminar cada tramo. |
 | `ArriveMigrations()` | Suma los migrantes que llegan a su destino (si el destino se perdió, van a la capital), mezclando su humor. |
-| `DailyEconomy(jugador)` | Producción del día (comida, madera, oro, yacimientos) multiplicada por el humor, sin impuestos en provincias descontentas; consumo de comida, hambre, humor y fertilidad, y crecimiento de la población (proporcional a la fertilidad). |
+| `DailyEconomy(jugador)` | Producción del día (comida, madera, oro, yacimientos) multiplicada por el humor, sin impuestos en provincias descontentas; consumo de comida, hambre, días de reserva de comida, humor y fertilidad, y crecimiento de la población (proporcional a la fertilidad). |
 | `UpdateMoodAndFertility(provincia, hambre)` | Acerca el humor a su objetivo y la fertilidad a la que marca el humor; avisa cuando una ciudad del jugador entra o sale del descontento. |
 | `DailyMigration(jugador)` | Cada ciudad envía parte de su gente a las provincias propias poco pobladas; primero las vacías y las cercanas. Guarda las fracciones de persona para el día siguiente. |
 | `MoveUnit(...)` | Orden de mover una unidad a una provincia (calcula la ruta por tierra). |
@@ -136,6 +139,7 @@ El corazón del juego: una partida en marcha.
 | `CanClaim(unidad)` / `Claim(...)` | Comprueba / reclama con una unidad militar la provincia libre en la que está. |
 | `CanRecruit(ciudad, tipo)` / `Recruit(...)` | Comprueba / recluta una unidad en una ciudad, pagando recursos y habitantes. |
 | `Disband(...)` | La unidad se asienta: sus ciudadanos pasan a vivir en la provincia (propia) donde está. |
+| `CanHoldFestival(ciudad)` / `HoldFestival(...)` | Comprueba / paga unas fiestas que suben el humor de la ciudad durante 30 días (una a la vez). |
 | `CanForceMigration(...)` / `ForceMigration(...)` | Comprueba / envía un número elegido de ciudadanos entre dos provincias propias pagando oro; viajan con el humor de su origen menos 20. |
 | `Settle(provincia, personas, humor)` | Añade gente a una provincia mezclando su humor con el de los residentes según cuántos son (migrantes, colonos al fundar, unidades que se asientan). |
 | `SetOwner(provincia, jugador)` | Cambia el dueño de una provincia y avisa al cliente (`OwnershipChanged`). |
@@ -169,6 +173,7 @@ Rival controlado por el ordenador. Determinista (usa su propia semilla).
 | Función | Qué hace |
 | --- | --- |
 | `Think(decisionesDiarias)` | Turno de la IA: licencia guerreros si hay hambre, guía a colonos y guerreros y, una vez al día, celebra fiestas y recluta. |
+| `HoldFestivals()` | Paga fiestas en las ciudades con humor por debajo de 45 si, tras pagarlas, le quedan 30 de oro para reclutar. |
 | `GuideSettlers(unidad)` | Busca el mejor sitio cercano para una ciudad, va allí y la funda. |
 | `GuideWarriors(unidad)` | Reclama la provincia si está libre; si no, va a la mejor provincia libre de su frontera. No reclama más rápido de lo que llegan los migrantes. |
 | `Recruit()` | Recluta colonos cuando una ciudad ha crecido lo bastante, y guerreros si le sobra comida. |
@@ -314,7 +319,7 @@ La pantalla de juego.
 | `DrawMigrations()` | Puntos que representan a los migrantes en camino. |
 | `DrawUnits()`, `DrawPath()` | Fichas de unidades (estilo OTAN: aspa para infantería, "C" para colonos) y la ruta de la seleccionada. |
 | `DrawTopBar()`, `Compact()` | Barra superior: nación, población y humor medio, fecha, velocidades y recursos (con números abreviados: 12,3k, 2,9M). |
-| `DrawSidePanel()`, `UnitPanel()`, `ProvincePanel()` | Panel derecho: datos y botones de la unidad o provincia seleccionada (humor y fertilidad, fundar, reclamar, asentarse, reclutar, migración forzada). |
+| `DrawSidePanel()`, `UnitPanel()`, `ProvincePanel()` | Panel derecho: datos y botones de la unidad o provincia seleccionada (humor y fertilidad, fundar, fiestas, reclamar, asentarse, reclutar, migración forzada). |
 | `MoodColor(humor, normal)`, `MoodTooltip(provincia)` | Color del humor (rojo si hay descontento, verde si está contento) y tooltip con sus causas y su efecto en la producción. |
 | `Line()`, `Paragraph()` | Ayudas para escribir filas y párrafos en el panel. |
 | `DrawBottomBar()` | Modos de mapa y ayuda de controles. |
@@ -410,7 +415,7 @@ Uso: ver el README.
 | Fichero | Qué comprueba |
 | --- | --- |
 | `WorldGenerationTests.cs` | Ambos mapas salen con unas 25.000 provincias y todos los píxeles asignados. |
-| `GameplayTests.cs` | Inicio sin territorio y con los recursos correctos; fundar la capital; océanos y polos no reclamables; las unidades terrestres no entran al mar pero sí cruzan hielo; nada cruza el mar; provincias mayores en desiertos, polos y océanos; solo las unidades militares reclaman; velocidad de 10 km/h; migración diaria; migración forzada con su coste; consumo de comida; la capital gana humor y fertilidad; el hambre los hunde; los migrantes forzados llegan descontentos; las provincias descontentas no pagan impuestos; la fertilidad acelera el crecimiento; la IA se expande. `WorldFixture` genera un único mundo para todos. |
+| `GameplayTests.cs` | Inicio sin territorio y con los recursos correctos; fundar la capital; océanos y polos no reclamables; las unidades terrestres no entran al mar pero sí cruzan hielo; nada cruza el mar; provincias mayores en desiertos, polos y océanos; solo las unidades militares reclaman; velocidad de 10 km/h; migración diaria; migración forzada con su coste; consumo de comida; la capital gana humor y fertilidad; el hambre los hunde; los migrantes forzados llegan descontentos; las provincias descontentas no pagan impuestos; la fertilidad acelera el crecimiento; las reservas de comida alegran; las fiestas cuestan oro y duran un mes; la IA se expande. `WorldFixture` genera un único mundo para todos. |
 | `ReleaseTests.cs` | La versión del `.csproj` coincide con la primera entrada del `CHANGELOG.md`. |
 
 ---

@@ -16,6 +16,8 @@ public sealed class Player
     /// <summary>Net change of each resource over the last day, for display.</summary>
     public double[] LastDayNet { get; } = new double[Resources.All.Length];
     public bool IsStarving { get; set; }
+    /// <summary>Days the food stockpile would last at the last day's consumption.</summary>
+    public double FoodReserveDays { get; set; }
 
     public Player(int id, string name, uint color, bool isHuman)
     {
@@ -33,6 +35,10 @@ public sealed class City
     public int OwnerId { get; set; }
     public int ProvinceId { get; }
     public long FoundedHours { get; }
+    /// <summary>The city's festival lasts until this hour; in the past when there is none.</summary>
+    public long FestivalUntilHours { get; set; }
+
+    public bool HasFestival(long nowHours) => FestivalUntilHours > nowHours;
 
     public City(int id, string name, int ownerId, int provinceId, long foundedHours)
     {

@@ -544,6 +544,19 @@ public sealed class GameScreen : IScreen
         if (city != null)
         {
             y += 10;
+            Ui.Text(x, y, "Fiestas", Theme.Text, FontSize.Normal, bold: true);
+            y += 26;
+            var festival = _session.CanHoldFestival(city);
+            string festivalLabel = city.HasFestival(_session.Date.Hours)
+                ? $"De fiesta: quedan {GameSession.FormatHours(city.FestivalUntilHours - _session.Date.Hours)}"
+                : $"Celebrar fiestas ({GameRules.FestivalCost(p.Population):N0} oro)";
+            string festivalTip = $"+{GameRules.FestivalMood:0} al humor de la ciudad durante {GameRules.FestivalDays} días." +
+                                 (festival.Ok ? "" : "\n" + festival.Message);
+            if (Ui.Button(new Rect(x, y, w, 34), festivalLabel, festival.Ok, tooltip: festivalTip))
+                Show(_session.HoldFestival(Human.Id, city.Id));
+            y += 40;
+
+            y += 10;
             Ui.Text(x, y, "Reclutar", Theme.Text, FontSize.Normal, bold: true);
             y += 26;
             foreach (var type in new[] { UnitType.Settlers, UnitType.Warriors })

@@ -2,6 +2,13 @@
 
 Todos los cambios del juego, del más reciente al más antiguo. Cada versión es un commit cuyo título es su número.
 
+## [1.2.0] - 2026-09-28
+
+### Añadido
+- **Reservas de comida**: la población está más contenta cuanto más dure la comida almacenada, hasta +10 de humor con reservas para 30 días.
+- **Fiestas**: una ciudad puede celebrar fiestas pagando oro (2 por cada 100 habitantes, mínimo 10). Suben su humor +20 durante 30 días; no se pueden repetir hasta que terminen. Botón en el panel de la ciudad.
+- Los rivales del ordenador celebran fiestas en sus ciudades inquietas (humor por debajo de 45) cuando les sobra oro.
+
 ## [1.1.0] - 2026-09-28
 
 ### Añadido

@@ -240,8 +240,43 @@ public class GameplayTests(WorldFixture world)
 
         Assert.Equal(target, s.TargetMood(a));
         RunHours(s, 24 * 60);
-        Assert.InRange(a.Mood, target - 1, target);
+        Assert.True(a.Mood > target - 1, $"mood {a.Mood}");
+        Assert.InRange(a.Mood, s.TargetMood(a) - 2, s.TargetMood(a) + 2);
         Assert.True(a.Fertility > 1.05, $"fertility {a.Fertility}");
+    }
+
+    [Fact]
+    public void FoodReservesCheerPeopleUp()
+    {
+        var s = NewSession();
+        var (a, _) = GrasslandPair();
+        s.FoundCity(0, s.AddUnit(0, UnitType.Settlers, a.Id, 300).Id);
+        s.Human.Stockpile[ResourceType.Food] = 300 * GameRules.FoodPerCitizen * GameRules.FoodReserveFullDays * 2;
+
+        RunHours(s, 24);
+        Assert.True(s.Human.FoodReserveDays > GameRules.FoodReserveFullDays);
+        Assert.Contains(s.MoodFactors(a), f => f.Reason == "Reservas de comida" && f.Points == GameRules.FoodReserveMood);
+    }
+
+    [Fact]
+    public void FestivalsCostGoldAndLiftTheCityMoodForAMonth()
+    {
+        var s = NewSession();
+        var (a, _) = GrasslandPair();
+        s.FoundCity(0, s.AddUnit(0, UnitType.Settlers, a.Id, 300).Id);
+        var city = s.CityIn(a)!;
+        double gold = s.Human.Stockpile[ResourceType.Gold];
+        double before = s.TargetMood(a);
+
+        Assert.True(s.HoldFestival(0, city.Id).Ok);
+        Assert.Equal(gold - GameRules.FestivalCost(300), s.Human.Stockpile[ResourceType.Gold]);
+        Assert.False(s.HoldFestival(0, city.Id).Ok); // one at a time
+        Assert.Contains(s.MoodFactors(a), f => f.Reason == "Fiestas");
+        Assert.True(s.TargetMood(a) > before);
+
+        RunHours(s, 24 * GameRules.FestivalDays + 1);
+        Assert.DoesNotContain(s.MoodFactors(a), f => f.Reason == "Fiestas");
+        Assert.True(s.CanHoldFestival(city).Ok || s.Human.Stockpile[ResourceType.Gold] < GameRules.FestivalCost(a.Population));
     }
 
     [Fact]
