@@ -26,11 +26,14 @@ public sealed class Pathfinder
         return _map.DistanceKm(a, b) / speed;
     }
 
-    /// <summary>Fastest route (A*), excluding the start province, or null when unreachable.</summary>
-    public (List<int> Path, double Hours)? FindPath(int from, int to)
+    /// <summary>
+    /// Fastest route (A*), excluding the start province, or null when unreachable. <paramref name="canEnter"/>
+    /// narrows where this traveller may go (a foreign country at peace, for an army).
+    /// </summary>
+    public (List<int> Path, double Hours)? FindPath(int from, int to, Func<int, bool>? canEnter = null)
     {
         if (from == to) return ([], 0);
-        if (!CanEnter(to)) return null;
+        if (!CanEnter(to) || canEnter?.Invoke(to) == false) return null;
         int n = _map.Provinces.Count;
         var cost = new double[n];
         Array.Fill(cost, double.PositiveInfinity);
@@ -45,7 +48,7 @@ public sealed class Pathfinder
             if (priority - Heuristic(current, to) > cost[current] + 1e-9) continue;
             foreach (int next in _map.Provinces[current].Neighbors)
             {
-                if (!CanEnter(next)) continue;
+                if (!CanEnter(next) || canEnter?.Invoke(next) == false) continue;
                 double c = cost[current] + StepHours(current, next);
                 if (c >= cost[next]) continue;
                 cost[next] = c;
@@ -64,9 +67,11 @@ public sealed class Pathfinder
     /// <summary>
     /// Travel hours from the nearest of several sources to every province (Dijkstra), and which source
     /// that is. Provinces beyond <paramref name="maxHours"/> stay at infinity. With
-    /// <paramref name="targets"/>, the search stops once all of them are settled; only their results are then final.
+    /// <paramref name="targets"/>, the search stops once all of them are settled; only their results are then final. <paramref name="canEnter"/>
+    /// narrows the provinces it may cross.
     /// </summary>
-    public (double[] Hours, int[] Source) FromSources(IEnumerable<int> sources, double maxHours = double.PositiveInfinity, IReadOnlySet<int>? targets = null)
+    public (double[] Hours, int[] Source) FromSources(IEnumerable<int> sources, double maxHours = double.PositiveInfinity,
+        IReadOnlySet<int>? targets = null, Func<int, bool>? canEnter = null)
     {
         int remaining = targets?.Count ?? -1;
         int n = _map.Provinces.Count;
@@ -88,7 +93,7 @@ public sealed class Pathfinder
             if (targets != null && targets.Contains(current) && --remaining == 0) break;
             foreach (int next in _map.Provinces[current].Neighbors)
             {
-                if (!CanEnter(next)) continue;
+                if (!CanEnter(next) || canEnter?.Invoke(next) == false) continue;
                 double c = h + StepHours(current, next);
                 if (c >= hours[next] || c > maxHours) continue;
                 hours[next] = c;

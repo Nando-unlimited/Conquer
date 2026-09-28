@@ -1,6 +1,7 @@
 using Conquer.Game.Buildings;
 using Conquer.Game.Economy;
 using Conquer.Game.Entities;
+using Conquer.Game.Military;
 using Conquer.Game.Rules;
 using Conquer.Game.Science;
 using Conquer.Game.Simulation;
@@ -11,10 +12,12 @@ namespace Conquer.Game.AI;
 /// <summary>
 /// A computer rival. It settles a good site quickly, then keeps a few warriors claiming the best
 /// free land along its borders, sends out new settlers once its cities have grown, pays for
-/// festivals when a city grows restless, researches advances and puts up buildings in a fixed order of preference.
+/// festivals when a city grows restless, researches advances and puts up buildings in a fixed order of
+/// preference. Its army (AiPlayer.Military.cs) trains, organises itself, declares wars it can win and
+/// makes peace when they go badly.
 /// Deterministic: all choices come from its own seeded Random.
 /// </summary>
-internal sealed class AiPlayer
+internal sealed partial class AiPlayer
 {
     private const int MaxCities = 8;
     /// <summary>Cities below this mood get a festival.</summary>
@@ -30,7 +33,10 @@ internal sealed class AiPlayer
     ];
     /// <summary>Food first, then the advances that pay for themselves.</summary>
     private static readonly Tech[] ResearchOrder =
-        [Tech.Agriculture, Tech.Writing, Tech.Mining, Tech.IronWorking, Tech.Irrigation, Tech.Carpentry, Tech.Mythology, Tech.Currency, Tech.Medicine];
+        [
+            Tech.Agriculture, Tech.Writing, Tech.Mining, Tech.BronzeWorking, Tech.HorsebackRiding, Tech.IronWorking,
+            Tech.Irrigation, Tech.Carpentry, Tech.TheWheel, Tech.Mythology, Tech.Currency, Tech.Medicine,
+        ];
     private readonly GameSession _session;
     private readonly Player _player;
     private readonly Random _random;
@@ -45,12 +51,15 @@ internal sealed class AiPlayer
     }
 
     private WorldMap Map => _session.Map;
+    public int PlayerId => _player.Id;
 
     public void Think(bool dailyDecisions)
     {
-        var units = _session.Units.Where(u => u.OwnerId == _player.Id && !u.IsMoving).ToList();
-        // Hungry soldiers go home and farm.
-        if (_player.IsStarving && units.FirstOrDefault(u => u.Info.IsMilitary && Map.Provinces[u.ProvinceId].OwnerId == _player.Id) is { } idle)
+        ClassifyNewDivisions();
+        bool atWar = _session.EnemiesOf(_player.Id).Any();
+        var units = _session.Units.Where(u => u.OwnerId == _player.Id && !u.IsMoving && !u.AttackingProvinceId.HasValue).ToList();
+        // Hungry soldiers go home and farm (never while at war).
+        if (_player.IsStarving && !atWar && units.FirstOrDefault(u => u.IsMilitary && Map.Provinces[u.ProvinceId].OwnerId == _player.Id) is { } idle)
         {
             _session.Disband(_player.Id, idle.Id);
             units.Remove(idle);
@@ -58,7 +67,10 @@ internal sealed class AiPlayer
         foreach (var unit in units)
         {
             if (unit.Type == UnitType.Settlers) GuideSettlers(unit);
-            else GuideWarriors(unit);
+            else if (unit.IsHeadquarters) FollowTroops(unit);
+            else if (atWar) GuideSoldier(unit);
+            else if (_claimers.Contains(unit.Id)) GuideWarriors(unit);
+            else if (unit.IsMilitary) GoHomeIfCutOff(unit);
         }
         foreach (int id in _targets.Keys.Where(id => _session.UnitById(id) is null).ToList()) _targets.Remove(id);
 
@@ -67,6 +79,9 @@ internal sealed class AiPlayer
             HoldFestivals();
             ChooseResearch();
             Recruit();
+            BuildArmy();
+            OrganiseArmy();
+            Diplomacy();
             Construct();
         }
     }
@@ -131,7 +146,7 @@ internal sealed class AiPlayer
 
         // The first city is urgent (food runs out); later ones may travel further for a better site.
         bool first = _player.CapitalCityId is null;
-        var (hours, _) = _session.Pathfinder.FromSources([unit.ProvinceId], maxHours: first ? 72 : 24 * 12);
+        var (hours, _) = _session.Pathfinder.FromSources([unit.ProvinceId], maxHours: first ? 72 : 24 * 12, canEnter: id => _session.CanUnitEnter(unit, id));
         int best = -1;
         double bestScore = double.MinValue;
         for (int id = 0; id < hours.Length; id++)
@@ -178,26 +193,27 @@ internal sealed class AiPlayer
         _session.MoveUnit(_player.Id, unit.Id, best);
     }
 
+    /// <summary>Sends out settlers once its cities have grown, and trains warriors to claim land (see <see cref="ClassifyNewDivisions"/>).</summary>
     private void Recruit()
     {
         var cities = _session.Cities.Where(c => c.OwnerId == _player.Id).ToList();
         if (cities.Count == 0) return;
-        int warriors = _session.Units.Count(u => u.OwnerId == _player.Id && u.Type == UnitType.Warriors);
         int settlers = _session.Units.Count(u => u.OwnerId == _player.Id && u.Type == UnitType.Settlers);
+        int claimers = _claimers.Count + cities.Sum(c => c.Training.Count(o => o.Brigade == BrigadeType.Warriors));
 
         foreach (var city in cities.OrderByDescending(c => Map.Provinces[c.ProvinceId].Population))
         {
             double pop = Map.Provinces[city.ProvinceId].Population;
             if (settlers == 0 && cities.Count < MaxCities && pop > 400 && TotalPopulation() > 1500
                 && _player.Stockpile[ResourceType.Food] > 300
-                && _session.Recruit(_player.Id, city.Id, UnitType.Settlers).Ok)
+                && _session.RecruitSettlers(_player.Id, city.Id).Ok)
             {
                 settlers++;
                 continue;
             }
             bool foodToSpare = _player.LastDayNet[(int)ResourceType.Food] > 3 || _player.Stockpile[ResourceType.Food] > 500;
-            if (warriors < 1 + cities.Count && pop > 250 && foodToSpare && _session.Recruit(_player.Id, city.Id, UnitType.Warriors).Ok)
-                warriors++;
+            if (claimers < 1 + cities.Count && pop > 250 && foodToSpare && _session.Train(_player.Id, city.Id, BrigadeType.Warriors).Ok)
+                claimers++;
         }
     }
 

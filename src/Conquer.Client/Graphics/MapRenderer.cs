@@ -237,14 +237,16 @@ public sealed class MapRenderer : IDisposable
             _ownerData[o] = (byte)(p.OwnerId + 1);
             _ownerData[o + 3] = 255;
 
+            // Colour by who holds the province, so occupied land shows the occupier inside the owner's borders.
+            int holder = p.IsOwned ? p.ControllerId : -1;
             Rgba color = new(0);
             switch (Mode)
             {
                 case MapMode.Terrain:
-                    if (p.IsOwned) color = new Rgba(players[p.OwnerId].Color).WithAlpha(0.35f);
+                    if (p.IsOwned) color = new Rgba(players[holder].Color).WithAlpha(0.35f);
                     break;
                 case MapMode.Political:
-                    if (p.IsOwned) color = new Rgba(players[p.OwnerId].Color).WithAlpha(0.85f);
+                    if (p.IsOwned) color = new Rgba(players[holder].Color).WithAlpha(p.IsOccupied ? 0.6f : 0.85f);
                     else if (p.IsClaimable) color = new Rgba(0xFFD9D0B4).WithAlpha(0.6f);
                     break;
                 case MapMode.Population:

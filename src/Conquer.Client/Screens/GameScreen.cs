@@ -1,6 +1,7 @@
 using System.Numerics;
 using Conquer.Client.Graphics;
 using Conquer.Client.UI;
+using Conquer.Game.Military;
 using Conquer.Game.Buildings;
 using Conquer.Game.Economy;
 using Conquer.Game.Entities;
@@ -12,7 +13,7 @@ using Silk.NET.Input;
 
 namespace Conquer.Client.Screens;
 
-public sealed class GameScreen : IScreen
+public sealed partial class GameScreen : IScreen
 {
     /// <summary>Game hours per real second at each speed; index 0 is paused.</summary>
     private static readonly double[] HoursPerSecond = [0, 1, 4, 12, 48, 168];
@@ -37,8 +38,8 @@ public sealed class GameScreen : IScreen
     private int _selectedProvince = -1, _hoverProvince = -1;
     private bool _choosingMigrationTarget;
     private int _migrationAmount = 50;
-    /// <summary>The province panel shows its Edificios tab instead of General.</summary>
-    private bool _showBuildings;
+    /// <summary>Which tab the province panel shows.</summary>
+    private ProvinceTab _provinceTab;
 
     private Ui Ui => _app.Ui;
     private Batch2D Batch => _app.Batch;
@@ -52,7 +53,7 @@ public sealed class GameScreen : IScreen
         _renderer = new MapRenderer(app.Gl, session.Map, pixels);
         _camera = new Camera(session.Map.Width, session.Map.Height) { Screen = app.ScreenSize };
         session.OwnershipChanged += _ => _mapDirty = true;
-        _nation = new NationView(session, session.Human, ViewProvince, Show);
+        _nation = new NationView(session, session.Human, ViewProvince, ViewUnit, Show);
         _renderer.IsResourceKnown = session.Human.Knows;
 
         var settlers = session.Units.First(u => u.OwnerId == GameSession.HumanPlayerId);
@@ -75,7 +76,27 @@ public sealed class GameScreen : IScreen
         if (options.Zoom is float zoom) _camera.LookAt(_camera.Center, zoom);
         if (Enum.TryParse<MapMode>(options.Mode, ignoreCase: true, out var mode)) _renderer.Mode = mode;
         if (Enum.TryParse<NationTab>(options.Nation, ignoreCase: true, out var tab)) { _nation.Tab = tab; _nation.Visible = true; }
-        _showBuildings = options.Panel == "buildings";
+        _provinceTab = options.Panel switch { "buildings" => ProvinceTab.Buildings, "army" => ProvinceTab.Army, _ => ProvinceTab.General };
+        if (options.Panel == "division" && Human.CapitalCityId is int capital) ShowSampleArmy(capital);
+    }
+
+    /// <summary>
+    /// For <c>--panel division</c>: trains three brigades and a corps HQ in the capital, merges the
+    /// brigades into one division under the corps and selects it.
+    /// </summary>
+    private void ShowSampleArmy(int capitalId)
+    {
+        var city = _session.CityById(capitalId)!;
+        Map.Provinces[city.ProvinceId].Population += 1000;
+        foreach (var r in new[] { ResourceType.Wood, ResourceType.Gold }) Human.Stockpile[r] += 1000;
+        foreach (var type in new[] { BrigadeType.Warriors, BrigadeType.Archers, BrigadeType.Warriors }) _session.Train(Human.Id, capitalId, type);
+        _session.RaiseHeadquarters(Human.Id, capitalId, 1);
+        for (int h = 0; h < 24 * 25; h++) _session.Step();
+        var divisions = _session.Units.Where(u => u.OwnerId == Human.Id && u.IsMilitary).ToList();
+        foreach (var other in divisions.Skip(1)) _session.Merge(Human.Id, divisions[0].Id, other.Id);
+        if (_session.Units.FirstOrDefault(u => u.OwnerId == Human.Id && u.IsHeadquarters) is { } corps) _session.Attach(Human.Id, divisions[0].Id, corps.Id);
+        _selectedUnitId = divisions[0].Id;
+        _selectedProvince = -1;
     }
 
     public void Frame(double dt)
@@ -100,6 +121,7 @@ public sealed class GameScreen : IScreen
         DrawCities();
         DrawMigrations();
         DrawUnits();
+        DrawBattles();
 
         DrawTopBar();
         if (!_nation.Visible) DrawSidePanel();
@@ -224,6 +246,16 @@ public sealed class GameScreen : IScreen
     private Rect NationRect => new(Math.Max(8, _app.ScreenSize.X / 2 - 540), TopBarHeight + 12, Math.Min(1080, _app.ScreenSize.X - 16), _app.ScreenSize.Y - TopBarHeight - 76);
 
     /// <summary>Selects a province and centres the map on it (from the nation screen).</summary>
+    /// <summary>Selects a unit and centres the map on it (from the nation screen).</summary>
+    private void ViewUnit(int unitId)
+    {
+        if (_session.UnitById(unitId) is not { } unit) return;
+        _selectedUnitId = unit.Id;
+        _selectedProvince = -1;
+        _choosingMigrationTarget = false;
+        _camera.LookAt(Center(unit.ProvinceId));
+    }
+
     private void ViewProvince(int provinceId)
     {
         _selectedUnitId = null;
@@ -304,41 +336,6 @@ public sealed class GameScreen : IScreen
             var color = new Rgba(_session.Players[m.OwnerId].Color);
             Batch.Rect(s.X - 3, s.Y - 3, 6, 6, Rgba.Black.WithAlpha(0.7f));
             Batch.Rect(s.X - 2, s.Y - 2, 4, 4, m.Forced ? Theme.Accent : color);
-        }
-    }
-
-    /// <summary>NATO-style counters: a cross for infantry, a "C" for settlers.</summary>
-    private void DrawUnits()
-    {
-        _unitHitBoxes.Clear();
-        var stackIndex = new Dictionary<int, int>();
-        foreach (var unit in _session.Units)
-        {
-            var pos = unit.IsMoving ? Between(unit.ProvinceId, unit.Path[0], unit.StepProgress) : Center(unit.ProvinceId);
-            var s = _camera.MapToScreen(pos);
-            if (!OnScreen(s)) continue;
-            int stack = stackIndex.GetValueOrDefault(unit.ProvinceId);
-            stackIndex[unit.ProvinceId] = stack + 1;
-            s += new Vector2(stack * 5, -stack * 5 - 14);
-
-            bool selected = unit.Id == _selectedUnitId;
-            if (selected) DrawPath(unit, s);
-
-            // Counters shrink when zoomed out so they don't bury the map.
-            float scale = selected ? 1 : Math.Clamp(_camera.Zoom / 3, 0.45f, 1);
-            float W = 28 * scale, H = 19 * scale;
-            var r = new Rect(s.X - W / 2, s.Y - H / 2, W, H);
-            var color = new Rgba(_session.Players[unit.OwnerId].Color);
-            Batch.Rect(r.X - 2, r.Y - 2, r.W + 4, r.H + 4, selected ? Theme.Accent : Rgba.Black);
-            Batch.Rect(r.X, r.Y, r.W, r.H, color.Scale(0.55f).WithAlpha(1));
-            Batch.Rect(r.X + 2, r.Y + 2, r.W - 4, r.H - 4, color);
-            if (unit.Info.IsMilitary)
-            {
-                Batch.Line(new(r.X + 2, r.Y + 2), new(r.Right - 2, r.Bottom - 2), Rgba.Black, 1.5f);
-                Batch.Line(new(r.X + 2, r.Bottom - 2), new(r.Right - 2, r.Y + 2), Rgba.Black, 1.5f);
-            }
-            else if (scale > 0.7f) Ui.TextCentered(r, unit.Info.Symbol, Rgba.Black, FontSize.Small, bold: true);
-            _unitHitBoxes.Add((unit.Id, r));
         }
     }
 
@@ -462,55 +459,6 @@ public sealed class GameScreen : IScreen
         }
     }
 
-    private void UnitPanel(Unit unit, float x, ref float y, float w)
-    {
-        var owner = _session.Players[unit.OwnerId];
-        var here = Map.Provinces[unit.ProvinceId];
-        Ui.Text(x, y, unit.Info.Name, Theme.Accent, FontSize.Large, bold: true);
-        y += 36;
-        Line(x, ref y, "Nación", owner.Name, new Rgba(owner.Color));
-        Line(x, ref y, "Ciudadanos", unit.Citizens.ToString("N0"));
-        Line(x, ref y, "Ubicación", here.Info.Name);
-        if (unit.IsMoving && unit.Destination is int dest)
-        {
-            double hours = unit.HoursToNext;
-            for (int i = 0; i + 1 < unit.Path.Count; i++) hours += _session.Pathfinder.StepHours(unit.Path[i], unit.Path[i + 1]);
-            Line(x, ref y, "Destino", Map.Provinces[dest].Info.Name);
-            Line(x, ref y, "Llegada en", GameSession.FormatHours(hours));
-        }
-        else Line(x, ref y, "Estado", "Esperando órdenes");
-        y += 8;
-
-        if (unit.OwnerId != Human.Id) return;
-        Paragraph(x, ref y, w, "Clic derecho en el mapa para mover la unidad. Viaja a 10 km/h por tierra, más despacio por montañas, selvas y hielo; no puede entrar en el mar.", Theme.TextDim);
-        y += 10;
-
-        if (unit.Info.CanFoundCity)
-        {
-            var can = _session.CanFoundCity(unit);
-            if (Ui.Button(new Rect(x, y, w, 36), "Fundar ciudad", can.Ok, tooltip: can.Ok ? "Reclama esta provincia y funda una ciudad con estos colonos." : can.Message))
-                Show(_session.FoundCity(Human.Id, unit.Id));
-            y += 44;
-        }
-        if (unit.Info.IsMilitary)
-        {
-            var can = _session.CanClaim(unit);
-            if (Ui.Button(new Rect(x, y, w, 36), "Reclamar provincia", can.Ok, tooltip: can.Ok ? "Esta provincia pasará a ser tuya." : can.Message))
-                Show(_session.Claim(Human.Id, unit.Id));
-            y += 44;
-        }
-        bool canSettle = here.OwnerId == Human.Id;
-        if (Ui.Button(new Rect(x, y, w, 36), "Asentarse aquí", canSettle,
-                tooltip: canSettle ? "Disuelve la unidad; sus ciudadanos se quedan a vivir en esta provincia." : "Solo en una provincia propia."))
-        {
-            Show(_session.Disband(Human.Id, unit.Id));
-            _selectedProvince = here.Id;
-            return;
-        }
-        y += 44;
-        if (unit.IsMoving && Ui.Button(new Rect(x, y, w, 36), "Detener")) _session.MoveUnit(Human.Id, unit.Id, unit.ProvinceId);
-    }
-
     private void ProvincePanel(Province p, float x, ref float y, float w)
     {
         var city = _session.CityIn(p);
@@ -519,12 +467,21 @@ public sealed class GameScreen : IScreen
         if (p.IsOwned)
         {
             string buildings = p.Constructing.HasValue ? $"Edificios ({p.Buildings.Count}+1)" : $"Edificios ({p.Buildings.Count})";
-            if (Ui.Button(new Rect(x, y, w / 2 - 3, 28), "General", active: !_showBuildings, size: FontSize.Small)) _showBuildings = false;
-            if (Ui.Button(new Rect(x + w / 2 + 3, y, w / 2 - 3, 28), buildings, active: _showBuildings, size: FontSize.Small)) _showBuildings = true;
+            bool army = city != null && p.OwnerId == Human.Id;
+            if (!army && _provinceTab == ProvinceTab.Army) _provinceTab = ProvinceTab.General;
+            string[] tabs = army ? ["General", buildings, city!.Training.Count > 0 ? $"Ejército ({city.Training.Count})" : "Ejército"] : ["General", buildings];
+            float tw = (w - 6 * (tabs.Length - 1)) / tabs.Length;
+            for (int i = 0; i < tabs.Length; i++)
+                if (Ui.Button(new Rect(x + i * (tw + 6), y, tw, 28), tabs[i], active: (int)_provinceTab == i, size: FontSize.Small)) _provinceTab = (ProvinceTab)i;
             y += 38;
-            if (_showBuildings)
+            if (_provinceTab == ProvinceTab.Buildings)
             {
                 BuildingsPanel(p, x, ref y, w);
+                return;
+            }
+            if (_provinceTab == ProvinceTab.Army)
+            {
+                ArmyPanel(city!, x, ref y, w);
                 return;
             }
         }
@@ -602,17 +559,14 @@ public sealed class GameScreen : IScreen
             y += 40;
 
             y += 10;
-            Ui.Text(x, y, "Reclutar", Theme.Text, FontSize.Normal, bold: true);
+            Ui.Text(x, y, "Colonos", Theme.Text, FontSize.Normal, bold: true);
             y += 26;
-            foreach (var type in new[] { UnitType.Settlers, UnitType.Warriors })
-            {
-                var info = type.Info();
-                var can = _session.CanRecruit(city, type);
-                string tip = $"{info.Citizens} ciudadanos de la ciudad. Coste: {info.Cost}." + (can.Ok ? "" : "\n" + can.Message);
-                if (Ui.Button(new Rect(x, y, w, 34), $"{info.Name} ({info.Citizens} hab.)", can.Ok, tooltip: tip))
-                    Show(_session.Recruit(Human.Id, city.Id, type));
-                y += 40;
-            }
+            var settlers = _session.CanRecruitSettlers(city);
+            string settlersTip = $"{GameRules.StartingCitizens} ciudadanos salen de la ciudad para fundar otra. Coste: {GameRules.SettlersCost}." +
+                                 (settlers.Ok ? "" : "\n" + settlers.Message);
+            if (Ui.Button(new Rect(x, y, w, 34), $"Enviar colonos ({GameRules.StartingCitizens} hab.)", settlers.Ok, tooltip: settlersTip))
+                Show(_session.RecruitSettlers(Human.Id, city.Id));
+            y += 40;
         }
 
         if (p.Population >= 1)

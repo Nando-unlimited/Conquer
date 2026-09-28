@@ -30,7 +30,7 @@ public sealed record NationStats(
 /// One running game. Time advances in fixed one-hour steps through <see cref="Step"/>; the economy
 /// and migration run once per in-game day, at midnight. Player 0 is the human.
 /// </summary>
-public sealed class GameSession
+public sealed partial class GameSession
 {
     public const int HumanPlayerId = 0;
 
@@ -61,13 +61,15 @@ public sealed class GameSession
 
     /// <summary>
     /// Sets up a new game: nobody owns any land; each player gets one band of settlers on a
-    /// habitable province, spread as far apart as possible, plus the starting stockpile.
+    /// habitable province, spread as far apart as possible, plus the starting stockpile. Tests can turn
+    /// the computer rivals off so nobody else moves their units.
     /// </summary>
-    public static GameSession Create(WorldMap map, int playerCount, int seed)
+    public static GameSession Create(WorldMap map, int playerCount, int seed, bool computerRivals = true)
     {
         foreach (var p in map.Provinces)
         {
             p.OwnerId = -1;
+            p.ControllerId = -1;
             p.Population = 0;
             p.CityId = null;
             p.Mood = GameRules.StartingMood;
@@ -88,7 +90,7 @@ public sealed class GameSession
             player.Stockpile[ResourceType.Wood] = GameRules.StartingWood;
             session.Players.Add(player);
             session.AddUnit(i, UnitType.Settlers, starts[i], GameRules.StartingCitizens);
-            if (!player.IsHuman) session._ais.Add(new AiPlayer(session, player, seed + 100 + i));
+            if (!player.IsHuman && computerRivals) session._ais.Add(new AiPlayer(session, player, seed + 100 + i));
         }
 
         session.Notify(HumanPlayerId, "Tus colonos esperan órdenes. Busca una buena tierra y funda tu primera ciudad.");
@@ -134,6 +136,7 @@ public sealed class GameSession
         if (p.Population > capacity)
             factors.Add(("Hacinamiento", -GameRules.MaxOvercrowdingMoodPenalty * Math.Min(1, p.Population / capacity - 1)));
         if (owner.IsStarving) factors.Add(("Hambre", GameRules.StarvingMood));
+        if (p.IsOccupied) factors.Add(("Ocupada por el enemigo", MilitaryRules.OccupiedMood));
         foreach (var tech in owner.Techs.Where(t => t.Info().Effects.Mood != 0))
             factors.Add((tech.Info().Name, tech.Info().Effects.Mood));
         foreach (var building in p.Buildings.Where(b => b.Info().Effects.Mood != 0))
@@ -179,6 +182,7 @@ public sealed class GameSession
     {
         Date = new GameDate(Date.Hours + 1);
         MoveUnits();
+        ResolveBattles();
         ArriveMigrations();
         if (Date.Hour == 0)
         {
@@ -186,35 +190,10 @@ public sealed class GameSession
             foreach (var player in Players) DailyMigration(player);
             foreach (var player in Players) DailyScience(player);
             foreach (var player in Players) DailyConstruction(player);
+            foreach (var player in Players) DailyMilitary(player);
         }
         if (Date.Hours % 6 == 0)
             foreach (var ai in _ais) ai.Think(dailyDecisions: Date.Hour == 0);
-    }
-
-    private void MoveUnits()
-    {
-        foreach (var unit in Units)
-        {
-            if (!unit.IsMoving) continue;
-            unit.HoursToNext -= 1;
-            while (unit.Path.Count > 0 && unit.HoursToNext <= 0)
-            {
-                double carry = unit.HoursToNext;
-                unit.ProvinceId = unit.Path[0];
-                unit.Path.RemoveAt(0);
-                if (unit.Path.Count > 0)
-                {
-                    unit.StepHours = Pathfinder.StepHours(unit.ProvinceId, unit.Path[0]);
-                    unit.HoursToNext = unit.StepHours + carry;
-                }
-                else
-                {
-                    unit.StepHours = unit.HoursToNext = 0;
-                    if (unit.OwnerId == HumanPlayerId)
-                        Notify(unit.OwnerId, $"{unit.Info.Name} han llegado a su destino.");
-                }
-            }
-        }
     }
 
     private void ArriveMigrations()
@@ -225,7 +204,7 @@ public sealed class GameSession
             if (m.ArriveHours > Date.Hours) continue;
             Migrations.RemoveAt(i);
             var target = Map.Provinces[m.ToProvinceId];
-            if (target.OwnerId == m.OwnerId)
+            if (target.OwnerId == m.OwnerId && !target.IsOccupied)
             {
                 Settle(target, m.People, m.Mood);
                 if (m.Forced && m.OwnerId == HumanPlayerId)
@@ -250,7 +229,8 @@ public sealed class GameSession
         {
             var p = Map.Provinces[id];
             double pop = p.Population;
-            if (pop <= 0) continue;
+            // An occupied province neither works nor eats for its owner.
+            if (pop <= 0 || p.IsOccupied) continue;
             population += pop;
             double capacity = CapacityOf(p);
             double worked = Math.Min(pop, capacity);
@@ -313,7 +293,7 @@ public sealed class GameSession
     public double SciencePerDay(Player player)
     {
         double points = 0;
-        foreach (var city in Cities.Where(c => c.OwnerId == player.Id))
+        foreach (var city in Cities.Where(c => c.OwnerId == player.Id && !Map.Provinces[c.ProvinceId].IsOccupied))
         {
             var p = Map.Provinces[city.ProvinceId];
             points += (GameRules.ScienceBasePerCity + p.Population * GameRules.SciencePerCityCitizen) * GameRules.MoodProductivity(p.Mood)
@@ -385,6 +365,7 @@ public sealed class GameSession
     public CommandResult CanBuild(int playerId, Province p, BuildingType type)
     {
         if (p.OwnerId != playerId) return CommandResult.Fail("La provincia no es tuya.");
+        if (p.IsOccupied) return CommandResult.Fail("La provincia está ocupada por el enemigo.");
         if (p.Buildings.Contains(type)) return CommandResult.Fail("Ya está construido.");
         var available = IsBuildingAvailable(p, type);
         if (!available.Ok) return available;
@@ -412,7 +393,7 @@ public sealed class GameSession
         foreach (int id in player.Provinces)
         {
             var p = Map.Provinces[id];
-            if (p.Constructing is not BuildingType type || --p.ConstructionDaysLeft > 0) continue;
+            if (p.Constructing is not BuildingType type || p.IsOccupied || --p.ConstructionDaysLeft > 0) continue;
             p.AddBuilding(type);
             p.Constructing = null;
             p.ConstructionDaysLeft = 0;
@@ -458,7 +439,8 @@ public sealed class GameSession
     private void DailyMigration(Player player)
     {
         var sources = Cities
-            .Where(c => c.OwnerId == player.Id && Map.Provinces[c.ProvinceId].Population > GameRules.MinEmigrationCityPopulation)
+            .Where(c => c.OwnerId == player.Id && !Map.Provinces[c.ProvinceId].IsOccupied
+                        && Map.Provinces[c.ProvinceId].Population > GameRules.MinEmigrationCityPopulation)
             .Select(c => c.ProvinceId)
             .ToList();
         if (sources.Count == 0) return;
@@ -474,7 +456,7 @@ public sealed class GameSession
         foreach (int id in player.Provinces)
         {
             var p = Map.Provinces[id];
-            if (p.CityId.HasValue || nearest[id] < 0) continue;
+            if (p.CityId.HasValue || p.IsOccupied || nearest[id] < 0) continue;
             double wanted = CapacityOf(p) * GameRules.MigrationTargetShare;
             double deficit = wanted - p.Population - incoming.GetValueOrDefault(id);
             if (deficit < 1) continue;
@@ -510,31 +492,14 @@ public sealed class GameSession
 
     // ------------------------------------------------------------------ commands
 
-    public CommandResult MoveUnit(int playerId, int unitId, int targetProvinceId)
-    {
-        if (UnitById(unitId) is not { } unit || unit.OwnerId != playerId) return CommandResult.Fail("Unidad no válida.");
-        if (targetProvinceId == unit.ProvinceId)
-        {
-            unit.Path.Clear();
-            unit.StepHours = unit.HoursToNext = 0;
-            return CommandResult.Success();
-        }
-        if (Pathfinder.FindPath(unit.ProvinceId, targetProvinceId) is not { } route)
-            return CommandResult.Fail("No hay camino por tierra hasta allí.");
-        var (path, hours) = route;
-        unit.Path.Clear();
-        unit.Path.AddRange(path);
-        unit.StepHours = unit.HoursToNext = Pathfinder.StepHours(unit.ProvinceId, path[0]);
-        return CommandResult.Success($"Llegada en {FormatHours(hours)}.");
-    }
-
     public CommandResult CanFoundCity(Unit unit)
     {
-        if (!unit.Info.CanFoundCity) return CommandResult.Fail("Solo los colonos pueden fundar ciudades.");
+        if (!unit.CanFoundCity) return CommandResult.Fail("Solo los colonos pueden fundar ciudades.");
         if (unit.IsMoving) return CommandResult.Fail("La unidad está en marcha.");
         var p = Map.Provinces[unit.ProvinceId];
         if (!p.IsClaimable) return CommandResult.Fail("Aquí no se puede vivir.");
         if (p.OwnerId >= 0 && p.OwnerId != unit.OwnerId) return CommandResult.Fail("Esta provincia tiene dueño.");
+        if (p.IsOccupied) return CommandResult.Fail("La provincia está ocupada por el enemigo.");
         if (p.CityId.HasValue) return CommandResult.Fail("Ya hay una ciudad aquí.");
         if (p.Neighbors.Any(n => Map.Provinces[n].CityId.HasValue)) return CommandResult.Fail("Demasiado cerca de otra ciudad.");
         return CommandResult.Success();
@@ -564,7 +529,7 @@ public sealed class GameSession
 
     public CommandResult CanClaim(Unit unit)
     {
-        if (!unit.Info.IsMilitary) return CommandResult.Fail("Solo las unidades militares reclaman territorio.");
+        if (!unit.IsMilitary) return CommandResult.Fail("Solo las unidades militares reclaman territorio.");
         if (unit.IsMoving) return CommandResult.Fail("La unidad está en marcha.");
         var p = Map.Provinces[unit.ProvinceId];
         if (!p.IsClaimable) return CommandResult.Fail(p.IsWater ? "El océano no se puede reclamar." : "Los polos no se pueden reclamar.");
@@ -584,25 +549,25 @@ public sealed class GameSession
         return CommandResult.Success();
     }
 
-    public CommandResult CanRecruit(City city, UnitType type)
+    public CommandResult CanRecruitSettlers(City city)
     {
-        var info = type.Info();
         var p = Map.Provinces[city.ProvinceId];
-        if (p.Population - info.Citizens < GameRules.MinCityPopulation)
-            return CommandResult.Fail($"Hacen falta {info.Citizens + GameRules.MinCityPopulation} habitantes.");
-        if (!Players[city.OwnerId].Stockpile.Has(info.Cost)) return CommandResult.Fail($"Cuesta {info.Cost}.");
+        if (p.IsOccupied) return CommandResult.Fail("La ciudad está ocupada por el enemigo.");
+        if (p.Population - GameRules.StartingCitizens < GameRules.MinCityPopulation)
+            return CommandResult.Fail($"Hacen falta {GameRules.StartingCitizens + GameRules.MinCityPopulation} habitantes.");
+        if (!Players[city.OwnerId].Stockpile.Has(GameRules.SettlersCost)) return CommandResult.Fail($"Cuesta {GameRules.SettlersCost}.");
         return CommandResult.Success();
     }
 
-    public CommandResult Recruit(int playerId, int cityId, UnitType type)
+    /// <summary>A band of settlers leaves the city at once to found another one.</summary>
+    public CommandResult RecruitSettlers(int playerId, int cityId)
     {
         if (CityById(cityId) is not { } city || city.OwnerId != playerId) return CommandResult.Fail("Ciudad no válida.");
-        var check = CanRecruit(city, type);
+        var check = CanRecruitSettlers(city);
         if (!check.Ok) return check;
-        var info = type.Info();
-        Players[playerId].Stockpile.TrySpend(info.Cost);
-        Map.Provinces[city.ProvinceId].Population -= info.Citizens;
-        AddUnit(playerId, type, city.ProvinceId, info.Citizens);
+        Players[playerId].Stockpile.TrySpend(GameRules.SettlersCost);
+        Map.Provinces[city.ProvinceId].Population -= GameRules.StartingCitizens;
+        AddUnit(playerId, UnitType.Settlers, city.ProvinceId, GameRules.StartingCitizens);
         return CommandResult.Success();
     }
 
@@ -641,6 +606,7 @@ public sealed class GameSession
         var from = Map.Provinces[fromId];
         var to = Map.Provinces[toId];
         if (from.OwnerId != playerId || to.OwnerId != playerId) return CommandResult.Fail("Origen y destino deben ser tuyos.");
+        if (from.IsOccupied || to.IsOccupied) return CommandResult.Fail("La provincia está ocupada por el enemigo.");
         if (fromId == toId) return CommandResult.Fail("Elige otra provincia de destino.");
         if (people < 1) return CommandResult.Fail("Elige cuántos ciudadanos.");
         int keep = from.CityId.HasValue ? GameRules.MinCityPopulation : 0;
@@ -670,7 +636,7 @@ public sealed class GameSession
     private void SetOwner(Province p, int playerId)
     {
         if (p.OwnerId >= 0) Players[p.OwnerId].Provinces.Remove(p.Id);
-        p.OwnerId = playerId;
+        p.OwnerId = p.ControllerId = playerId;
         Players[playerId].Provinces.Add(p.Id);
         OwnershipChanged?.Invoke(p.Id);
     }
@@ -678,18 +644,21 @@ public sealed class GameSession
     /// <summary>Raised with the province id whenever a province changes hands (the client recolours the map).</summary>
     public event Action<int>? OwnershipChanged;
 
-    internal Unit AddUnit(int ownerId, UnitType type, int provinceId, int citizens)
+    internal Unit AddUnit(int ownerId, UnitType type, int provinceId, int citizens, string name = "Colonos", int headquartersLevel = 0)
     {
-        var unit = new Unit(_nextUnitId++, ownerId, type, provinceId, citizens);
+        var unit = new Unit(_nextUnitId++, ownerId, type, provinceId, citizens, name, headquartersLevel);
         Units.Add(unit);
         _unitsById[unit.Id] = unit;
         return unit;
     }
 
+    /// <summary>Takes a unit off the map: its subordinates lose their commander and it leaves any battle.</summary>
     private void RemoveUnit(Unit unit)
     {
         Units.Remove(unit);
         _unitsById.Remove(unit.Id);
+        foreach (var sub in Units.Where(u => u.CommanderId == unit.Id)) sub.CommanderId = null;
+        foreach (var battle in _battles) battle.Attackers.Remove(unit.Id);
     }
 
     /// <summary>Moves people into a province, blending their mood with the residents' by headcount.</summary>

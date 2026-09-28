@@ -27,6 +27,8 @@ public sealed class Province
 
     /// <summary>-1 while nobody owns the province.</summary>
     public int OwnerId { get; set; } = -1;
+    /// <summary>Who holds it: the owner, or an enemy occupying it in a war (-1 while unowned).</summary>
+    public int ControllerId { get; set; } = -1;
     public double Population { get; set; }
     public int? CityId { get; set; }
     /// <summary>0 (furious) to 100 (delighted); drifts each day toward what the province's conditions call for.</summary>
@@ -62,6 +64,7 @@ public sealed class Province
     public bool IsWater => Info.IsWater;
     public bool IsClaimable => Info.Habitable;
     public bool IsOwned => OwnerId >= 0;
+    public bool IsOccupied => OwnerId >= 0 && ControllerId != OwnerId;
 
     /// <summary>Citizens the province's land can feed.</summary>
     public double Capacity => AreaKm2 * Info.Carrying;

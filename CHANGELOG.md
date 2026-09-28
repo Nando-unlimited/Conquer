@@ -2,6 +2,39 @@
 
 Todos los cambios del juego, del más reciente al más antiguo. Cada versión es un commit cuyo título es su número.
 
+## [1.8.0] - 2026-09-28
+
+Ejército al estilo de Hearts of Iron III, en la Antigüedad.
+
+### Añadido
+- **Brigadas y divisiones**: las ciudades entrenan brigadas (tardan días y cogen sus hombres de la población) y cada una forma una división. Las divisiones de una misma provincia se pueden **unir** (hasta 4 brigadas) y **separar**; marchan al paso de su brigada más lenta.
+- Seis brigadas de la Antigüedad, cada una con ataque, defensa, organización y velocidad:
+  - Guerreros y Arqueros, desde el principio.
+  - Lanceros de bronce (Trabajo del bronce).
+  - Jinetes (Doma del caballo).
+  - Carros de guerra (La rueda).
+  - Infantería de hierro (Trabajo del hierro).
+- Los montados son más rápidos pero atacan a la mitad en bosques, pantanos y montañas.
+- Nuevos avances: **Trabajo del bronce**, **Doma del caballo** y **La rueda**. Trabajo del hierro requiere ahora Trabajo del bronce.
+- **Guerra y paz**: puedes declarar la guerra y proponer la paz en la nueva pestaña **Diplomacia** de la pantalla de la nación. Nadie puede entrar en tierras de otra nación si no está en guerra con ella; los colonos y los cuarteles, nunca.
+- **Combate hora a hora**: mover una división a una provincia enemiga con tropas la ataca desde la frontera. Cada bando dispara con su ataque o su defensa según sus hombres, su organización, el mando, el suministro y el terreno (el defensor gana hasta un 50 % en montañas). La división que se queda sin organización se retira; la que no tiene adónde ir es destruida.
+- **Ocupación**: al ganar una batalla o entrar en tierra enemiga sin defensa, la provincia pasa a estar ocupada. Una provincia ocupada no produce ni come para su dueño, no recibe migrantes, sus obras se detienen y su humor cae 30 puntos. En el mapa político toma el color del ocupante dentro de las fronteras de su dueño. La paz devuelve lo ocupado y los ejércitos vuelven a casa.
+- **Suministro**: llega desde tus ciudades por tierra que controlas (o sin dueño) hasta 15 días de marcha, y una provincia más allá.
+  - Con suministro y fuera de combate, las divisiones recuperan organización y reciben refuerzos que salen de la capital.
+  - Sin él, luchan peor, se desgastan y acaban dispersándose.
+- **Cadena de mando**: cuarteles generales de cuerpo, ejército, grupo de ejércitos y teatro, cada uno con su alcance (300 a 2.500 km) y hasta 5 subordinados del nivel inferior. Una división con su cuartel a su alcance lucha y se recupera un 10 % mejor, y un 5 % más por cada nivel superior enlazado.
+- Pestaña **Ejército** en tus ciudades para entrenar brigadas y cuarteles y ver lo que está en instrucción.
+- Panel de la división con sus brigadas, barras de hombres y organización, suministro, mando y botones para unir, separar y asignar a un cuartel.
+- Pestaña **Ejército** en la pantalla de la nación con el orden de batalla completo.
+- En el mapa, fichas con barras de hombres y organización, flechas de ataque y espadas cruzadas sobre cada batalla (con los dos bandos al pasar el ratón).
+- **La IA**:
+  - Forma un ejército, lo organiza en divisiones y cuarteles y declara la guerra a vecinos mucho más débiles pasados dos años.
+  - Ataca las provincias enemigas peor defendidas que alcanza su suministro y acude a defender sus ciudades.
+  - Hace la paz cuando la guerra le va mal. Solo acepta tu propuesta de paz si la guerra dura ya dos meses y no la va ganando.
+
+### Cambiado
+- Los guerreros son ahora una brigada: se entrenan en la pestaña Ejército de la ciudad (15 días) en lugar de aparecer al momento. Los colonos se envían desde la pestaña General.
+
 ## [1.7.1] - 2026-09-28
 
 ### Cambiado

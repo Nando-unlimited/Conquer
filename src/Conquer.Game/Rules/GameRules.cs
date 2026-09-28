@@ -10,6 +10,8 @@ public static class GameRules
     public const double StartingFood = 600;
     public const double StartingGold = 50;
     public const double StartingWood = 100;
+    /// <summary>A band of settlers: <see cref="StartingCitizens"/> citizens from the city that sends them, plus this.</summary>
+    public static readonly ResourceCost SettlersCost = new((ResourceType.Food, 150), (ResourceType.Wood, 50), (ResourceType.Gold, 20));
 
     // Movement
     /// <summary>How far a citizen walks in an hour on open ground; units and migrants travel at this pace.</summary>
@@ -117,24 +119,6 @@ public static class GameRules
 public enum UnitType
 {
     Settlers,
-    Warriors,
-}
-
-/// <param name="Citizens">Citizens that form the unit, taken from the city that recruits it.</param>
-public sealed record UnitTypeInfo(string Name, string Symbol, int Citizens, bool IsMilitary, bool CanFoundCity, ResourceCost Cost);
-
-public static class UnitTypes
-{
-    private static readonly UnitTypeInfo Settlers = new("Colonos", "C", GameRules.StartingCitizens, false, true,
-        new ResourceCost((ResourceType.Food, 150), (ResourceType.Wood, 50), (ResourceType.Gold, 20)));
-
-    private static readonly UnitTypeInfo Warriors = new("Guerreros", "G", 100, true, false,
-        new ResourceCost((ResourceType.Wood, 30), (ResourceType.Gold, 15)));
-
-    public static UnitTypeInfo Info(this UnitType type) => type switch
-    {
-        UnitType.Settlers => Settlers,
-        UnitType.Warriors => Warriors,
-        _ => throw new ArgumentOutOfRangeException(nameof(type)),
-    };
+    Division,
+    Headquarters,
 }

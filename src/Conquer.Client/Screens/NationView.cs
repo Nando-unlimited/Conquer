@@ -3,6 +3,7 @@ using Conquer.Client.UI;
 using Conquer.Game.Buildings;
 using Conquer.Game.Economy;
 using Conquer.Game.Entities;
+using Conquer.Game.Military;
 using Conquer.Game.Rules;
 using Conquer.Game.Science;
 using Conquer.Game.Simulation;
@@ -16,22 +17,25 @@ public enum NationTab
     Cities,
     Provinces,
     Science,
+    Army,
+    Diplomacy,
 }
 
 /// <summary>
 /// The nation screen: an overview of the player's people and economy, and tables of their cities and
 /// provinces with the actions that apply to each. Time keeps running while it is open.
 /// </summary>
-public sealed class NationView
+public sealed partial class NationView
 {
     private const float RowHeight = 34;
-    private static readonly string[] TabNames = ["Resumen", "Ciudades", "Provincias", "Ciencia"];
+    private static readonly string[] TabNames = ["Resumen", "Ciudades", "Provincias", "Ciencia", "Ejército", "Diplomacia"];
     /// <summary>Colours of the mood levels, worst first.</summary>
     private static readonly Rgba[] MoodLevelColors = [Theme.Bad, new(0xFFE0A050), new(0xFFB9C08A), Theme.Good];
 
     private readonly GameSession _session;
     private readonly Player _player;
     private readonly Action<int> _viewProvince;
+    private readonly Action<int> _viewUnit;
     private readonly Action<CommandResult> _show;
     private readonly float[] _scroll = new float[TabNames.Length];
     private readonly int[] _sortColumn = new int[TabNames.Length];
@@ -41,12 +45,14 @@ public sealed class NationView
     public NationTab Tab { get; set; }
 
     /// <param name="viewProvince">Called when the player asks to see a province on the map; the view closes.</param>
+    /// <param name="viewUnit">Called when the player asks to see a unit on the map; the view closes.</param>
     /// <param name="show">Shows the result of an order to the player.</param>
-    public NationView(GameSession session, Player player, Action<int> viewProvince, Action<CommandResult> show)
+    public NationView(GameSession session, Player player, Action<int> viewProvince, Action<int> viewUnit, Action<CommandResult> show)
     {
         _session = session;
         _player = player;
         _viewProvince = viewProvince;
+        _viewUnit = viewUnit;
         _show = show;
         // Tables start sorted by population, largest first.
         _sortColumn[(int)NationTab.Cities] = _sortColumn[(int)NationTab.Provinces] = 1;
@@ -62,7 +68,7 @@ public sealed class NationView
         ui.Text(area.X + 20, area.Y + 14, _player.Name, Theme.Accent, FontSize.Large, bold: true);
         float tx = area.X + 40 + ui.Font.Measure(_player.Name, FontSize.Large, true);
         for (int i = 0; i < TabNames.Length; i++)
-            if (ui.Button(new Rect(tx + i * 124, area.Y + 12, 118, 32), TabNames[i], active: (int)Tab == i)) Tab = (NationTab)i;
+            if (ui.Button(new Rect(tx + i * 116, area.Y + 12, 110, 32), TabNames[i], active: (int)Tab == i)) Tab = (NationTab)i;
         if (ui.Button(new Rect(area.Right - 120, area.Y + 12, 100, 32), "Cerrar", tooltip: "Cerrar (N o Esc)")) Visible = false;
 
         var content = new Rect(area.X + 20, area.Y + 60, area.W - 40, area.H - 76);
@@ -72,6 +78,8 @@ public sealed class NationView
             case NationTab.Cities: Cities(ui, content); break;
             case NationTab.Provinces: Provinces(ui, content); break;
             case NationTab.Science: Science(ui, content); break;
+            case NationTab.Army: Army(ui, content); break;
+            case NationTab.Diplomacy: Diplomacy(ui, content); break;
         }
     }
 
@@ -215,15 +223,19 @@ public sealed class NationView
             x += columns[4].Width;
 
             float bw = (columns[5].Width - 14) / 2;
-            foreach (var type in new[] { UnitType.Settlers, UnitType.Warriors })
-            {
-                var info = type.Info();
-                var can = _session.CanRecruit(city, type);
-                string recruitTip = $"{info.Citizens} ciudadanos de la ciudad. Coste: {info.Cost}." + (can.Ok ? "" : "\n" + can.Message);
-                if (ui.Button(new Rect(x, rowY + 3, bw, RowHeight - 6), info.Name, can.Ok, tooltip: recruitTip, size: FontSize.Small))
-                    _show(_session.Recruit(_player.Id, city.Id, type));
-                x += bw + 4;
-            }
+            var settlers = _session.CanRecruitSettlers(city);
+            string settlersTip = $"{GameRules.StartingCitizens} ciudadanos salen a fundar otra ciudad. Coste: {GameRules.SettlersCost}." +
+                                 (settlers.Ok ? "" : "\n" + settlers.Message);
+            if (ui.Button(new Rect(x, rowY + 3, bw, RowHeight - 6), "Colonos", settlers.Ok, tooltip: settlersTip, size: FontSize.Small))
+                _show(_session.RecruitSettlers(_player.Id, city.Id));
+            x += bw + 4;
+            var warriors = BrigadeType.Warriors.Info();
+            var train = _session.CanTrain(city, BrigadeType.Warriors);
+            string trainTip = $"Entrena una brigada de {warriors.Name.ToLowerInvariant()} ({warriors.Men} hombres). Coste: {warriors.Cost}. " +
+                              $"Tarda {warriors.TrainingDays} días." + (city.Training.Count > 0 ? $"\nEn instrucción: {city.Training.Count}." : "") +
+                              (train.Ok ? "" : "\n" + train.Message);
+            if (ui.Button(new Rect(x, rowY + 3, bw, RowHeight - 6), warriors.Name, train.Ok, tooltip: trainTip, size: FontSize.Small))
+                _show(_session.Train(_player.Id, city.Id, BrigadeType.Warriors));
             x = r.X + 8 + columns.Take(6).Sum(c => c.Width);
             ViewButton(ui, x, rowY, columns[6].Width, p.Id);
         }
