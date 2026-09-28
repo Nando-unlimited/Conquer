@@ -5,12 +5,17 @@ namespace Conquer.Game.World.Generation;
 /// <summary>
 /// Scatters deposits over habitable provinces. Each resource favours certain terrain and is
 /// clustered by regional noise, so some regions are rich in it and others lack it entirely.
+/// Every deposit is a finite pocket: it has a daily output and a total size.
 /// </summary>
 internal static class ResourceGenerator
 {
+    private const double MinDepositYears = 10, MaxDepositYears = 50;
+
     public static void Place(IReadOnlyList<Province> provinces, int seed)
     {
         var random = new Random(seed + 30);
+        // Pocket sizes draw from their own generator so a seed places the same deposits as before they had a size.
+        var sizes = new Random(seed + 29);
         var regional = Resources.Deposits.ToDictionary(r => r, r => new Noise(seed + 31 + (int)r));
 
         foreach (var p in provinces)
@@ -25,7 +30,13 @@ internal static class ResourceGenerator
                 if (chance <= 0) continue;
                 double cluster = Math.Clamp(regional[resource].Fractal(sx * 3, sy * 3, sz * 3, 3) * 1.8 + 0.6, 0, 2);
                 if (random.NextDouble() < chance * cluster)
-                    p.Deposits[(int)resource] = (float)Math.Round(Richness(resource) * (0.5 + random.NextDouble()), 1);
+                {
+                    float output = (float)Math.Round(Richness(resource) * (0.5 + random.NextDouble()), 1);
+                    p.Deposits[(int)resource] = output;
+                    // A pocket lasts 10 to 50 years at full output; small and large ones alike.
+                    double years = MinDepositYears + (MaxDepositYears - MinDepositYears) * sizes.NextDouble();
+                    p.DepositSizes[(int)resource] = (float)(Math.Round(output * 365 * years / 10) * 10);
+                }
             }
         }
     }

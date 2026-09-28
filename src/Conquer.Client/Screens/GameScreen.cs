@@ -552,7 +552,16 @@ public sealed class GameScreen : IScreen
         Line(x, ref y, "Comida", $"{fed * 1000:0} por mil hab./día");
         if (p.Info.WoodYield > 0) Line(x, ref y, "Madera", $"{p.Info.WoodYield:0.#} por mil hab./día");
         foreach (var r in Resources.Deposits.Where(r => p.Deposits[(int)r] > 0))
-            Line(x, ref y, r.Name(), $"{p.Deposits[(int)r]:0.0} al día");
+        {
+            var row = new Rect(x, y, w, 24);
+            double left = p.Reserves[(int)r];
+            if (left <= 0) Line(x, ref y, r.Name(), "Agotado", Theme.TextDim);
+            else Line(x, ref y, r.Name(), $"{p.Deposits[(int)r]:0.0}/día · quedan {Compact(left)}");
+            if (Ui.Hover(row))
+                Ui.Tooltip(left <= 0 ? "Esta bolsa se ha agotado y ya no produce."
+                    : $"Bolsa de {r.Name().ToLowerInvariant()}: quedan {left:N0} de {p.DepositSizes[(int)r] * GameRules.DepositSizeMultiplier:N0}.\n" +
+                      $"Explotada al máximo ({GameRules.DepositFullWorkers:N0} habitantes) dura unos {left / p.Deposits[(int)r] / 365:0} años.");
+        }
 
         if (p.OwnerId != Human.Id) return;
 
@@ -616,9 +625,9 @@ public sealed class GameScreen : IScreen
     private void DrawBottomBar()
     {
         var s = _app.ScreenSize;
-        var bar = new Rect(8, s.Y - 52, 612, 44);
+        var bar = new Rect(8, s.Y - 52, 732, 44);
         Ui.Panel(bar);
-        string[] names = ["Terreno", "Político", "Población", "Humor", "Fertilidad"];
+        string[] names = ["Terreno", "Político", "Población", "Humor", "Fertilidad", "Recursos"];
         for (int i = 0; i < names.Length; i++)
         {
             if (Ui.Button(new Rect(bar.X + 6 + i * 120, bar.Y + 6, 114, 32), names[i], active: (int)_renderer.Mode == i, tooltip: "Modo de mapa (Tab)"))
@@ -627,6 +636,7 @@ public sealed class GameScreen : IScreen
                 _mapDirty = true;
             }
         }
+        if (_renderer.Mode == MapMode.Resources) DrawResourceFilter(bar);
 
         string help = _choosingMigrationTarget
             ? "Clic izquierdo: elegir provincia de destino  ·  Esc: cancelar"
@@ -636,12 +646,39 @@ public sealed class GameScreen : IScreen
         Ui.Text(bar.Right + 16, s.Y - 38, help, _choosingMigrationTarget ? Theme.Accent : Theme.TextDim, FontSize.Small);
     }
 
+    /// <summary>Row above the map modes that shows every deposit or only one resource; it doubles as the legend.</summary>
+    private void DrawResourceFilter(Rect modes)
+    {
+        const float Bw = 96;
+        var panel = new Rect(modes.X, modes.Y - 50, 12 + (Resources.Deposits.Length + 1) * (Bw + 4) - 4, 44);
+        Ui.Panel(panel);
+        float x = panel.X + 6;
+        if (Ui.Button(new Rect(x, panel.Y + 6, Bw, 32), "Todos", active: _renderer.ResourceFilter is null,
+                tooltip: "Color del yacimiento principal de cada provincia", size: FontSize.Small))
+        {
+            _renderer.ResourceFilter = null;
+            _mapDirty = true;
+        }
+        foreach (var r in Resources.Deposits)
+        {
+            x += Bw + 4;
+            var rect = new Rect(x, panel.Y + 6, Bw, 32);
+            if (Ui.Button(rect, "    " + r.Name(), active: _renderer.ResourceFilter == r,
+                    tooltip: $"Solo {r.Name().ToLowerInvariant()}: más intenso cuanto más queda en la bolsa", size: FontSize.Small))
+            {
+                _renderer.ResourceFilter = _renderer.ResourceFilter == r ? null : r;
+                _mapDirty = true;
+            }
+            Batch.Rect(rect.X + 8, rect.Y + 11, 10, 10, MapRenderer.ResourceColor(r));
+        }
+    }
+
     private void DrawMessages()
     {
         const double Lifetime = 8;
         _messages.RemoveAll(m => _realTime - m.Time > Lifetime);
         var s = _app.ScreenSize;
-        float y = s.Y - 70;
+        float y = s.Y - (_renderer.Mode == MapMode.Resources ? 120 : 70); // above the resource filter when it is open
         foreach (var (text, time, ok) in _messages.AsEnumerable().Reverse().Take(5))
         {
             float alpha = (float)Math.Clamp((Lifetime - (_realTime - time)) / 1.5, 0, 1);
@@ -660,6 +697,9 @@ public sealed class GameScreen : IScreen
         string text = $"{p.Info.Name}  ·  {owner}";
         if (p.IsOwned) text += $"\n{p.Population:N0} habitantes";
         if (p.IsOwned && p.Population >= 1) text += $"\nHumor {p.Mood:0} ({GameRules.MoodName(p.Mood)})  ·  Fertilidad {p.Fertility:P0}";
+        if (_renderer.Mode == MapMode.Resources)
+            foreach (var r in Resources.Deposits.Where(r => p.Deposits[(int)r] > 0))
+                text += p.HasDeposit(r) ? $"\n{r.Name()}: {p.Deposits[(int)r]:0.0}/día, quedan {Compact(p.Reserves[(int)r])}" : $"\n{r.Name()}: agotado";
         if (_choosingMigrationTarget) text += "\nClic para enviar aquí a los migrantes";
         Ui.Tooltip(text);
     }

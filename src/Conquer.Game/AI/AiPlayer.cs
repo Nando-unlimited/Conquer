@@ -169,7 +169,7 @@ internal sealed class AiPlayer
     private double SiteScore(Province p)
     {
         double food = Math.Min(p.Capacity, 40000) * p.Info.FoodYield / 100;
-        double deposits = Resources.Deposits.Sum(r => p.Deposits[(int)r]) * 10;
+        double deposits = Resources.Deposits.Where(p.HasDeposit).Sum(r => p.Deposits[(int)r]) * 10;
         double coast = p.Neighbors.Any(n => Map.Provinces[n].IsWater) ? 20 : 0;
         return food + deposits + coast;
     }

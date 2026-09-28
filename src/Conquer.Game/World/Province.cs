@@ -19,6 +19,10 @@ public sealed class Province
 
     /// <summary>Daily output of each deposit when the province is fully worked; zero when absent.</summary>
     public float[] Deposits { get; } = new float[Resources.All.Length];
+    /// <summary>Total amount each deposit holds on a map of normal size; a game scales it (see <see cref="GameRules.DepositSizeMultiplier"/>).</summary>
+    public float[] DepositSizes { get; } = new float[Resources.All.Length];
+    /// <summary>What is left in each deposit in the current game; it stops producing at zero.</summary>
+    public double[] Reserves { get; } = new double[Resources.All.Length];
 
     /// <summary>-1 while nobody owns the province.</summary>
     public int OwnerId { get; set; } = -1;
@@ -38,4 +42,7 @@ public sealed class Province
 
     /// <summary>Citizens the province's land can feed.</summary>
     public double Capacity => AreaKm2 * Info.Carrying;
+
+    /// <summary>The province has this deposit and it is not yet exhausted.</summary>
+    public bool HasDeposit(ResourceType r) => Deposits[(int)r] > 0 && Reserves[(int)r] > 0;
 }

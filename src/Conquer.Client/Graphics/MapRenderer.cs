@@ -1,3 +1,4 @@
+using Conquer.Game.Economy;
 using Conquer.Game.Simulation;
 using Conquer.Game.World;
 using Silk.NET.OpenGL;
@@ -11,6 +12,7 @@ public enum MapMode
     Population,
     Mood,
     Fertility,
+    Resources,
 }
 
 /// <summary>
@@ -146,6 +148,8 @@ public sealed class MapRenderer : IDisposable
     private readonly byte[] _ownerData = new byte[SlotsX * SlotsY * 4];
 
     public MapMode Mode { get; set; } = MapMode.Terrain;
+    /// <summary>In resources mode, the only resource shown; null shows each province's main deposit.</summary>
+    public ResourceType? ResourceFilter { get; set; }
 
     /// <summary>Pixel data prepared off the main thread (it takes a moment for 6.5 million pixels).</summary>
     public sealed record Prepared(byte[] Ids, byte[] Terrain);
@@ -253,6 +257,9 @@ public sealed class MapRenderer : IDisposable
                     if (p.IsOwned && p.Population > 0) color = ScaleColor(p.Fertility - 0.5);
                     else if (p.IsClaimable) color = new Rgba(0xFF808080).WithAlpha(0.55f);
                     break;
+                case MapMode.Resources:
+                    if (p.IsClaimable) color = DepositColor(p);
+                    break;
             }
             _colorData[o] = color.R;
             _colorData[o + 1] = color.G;
@@ -270,6 +277,41 @@ public sealed class MapRenderer : IDisposable
         byte r = (byte)(255 - 90 * t), g = (byte)(230 * (1 - t)), b = (byte)(60 * (1 - t));
         return new Rgba(0xD0000000u | ((uint)r << 16) | ((uint)g << 8) | b);
     }
+
+    /// <summary>
+    /// Resources mode: the colour of the province's richest remaining deposit, or with a filter, that
+    /// resource brighter the more is left (log scale). Grey where there is nothing.
+    /// </summary>
+    private Rgba DepositColor(Province p)
+    {
+        var none = new Rgba(0xFF606060).WithAlpha(0.6f);
+        if (ResourceFilter is ResourceType only)
+        {
+            if (!p.HasDeposit(only)) return none;
+            float t = (float)Math.Clamp(Math.Log10(p.Reserves[(int)only]) / 5.5, 0.25, 1);
+            return ResourceColor(only).WithAlpha(0.35f + 0.6f * t);
+        }
+        var main = Resources.Deposits.Where(p.HasDeposit).OrderByDescending(r => p.Deposits[(int)r] / Richness(r)).Cast<ResourceType?>().FirstOrDefault();
+        return main is ResourceType r ? ResourceColor(r).WithAlpha(0.9f) : none;
+    }
+
+    /// <summary>Gold and silver pockets are small, so they compare by a smaller yardstick.</summary>
+    private static double Richness(ResourceType r) => r is ResourceType.Gold or ResourceType.Silver ? 1 : 4;
+
+    /// <summary>Colour of each deposit resource on the map and in its legend.</summary>
+    public static Rgba ResourceColor(ResourceType r) => new(r switch
+    {
+        ResourceType.Coal => 0xFF3A3A3Au,
+        ResourceType.Iron => 0xFFB5523Bu,
+        ResourceType.Copper => 0xFFE08A3Cu,
+        ResourceType.Silicon => 0xFF9FC7E8u,
+        ResourceType.Oil => 0xFF6A3E8Cu,
+        ResourceType.Aluminium => 0xFFC8CCD4u,
+        ResourceType.Rubber => 0xFF3FA34Du,
+        ResourceType.Gold => 0xFFF2CC30u,
+        ResourceType.Silver => 0xFFF4F4F4u,
+        _ => 0xFF808080u,
+    });
 
     /// <summary>Red at 0, yellow at 0.5, green at 1 (mood and fertility modes).</summary>
     private static Rgba ScaleColor(double value)

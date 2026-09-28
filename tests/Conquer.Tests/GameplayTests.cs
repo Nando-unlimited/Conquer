@@ -366,6 +366,41 @@ public class GameplayTests(WorldFixture world)
     }
 
     [Fact]
+    public void EveryDepositIsAFinitePocket()
+    {
+        NewSession();
+        var deposits = _map.Provinces.SelectMany(p => Resources.Deposits.Where(r => p.Deposits[(int)r] > 0).Select(r => (p, r))).ToList();
+
+        Assert.NotEmpty(deposits);
+        Assert.All(deposits, d =>
+        {
+            float size = d.p.DepositSizes[(int)d.r];
+            // Between 10 and 50 years of full output, and the game starts with the whole pocket.
+            Assert.InRange(size, d.p.Deposits[(int)d.r] * 365 * 10 - 10, d.p.Deposits[(int)d.r] * 365 * 50 + 10);
+            Assert.Equal(size * GameRules.DepositSizeMultiplier, d.p.Reserves[(int)d.r]);
+        });
+    }
+
+    [Fact]
+    public void DepositsRunDryAndStopProducing()
+    {
+        var s = NewSession();
+        var p = _map.Provinces.First(p => p.IsClaimable && p.Neighbors.Length > 3 && p.HasDeposit(ResourceType.Iron));
+        s.FoundCity(0, s.AddUnit(0, UnitType.Settlers, p.Id, 300).Id);
+        p.Population = GameRules.DepositFullWorkers;
+        p.Reserves[(int)ResourceType.Iron] = 1.5; // less than a day's output
+
+        RunHours(s, 24);
+        Assert.Equal(1.5, s.Human.LastDayNet[(int)ResourceType.Iron], 6);
+        Assert.False(p.HasDeposit(ResourceType.Iron));
+        Assert.Contains(s.Notifications, n => n.Text.Contains("agotado"));
+
+        RunHours(s, 24);
+        Assert.Equal(0, s.Human.LastDayNet[(int)ResourceType.Iron]);
+        Assert.Equal(1.5, s.Human.Stockpile[ResourceType.Iron], 6);
+    }
+
+    [Fact]
     public void ComputerRivalsFoundCitiesAndExpand()
     {
         var s = NewSession(players: 4);

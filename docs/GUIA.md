@@ -62,6 +62,7 @@ Todas las constantes de equilibrio (por día de juego salvo que se diga otra cos
 | `CityCapacityMultiplier` | Una ciudad alimenta 2,5 veces más gente que la tierra sola. |
 | `TaxGoldPerCitizen` | Oro por habitante y día. |
 | `DepositFullWorkers` | Habitantes necesarios para que un yacimiento rinda al máximo. |
+| `DepositSizeMultiplier` | Multiplica el tamaño de todas las bolsas de recurso al empezar la partida (1 por ahora; lo cambiarán los niveles de dificultad). |
 | `OvercrowdedFoodShare` | Lo que rinden los trabajadores que superan la capacidad de la tierra. |
 | `DailyEmigrationShare`, `MinEmigrationCityPopulation` | Parte de una ciudad que emigra cada día, y población por debajo de la cual deja de enviar gente. |
 | `SettledPopulation` | Habitantes con los que una provincia se considera asentada. |
@@ -122,16 +123,17 @@ El corazón del juego: una partida en marcha.
 | Función | Qué hace |
 | --- | --- |
 | `CommandResult` | Resultado de una orden: `Ok` y un mensaje para el jugador. |
-| `Create(map, jugadores, semilla)` | Nueva partida: limpia las provincias, crea jugadores con sus recursos iniciales y una unidad de colonos cada uno en sitios fértiles y alejados, y crea las IA. |
+| `Create(map, jugadores, semilla)` | Nueva partida: limpia las provincias (dueño, población, ciudad, humor, fertilidad y bolsas de recurso llenas según `DepositSizeMultiplier`), crea jugadores con sus recursos iniciales y una unidad de colonos cada uno en sitios fértiles y alejados, y crea las IA. |
 | `UnitById`, `CityById`, `CityIn(provincia)` | Búsquedas. |
 | `CapacityOf(provincia)` | Habitantes que puede alimentar una provincia, contando la bonificación de ciudad. |
 | `MoodFactors(provincia)` | Lista de (causa, puntos) que forman el humor objetivo: base, ciudad, capital o distancia a ella, fiestas, reservas de comida, hacinamiento y hambre. |
 | `TargetMood(provincia)` | Suma de esos factores, entre 0 y 100. |
-| `Stats(jugador)` | Totales de la nación (`NationStats`): población asentada, en unidades y migrando; provincias, ciudades y unidades; humor y fertilidad medios ponderados por habitantes, y habitantes en cada nivel de humor. |
+| `Stats(jugador)` | Totales de la nación (`NationStats`): población asentada, en unidades y migrando; provincias, ciudades y unidades; humor y fertilidad medios ponderados por habitantes, habitantes en cada nivel de humor y lo que queda en los yacimientos de sus provincias (`Reserves`). |
 | `Step()` | Avanza una hora: mueve unidades, hace llegar migrantes; a medianoche economía y migración; cada 6 h piensan las IA. |
 | `MoveUnits()` | Avanza cada unidad por su ruta y la cambia de provincia al terminar cada tramo. |
 | `ArriveMigrations()` | Suma los migrantes que llegan a su destino (si el destino se perdió, van a la capital), mezclando su humor. |
-| `DailyEconomy(jugador)` | Producción del día (comida, madera, oro, yacimientos) multiplicada por el humor, sin impuestos en provincias descontentas; consumo de comida, hambre, días de reserva de comida, humor y fertilidad, y crecimiento de la población (proporcional a la fertilidad). |
+| `DailyEconomy(jugador)` | Producción del día (comida, madera, oro, yacimientos) multiplicada por el humor; los yacimientos sacan de su bolsa hasta agotarla (`Extract`); sin impuestos en provincias descontentas; consumo de comida, hambre, días de reserva de comida, humor y fertilidad, y crecimiento de la población (proporcional a la fertilidad). |
+| `Extract(provincia, recurso, cantidad)` | Saca de la bolsa de un yacimiento lo que se pide o lo que queda, y avisa al jugador cuando se agota. |
 | `UpdateMoodAndFertility(provincia, hambre)` | Acerca el humor a su objetivo y la fertilidad a la que marca el humor; avisa cuando una ciudad del jugador entra o sale del descontento. |
 | `DailyMigration(jugador)` | Cada ciudad envía parte de su gente a las provincias propias poco pobladas; primero las vacías y las cercanas. Guarda las fracciones de persona para el día siguiente. |
 | `MoveUnit(...)` | Orden de mover una unidad a una provincia (calcula la ruta por tierra). |
@@ -179,7 +181,7 @@ Rival controlado por el ordenador. Determinista (usa su propia semilla).
 | `Recruit()` | Recluta colonos cuando una ciudad ha crecido lo bastante, y guerreros si le sobra comida. |
 | `FreeBorderProvinces()` | Provincias libres y reclamables junto a su territorio. |
 | `CanSettle(provincia)` | ¿Se puede fundar ciudad aquí? |
-| `SiteScore(provincia)` | Lo buena que es una provincia: comida, yacimientos y costa. |
+| `SiteScore(provincia)` | Lo buena que es una provincia: comida, yacimientos sin agotar y costa. |
 | `TotalPopulation()`, `NearestCityDistanceKm()` | Ayudas. |
 
 ### `World/Biome.cs`
@@ -191,9 +193,9 @@ Rival controlado por el ordenador. Determinista (usa su propia semilla).
 
 ### `World/Province.cs`
 `Province`: id, bioma dominante, centro (píxel y lat/lon), área en km², altitud media, vecinas,
-yacimientos (`Deposits`), dueño, población, ciudad, humor (`Mood`, 0-100) y fertilidad
-(`Fertility`, multiplicador de nacimientos, 1 = normal). `IsWater`, `IsClaimable`, `IsOwned` y
-`Capacity` (habitantes que alimenta su tierra) son atajos.
+yacimientos (`Deposits`: producción diaria; `DepositSizes`: tamaño de la bolsa; `Reserves`: lo que queda en la partida), dueño, población, ciudad, humor (`Mood`, 0-100) y fertilidad
+(`Fertility`, multiplicador de nacimientos, 1 = normal). `IsWater`, `IsClaimable`, `IsOwned`,
+`Capacity` (habitantes que alimenta su tierra) y `HasDeposit(recurso)` (tiene ese yacimiento sin agotar) son atajos.
 
 ### `World/WorldMap.cs`
 | Elemento | Qué es |
@@ -263,7 +265,7 @@ Divide el mapa en provincias.
 ### `World/Generation/ResourceGenerator.cs`
 | Función | Qué hace |
 | --- | --- |
-| `Place(provincias, semilla)` | Reparte yacimientos en las provincias habitables, agrupados por regiones. |
+| `Place(provincias, semilla)` | Reparte yacimientos en las provincias habitables, agrupados por regiones. Cada uno es una bolsa finita: producción diaria (`Deposits`) y tamaño total (`DepositSizes`) de 10 a 50 años de producción máxima, sorteado con su propio generador para que una semilla siga poniendo los mismos yacimientos. |
 | `Chance(recurso, bioma, latitud)` | Probabilidad de cada recurso según el terreno (caucho en selvas tropicales, petróleo en desiertos, etc.). |
 | `Richness(recurso)` | Producción típica diaria de un yacimiento. |
 
@@ -279,7 +281,7 @@ Punto de entrada. Pone el formato de números en español y lee los argumentos.
 
 | Elemento | Qué es |
 | --- | --- |
-| `StartOptions.Parse(args)` | Opciones de línea de comandos para pruebas: `--new random|earth`, `--seed`, `--players`, `--days` (funda la capital y avanza N días), `--zoom`, `--mode terrain|political|population|mood|fertility`, `--nation summary|cities|provinces` (abre la pantalla de la nación) y `--screenshot fichero.png` (guarda una captura del juego y se cierra). |
+| `StartOptions.Parse(args)` | Opciones de línea de comandos para pruebas: `--new random|earth`, `--seed`, `--players`, `--days` (funda la capital y avanza N días), `--zoom`, `--mode terrain|political|population|mood|fertility|resources`, `--nation summary|cities|provinces` (abre la pantalla de la nación) y `--screenshot fichero.png` (guarda una captura del juego y se cierra). |
 | `QuickStart` | Partida que empieza directamente, sin menús. |
 
 ### `ConquerApp.cs`
@@ -320,11 +322,12 @@ La pantalla de juego.
 | `DrawMigrations()` | Puntos que representan a los migrantes en camino. |
 | `DrawUnits()`, `DrawPath()` | Fichas de unidades (estilo OTAN: aspa para infantería, "C" para colonos) y la ruta de la seleccionada. |
 | `DrawTopBar()`, `Compact()` | Barra superior: nación, población y humor medio, fecha, velocidades, recursos y botones Nación y Menú (con números abreviados: 12,3k, 2,9M). |
-| `DrawSidePanel()`, `UnitPanel()`, `ProvincePanel()` | Panel derecho: datos y botones de la unidad o provincia seleccionada (humor y fertilidad, fundar, fiestas, reclamar, asentarse, reclutar, migración forzada). |
+| `DrawSidePanel()`, `UnitPanel()`, `ProvincePanel()` | Panel derecho: datos y botones de la unidad o provincia seleccionada (humor y fertilidad, yacimientos con lo que les queda, fundar, fiestas, reclamar, asentarse, reclutar, migración forzada). |
 | `MoodTooltip(provincia)` | Tooltip del humor con sus causas y su efecto en la producción. |
 | `Line()`, `Paragraph()` | Ayudas para escribir filas y párrafos en el panel. |
 | `DrawBottomBar()` | Modos de mapa y ayuda de controles. |
-| `DrawMessages()`, `HoverTooltip()` | Mensajes y tooltip de la provincia bajo el ratón. |
+| `DrawResourceFilter(barra)` | En el modo recursos, fila de botones para ver todos los yacimientos o solo uno; hace de leyenda con el color de cada recurso. |
+| `DrawMessages()`, `HoverTooltip()` | Mensajes (más arriba si está abierto el filtro de recursos) y tooltip de la provincia bajo el ratón (con sus yacimientos en el modo recursos). |
 | `DrawPauseMenu()` | Menú de pausa (Esc). |
 
 ### `Screens/NationView.cs`
@@ -335,7 +338,7 @@ Pantalla de la nación (botón «Nación» o tecla N). El tiempo sigue corriendo
 | `NationTab` | Pestañas: `Summary` (Resumen), `Cities` (Ciudades), `Provinces` (Provincias). |
 | `NationView(partida, jugador, verProvincia, mostrar)` | Recibe qué hacer al pulsar «Ver» (centrar el mapa) y cómo mostrar el resultado de las órdenes. |
 | `Frame(ui, área)` | Dibuja el panel opaco con las pestañas y el botón Cerrar. |
-| `Summary(...)` | Resumen: población (total, asentada, en unidades, migrando), fertilidad media, humor medio con su barra por niveles (`MoodBar`), territorio, comida con sus días de reserva y el resto de recursos con su balance diario. |
+| `Summary(...)` | Resumen: población (total, asentada, en unidades, migrando), fertilidad media, humor medio con su barra por niveles (`MoodBar`), territorio, comida con sus días de reserva y el resto de recursos con su almacén, balance diario y lo que queda en sus bolsas. |
 | `Cities(...)` | Tabla de ciudades: población / capacidad, humor, fertilidad, fiestas, reclutar colonos o guerreros y «Ver». |
 | `Provinces(...)` | Tabla de todas las provincias: población, humor, fertilidad, terreno, migrantes en camino y «Ver». |
 | `ProvinceCells(...)` | Celdas de población, humor (con tooltip de causas) y fertilidad, comunes a las dos tablas. |
@@ -348,7 +351,8 @@ Dibuja el mapa entero con un único shader.
 
 | Elemento | Qué es |
 | --- | --- |
-| `MapMode` | Terreno, político, población, humor, fertilidad. |
+| `MapMode` | Terreno, político, población, humor, fertilidad, recursos. |
+| `ResourceFilter` | En el modo recursos, el único recurso que se muestra (o `null` para todos). |
 | Shader de fragmentos | Para cada píxel de pantalla calcula el punto del mapa, busca la provincia en la textura de ids y la colorea según su dueño o su población. Con zoom alto mezcla las 4 celdas vecinas (`smoothRegions`, `strongest`) para trazar fronteras suaves; con zoom lejano compara con el píxel vecino. Resalta la provincia seleccionada y la que está bajo el ratón. |
 | `Prepare(mapa)` | Prepara (fuera del hilo principal) los píxeles de ids y colores del terreno. |
 | `ProvinceAt(mapa, punto, zoom)` | Provincia que se ve en un punto, con la misma regla que el shader (para los clics). |
@@ -356,6 +360,8 @@ Dibuja el mapa entero con un único shader.
 | `Refresh(partida)` | Recalcula el color de cada provincia y su dueño (texturas pequeñas de 256×128). |
 | `PopulationColor(densidad)` | Escala de color del modo población. |
 | `ScaleColor(valor)` | Rojo-amarillo-verde de 0 a 1, para los modos humor y fertilidad. |
+| `DepositColor(provincia)` | Color del modo recursos: el del yacimiento principal que queda, o con filtro ese recurso más intenso cuanto más queda. Gris si no hay nada. |
+| `ResourceColor(recurso)` | Color de cada recurso en el mapa y en la leyenda. |
 | `Draw(cámara, ...)` | Pasa los parámetros al shader y dibuja. |
 
 ### `Graphics/TerrainColors.cs`
@@ -432,7 +438,7 @@ Uso: ver el README.
 | Fichero | Qué comprueba |
 | --- | --- |
 | `WorldGenerationTests.cs` | Ambos mapas salen con unas 25.000 provincias y todos los píxeles asignados. |
-| `GameplayTests.cs` | Inicio sin territorio y con los recursos correctos; fundar la capital; océanos y polos no reclamables; las unidades terrestres no entran al mar pero sí cruzan hielo; nada cruza el mar; provincias mayores en desiertos, polos y océanos; solo las unidades militares reclaman; velocidad de 10 km/h; migración diaria; migración forzada con su coste; consumo de comida; la capital gana humor y fertilidad; el hambre los hunde; los migrantes forzados llegan descontentos; las provincias descontentas no pagan impuestos; la fertilidad acelera el crecimiento; las reservas de comida alegran; las fiestas cuestan oro y duran un mes; las estadísticas de la nación suman bien; la IA se expande. `WorldFixture` genera un único mundo para todos. |
+| `GameplayTests.cs` | Inicio sin territorio y con los recursos correctos; fundar la capital; océanos y polos no reclamables; las unidades terrestres no entran al mar pero sí cruzan hielo; nada cruza el mar; provincias mayores en desiertos, polos y océanos; solo las unidades militares reclaman; velocidad de 10 km/h; migración diaria; migración forzada con su coste; consumo de comida; la capital gana humor y fertilidad; el hambre los hunde; los migrantes forzados llegan descontentos; las provincias descontentas no pagan impuestos; la fertilidad acelera el crecimiento; las reservas de comida alegran; las fiestas cuestan oro y duran un mes; las estadísticas de la nación suman bien; cada yacimiento es una bolsa finita que empieza llena; las bolsas se agotan y dejan de producir; la IA se expande. `WorldFixture` genera un único mundo para todos. |
 | `ReleaseTests.cs` | La versión del `.csproj` coincide con la primera entrada del `CHANGELOG.md`. |
 
 ---

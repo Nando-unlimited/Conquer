@@ -32,6 +32,11 @@ public static class GameRules
     public const double TaxGoldPerCitizen = 0.002;
     /// <summary>A deposit gives its full output once this many citizens live in the province.</summary>
     public const double DepositFullWorkers = 1000;
+    /// <summary>
+    /// Scales the size of every deposit (pocket of resource) at the start of a game. The difficulty
+    /// levels will change it: larger pockets on easy, smaller on hard.
+    /// </summary>
+    public const double DepositSizeMultiplier = 1;
     /// <summary>Workers beyond the land's capacity still produce this share of normal food.</summary>
     public const double OvercrowdedFoodShare = 0.3;
 

@@ -116,15 +116,20 @@ public sealed class NationView
         y += 10;
 
         Heading(ui, x, ref y, "Recursos");
-        ui.Text(x + colW - 230, y, "Almacén", Theme.TextDim, FontSize.Small);
-        ui.Text(x + colW - 100, y, "Por día", Theme.TextDim, FontSize.Small);
+        ui.Text(x + colW - 310, y, "Almacén", Theme.TextDim, FontSize.Small);
+        ui.Text(x + colW - 200, y, "Por día", Theme.TextDim, FontSize.Small);
+        ui.Text(x + colW - 90, y, "En bolsas", Theme.TextDim, FontSize.Small);
+        if (ui.Hover(new Rect(x + colW - 90, y, 90, 20)))
+            ui.Tooltip("Lo que queda en los yacimientos de tus provincias. Cada bolsa se agota al explotarla.");
         y += 22;
         foreach (var res in Resources.All.Where(res => res != ResourceType.Food))
         {
             double net = _player.LastDayNet[(int)res];
             ui.Text(x, y, res.Name(), Theme.TextDim);
-            ui.Text(x + colW - 230, y, $"{_player.Stockpile[res]:N0}");
-            ui.Text(x + colW - 100, y, Math.Abs(net) < 0.005 ? "-" : $"{net:+#,0.##;-#,0.##}", net > 0 ? Theme.Good : net < 0 ? Theme.Bad : Theme.TextDim);
+            ui.Text(x + colW - 310, y, $"{_player.Stockpile[res]:N0}");
+            ui.Text(x + colW - 200, y, Math.Abs(net) < 0.005 ? "-" : $"{net:+#,0.##;-#,0.##}", net > 0 ? Theme.Good : net < 0 ? Theme.Bad : Theme.TextDim);
+            bool mined = Resources.Deposits.Contains(res);
+            ui.Text(x + colW - 90, y, mined ? Compact(stats.Reserves[(int)res]) : "-", mined && stats.Reserves[(int)res] > 0 ? Theme.Text : Theme.TextDim);
             y += 24;
         }
     }

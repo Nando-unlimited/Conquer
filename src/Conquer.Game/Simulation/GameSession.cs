@@ -16,9 +16,10 @@ public readonly record struct CommandResult(bool Ok, string Message)
 /// <param name="InUnits">Citizens serving in units.</param>
 /// <param name="Migrating">Citizens on the road to a new home.</param>
 /// <param name="PopulationByMood">Settled citizens at each mood level, worst first (see <see cref="GameRules.MoodNames"/>).</param>
+/// <param name="Reserves">What is left in the deposits of the nation's provinces, by resource.</param>
 public sealed record NationStats(
     double Settled, int InUnits, int Migrating, int Provinces, int Cities, int Units,
-    double AverageMood, double AverageFertility, double[] PopulationByMood)
+    double AverageMood, double AverageFertility, double[] PopulationByMood, double[] Reserves)
 {
     public double Total => Settled + InUnits + Migrating;
 }
@@ -69,6 +70,8 @@ public sealed class GameSession
             p.CityId = null;
             p.Mood = GameRules.StartingMood;
             p.Fertility = 1;
+            foreach (var r in Resources.Deposits)
+                p.Reserves[(int)r] = p.DepositSizes[(int)r] * GameRules.DepositSizeMultiplier;
         }
         var session = new GameSession(map, seed);
         var names = PlayerNames.Pick(playerCount, session._random);
@@ -133,9 +136,11 @@ public sealed class GameSession
     {
         double settled = 0, mood = 0, fertility = 0;
         var byMood = new double[GameRules.MoodNames.Length];
+        var reserves = new double[Resources.All.Length];
         foreach (int id in player.Provinces)
         {
             var p = Map.Provinces[id];
+            foreach (var r in Resources.Deposits) reserves[(int)r] += p.Reserves[(int)r];
             if (p.Population <= 0) continue;
             settled += p.Population;
             mood += p.Population * p.Mood;
@@ -151,7 +156,8 @@ public sealed class GameSession
             Units.Count(u => u.OwnerId == player.Id),
             settled > 0 ? mood / settled : GameRules.StartingMood,
             settled > 0 ? fertility / settled : 1,
-            byMood);
+            byMood,
+            reserves);
     }
 
     // ------------------------------------------------------------------ time
@@ -240,7 +246,8 @@ public sealed class GameSession
             net[(int)ResourceType.Wood] += p.Info.WoodYield / 1000 * worked * output;
             if (p.Mood >= GameRules.UnrestMood) net[(int)ResourceType.Gold] += GameRules.TaxGoldPerCitizen * pop * output;
             double workforce = Math.Min(1, pop / GameRules.DepositFullWorkers);
-            foreach (var r in Resources.Deposits) net[(int)r] += p.Deposits[(int)r] * workforce * output;
+            foreach (var r in Resources.Deposits)
+                if (p.HasDeposit(r)) net[(int)r] += Extract(p, r, p.Deposits[(int)r] * workforce * output);
         }
 
         double eaters = population
@@ -279,6 +286,20 @@ public sealed class GameSession
                     p.Population += p.Population * rate * (1 - p.Population / capacity);
             }
         }
+    }
+
+    /// <summary>Takes up to <paramref name="amount"/> from a deposit's pocket and returns what was taken.</summary>
+    private double Extract(Province p, ResourceType r, double amount)
+    {
+        double taken = Math.Min(amount, p.Reserves[(int)r]);
+        p.Reserves[(int)r] -= taken;
+        if (p.Reserves[(int)r] <= 0)
+        {
+            p.Reserves[(int)r] = 0;
+            if (p.OwnerId == HumanPlayerId)
+                Notify(p.OwnerId, $"Se ha agotado el yacimiento de {r.Name().ToLowerInvariant()} en {CityIn(p)?.Name ?? p.Info.Name.ToLowerInvariant()}.");
+        }
+        return taken;
     }
 
     /// <summary>Mood closes part of the gap to its target each day; fertility follows mood and food, more slowly.</summary>

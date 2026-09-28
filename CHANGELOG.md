@@ -2,6 +2,18 @@
 
 Todos los cambios del juego, del más reciente al más antiguo. Cada versión es un commit cuyo título es su número.
 
+## [1.4.0] - 2026-09-28
+
+### Añadido
+- **Bolsas de recurso**: cada yacimiento guarda una cantidad limitada, de 10 a 50 años de producción a pleno rendimiento. Al explotarlo se vacía y, cuando se agota, deja de producir y te avisa.
+- El panel de la provincia muestra lo que queda en cada yacimiento; al pasar el ratón, el total de la bolsa y cuántos años dura explotada al máximo.
+- En la pantalla de la nación, la tabla de recursos muestra cuánto queda en las bolsas de tus provincias.
+- Modo de mapa **Recursos**: cada provincia con el color de su yacimiento principal, con una leyenda que sirve de filtro para ver un solo recurso (más intenso cuanto más queda en la bolsa). El tooltip del mapa lista los yacimientos de la provincia.
+- El tamaño de las bolsas se podrá ajustar con la dificultad, cuando exista.
+
+### Cambiado
+- Los rivales del ordenador ya no valoran los yacimientos agotados al buscar dónde fundar.
+
 ## [1.3.0] - 2026-09-28
 
 ### Añadido
