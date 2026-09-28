@@ -18,7 +18,7 @@ namespace Conquer.Client
     /// <c>--new random|earth [--seed N] [--players N]</c> skips the menus and starts a game;
     /// <c>--days N</c> founds the player's capital and fast-forwards N days;
     /// <c>--zoom Z</c> and <c>--mode terrain|political|population|mood|fertility</c> set the view;
-    /// <c>--nation summary|cities|provinces</c> opens the nation screen on that tab;
+    /// <c>--nation summary|cities|provinces|science</c> opens the nation screen on that tab;
     /// <c>--screenshot file.png</c> saves the first frames to a PNG and exits.
     /// </summary>
     public sealed record StartOptions(QuickStart? QuickStart, int Days = 0, float? Zoom = null, string? Mode = null, string? Screenshot = null, string? Nation = null)

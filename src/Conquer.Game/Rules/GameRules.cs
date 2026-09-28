@@ -40,6 +40,12 @@ public static class GameRules
     /// <summary>Workers beyond the land's capacity still produce this share of normal food.</summary>
     public const double OvercrowdedFoodShare = 0.3;
 
+    // Science
+    /// <summary>Science points every city produces per day on top of its citizens'.</summary>
+    public const double ScienceBasePerCity = 0.5;
+    /// <summary>Science points each city dweller produces per day.</summary>
+    public const double SciencePerCityCitizen = 0.001;
+
     // Migration
     /// <summary>Share of a city's population that may leave for new territories each day.</summary>
     public const double DailyEmigrationShare = 0.0015;

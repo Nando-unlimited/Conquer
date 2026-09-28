@@ -2,6 +2,7 @@ using Conquer.Game.AI;
 using Conquer.Game.Economy;
 using Conquer.Game.Entities;
 using Conquer.Game.Rules;
+using Conquer.Game.Science;
 using Conquer.Game.World;
 
 namespace Conquer.Game.Simulation;
@@ -89,6 +90,7 @@ public sealed class GameSession
         }
 
         session.Notify(HumanPlayerId, "Tus colonos esperan órdenes. Busca una buena tierra y funda tu primera ciudad.");
+        session.Notify(HumanPlayerId, "Cuando tengas una ciudad, elige qué investigar en la pantalla de la nación (N).");
         return session;
     }
 
@@ -97,7 +99,8 @@ public sealed class GameSession
     public City? CityIn(Province p) => p.CityId is int id ? CityById(id) : null;
 
     /// <summary>Citizens a province's land can feed, including the bonus of a city.</summary>
-    public double CapacityOf(Province p) => p.Capacity * (p.CityId.HasValue ? GameRules.CityCapacityMultiplier : 1);
+    public double CapacityOf(Province p) =>
+        p.Capacity * (p.CityId.HasValue ? GameRules.CityCapacityMultiplier : 1) * (1 + (p.OwnerId >= 0 ? Players[p.OwnerId].Bonuses.Capacity : 0));
 
     /// <summary>
     /// What pushes a province's mood up or down, as (reason, points). Their sum, clamped to 0..100,
@@ -126,6 +129,8 @@ public sealed class GameSession
         if (p.Population > capacity)
             factors.Add(("Hacinamiento", -GameRules.MaxOvercrowdingMoodPenalty * Math.Min(1, p.Population / capacity - 1)));
         if (owner.IsStarving) factors.Add(("Hambre", GameRules.StarvingMood));
+        foreach (var tech in owner.Techs.Where(t => t.Info().Effects.Mood != 0))
+            factors.Add((tech.Info().Name, tech.Info().Effects.Mood));
         return factors;
     }
 
@@ -172,6 +177,7 @@ public sealed class GameSession
         {
             foreach (var player in Players) DailyEconomy(player);
             foreach (var player in Players) DailyMigration(player);
+            foreach (var player in Players) DailyScience(player);
         }
         if (Date.Hours % 6 == 0)
             foreach (var ai in _ais) ai.Think(dailyDecisions: Date.Hour == 0);
@@ -242,12 +248,12 @@ public sealed class GameSession
             double worked = Math.Min(pop, capacity);
             double crowded = Math.Max(0, pop - capacity);
             double output = GameRules.MoodProductivity(p.Mood);
-            net[(int)ResourceType.Food] += GameRules.FoodPerWorker * p.Info.FoodYield * (worked + crowded * GameRules.OvercrowdedFoodShare) * output;
-            net[(int)ResourceType.Wood] += p.Info.WoodYield / 1000 * worked * output;
-            if (p.Mood >= GameRules.UnrestMood) net[(int)ResourceType.Gold] += GameRules.TaxGoldPerCitizen * pop * output;
+            net[(int)ResourceType.Food] += GameRules.FoodPerWorker * p.Info.FoodYield * (worked + crowded * GameRules.OvercrowdedFoodShare) * output * (1 + player.Bonuses.Food);
+            net[(int)ResourceType.Wood] += p.Info.WoodYield / 1000 * worked * output * (1 + player.Bonuses.Wood);
+            if (p.Mood >= GameRules.UnrestMood) net[(int)ResourceType.Gold] += GameRules.TaxGoldPerCitizen * pop * output * (1 + player.Bonuses.Taxes);
             double workforce = Math.Min(1, pop / GameRules.DepositFullWorkers);
             foreach (var r in Resources.Deposits)
-                if (p.HasDeposit(r)) net[(int)r] += Extract(p, r, p.Deposits[(int)r] * workforce * output);
+                if (p.HasDeposit(r)) net[(int)r] += Extract(p, r, p.Deposits[(int)r] * workforce * output * (1 + player.Bonuses.Deposits));
         }
 
         double eaters = population
@@ -273,10 +279,10 @@ public sealed class GameSession
         {
             var p = Map.Provinces[id];
             if (p.Population <= 0) continue;
-            UpdateMoodAndFertility(p, starving);
+            UpdateMoodAndFertility(p, player, starving);
             if (starving)
             {
-                p.Population *= 1 - GameRules.StarvationRate;
+                p.Population *= 1 - GameRules.StarvationRate * (1 - player.Bonuses.FamineSurvival);
             }
             else
             {
@@ -286,6 +292,66 @@ public sealed class GameSession
                     p.Population += p.Population * rate * (1 - p.Population / capacity);
             }
         }
+    }
+
+    /// <summary>Fertility a populated province tends to, with its owner's advances.</summary>
+    public double TargetFertility(Province p, Player owner, bool starving) =>
+        GameRules.TargetFertility(p.Mood, starving) * (1 + owner.Bonuses.Fertility);
+
+    // ------------------------------------------------------------------ science
+
+    /// <summary>Science points a player's cities produce per day, scaled by their mood and advances.</summary>
+    public double SciencePerDay(Player player)
+    {
+        double points = 0;
+        foreach (var city in Cities.Where(c => c.OwnerId == player.Id))
+        {
+            var p = Map.Provinces[city.ProvinceId];
+            points += (GameRules.ScienceBasePerCity + p.Population * GameRules.SciencePerCityCitizen) * GameRules.MoodProductivity(p.Mood);
+        }
+        return points * (1 + player.Bonuses.Science);
+    }
+
+    /// <summary>The day's science goes into the current research (or is saved) and completes it when enough is in.</summary>
+    private void DailyScience(Player player)
+    {
+        double points = SciencePerDay(player);
+        player.LastDayScience = points;
+        if (player.Researching is not Tech tech)
+        {
+            player.SpareScience += points;
+            return;
+        }
+        player.ResearchProgress[(int)tech] += points;
+        double surplus = player.ResearchProgress[(int)tech] - tech.Info().Cost;
+        if (surplus < 0) return;
+
+        player.Learn(tech);
+        player.ResearchProgress[(int)tech] = tech.Info().Cost;
+        player.SpareScience += surplus;
+        player.Researching = null;
+        if (player.IsHuman)
+            Notify(player.Id, $"Descubrimiento: {tech.Info().Name}. {tech.Info().Description} Elige otra investigación (N).");
+    }
+
+    public CommandResult CanResearch(Player player, Tech tech)
+    {
+        if (player.Techs.Contains(tech)) return CommandResult.Fail("Ya lo conoces.");
+        var missing = tech.Info().Requires.Where(t => !player.Techs.Contains(t)).ToList();
+        if (missing.Count > 0) return CommandResult.Fail("Requiere " + string.Join(" y ", missing.Select(t => t.Info().Name.ToLowerInvariant())) + ".");
+        return CommandResult.Success();
+    }
+
+    /// <summary>Points the nation's science at an advance. Saved science goes into it at once.</summary>
+    public CommandResult Research(int playerId, Tech tech)
+    {
+        var player = Players[playerId];
+        var check = CanResearch(player, tech);
+        if (!check.Ok) return check;
+        player.Researching = tech;
+        player.ResearchProgress[(int)tech] += player.SpareScience;
+        player.SpareScience = 0;
+        return CommandResult.Success();
     }
 
     /// <summary>Takes up to <paramref name="amount"/> from a deposit's pocket and returns what was taken.</summary>
@@ -303,11 +369,11 @@ public sealed class GameSession
     }
 
     /// <summary>Mood closes part of the gap to its target each day; fertility follows mood and food, more slowly.</summary>
-    private void UpdateMoodAndFertility(Province p, bool starving)
+    private void UpdateMoodAndFertility(Province p, Player owner, bool starving)
     {
         double before = p.Mood;
         p.Mood += (TargetMood(p) - p.Mood) * GameRules.MoodChangePerDay;
-        p.Fertility += (GameRules.TargetFertility(p.Mood, starving) - p.Fertility) * GameRules.FertilityChangePerDay;
+        p.Fertility += (TargetFertility(p, owner, starving) - p.Fertility) * GameRules.FertilityChangePerDay;
 
         if (p.OwnerId == HumanPlayerId && CityIn(p) is { } city)
         {

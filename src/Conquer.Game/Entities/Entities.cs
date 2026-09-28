@@ -1,5 +1,6 @@
 using Conquer.Game.Economy;
 using Conquer.Game.Rules;
+using Conquer.Game.Science;
 
 namespace Conquer.Game.Entities;
 
@@ -18,6 +19,23 @@ public sealed class Player
     public bool IsStarving { get; set; }
     /// <summary>Days the food stockpile would last at the last day's consumption.</summary>
     public double FoodReserveDays { get; set; }
+
+    /// <summary>Advances discovered so far.</summary>
+    public HashSet<Tech> Techs { get; } = [];
+    /// <summary>The effects of every discovered advance, added up.</summary>
+    public TechEffects Bonuses { get; private set; } = new();
+    /// <summary>What the nation is researching; null while idle.</summary>
+    public Tech? Researching { get; set; }
+    /// <summary>Science points put into each advance; kept when research switches to another one.</summary>
+    public double[] ResearchProgress { get; } = new double[Science.Techs.All.Length];
+    /// <summary>Science earned while nothing was being researched; it goes into the next advance chosen.</summary>
+    public double SpareScience { get; set; }
+    public double LastDayScience { get; set; }
+
+    public void Learn(Tech tech)
+    {
+        if (Techs.Add(tech)) Bonuses += tech.Info().Effects;
+    }
 
     public Player(int id, string name, uint color, bool isHuman)
     {

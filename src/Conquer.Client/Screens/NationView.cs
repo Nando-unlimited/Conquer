@@ -3,6 +3,7 @@ using Conquer.Client.UI;
 using Conquer.Game.Economy;
 using Conquer.Game.Entities;
 using Conquer.Game.Rules;
+using Conquer.Game.Science;
 using Conquer.Game.Simulation;
 using Conquer.Game.World;
 
@@ -13,6 +14,7 @@ public enum NationTab
     Summary,
     Cities,
     Provinces,
+    Science,
 }
 
 /// <summary>
@@ -22,7 +24,7 @@ public enum NationTab
 public sealed class NationView
 {
     private const float RowHeight = 34;
-    private static readonly string[] TabNames = ["Resumen", "Ciudades", "Provincias"];
+    private static readonly string[] TabNames = ["Resumen", "Ciudades", "Provincias", "Ciencia"];
     /// <summary>Colours of the mood levels, worst first.</summary>
     private static readonly Rgba[] MoodLevelColors = [Theme.Bad, new(0xFFE0A050), new(0xFFB9C08A), Theme.Good];
 
@@ -68,6 +70,7 @@ public sealed class NationView
             case NationTab.Summary: Summary(ui, content); break;
             case NationTab.Cities: Cities(ui, content); break;
             case NationTab.Provinces: Provinces(ui, content); break;
+            case NationTab.Science: Science(ui, content); break;
         }
     }
 
@@ -100,6 +103,13 @@ public sealed class NationView
         Row(ui, x, ref y, colW, "Provincias", $"{stats.Provinces:N0}");
         Row(ui, x, ref y, colW, "Ciudades", $"{stats.Cities:N0}");
         Row(ui, x, ref y, colW, "Unidades", $"{stats.Units:N0}");
+        y += 10;
+
+        Heading(ui, x, ref y, "Ciencia");
+        Row(ui, x, ref y, colW, "Puntos por día", $"{_player.LastDayScience:0.##}");
+        Row(ui, x, ref y, colW, "Investigando", _player.Researching is Tech current
+            ? $"{current.Info().Name} ({_player.ResearchProgress[(int)current] / current.Info().Cost:P0})"
+            : "Nada", _player.Researching is null ? Theme.Accent : Theme.Text);
 
         x = r.X + colW + 30;
         y = r.Y;
@@ -247,6 +257,83 @@ public sealed class NationView
 
     /// <summary>A city's name, or the province's terrain and number for the countryside.</summary>
     private string ProvinceName(Province p) => _session.CityIn(p)?.Name ?? $"{p.Info.Name} {p.Id}";
+
+    // ------------------------------------------------------------------ science
+
+    private void Science(Ui ui, Rect r)
+    {
+        float y = r.Y;
+        double perDay = _session.SciencePerDay(_player);
+        ui.Text(r.X, y, $"Ciencia: {perDay:0.##} puntos al día", Theme.Text, FontSize.Normal, bold: true);
+        if (ui.Hover(new Rect(r.X, y, 300, 24)))
+            ui.Tooltip($"Cada ciudad aporta {GameRules.ScienceBasePerCity:0.#} puntos más {GameRules.SciencePerCityCitizen * 1000:0.#} por cada mil habitantes, " +
+                       $"multiplicado por su humor." + (_player.Bonuses.Science > 0 ? $"\nAvances: +{_player.Bonuses.Science:P0}." : ""));
+        y += 30;
+
+        if (_player.Researching is Tech current)
+        {
+            var info = current.Info();
+            double done = _player.ResearchProgress[(int)current];
+            string eta = perDay > 0 ? $" · unos {GameSession.FormatHours(Math.Ceiling((info.Cost - done) / perDay) * 24)}" : "";
+            ui.Text(r.X, y, $"Investigando {info.Name}: {done:0} / {info.Cost:0}{eta}", Theme.Accent);
+            y += 26;
+            ProgressBar(ui, new Rect(r.X, y, Math.Min(520, r.W), 12), done / info.Cost, Theme.Accent);
+            y += 24;
+        }
+        else
+        {
+            ui.Text(r.X, y, "No estás investigando nada: elige un avance." +
+                (_player.SpareScience >= 1 ? $" Tienes {_player.SpareScience:0} puntos guardados para él." : ""), Theme.Accent);
+            y += 36;
+        }
+
+        const float CardW = 250, CardH = 128, Gap = 12;
+        int perRow = Math.Max(1, (int)((r.W + Gap) / (CardW + Gap)));
+        for (int i = 0; i < Techs.All.Length; i++)
+        {
+            var card = new Rect(r.X + i % perRow * (CardW + Gap), y + i / perRow * (CardH + Gap), CardW, CardH);
+            TechCard(ui, card, Techs.All[i]);
+        }
+    }
+
+    /// <summary>One advance: its state, cost, effect, requirements and the button to research it.</summary>
+    private void TechCard(Ui ui, Rect c, Tech tech)
+    {
+        var info = tech.Info();
+        bool known = _player.Techs.Contains(tech), current = _player.Researching == tech;
+        var can = _session.CanResearch(_player, tech);
+        var border = known ? Theme.Good : current ? Theme.Accent : can.Ok ? Theme.PanelBorder : Theme.ButtonDisabled;
+        ui.Batch.Rect(c.X, c.Y, c.W, c.H, Theme.Button.WithAlpha(known ? 0.25f : 0.55f));
+        ui.Batch.Outline(c.X, c.Y, c.W, c.H, border);
+
+        float x = c.X + 10, y = c.Y + 8;
+        ui.Text(x, y, info.Name, known ? Theme.Good : current ? Theme.Accent : can.Ok ? Theme.Text : Theme.TextDisabled, bold: true);
+        double done = _player.ResearchProgress[(int)tech];
+        string cost = known ? "Descubierto" : done > 0 ? $"{done:0} / {info.Cost:0}" : $"{info.Cost:0} puntos";
+        ui.Text(c.Right - 10 - ui.Font.Measure(cost, FontSize.Small), y + 3, cost, Theme.TextDim, FontSize.Small);
+        y += 26;
+        foreach (var line in ui.Font.Wrap(info.Description, c.W - 20, FontSize.Small).Take(2))
+        {
+            ui.Text(x, y, line, known || can.Ok ? Theme.Text : Theme.TextDim, FontSize.Small);
+            y += ui.Font.LineHeight(FontSize.Small);
+        }
+        if (info.Requires.Length > 0)
+            ui.Text(x, c.Y + 72, "Requiere: " + string.Join(", ", info.Requires.Select(t => t.Info().Name)),
+                info.Requires.All(_player.Techs.Contains) ? Theme.TextDim : Theme.Bad, FontSize.Small);
+
+        if (known) return;
+        if (!current && done > 0) ProgressBar(ui, new Rect(x, c.Bottom - 40, c.W - 20, 4), done / info.Cost, Theme.TextDim);
+        var button = new Rect(x, c.Bottom - 32, c.W - 20, 26);
+        if (current) ProgressBar(ui, new Rect(x, c.Bottom - 20, c.W - 20, 8), done / info.Cost, Theme.Accent);
+        else if (ui.Button(button, "Investigar", can.Ok, tooltip: can.Ok ? null : can.Message, size: FontSize.Small))
+            _show(_session.Research(_player.Id, tech));
+    }
+
+    private static void ProgressBar(Ui ui, Rect r, double share, Rgba color)
+    {
+        ui.Batch.Rect(r.X, r.Y, r.W, r.H, Theme.ButtonDisabled);
+        ui.Batch.Rect(r.X, r.Y, (float)(r.W * Math.Clamp(share, 0, 1)), r.H, color);
+    }
 
     // ------------------------------------------------------------------ table helpers
 

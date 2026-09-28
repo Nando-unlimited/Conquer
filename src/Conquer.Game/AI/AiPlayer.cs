@@ -1,6 +1,7 @@
 using Conquer.Game.Economy;
 using Conquer.Game.Entities;
 using Conquer.Game.Rules;
+using Conquer.Game.Science;
 using Conquer.Game.Simulation;
 using Conquer.Game.World;
 
@@ -8,8 +9,8 @@ namespace Conquer.Game.AI;
 
 /// <summary>
 /// A computer rival. It settles a good site quickly, then keeps a few warriors claiming the best
-/// free land along its borders, sends out new settlers once its cities have grown and pays for
-/// festivals when a city grows restless.
+/// free land along its borders, sends out new settlers once its cities have grown, pays for
+/// festivals when a city grows restless and researches advances in a fixed order of preference.
 /// Deterministic: all choices come from its own seeded Random.
 /// </summary>
 internal sealed class AiPlayer
@@ -18,6 +19,9 @@ internal sealed class AiPlayer
     /// <summary>Cities below this mood get a festival.</summary>
     private const double FestivalMood = 45;
     private const double GoldKeptForRecruiting = 30;
+    /// <summary>Food first, then the advances that pay for themselves.</summary>
+    private static readonly Tech[] ResearchOrder =
+        [Tech.Agriculture, Tech.Writing, Tech.Mining, Tech.Irrigation, Tech.Carpentry, Tech.Mythology, Tech.Currency, Tech.Medicine];
     private readonly GameSession _session;
     private readonly Player _player;
     private readonly Random _random;
@@ -52,8 +56,17 @@ internal sealed class AiPlayer
         if (dailyDecisions)
         {
             HoldFestivals();
+            ChooseResearch();
             Recruit();
         }
+    }
+
+    /// <summary>Picks the next advance in its order of preference once the current one is done.</summary>
+    private void ChooseResearch()
+    {
+        if (_player.Researching.HasValue || _player.CapitalCityId is null) return;
+        foreach (var tech in ResearchOrder)
+            if (_session.Research(_player.Id, tech).Ok) return;
     }
 
     /// <summary>Restless cities get a festival when there is gold to spare after keeping enough to recruit.</summary>

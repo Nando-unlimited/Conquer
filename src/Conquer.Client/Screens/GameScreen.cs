@@ -392,7 +392,10 @@ public sealed class GameScreen : IScreen
             if (x > s.X - 290) break;
         }
 
-        if (Ui.Button(new Rect(s.X - 190, 12, 92, 32), "Nación", active: _nation.Visible, tooltip: "Gestionar el país (N)")) _nation.Visible = !_nation.Visible;
+        bool idleScience = Human.Researching is null && Human.CapitalCityId.HasValue;
+        string nationTip = idleScience ? "Gestionar el país (N)\nNo estás investigando nada." : "Gestionar el país (N)";
+        if (Ui.Button(new Rect(s.X - 190, 12, 92, 32), idleScience ? "Nación !" : "Nación", active: _nation.Visible, tooltip: nationTip))
+            _nation.Visible = !_nation.Visible;
         if (Ui.Button(new Rect(s.X - 90, 12, 78, 32), "Menú")) _menuOpen = true;
     }
 
@@ -534,7 +537,7 @@ public sealed class GameScreen : IScreen
                 Line(x, ref y, "Fertilidad", $"{p.Fertility:P0}", p.Fertility < 0.75 ? Theme.Bad : p.Fertility >= 1.15 ? Theme.Good : Theme.Text);
                 if (Ui.Hover(row))
                     Ui.Tooltip("Nacimientos respecto a lo normal. Sube con el buen humor, cae con el hambre y cambia despacio.\n" +
-                               $"Tiende a {GameRules.TargetFertility(p.Mood, owner.IsStarving):P0}.");
+                               $"Tiende a {_session.TargetFertility(p, owner, owner.IsStarving):P0}.");
             }
             int incoming = _session.Migrations.Where(m => m.ToProvinceId == p.Id).Sum(m => m.People);
             if (incoming > 0) Line(x, ref y, "En camino", $"{incoming:N0} migrantes");

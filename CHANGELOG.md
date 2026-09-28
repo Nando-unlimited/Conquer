@@ -2,6 +2,23 @@
 
 Todos los cambios del juego, del más reciente al más antiguo. Cada versión es un commit cuyo título es su número.
 
+## [1.5.0] - 2026-09-28
+
+### Añadido
+- **Ciencia**: las ciudades producen puntos de ciencia cada día (0,5 por ciudad más 1 por cada mil habitantes), multiplicados por su humor.
+- **Investigación**: elige un avance en la nueva pestaña **Ciencia** de la pantalla de la nación; la ciencia se acumula en él hasta descubrirlo. Si cambias de avance no pierdes lo investigado, y la ciencia que se gana sin nada en investigación se guarda para el siguiente.
+- Ocho avances de la Antigüedad, algunos con requisitos:
+  - Agricultura (60): +20 % de comida.
+  - Carpintería (60): +50 % de madera.
+  - Minería (100): +50 % de producción de los yacimientos (se agotan antes).
+  - Escritura (80): +30 % de ciencia.
+  - Mitología (100): +5 de humor en todas tus provincias.
+  - Irrigación (250, requiere Agricultura): la tierra alimenta un 25 % más de gente.
+  - Medicina (250, requiere Escritura): +10 % de fertilidad y el hambre mata la mitad.
+  - Moneda (300, requiere Escritura y Minería): +30 % de oro de los impuestos.
+- Aviso al descubrir un avance, ciencia por día e investigación actual en el resumen de la nación, y el botón «Nación !» cuando no estás investigando nada.
+- Los rivales del ordenador también investigan.
+
 ## [1.4.0] - 2026-09-28
 
 ### Añadido

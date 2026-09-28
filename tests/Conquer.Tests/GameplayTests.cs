@@ -1,5 +1,6 @@
 using Conquer.Game.Economy;
 using Conquer.Game.Rules;
+using Conquer.Game.Science;
 using Conquer.Game.Simulation;
 using Conquer.Game.World;
 
@@ -401,6 +402,71 @@ public class GameplayTests(WorldFixture world)
     }
 
     [Fact]
+    public void CitiesProduceScienceThatDiscoversAdvances()
+    {
+        var s = NewSession();
+        var (a, _) = GrasslandPair();
+        s.FoundCity(0, s.AddUnit(0, UnitType.Settlers, a.Id, 300).Id);
+        Assert.True(s.SciencePerDay(s.Human) > GameRules.ScienceBasePerCity);
+
+        Assert.True(s.Research(0, Tech.Agriculture).Ok);
+        for (int day = 0; day < 365 && !s.Human.Techs.Contains(Tech.Agriculture); day++) RunHours(s, 24);
+
+        Assert.Contains(Tech.Agriculture, s.Human.Techs);
+        Assert.Null(s.Human.Researching);
+        Assert.Equal(0.2, s.Human.Bonuses.Food);
+        Assert.Contains(s.Notifications, n => n.Text.StartsWith("Descubrimiento: Agricultura"));
+        Assert.False(s.Research(0, Tech.Agriculture).Ok); // already known
+    }
+
+    [Fact]
+    public void AdvancesNeedTheirPrerequisites()
+    {
+        var s = NewSession();
+        Assert.False(s.Research(0, Tech.Irrigation).Ok);
+        Assert.False(s.Research(0, Tech.Currency).Ok);
+        s.Human.Learn(Tech.Agriculture);
+        s.Human.Learn(Tech.Writing);
+        Assert.True(s.Research(0, Tech.Irrigation).Ok);
+        Assert.False(s.Research(0, Tech.Currency).Ok); // still needs mining
+    }
+
+    [Fact]
+    public void ScienceIsSavedWhileNothingIsResearched()
+    {
+        var s = NewSession();
+        var (a, _) = GrasslandPair();
+        s.FoundCity(0, s.AddUnit(0, UnitType.Settlers, a.Id, 300).Id);
+        RunHours(s, 24 * 5);
+        double saved = s.Human.SpareScience;
+
+        Assert.True(saved > 0);
+        s.Research(0, Tech.Mining);
+        Assert.Equal(saved, s.Human.ResearchProgress[(int)Tech.Mining]);
+        Assert.Equal(0, s.Human.SpareScience);
+    }
+
+    [Fact]
+    public void AdvancesImproveTheEconomy()
+    {
+        (double Food, double Capacity) OneDay(params Tech[] techs)
+        {
+            var s = NewSession();
+            var (a, _) = GrasslandPair();
+            s.FoundCity(0, s.AddUnit(0, UnitType.Settlers, a.Id, 300).Id);
+            foreach (var t in techs) s.Human.Learn(t);
+            RunHours(s, 24);
+            // Harvest = balance + what was eaten: 300 in the city and the 300 starting settlers still waiting.
+            return (s.Human.LastDayNet[(int)ResourceType.Food] + GameRules.FoodPerCitizen * 600, s.CapacityOf(a));
+        }
+
+        var plain = OneDay();
+        var advanced = OneDay(Tech.Agriculture, Tech.Irrigation);
+        Assert.Equal(plain.Food * 1.2, advanced.Food, 3);
+        Assert.Equal(plain.Capacity * 1.25, advanced.Capacity, 3);
+    }
+
+    [Fact]
     public void ComputerRivalsFoundCitiesAndExpand()
     {
         var s = NewSession(players: 4);
@@ -410,6 +476,7 @@ public class GameplayTests(WorldFixture world)
         {
             Assert.NotNull(ai.CapitalCityId);
             Assert.True(ai.Provinces.Count > 1, $"{ai.Name} owns {ai.Provinces.Count} provinces");
+            Assert.True(ai.Techs.Count > 0 || ai.Researching.HasValue, $"{ai.Name} is not researching");
         }
     }
 }
