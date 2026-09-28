@@ -1,6 +1,7 @@
 using System.Numerics;
 using Conquer.Client.Graphics;
 using Conquer.Client.UI;
+using Conquer.Game.Buildings;
 using Conquer.Game.Economy;
 using Conquer.Game.Entities;
 using Conquer.Game.Rules;
@@ -35,6 +36,8 @@ public sealed class GameScreen : IScreen
     private int _selectedProvince = -1, _hoverProvince = -1;
     private bool _choosingMigrationTarget;
     private int _migrationAmount = 50;
+    /// <summary>The province panel shows its Edificios tab instead of General.</summary>
+    private bool _showBuildings;
 
     private Ui Ui => _app.Ui;
     private Batch2D Batch => _app.Batch;
@@ -70,6 +73,7 @@ public sealed class GameScreen : IScreen
         if (options.Zoom is float zoom) _camera.LookAt(_camera.Center, zoom);
         if (Enum.TryParse<MapMode>(options.Mode, ignoreCase: true, out var mode)) _renderer.Mode = mode;
         if (Enum.TryParse<NationTab>(options.Nation, ignoreCase: true, out var tab)) { _nation.Tab = tab; _nation.Visible = true; }
+        _showBuildings = options.Panel == "buildings";
     }
 
     public void Frame(double dt)
@@ -510,6 +514,18 @@ public sealed class GameScreen : IScreen
         var city = _session.CityIn(p);
         Ui.Text(x, y, city?.Name ?? p.Info.Name, Theme.Accent, FontSize.Large, bold: true);
         y += 36;
+        if (p.IsOwned)
+        {
+            string buildings = p.Constructing.HasValue ? $"Edificios ({p.Buildings.Count}+1)" : $"Edificios ({p.Buildings.Count})";
+            if (Ui.Button(new Rect(x, y, w / 2 - 3, 28), "General", active: !_showBuildings, size: FontSize.Small)) _showBuildings = false;
+            if (Ui.Button(new Rect(x + w / 2 + 3, y, w / 2 - 3, 28), buildings, active: _showBuildings, size: FontSize.Small)) _showBuildings = true;
+            y += 38;
+            if (_showBuildings)
+            {
+                BuildingsPanel(p, x, ref y, w);
+                return;
+            }
+        }
         if (city != null) Line(x, ref y, "Terreno", p.Info.Name);
         Line(x, ref y, "Superficie", $"{p.AreaKm2:N0} km²");
         Line(x, ref y, "Altitud media", $"{p.MeanElevation:N0} m");
@@ -622,6 +638,69 @@ public sealed class GameScreen : IScreen
             if (Ui.Button(new Rect(x, y, w, 34), label, affordable && p.Population - keep >= 1, active: _choosingMigrationTarget,
                     tooltip: "Haz clic en una de tus provincias. Los ciudadanos viajan a 10 km/h."))
                 _choosingMigrationTarget = !_choosingMigrationTarget;
+        }
+    }
+
+    /// <summary>
+    /// The province's buildings: the one under construction, the finished ones and, in your own
+    /// provinces, a button for each building you can put up; the rest say what they are missing.
+    /// </summary>
+    private void BuildingsPanel(Province p, float x, ref float y, float w)
+    {
+        if (p.Constructing is BuildingType building)
+        {
+            var info = building.Info();
+            Ui.Text(x, y, $"En obras: {info.Name}", Theme.Accent, bold: true);
+            y += 26;
+            float done = 1 - p.ConstructionDaysLeft / (float)info.Days;
+            Batch.Rect(x, y, w, 8, Theme.ButtonDisabled);
+            Batch.Rect(x, y, w * done, 8, Theme.Accent);
+            y += 14;
+            Ui.Text(x, y, $"Quedan {p.ConstructionDaysLeft} días", Theme.TextDim, FontSize.Small);
+            y += 30;
+        }
+
+        Ui.Text(x, y, "Construidos", Theme.Text, bold: true);
+        y += 26;
+        if (p.Buildings.Count == 0)
+        {
+            Ui.Text(x, y, "Ninguno todavía.", Theme.TextDim, FontSize.Small);
+            y += 22;
+        }
+        foreach (var built in Buildings.All.Where(p.Buildings.Contains))
+        {
+            Ui.Text(x, y, built.Info().Name, Theme.Good);
+            y += 22;
+            Ui.Text(x + 10, y, built.Info().Description, Theme.TextDim, FontSize.Small);
+            y += 24;
+        }
+
+        if (p.OwnerId != Human.Id) return;
+        y += 10;
+        Ui.Text(x, y, "Construir", Theme.Text, bold: true);
+        y += 26;
+        var missing = new List<(BuildingType Type, string Reason)>();
+        foreach (var type in Buildings.All.Where(t => !p.Buildings.Contains(t) && p.Constructing != t))
+        {
+            var available = _session.IsBuildingAvailable(p, type);
+            if (!available.Ok)
+            {
+                missing.Add((type, available.Message));
+                continue;
+            }
+            var info = type.Info();
+            var can = _session.CanBuild(Human.Id, p, type);
+            string tip = $"{info.Description}\nCoste: {info.Cost}. Tarda {info.Days} días." + (can.Ok ? "" : "\n" + can.Message);
+            if (Ui.Button(new Rect(x, y, w, 30), $"{info.Name}  ·  {info.Cost}  ·  {info.Days} d", can.Ok, tooltip: tip, size: FontSize.Small))
+                Show(_session.Build(Human.Id, p.Id, type));
+            y += 34;
+        }
+        if (missing.Count == 0) return;
+        y += 6;
+        foreach (var (type, reason) in missing)
+        {
+            Ui.Text(x, y, $"{type.Info().Name}: {reason.TrimEnd('.').ToLowerInvariant()}", Theme.TextDisabled, FontSize.Small);
+            y += 20;
         }
     }
 

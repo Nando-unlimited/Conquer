@@ -1,3 +1,4 @@
+using Conquer.Game.Buildings;
 using Conquer.Game.Economy;
 using Conquer.Game.Rules;
 
@@ -32,6 +33,28 @@ public sealed class Province
     public double Mood { get; set; } = GameRules.StartingMood;
     /// <summary>Birth-rate multiplier (1 = normal); follows mood and food slowly.</summary>
     public double Fertility { get; set; } = 1;
+
+    /// <summary>Finished buildings.</summary>
+    public HashSet<BuildingType> Buildings { get; } = [];
+    /// <summary>The effects of every finished building, added up.</summary>
+    public Modifiers BuildingBonuses { get; private set; } = Modifiers.None;
+    /// <summary>The building under construction, if any, and the days of work it still needs.</summary>
+    public BuildingType? Constructing { get; set; }
+    public int ConstructionDaysLeft { get; set; }
+
+    public void AddBuilding(BuildingType type)
+    {
+        if (Buildings.Add(type)) BuildingBonuses += type.Info().Effects;
+    }
+
+    /// <summary>Knocks down every building and stops any construction (for a new game).</summary>
+    public void ClearBuildings()
+    {
+        Buildings.Clear();
+        BuildingBonuses = Modifiers.None;
+        Constructing = null;
+        ConstructionDaysLeft = 0;
+    }
 
     public Province(int id) => Id = id;
 

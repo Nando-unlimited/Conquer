@@ -1,3 +1,4 @@
+using Conquer.Game.Buildings;
 using Conquer.Game.Economy;
 using Conquer.Game.Entities;
 using Conquer.Game.Rules;
@@ -10,7 +11,7 @@ namespace Conquer.Game.AI;
 /// <summary>
 /// A computer rival. It settles a good site quickly, then keeps a few warriors claiming the best
 /// free land along its borders, sends out new settlers once its cities have grown, pays for
-/// festivals when a city grows restless and researches advances in a fixed order of preference.
+/// festivals when a city grows restless, researches advances and puts up buildings in a fixed order of preference.
 /// Deterministic: all choices come from its own seeded Random.
 /// </summary>
 internal sealed class AiPlayer
@@ -19,6 +20,14 @@ internal sealed class AiPlayer
     /// <summary>Cities below this mood get a festival.</summary>
     private const double FestivalMood = 45;
     private const double GoldKeptForRecruiting = 30;
+    private const double WoodKeptForRecruiting = 50;
+    /// <summary>Buildings only go where at least this many people live.</summary>
+    private const double MinWorkersForBuilding = 200;
+    private static readonly BuildingType[] BuildOrder =
+    [
+        BuildingType.Farm, BuildingType.Temple, BuildingType.Library, BuildingType.Market,
+        BuildingType.Mine, BuildingType.Sawmill, BuildingType.Aqueduct, BuildingType.HerbalistHut,
+    ];
     /// <summary>Food first, then the advances that pay for themselves.</summary>
     private static readonly Tech[] ResearchOrder =
         [Tech.Agriculture, Tech.Writing, Tech.Mining, Tech.Irrigation, Tech.Carpentry, Tech.Mythology, Tech.Currency, Tech.Medicine];
@@ -58,8 +67,39 @@ internal sealed class AiPlayer
             HoldFestivals();
             ChooseResearch();
             Recruit();
+            Construct();
         }
     }
+
+    /// <summary>
+    /// Picks its most wanted building (cities first, then by population and <see cref="BuildOrder"/>)
+    /// and starts it once it can pay while keeping enough wood and gold to recruit. Until then it
+    /// saves up rather than spending on something cheaper.
+    /// </summary>
+    private void Construct()
+    {
+        var provinces = _player.Provinces.Select(id => Map.Provinces[id])
+            .Where(p => p.Population >= GameRules.SettledPopulation && !p.Constructing.HasValue)
+            .OrderByDescending(p => p.CityId.HasValue).ThenByDescending(p => p.Population);
+        foreach (var p in provinces)
+        foreach (var type in BuildOrder)
+        {
+            if (p.Buildings.Contains(type) || !_session.IsBuildingAvailable(p, type).Ok || !WorthBuilding(p, type)) continue;
+            bool spare = type.Info().Cost.Items.All(i =>
+                _player.Stockpile[i.Type] - i.Amount >= (i.Type == ResourceType.Wood ? WoodKeptForRecruiting : GoldKeptForRecruiting));
+            if (spare) _session.Build(_player.Id, p.Id, type);
+            return;
+        }
+    }
+
+    /// <summary>Whether a building would pay off here: enough people to benefit, wooded land for sawmills, restless people for temples.</summary>
+    private bool WorthBuilding(Province p, BuildingType type) => p.Population >= MinWorkersForBuilding && type switch
+    {
+        BuildingType.Sawmill => p.Info.WoodYield >= 1,
+        BuildingType.Temple => p.Mood < FestivalMood + 15,
+        BuildingType.Aqueduct => p.Population > 0.6 * _session.CapacityOf(p),
+        _ => true,
+    };
 
     /// <summary>Picks the next advance in its order of preference once the current one is done.</summary>
     private void ChooseResearch()

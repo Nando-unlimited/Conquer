@@ -19,13 +19,14 @@ namespace Conquer.Client
     /// <c>--days N</c> founds the player's capital and fast-forwards N days;
     /// <c>--zoom Z</c> and <c>--mode terrain|political|population|mood|fertility</c> set the view;
     /// <c>--nation summary|cities|provinces|science</c> opens the nation screen on that tab;
+    /// <c>--panel buildings</c> shows the Edificios tab of the selected province;
     /// <c>--screenshot file.png</c> saves the first frames to a PNG and exits.
     /// </summary>
-    public sealed record StartOptions(QuickStart? QuickStart, int Days = 0, float? Zoom = null, string? Mode = null, string? Screenshot = null, string? Nation = null)
+    public sealed record StartOptions(QuickStart? QuickStart, int Days = 0, float? Zoom = null, string? Mode = null, string? Screenshot = null, string? Nation = null, string? Panel = null)
     {
         public static StartOptions Parse(string[] args)
         {
-            string? kind = null, mode = null, screenshot = null, nation = null;
+            string? kind = null, mode = null, screenshot = null, nation = null, panel = null;
             int seed = Environment.TickCount & 0xFFFF, players = 4, days = 0;
             float? zoom = null;
             for (int i = 0; i < args.Length - 1; i++)
@@ -41,6 +42,7 @@ namespace Conquer.Client
                     case "--mode": mode = value; break;
                     case "--screenshot": screenshot = value; break;
                     case "--nation": nation = value; break;
+                    case "--panel": panel = value; break;
                 }
             }
             QuickStart? quick = null;
@@ -49,7 +51,7 @@ namespace Conquer.Client
                 var map = kind.Equals("earth", StringComparison.OrdinalIgnoreCase) ? MapKind.Earth : MapKind.Random;
                 quick = new QuickStart(new WorldSettings(map, seed), players);
             }
-            return new StartOptions(quick, days, zoom, mode, screenshot, nation);
+            return new StartOptions(quick, days, zoom, mode, screenshot, nation, panel);
         }
     }
 }

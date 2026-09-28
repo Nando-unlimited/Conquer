@@ -2,6 +2,22 @@
 
 Todos los cambios del juego, del más reciente al más antiguo. Cada versión es un commit cuyo título es su número.
 
+## [1.6.0] - 2026-09-28
+
+### Añadido
+- **Edificios** en las provincias: se pagan con madera y oro y tardan días en construirse. Cada provincia puede tener uno de cada tipo y levantar uno a la vez, y hacen falta al menos 10 habitantes para construir. Avisa al terminar cada obra.
+- Ocho edificios, que mejoran su propia provincia:
+  - Granja (40 madera, 10 oro, 20 días): +25 % de comida.
+  - Aserradero (30 madera, 10 oro, 15 días): +50 % de madera.
+  - Mina (60 madera, 20 oro, 30 días; requiere Minería y un yacimiento): +50 % de producción de los yacimientos.
+  - Templo (50 madera, 30 oro, 30 días; requiere Mitología): +10 de humor.
+  - Biblioteca (60 madera, 40 oro, 40 días; requiere Escritura y ciudad): +50 % de ciencia de la ciudad.
+  - Mercado (80 madera, 50 oro, 45 días; requiere Moneda y ciudad): +50 % de oro de los impuestos.
+  - Acueducto (100 madera, 40 oro, 60 días; requiere Irrigación): la tierra alimenta un 25 % más de gente.
+  - Herbolario (40 madera, 30 oro, 30 días; requiere Medicina): +20 % de fertilidad.
+- El panel de la provincia tiene dos pestañas: **General** y **Edificios** (obra en curso, edificios construidos y botones para construir; los que aún no se pueden levantar dicen qué les falta).
+- Los rivales del ordenador construyen en sus ciudades y provincias más pobladas, ahorrando para el edificio que más les conviene.
+
 ## [1.5.0] - 2026-09-28
 
 ### Añadido

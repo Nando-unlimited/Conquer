@@ -87,13 +87,25 @@ Todas las constantes de equilibrio (por día de juego salvo que se diga otra cos
 | `UnitTypeInfo` | Nombre, símbolo, ciudadanos, si es militar, si funda ciudades y coste. |
 | `UnitTypes.Info(type)` | Devuelve la ficha de un tipo de unidad. |
 
+### `Rules/Modifiers.cs`
+`Modifiers`: mejoras sobre las reglas normales. Los avances las aplican a toda la nación y los edificios a su provincia; todas se suman con `+`. Campos: parte extra de comida, madera, yacimientos, impuestos, ciencia, capacidad de la tierra y fertilidad; puntos de humor; parte de las muertes por hambre que se evita. `Modifiers.None` es «sin mejoras».
+
+### `Buildings/Building.cs`
+Los edificios que se construyen en las provincias. **Aquí se añaden y equilibran los edificios.**
+
+| Elemento | Qué es |
+| --- | --- |
+| `BuildingType` | Granja, Aserradero, Mina, Templo, Biblioteca, Mercado, Acueducto y Herbolario. |
+| `BuildingInfo` | Nombre, descripción, coste (madera y oro), días de obra, avance que requiere, si solo va en ciudades, si necesita un yacimiento sin agotar y sus efectos (`Modifiers`) en la provincia. |
+| `Buildings.All`, `Buildings.Info(tipo)` | Todos los edificios y la ficha de cada uno. |
+
 ### `Science/Technology.cs`
 Los avances que se pueden investigar. **Aquí se añaden y equilibran los avances.**
 
 | Elemento | Qué es |
 | --- | --- |
 | `Tech` | Los avances: Agricultura, Carpintería, Minería, Escritura, Mitología, Irrigación, Medicina y Moneda. |
-| `TechEffects` | Lo que mejora un avance: parte extra de comida, madera, yacimientos, impuestos, ciencia, capacidad de la tierra y fertilidad; puntos de humor; parte de las muertes por hambre que evita. Se suman con `+`. |
+| `TechInfo.Effects` | Lo que mejora el avance en toda la nación, como `Modifiers`. |
 | `TechInfo` | Nombre, coste en puntos de ciencia, requisitos, descripción y efectos. |
 | `Techs.All`, `Techs.Info(avance)` | Todos los avances y la ficha de cada uno. |
 
@@ -134,22 +146,26 @@ El corazón del juego: una partida en marcha.
 | Función | Qué hace |
 | --- | --- |
 | `CommandResult` | Resultado de una orden: `Ok` y un mensaje para el jugador. |
-| `Create(map, jugadores, semilla)` | Nueva partida: limpia las provincias (dueño, población, ciudad, humor, fertilidad y bolsas de recurso llenas según `DepositSizeMultiplier`), crea jugadores con sus recursos iniciales y una unidad de colonos cada uno en sitios fértiles y alejados, y crea las IA. |
+| `Create(map, jugadores, semilla)` | Nueva partida: limpia las provincias (dueño, población, ciudad, humor, fertilidad, edificios y bolsas de recurso llenas según `DepositSizeMultiplier`), crea jugadores con sus recursos iniciales y una unidad de colonos cada uno en sitios fértiles y alejados, y crea las IA. |
 | `UnitById`, `CityById`, `CityIn(provincia)` | Búsquedas. |
-| `CapacityOf(provincia)` | Habitantes que puede alimentar una provincia, contando la bonificación de ciudad y los avances de su dueño (Irrigación). |
-| `MoodFactors(provincia)` | Lista de (causa, puntos) que forman el humor objetivo: base, ciudad, capital o distancia a ella, fiestas, reservas de comida, hacinamiento y hambre y avances que dan humor (Mitología). |
+| `CapacityOf(provincia)` | Habitantes que puede alimentar una provincia, contando la bonificación de ciudad y los avances de su dueño (Irrigación) y sus edificios (Acueducto). |
+| `BonusesOf(provincia)` | Mejoras que se aplican a una provincia: las de los avances de su dueño más las de sus edificios. |
+| `MoodFactors(provincia)` | Lista de (causa, puntos) que forman el humor objetivo: base, ciudad, capital o distancia a ella, fiestas, reservas de comida, hacinamiento y hambre y avances que dan humor (Mitología) y edificios que dan humor (Templo). |
 | `TargetMood(provincia)` | Suma de esos factores, entre 0 y 100. |
 | `Stats(jugador)` | Totales de la nación (`NationStats`): población asentada, en unidades y migrando; provincias, ciudades y unidades; humor y fertilidad medios ponderados por habitantes, habitantes en cada nivel de humor y lo que queda en los yacimientos de sus provincias (`Reserves`). |
-| `Step()` | Avanza una hora: mueve unidades, hace llegar migrantes; a medianoche economía, migración y ciencia; cada 6 h piensan las IA. |
+| `Step()` | Avanza una hora: mueve unidades, hace llegar migrantes; a medianoche economía, migración, ciencia y obras; cada 6 h piensan las IA. |
 | `MoveUnits()` | Avanza cada unidad por su ruta y la cambia de provincia al terminar cada tramo. |
 | `ArriveMigrations()` | Suma los migrantes que llegan a su destino (si el destino se perdió, van a la capital), mezclando su humor. |
-| `DailyEconomy(jugador)` | Producción del día (comida, madera, oro, yacimientos) multiplicada por el humor y los avances; los yacimientos sacan de su bolsa hasta agotarla (`Extract`); sin impuestos en provincias descontentas; consumo de comida, hambre, días de reserva de comida, humor y fertilidad, y crecimiento de la población (proporcional a la fertilidad). |
+| `DailyEconomy(jugador)` | Producción del día (comida, madera, oro, yacimientos) multiplicada por el humor, los avances y los edificios de cada provincia; los yacimientos sacan de su bolsa hasta agotarla (`Extract`); sin impuestos en provincias descontentas; consumo de comida, hambre, días de reserva de comida, humor y fertilidad, y crecimiento de la población (proporcional a la fertilidad). |
 | `Extract(provincia, recurso, cantidad)` | Saca de la bolsa de un yacimiento lo que se pide o lo que queda, y avisa al jugador cuando se agota. |
 | `UpdateMoodAndFertility(provincia, dueño, hambre)` | Acerca el humor a su objetivo y la fertilidad a la que marca el humor; avisa cuando una ciudad del jugador entra o sale del descontento. |
-| `TargetFertility(provincia, dueño, hambre)` | Fertilidad hacia la que tiende una provincia, con los avances de su dueño (Medicina). |
-| `SciencePerDay(jugador)` | Puntos de ciencia al día de sus ciudades, por su humor y sus avances (Escritura). |
+| `TargetFertility(provincia, dueño, hambre)` | Fertilidad hacia la que tiende una provincia, con los avances de su dueño (Medicina) y sus edificios (Herbolario). |
+| `SciencePerDay(jugador)` | Puntos de ciencia al día de sus ciudades, por su humor, sus avances (Escritura) y sus edificios (Biblioteca). |
 | `DailyScience(jugador)` | Suma la ciencia del día al avance en investigación (o la guarda si no hay ninguno); al completarlo lo aprende, guarda lo sobrante y avisa. |
 | `CanResearch(jugador, avance)` / `Research(...)` | Comprueba (no conocido y con sus requisitos) / pone la ciencia del país en un avance; la ciencia guardada entra en él de inmediato. |
+| `IsBuildingAvailable(provincia, tipo)` | ¿Podría construirse aquí algún día? Tiene dueño, se conoce su avance y hay ciudad o yacimiento si los necesita (sin mirar coste ni obras). |
+| `CanBuild(jugador, provincia, tipo)` / `Build(...)` | Comprueba (es tuya, no está construido, está disponible, no hay otra obra, tiene al menos 10 habitantes y puedes pagarlo) / paga y empieza la obra. |
+| `DailyConstruction(jugador)` | Cada obra avanza un día; al terminar, el edificio empieza a funcionar y avisa al jugador. |
 | `DailyMigration(jugador)` | Cada ciudad envía parte de su gente a las provincias propias poco pobladas; primero las vacías y las cercanas. Guarda las fracciones de persona para el día siguiente. |
 | `MoveUnit(...)` | Orden de mover una unidad a una provincia (calcula la ruta por tierra). |
 | `CanFoundCity(unidad)` / `FoundCity(...)` | Comprueba / funda una ciudad con colonos: reclama la provincia, crea la ciudad (capital si es la primera) y los colonos pasan a ser su población. |
@@ -189,9 +205,10 @@ Rival controlado por el ordenador. Determinista (usa su propia semilla).
 
 | Función | Qué hace |
 | --- | --- |
-| `Think(decisionesDiarias)` | Turno de la IA: licencia guerreros si hay hambre, guía a colonos y guerreros y, una vez al día, celebra fiestas, elige investigación y recluta. |
+| `Think(decisionesDiarias)` | Turno de la IA: licencia guerreros si hay hambre, guía a colonos y guerreros y, una vez al día, celebra fiestas, elige investigación, recluta y construye. |
 | `HoldFestivals()` | Paga fiestas en las ciudades con humor por debajo de 45 si, tras pagarlas, le quedan 30 de oro para reclutar. |
 | `ChooseResearch()`, `ResearchOrder` | Cuando no investiga nada, elige el primer avance disponible de su orden de preferencia (Agricultura, Escritura, Minería, Irrigación...). |
+| `Construct()`, `BuildOrder`, `WorthBuilding(...)` | Elige su edificio más deseado (ciudades primero, luego por población y orden de preferencia) donde compense: al menos 200 habitantes, aserraderos en tierra con madera, templos donde hay inquietud, acueductos al 60 % de la capacidad. Lo empieza cuando puede pagarlo guardando madera y oro para reclutar; si no, ahorra. |
 | `GuideSettlers(unidad)` | Busca el mejor sitio cercano para una ciudad, va allí y la funda. |
 | `GuideWarriors(unidad)` | Reclama la provincia si está libre; si no, va a la mejor provincia libre de su frontera. No reclama más rápido de lo que llegan los migrantes. |
 | `Recruit()` | Recluta colonos cuando una ciudad ha crecido lo bastante, y guerreros si le sobra comida. |
@@ -212,6 +229,7 @@ Rival controlado por el ordenador. Determinista (usa su propia semilla).
 yacimientos (`Deposits`: producción diaria; `DepositSizes`: tamaño de la bolsa; `Reserves`: lo que queda en la partida), dueño, población, ciudad, humor (`Mood`, 0-100) y fertilidad
 (`Fertility`, multiplicador de nacimientos, 1 = normal). `IsWater`, `IsClaimable`, `IsOwned`,
 `Capacity` (habitantes que alimenta su tierra) y `HasDeposit(recurso)` (tiene ese yacimiento sin agotar) son atajos.
+Edificios: los terminados (`Buildings`) y la suma de sus efectos (`BuildingBonuses`), el que está en obras (`Constructing`) y los días que le quedan (`ConstructionDaysLeft`). `AddBuilding(tipo)` añade uno terminado; `ClearBuildings()` los quita todos (nueva partida).
 
 ### `World/WorldMap.cs`
 | Elemento | Qué es |
@@ -297,7 +315,7 @@ Punto de entrada. Pone el formato de números en español y lee los argumentos.
 
 | Elemento | Qué es |
 | --- | --- |
-| `StartOptions.Parse(args)` | Opciones de línea de comandos para pruebas: `--new random|earth`, `--seed`, `--players`, `--days` (funda la capital y avanza N días), `--zoom`, `--mode terrain|political|population|mood|fertility|resources`, `--nation summary|cities|provinces|science` (abre la pantalla de la nación) y `--screenshot fichero.png` (guarda una captura del juego y se cierra). |
+| `StartOptions.Parse(args)` | Opciones de línea de comandos para pruebas: `--new random|earth`, `--seed`, `--players`, `--days` (funda la capital y avanza N días), `--zoom`, `--mode terrain|political|population|mood|fertility|resources`, `--nation summary|cities|provinces|science` (abre la pantalla de la nación), `--panel buildings` (muestra la pestaña Edificios de la provincia seleccionada) y `--screenshot fichero.png` (guarda una captura del juego y se cierra). |
 | `QuickStart` | Partida que empieza directamente, sin menús. |
 
 ### `ConquerApp.cs`
@@ -323,7 +341,7 @@ La pantalla de juego.
 | Función | Qué hace |
 | --- | --- |
 | `GameScreen(...)` | Crea el renderizador y la cámara y centra la vista en tus colonos. |
-| `ApplyTestOptions(...)` | Aplica `--days`, `--zoom`, `--mode` y `--nation`. |
+| `ApplyTestOptions(...)` | Aplica `--days`, `--zoom`, `--mode`, `--nation` y `--panel`. |
 | `Frame(dt)` | Fotograma: teclas, tiempo, refresco del mapa, dibujo del mapa, marcadores, paneles e interacción. |
 | `AdvanceTime(dt)` | Convierte tiempo real en horas de juego según la velocidad (pausa, 1 h/s … 7 días/s). |
 | `SetSpeed`, `HandleKeys` | Velocidad y teclado (Espacio, 1-5, Tab, Inicio, N, +/-, WASD, Esc). |
@@ -338,8 +356,9 @@ La pantalla de juego.
 | `DrawMigrations()` | Puntos que representan a los migrantes en camino. |
 | `DrawUnits()`, `DrawPath()` | Fichas de unidades (estilo OTAN: aspa para infantería, "C" para colonos) y la ruta de la seleccionada. |
 | `DrawTopBar()`, `Compact()` | Barra superior: nación, población y humor medio, fecha, velocidades, recursos y botones Nación (con «!» si no se investiga nada) y Menú (con números abreviados: 12,3k, 2,9M). |
-| `DrawSidePanel()`, `UnitPanel()`, `ProvincePanel()` | Panel derecho: datos y botones de la unidad o provincia seleccionada (humor y fertilidad, yacimientos con lo que les queda, fundar, fiestas, reclamar, asentarse, reclutar, migración forzada). |
+| `DrawSidePanel()`, `UnitPanel()`, `ProvincePanel()` | Panel derecho: datos y botones de la unidad o provincia seleccionada; el de provincia tiene pestañas General y Edificios (humor y fertilidad, yacimientos con lo que les queda, fundar, fiestas, reclamar, asentarse, reclutar, migración forzada). |
 | `MoodTooltip(provincia)` | Tooltip del humor con sus causas y su efecto en la producción. |
+| `BuildingsPanel(...)` | Pestaña Edificios: la obra en curso con su barra, los edificios terminados y, en tus provincias, un botón por cada edificio que puedes levantar; los demás dicen qué les falta. |
 | `Line()`, `Paragraph()` | Ayudas para escribir filas y párrafos en el panel. |
 | `DrawBottomBar()` | Modos de mapa y ayuda de controles. |
 | `DrawResourceFilter(barra)` | En el modo recursos, fila de botones para ver todos los yacimientos o solo uno; hace de leyenda con el color de cada recurso. |
@@ -455,7 +474,7 @@ Uso: ver el README.
 | Fichero | Qué comprueba |
 | --- | --- |
 | `WorldGenerationTests.cs` | Ambos mapas salen con unas 25.000 provincias y todos los píxeles asignados. |
-| `GameplayTests.cs` | Inicio sin territorio y con los recursos correctos; fundar la capital; océanos y polos no reclamables; las unidades terrestres no entran al mar pero sí cruzan hielo; nada cruza el mar; provincias mayores en desiertos, polos y océanos; solo las unidades militares reclaman; velocidad de 10 km/h; migración diaria; migración forzada con su coste; consumo de comida; la capital gana humor y fertilidad; el hambre los hunde; los migrantes forzados llegan descontentos; las provincias descontentas no pagan impuestos; la fertilidad acelera el crecimiento; las reservas de comida alegran; las fiestas cuestan oro y duran un mes; las estadísticas de la nación suman bien; cada yacimiento es una bolsa finita que empieza llena; las bolsas se agotan y dejan de producir; las ciudades producen ciencia que descubre avances; los avances piden sus requisitos; la ciencia sin investigación se guarda; los avances mejoran la economía; la IA se expande e investiga. `WorldFixture` genera un único mundo para todos. |
+| `GameplayTests.cs` | Inicio sin territorio y con los recursos correctos; fundar la capital; océanos y polos no reclamables; las unidades terrestres no entran al mar pero sí cruzan hielo; nada cruza el mar; provincias mayores en desiertos, polos y océanos; solo las unidades militares reclaman; velocidad de 10 km/h; migración diaria; migración forzada con su coste; consumo de comida; la capital gana humor y fertilidad; el hambre los hunde; los migrantes forzados llegan descontentos; las provincias descontentas no pagan impuestos; la fertilidad acelera el crecimiento; las reservas de comida alegran; las fiestas cuestan oro y duran un mes; las estadísticas de la nación suman bien; cada yacimiento es una bolsa finita que empieza llena; las bolsas se agotan y dejan de producir; las ciudades producen ciencia que descubre avances; los avances piden sus requisitos; la ciencia sin investigación se guarda; los avances mejoran la economía; los edificios cuestan y tardan, tienen sus requisitos y mejoran su provincia; la IA se expande e investiga. `WorldFixture` genera un único mundo para todos. |
 | `ReleaseTests.cs` | La versión del `.csproj` coincide con la primera entrada del `CHANGELOG.md`. |
 
 ---

@@ -1,4 +1,5 @@
 using Conquer.Game.AI;
+using Conquer.Game.Buildings;
 using Conquer.Game.Economy;
 using Conquer.Game.Entities;
 using Conquer.Game.Rules;
@@ -71,6 +72,7 @@ public sealed class GameSession
             p.CityId = null;
             p.Mood = GameRules.StartingMood;
             p.Fertility = 1;
+            p.ClearBuildings();
             foreach (var r in Resources.Deposits)
                 p.Reserves[(int)r] = p.DepositSizes[(int)r] * GameRules.DepositSizeMultiplier;
         }
@@ -100,7 +102,10 @@ public sealed class GameSession
 
     /// <summary>Citizens a province's land can feed, including the bonus of a city.</summary>
     public double CapacityOf(Province p) =>
-        p.Capacity * (p.CityId.HasValue ? GameRules.CityCapacityMultiplier : 1) * (1 + (p.OwnerId >= 0 ? Players[p.OwnerId].Bonuses.Capacity : 0));
+        p.Capacity * (p.CityId.HasValue ? GameRules.CityCapacityMultiplier : 1) * (1 + BonusesOf(p).Capacity);
+
+    /// <summary>What improves a province: its owner's advances plus its own buildings.</summary>
+    public Modifiers BonusesOf(Province p) => p.OwnerId >= 0 ? Players[p.OwnerId].Bonuses + p.BuildingBonuses : p.BuildingBonuses;
 
     /// <summary>
     /// What pushes a province's mood up or down, as (reason, points). Their sum, clamped to 0..100,
@@ -131,6 +136,8 @@ public sealed class GameSession
         if (owner.IsStarving) factors.Add(("Hambre", GameRules.StarvingMood));
         foreach (var tech in owner.Techs.Where(t => t.Info().Effects.Mood != 0))
             factors.Add((tech.Info().Name, tech.Info().Effects.Mood));
+        foreach (var building in p.Buildings.Where(b => b.Info().Effects.Mood != 0))
+            factors.Add((building.Info().Name, building.Info().Effects.Mood));
         return factors;
     }
 
@@ -178,6 +185,7 @@ public sealed class GameSession
             foreach (var player in Players) DailyEconomy(player);
             foreach (var player in Players) DailyMigration(player);
             foreach (var player in Players) DailyScience(player);
+            foreach (var player in Players) DailyConstruction(player);
         }
         if (Date.Hours % 6 == 0)
             foreach (var ai in _ais) ai.Think(dailyDecisions: Date.Hour == 0);
@@ -248,12 +256,13 @@ public sealed class GameSession
             double worked = Math.Min(pop, capacity);
             double crowded = Math.Max(0, pop - capacity);
             double output = GameRules.MoodProductivity(p.Mood);
-            net[(int)ResourceType.Food] += GameRules.FoodPerWorker * p.Info.FoodYield * (worked + crowded * GameRules.OvercrowdedFoodShare) * output * (1 + player.Bonuses.Food);
-            net[(int)ResourceType.Wood] += p.Info.WoodYield / 1000 * worked * output * (1 + player.Bonuses.Wood);
-            if (p.Mood >= GameRules.UnrestMood) net[(int)ResourceType.Gold] += GameRules.TaxGoldPerCitizen * pop * output * (1 + player.Bonuses.Taxes);
+            var bonus = BonusesOf(p);
+            net[(int)ResourceType.Food] += GameRules.FoodPerWorker * p.Info.FoodYield * (worked + crowded * GameRules.OvercrowdedFoodShare) * output * (1 + bonus.Food);
+            net[(int)ResourceType.Wood] += p.Info.WoodYield / 1000 * worked * output * (1 + bonus.Wood);
+            if (p.Mood >= GameRules.UnrestMood) net[(int)ResourceType.Gold] += GameRules.TaxGoldPerCitizen * pop * output * (1 + bonus.Taxes);
             double workforce = Math.Min(1, pop / GameRules.DepositFullWorkers);
             foreach (var r in Resources.Deposits)
-                if (p.HasDeposit(r)) net[(int)r] += Extract(p, r, p.Deposits[(int)r] * workforce * output * (1 + player.Bonuses.Deposits));
+                if (p.HasDeposit(r)) net[(int)r] += Extract(p, r, p.Deposits[(int)r] * workforce * output * (1 + bonus.Deposits));
         }
 
         double eaters = population
@@ -296,7 +305,7 @@ public sealed class GameSession
 
     /// <summary>Fertility a populated province tends to, with its owner's advances.</summary>
     public double TargetFertility(Province p, Player owner, bool starving) =>
-        GameRules.TargetFertility(p.Mood, starving) * (1 + owner.Bonuses.Fertility);
+        GameRules.TargetFertility(p.Mood, starving) * (1 + owner.Bonuses.Fertility + p.BuildingBonuses.Fertility);
 
     // ------------------------------------------------------------------ science
 
@@ -307,9 +316,10 @@ public sealed class GameSession
         foreach (var city in Cities.Where(c => c.OwnerId == player.Id))
         {
             var p = Map.Provinces[city.ProvinceId];
-            points += (GameRules.ScienceBasePerCity + p.Population * GameRules.SciencePerCityCitizen) * GameRules.MoodProductivity(p.Mood);
+            points += (GameRules.ScienceBasePerCity + p.Population * GameRules.SciencePerCityCitizen) * GameRules.MoodProductivity(p.Mood)
+                      * (1 + player.Bonuses.Science + p.BuildingBonuses.Science);
         }
-        return points * (1 + player.Bonuses.Science);
+        return points;
     }
 
     /// <summary>The day's science goes into the current research (or is saved) and completes it when enough is in.</summary>
@@ -352,6 +362,62 @@ public sealed class GameSession
         player.ResearchProgress[(int)tech] += player.SpareScience;
         player.SpareScience = 0;
         return CommandResult.Success();
+    }
+
+    // ------------------------------------------------------------------ buildings
+
+    /// <summary>
+    /// Whether the building could go up in this province one day, ignoring cost and ongoing work:
+    /// its advance is known, and the province has a city or a deposit if the building needs one.
+    /// </summary>
+    public CommandResult IsBuildingAvailable(Province p, BuildingType type)
+    {
+        var info = type.Info();
+        if (p.OwnerId < 0) return CommandResult.Fail("La provincia no es de nadie.");
+        if (info.RequiresTech is Tech tech && !Players[p.OwnerId].Techs.Contains(tech))
+            return CommandResult.Fail($"Requiere {tech.Info().Name.ToLowerInvariant()}.");
+        if (info.CityOnly && !p.CityId.HasValue) return CommandResult.Fail("Solo en provincias con ciudad.");
+        if (info.NeedsDeposit && !Resources.Deposits.Any(p.HasDeposit)) return CommandResult.Fail("Requiere un yacimiento sin agotar.");
+        return CommandResult.Success();
+    }
+
+    public CommandResult CanBuild(int playerId, Province p, BuildingType type)
+    {
+        if (p.OwnerId != playerId) return CommandResult.Fail("La provincia no es tuya.");
+        if (p.Buildings.Contains(type)) return CommandResult.Fail("Ya está construido.");
+        var available = IsBuildingAvailable(p, type);
+        if (!available.Ok) return available;
+        if (p.Constructing is BuildingType busy) return CommandResult.Fail($"Ya se está construyendo {busy.Info().Name.ToLowerInvariant()}.");
+        if (p.Population < GameRules.SettledPopulation) return CommandResult.Fail($"Hacen falta al menos {GameRules.SettledPopulation} habitantes.");
+        if (!Players[playerId].Stockpile.Has(type.Info().Cost)) return CommandResult.Fail($"Cuesta {type.Info().Cost}.");
+        return CommandResult.Success();
+    }
+
+    /// <summary>Pays for a building and starts its construction; it takes <see cref="BuildingInfo.Days"/> days.</summary>
+    public CommandResult Build(int playerId, int provinceId, BuildingType type)
+    {
+        var p = Map.Provinces[provinceId];
+        var check = CanBuild(playerId, p, type);
+        if (!check.Ok) return check;
+        Players[playerId].Stockpile.TrySpend(type.Info().Cost);
+        p.Constructing = type;
+        p.ConstructionDaysLeft = type.Info().Days;
+        return CommandResult.Success($"{type.Info().Name} en obras: {type.Info().Days} días.");
+    }
+
+    /// <summary>Every construction advances a day; finished buildings start working at once.</summary>
+    private void DailyConstruction(Player player)
+    {
+        foreach (int id in player.Provinces)
+        {
+            var p = Map.Provinces[id];
+            if (p.Constructing is not BuildingType type || --p.ConstructionDaysLeft > 0) continue;
+            p.AddBuilding(type);
+            p.Constructing = null;
+            p.ConstructionDaysLeft = 0;
+            if (player.IsHuman)
+                Notify(player.Id, $"Terminada la obra: {type.Info().Name} en {CityIn(p)?.Name ?? p.Info.Name.ToLowerInvariant()}.");
+        }
     }
 
     /// <summary>Takes up to <paramref name="amount"/> from a deposit's pocket and returns what was taken.</summary>

@@ -1,3 +1,5 @@
+using Conquer.Game.Rules;
+
 namespace Conquer.Game.Science;
 
 /// <summary>The advances a nation can research. The order is the order they are listed in.</summary>
@@ -13,44 +15,9 @@ public enum Tech
     Currency,
 }
 
-/// <summary>
-/// What an advance improves for its owner. Shares are added to the normal amount (0.2 = +20 %);
-/// the effects of every known advance add up.
-/// </summary>
-public sealed record TechEffects
-{
-    public double Food { get; init; }
-    public double Wood { get; init; }
-    /// <summary>Output of deposits (their pockets empty faster too).</summary>
-    public double Deposits { get; init; }
-    /// <summary>Gold from taxes.</summary>
-    public double Taxes { get; init; }
-    public double Science { get; init; }
-    /// <summary>Citizens the land can feed.</summary>
-    public double Capacity { get; init; }
-    public double Fertility { get; init; }
-    /// <summary>Mood points in every province.</summary>
-    public double Mood { get; init; }
-    /// <summary>Share of hunger deaths avoided.</summary>
-    public double FamineSurvival { get; init; }
-
-    public static TechEffects operator +(TechEffects a, TechEffects b) => new()
-    {
-        Food = a.Food + b.Food,
-        Wood = a.Wood + b.Wood,
-        Deposits = a.Deposits + b.Deposits,
-        Taxes = a.Taxes + b.Taxes,
-        Science = a.Science + b.Science,
-        Capacity = a.Capacity + b.Capacity,
-        Fertility = a.Fertility + b.Fertility,
-        Mood = a.Mood + b.Mood,
-        FamineSurvival = a.FamineSurvival + b.FamineSurvival,
-    };
-}
-
 /// <param name="Cost">Science points needed to discover it.</param>
 /// <param name="Requires">Advances that must be known before researching it.</param>
-public sealed record TechInfo(string Name, double Cost, Tech[] Requires, string Description, TechEffects Effects);
+public sealed record TechInfo(string Name, double Cost, Tech[] Requires, string Description, Modifiers Effects);
 
 public static class Techs
 {

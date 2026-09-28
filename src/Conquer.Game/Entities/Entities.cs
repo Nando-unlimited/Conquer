@@ -23,7 +23,7 @@ public sealed class Player
     /// <summary>Advances discovered so far.</summary>
     public HashSet<Tech> Techs { get; } = [];
     /// <summary>The effects of every discovered advance, added up.</summary>
-    public TechEffects Bonuses { get; private set; } = new();
+    public Modifiers Bonuses { get; private set; } = Modifiers.None;
     /// <summary>What the nation is researching; null while idle.</summary>
     public Tech? Researching { get; set; }
     /// <summary>Science points put into each advance; kept when research switches to another one.</summary>

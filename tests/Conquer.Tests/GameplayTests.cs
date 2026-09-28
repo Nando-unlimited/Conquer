@@ -1,3 +1,4 @@
+using Conquer.Game.Buildings;
 using Conquer.Game.Economy;
 using Conquer.Game.Rules;
 using Conquer.Game.Science;
@@ -464,6 +465,67 @@ public class GameplayTests(WorldFixture world)
         var advanced = OneDay(Tech.Agriculture, Tech.Irrigation);
         Assert.Equal(plain.Food * 1.2, advanced.Food, 3);
         Assert.Equal(plain.Capacity * 1.25, advanced.Capacity, 3);
+    }
+
+    [Fact]
+    public void BuildingsCostResourcesAndTakeDaysToBuild()
+    {
+        var s = NewSession();
+        var (a, _) = GrasslandPair();
+        s.FoundCity(0, s.AddUnit(0, UnitType.Settlers, a.Id, 300).Id);
+        var farm = BuildingType.Farm.Info();
+
+        Assert.True(s.Build(0, a.Id, BuildingType.Farm).Ok);
+        Assert.Equal(GameRules.StartingWood - 40, s.Human.Stockpile[ResourceType.Wood]);
+        Assert.Equal(BuildingType.Farm, a.Constructing);
+        Assert.False(s.Build(0, a.Id, BuildingType.Sawmill).Ok); // one construction at a time
+
+        RunHours(s, 24 * (farm.Days - 1));
+        Assert.DoesNotContain(BuildingType.Farm, a.Buildings);
+        RunHours(s, 24);
+        Assert.Contains(BuildingType.Farm, a.Buildings);
+        Assert.Null(a.Constructing);
+        Assert.Contains(s.Notifications, n => n.Text.StartsWith("Terminada la obra: Granja"));
+        Assert.False(s.Build(0, a.Id, BuildingType.Farm).Ok); // one of each
+    }
+
+    [Fact]
+    public void BuildingsHaveTheirRequirements()
+    {
+        var s = NewSession();
+        var (a, b) = GrasslandPair();
+        s.FoundCity(0, s.AddUnit(0, UnitType.Settlers, a.Id, 300).Id);
+        s.Claim(0, s.AddUnit(0, UnitType.Warriors, b.Id, 100).Id);
+        s.Human.Stockpile[ResourceType.Wood] = s.Human.Stockpile[ResourceType.Gold] = 1000;
+
+        Assert.False(s.Build(0, a.Id, BuildingType.Library).Ok); // needs writing
+        s.Human.Learn(Tech.Writing);
+        Assert.False(s.Build(0, b.Id, BuildingType.Library).Ok); // needs a city
+        Assert.False(s.Build(0, b.Id, BuildingType.Farm).Ok);    // nobody lives there to build it
+        Assert.True(s.Build(0, a.Id, BuildingType.Library).Ok);
+
+        s.Human.Learn(Tech.Mining);
+        var bare = _map.Provinces.First(p => p.IsClaimable && !p.IsOwned && !Resources.Deposits.Any(p.HasDeposit));
+        s.Claim(0, s.AddUnit(0, UnitType.Warriors, bare.Id, 100).Id);
+        Assert.False(s.IsBuildingAvailable(bare, BuildingType.Mine).Ok); // no deposit to mine
+    }
+
+    [Fact]
+    public void BuildingsImproveTheirOwnProvince()
+    {
+        var s = NewSession();
+        var (a, _) = GrasslandPair();
+        s.FoundCity(0, s.AddUnit(0, UnitType.Settlers, a.Id, 300).Id);
+        double target = s.TargetMood(a), capacity = s.CapacityOf(a), science = s.SciencePerDay(s.Human);
+
+        a.AddBuilding(BuildingType.Temple);
+        a.AddBuilding(BuildingType.Aqueduct);
+        a.AddBuilding(BuildingType.Library);
+
+        Assert.Contains(s.MoodFactors(a), f => f.Reason == "Templo" && f.Points == 10);
+        Assert.Equal(Math.Min(100, target + 10), s.TargetMood(a));
+        Assert.Equal(capacity * 1.25, s.CapacityOf(a), 6);
+        Assert.Equal(science * 1.5, s.SciencePerDay(s.Human), 6);
     }
 
     [Fact]
