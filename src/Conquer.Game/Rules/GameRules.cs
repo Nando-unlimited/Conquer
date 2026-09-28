@@ -1,0 +1,77 @@
+using Conquer.Game.Economy;
+
+namespace Conquer.Game.Rules;
+
+/// <summary>Tuning numbers for the whole game. Rates are per in-game day unless stated otherwise.</summary>
+public static class GameRules
+{
+    // Starting conditions
+    public const int StartingCitizens = 300;
+    public const double StartingFood = 600;
+    public const double StartingGold = 50;
+    public const double StartingWood = 100;
+
+    // Movement
+    /// <summary>How far a citizen walks in an hour on open ground; units and migrants travel at this pace.</summary>
+    public const double CitizenSpeedKmh = 10;
+
+    // Population
+    /// <summary>Food each citizen eats per day (units and migrants on the road too).</summary>
+    public const double FoodPerCitizen = 0.1;
+    /// <summary>Food a worker grows per day on land of yield 1; most farmland feeds more people than work it.</summary>
+    public const double FoodPerWorker = 0.13;
+    /// <summary>Daily growth of a fed province (about +55% a year), damped as it fills up.</summary>
+    public const double GrowthRate = 0.0012;
+    public const double StarvationRate = 0.01;
+    /// <summary>A city feeds this many times the citizens of the surrounding land.</summary>
+    public const double CityCapacityMultiplier = 2.5;
+    /// <summary>Cities grow this many times faster than the countryside.</summary>
+    public const double CityGrowthMultiplier = 2;
+
+    // Production
+    public const double TaxGoldPerCitizen = 0.002;
+    /// <summary>A deposit gives its full output once this many citizens live in the province.</summary>
+    public const double DepositFullWorkers = 1000;
+    /// <summary>Workers beyond the land's capacity still produce this share of normal food.</summary>
+    public const double OvercrowdedFoodShare = 0.3;
+
+    // Migration
+    /// <summary>Share of a city's population that may leave for new territories each day.</summary>
+    public const double DailyEmigrationShare = 0.0015;
+    /// <summary>Cities stop sending migrants below this population.</summary>
+    public const int MinEmigrationCityPopulation = 200;
+    /// <summary>A province counts as settled once this many citizens live there; until then it draws migrants first.</summary>
+    public const int SettledPopulation = 10;
+    /// <summary>Settled provinces attract migrants until they reach this share of their capacity.</summary>
+    public const double MigrationTargetShare = 0.5;
+    public const int MinCityPopulation = 100;
+    /// <summary>Gold paid per 10 citizens moved by a forced migration.</summary>
+    public const double ForcedMigrationGoldPerTen = 1;
+
+    public static double ForcedMigrationCost(int citizens) => Math.Ceiling(citizens / 10.0) * ForcedMigrationGoldPerTen;
+}
+
+public enum UnitType
+{
+    Settlers,
+    Warriors,
+}
+
+/// <param name="Citizens">Citizens that form the unit, taken from the city that recruits it.</param>
+public sealed record UnitTypeInfo(string Name, string Symbol, int Citizens, bool IsMilitary, bool CanFoundCity, ResourceCost Cost);
+
+public static class UnitTypes
+{
+    private static readonly UnitTypeInfo Settlers = new("Colonos", "C", GameRules.StartingCitizens, false, true,
+        new ResourceCost((ResourceType.Food, 150), (ResourceType.Wood, 50), (ResourceType.Gold, 20)));
+
+    private static readonly UnitTypeInfo Warriors = new("Guerreros", "G", 100, true, false,
+        new ResourceCost((ResourceType.Wood, 30), (ResourceType.Gold, 15)));
+
+    public static UnitTypeInfo Info(this UnitType type) => type switch
+    {
+        UnitType.Settlers => Settlers,
+        UnitType.Warriors => Warriors,
+        _ => throw new ArgumentOutOfRangeException(nameof(type)),
+    };
+}

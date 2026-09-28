@@ -1,0 +1,70 @@
+namespace Conquer.Game.Economy;
+
+public enum ResourceType
+{
+    Food,
+    Wood,
+    Coal,
+    Iron,
+    Copper,
+    Silicon,
+    Oil,
+    Aluminium,
+    Rubber,
+    Gold,
+    Silver,
+}
+
+public static class Resources
+{
+    public static readonly ResourceType[] All = Enum.GetValues<ResourceType>();
+
+    /// <summary>Resources found as deposits in the ground (everything except food and wood, which come from the land itself).</summary>
+    public static readonly ResourceType[] Deposits =
+    [
+        ResourceType.Coal, ResourceType.Iron, ResourceType.Copper, ResourceType.Silicon, ResourceType.Oil,
+        ResourceType.Aluminium, ResourceType.Rubber, ResourceType.Gold, ResourceType.Silver,
+    ];
+
+    public static string Name(this ResourceType type) => type switch
+    {
+        ResourceType.Food => "Comida",
+        ResourceType.Wood => "Madera",
+        ResourceType.Coal => "Carbón",
+        ResourceType.Iron => "Hierro",
+        ResourceType.Copper => "Cobre",
+        ResourceType.Silicon => "Silicio",
+        ResourceType.Oil => "Petróleo",
+        ResourceType.Aluminium => "Aluminio",
+        ResourceType.Rubber => "Caucho",
+        ResourceType.Gold => "Oro",
+        ResourceType.Silver => "Plata",
+        _ => type.ToString(),
+    };
+}
+
+/// <summary>A national store of every resource.</summary>
+public sealed class Stockpile
+{
+    private readonly double[] _amounts = new double[Resources.All.Length];
+
+    public double this[ResourceType type]
+    {
+        get => _amounts[(int)type];
+        set => _amounts[(int)type] = value;
+    }
+
+    public bool Has(ResourceCost cost) => cost.Items.All(i => this[i.Type] >= i.Amount);
+
+    public bool TrySpend(ResourceCost cost)
+    {
+        if (!Has(cost)) return false;
+        foreach (var (type, amount) in cost.Items) this[type] -= amount;
+        return true;
+    }
+}
+
+public readonly record struct ResourceCost(params (ResourceType Type, double Amount)[] Items)
+{
+    public override string ToString() => string.Join(", ", Items.Select(i => $"{i.Amount:0} {i.Type.Name()}"));
+}

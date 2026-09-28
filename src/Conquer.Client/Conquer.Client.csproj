@@ -1,0 +1,33 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <AssemblyName>Conquer</AssemblyName>
+    <RootNamespace>Conquer.Client</RootNamespace>
+    <!-- Game version: bump on every change and add a matching entry at the top of CHANGELOG.md. -->
+    <Version>1.0.0</Version>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Conquer.Game\Conquer.Game.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Silk.NET.Input" Version="2.23.0" />
+    <PackageReference Include="Silk.NET.OpenGL" Version="2.23.0" />
+    <PackageReference Include="Silk.NET.Windowing" Version="2.23.0" />
+    <PackageReference Include="StbTrueTypeSharp" Version="1.26.13" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="Assets\NotoSans-Regular.ttf" LogicalName="Conquer.Client.Assets.NotoSans-Regular.ttf" />
+    <EmbeddedResource Include="Assets\NotoSans-Bold.ttf" LogicalName="Conquer.Client.Assets.NotoSans-Bold.ttf" />
+    <EmbeddedResource Include="..\..\CHANGELOG.md" LogicalName="CHANGELOG.md" />
+    <InternalsVisibleTo Include="Conquer.Tests" />
+  </ItemGroup>
+
+</Project>
