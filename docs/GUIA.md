@@ -64,6 +64,8 @@ Todas las constantes de equilibrio (por día de juego salvo que se diga otra cos
 | `DepositFullWorkers` | Habitantes necesarios para que un yacimiento rinda al máximo. |
 | `DepositSizeMultiplier` | Multiplica el tamaño de todas las bolsas de recurso al empezar la partida (1 por ahora; lo cambiarán los niveles de dificultad). |
 | `ScienceBasePerCity`, `SciencePerCityCitizen` | Ciencia diaria de cada ciudad: 0,5 fijos más 0,001 por habitante (antes de humor y avances). |
+| `MinRiverFlow`, `GreatRiverFlow` | Agua que ha de reunir un tramo para ser río (60) y para ser gran río (300); solo los grandes ríos cambian el juego. |
+| `RiverFertility` | La tierra de un gran río da un 25 % más de comida y de capacidad. |
 | `OvercrowdedFoodShare` | Lo que rinden los trabajadores que superan la capacidad de la tierra. |
 | `DailyEmigrationShare`, `MinEmigrationCityPopulation` | Parte de una ciudad que emigra cada día, y población por debajo de la cual deja de enviar gente. |
 | `SettledPopulation` | Habitantes con los que una provincia se considera asentada. |
@@ -97,6 +99,7 @@ Cifras del ejército. El combate se mide por hora; el resto, por día.
 | `BreakingOrganisation` | Un regimiento se rompe por debajo del 10 % de su organización: el defensor se retira y el atacante abandona. |
 | `CombatRandomness` | El fuego de cada bando varía un ±20 % cada hora. |
 | `MountedRoughTerrainAttack`, `TerrainDefense(bioma)`, `IsRough(bioma)` | La caballería ataca a la mitad en terreno difícil; el defensor dispara ×1,25 en colinas, ×1,5 en montañas y ×1,2 en bosques y pantanos. |
+| `RiverDefense`, `DefenseMultiplier(provincia)` | Con un gran río el defensor dispara ×1,25 más (el atacante tiene que cruzarlo); se multiplica por el del terreno. |
 | `CommandBonus`, `HigherCommandBonus` | +10 % en combate y recuperación con el cuartel propio a su alcance, y +5 % por cada nivel superior enlazado. |
 | `SupplyRangeHours` | El suministro llega hasta 15 días de marcha desde una ciudad, por tierra propia o libre. |
 | `OutOfSupplyEfficiency`, `OutOfSupplyOrganisationLoss`, `OutOfSupplyAttrition` | Sin suministro se lucha al 75 % y se pierde cada día un 5 % de organización y un 1 % de hombres. |
@@ -332,14 +335,16 @@ El ejército de un rival.
 `Province`: id, bioma dominante, centro (píxel y lat/lon), área en km², altitud media, vecinas,
 yacimientos (`Deposits`: producción diaria; `DepositSizes`: tamaño de la bolsa; `Reserves`: lo que queda en la partida), dueño, población, ciudad, humor (`Mood`, 0-100) y fertilidad
 (`Fertility`, multiplicador de nacimientos, 1 = normal). `ControllerId` es quién la tiene en la guerra (su dueño, o el enemigo que la ocupa) e `IsOccupied` si la ocupa otro. `IsWater`, `IsClaimable`, `IsOwned`,
-`Capacity` (habitantes que alimenta su tierra) y `HasDeposit(recurso)` (tiene ese yacimiento sin agotar) son atajos.
+`RiverFlow` (agua del mayor río que la cruza, 0 sin río), `HasRiver` (la cruza un gran río), `FoodYield` (rendimiento de comida de su bioma, más en un gran río),
+`Capacity` (habitantes que alimenta su tierra, más en un gran río) y `HasDeposit(recurso)` (tiene ese yacimiento sin agotar) son atajos.
 Edificios: los terminados (`Buildings`) y la suma de sus efectos (`BuildingBonuses`), el que está en obras (`Constructing`) y los días que le quedan (`ConstructionDaysLeft`). `AddBuilding(tipo)` añade uno terminado; `ClearBuildings()` los quita todos (nueva partida).
 
 ### `World/WorldMap.cs`
 | Elemento | Qué es |
 | --- | --- |
 | `MapKind` | `Random` o `Earth`. |
-| `WorldMap` | El mapa: tamaño, altitud, bioma e id de provincia por píxel, y la lista de provincias. |
+| `RiverSegment` | Un tramo corto de río entre dos puntos del mapa, con el agua que lleva. |
+| `WorldMap` | El mapa: tamaño, altitud, bioma e id de provincia por píxel, la lista de provincias y los ríos (`Rivers`). |
 | `Latitude(y)`, `Longitude(x)`, `WrapX(x)` | Conversión de píxeles a grados y vuelta al mundo en X. |
 | `ProvinceAt(x, y)` | Provincia en un píxel. |
 | `PixelAreaKm2(fila)` | Área real de un píxel (menor cerca de los polos). |
@@ -349,7 +354,7 @@ Edificios: los terminados (`Buildings`) y la suma de sus efectos (`BuildingBonus
 | Elemento | Qué es |
 | --- | --- |
 | `WorldSettings` | Tipo de mapa, semilla y número objetivo de provincias (25.000). |
-| `Generate(ajustes, progreso)` | Crea el mundo en cuatro pasos: relieve → clima y biomas → provincias → recursos. Informa del paso en curso para la pantalla de carga. |
+| `Generate(ajustes, progreso)` | Crea el mundo en cinco pasos: relieve → clima y biomas → provincias → recursos → ríos (cada provincia guarda el mayor que la cruza). Informa del paso en curso para la pantalla de carga. |
 
 ### `World/EarthData.cs`
 Formato del fichero `Assets/earth.gz` (Tierra real, 3600×1800): altitud en metros y marcas de tierra,
@@ -407,6 +412,16 @@ Divide el mapa en provincias.
 | `Chance(recurso, bioma, latitud)` | Probabilidad de cada recurso según el terreno (caucho en selvas tropicales, petróleo en desiertos, etc.). |
 | `Richness(recurso)` | Producción típica diaria de un yacimiento. |
 
+### `World/Generation/RiverGenerator.cs`
+Traza los ríos a partir del relieve, en una rejilla de 2×2 píxeles.
+
+| Función | Qué hace |
+| --- | --- |
+| `Trace(...)` | Inundación por prioridad desde mares y lagos: cada celda de tierra desagua en la vecina que llegó primero (las hondonadas se cruzan como un lago lleno). La lluvia baja por ese árbol y cada celda con agua suficiente es río. Un poco de ruido en la altitud hace que serpenteen por el llano. |
+| `Smooth(...)` | Une las celdas en tramos (de una fuente o confluencia a la siguiente o al mar), los suaviza y los corta en `RiverSegment`. |
+| `Jitter`, `Unwrap`, `Wrap`, `Chaikin` | Ayudas: desplazamiento fijo para no seguir la rejilla, continuidad al cruzar el borde del mapa y suavizado de esquinas. |
+| `Runoff(bioma)` | Agua que aporta cada bioma: mucha en selvas, bosques y montañas; poca en desiertos y hielo. |
+
 ### `Assets/earth.gz`
 Mapa de la Tierra real, generado por `tools/Conquer.EarthData`. Se incluye dentro de la DLL.
 
@@ -457,6 +472,7 @@ La pantalla de juego. Clase parcial: el ejército en pantalla está en `GameScre
 | `NationRect`, `ViewProvince(provincia)` | Rectángulo de la pantalla de la nación, y seleccionar y centrar una provincia cuando se pide desde ella. |
 | `Show(resultado)`, `CollectNotifications()` | Mensajes temporales en pantalla. |
 | `Center`, `Between`, `OnScreen` | Posición de una provincia, punto intermedio entre dos (cruzando el borde del mapa por el lado corto) y si algo está en pantalla. |
+| `DrawRivers()` | Ríos como líneas azules, más anchas cuanta más agua llevan; con el zoom alejado solo se ven los grandes. |
 | `DrawCities()` | Marcadores de ciudad y sus nombres. |
 | `DrawMigrations()` | Puntos que representan a los migrantes en camino. |
 | `DrawPath()` | Ruta de la unidad seleccionada. |

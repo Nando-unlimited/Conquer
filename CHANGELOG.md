@@ -11,6 +11,10 @@ Todos los cambios del juego, del más reciente al más antiguo. Cada versión es
 - En la pestaña Ejército de tus ciudades se entrena un **regimiento entero** a partir de una plantilla: pagas todo a la vez, los hombres salen de la ciudad y sus batallones se instruyen juntos (tarda lo que el más lento). Los batallones sueltos se siguen pudiendo entrenar.
 - Cada nación empieza con una plantilla de dos cohortes de guerreros.
 - La IA diseña su propia plantilla con su mejor infantería y su tropa más ofensiva, solo con tropas cuyos materiales tiene, y la recorta al tamaño que su ciudad puede dar.
+- **Ríos**, trazados a partir del relieve y la lluvia en los mapas aleatorio y de la Tierra. Se ven como líneas azules, más anchas cuanta más agua llevan; con el zoom alejado solo se ven los grandes.
+  - Los **grandes ríos** hacen la tierra más fértil: +25 % de comida y de capacidad.
+  - Quien ataque una provincia con un gran río tiene que cruzarlo: el defensor dispara un 25 % más.
+  - Los arroyos se dibujan pero no cambian nada. El panel y el tooltip de la provincia dicen si tiene río.
 
 ## [1.9.0] - 2026-09-28
 
