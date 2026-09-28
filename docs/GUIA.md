@@ -108,8 +108,8 @@ Las brigadas que se entrenan en las ciudades. **Aquí se añaden y equilibran la
 
 | Elemento | Qué es |
 | --- | --- |
-| `BrigadeType` | Guerreros, Arqueros, Lanceros de bronce, Jinetes, Carros de guerra e Infantería de hierro. |
-| `BrigadeInfo` | Nombre, símbolo, hombres, coste, días de instrucción, avance que requiere, ataque, defensa, organización máxima, velocidad y si es montada. |
+| `BrigadeType` | Guerreros, Arqueros, Lanceros de bronce, Jinetes, Carros de guerra, Carros de arqueros e Infantería de hierro. |
+| `BrigadeInfo` | Nombre, símbolo, hombres, coste, días de instrucción, avances que requiere (todos: los carros de arqueros piden La rueda y Tiro con arco), ataque, defensa, organización máxima, velocidad y si es montada. |
 | `Brigades.All`, `Brigades.Info(tipo)` | Todas las brigadas y la ficha de cada una. |
 | `Brigade` | Una brigada de una división: sus hombres (`Strength`) y su organización, y ambos como parte de su máximo. |
 
@@ -139,7 +139,7 @@ Los avances que se pueden investigar. **Aquí se añaden y equilibran los avance
 
 | Elemento | Qué es |
 | --- | --- |
-| `Tech` | Los avances: Agricultura, Carpintería, Minería, Trabajo del bronce, Trabajo del hierro, Doma del caballo, La rueda, Escritura, Mitología, Irrigación, Medicina y Moneda. |
+| `Tech` | Los avances: Agricultura, Carpintería, Minería, Trabajo del bronce, Trabajo del hierro, Doma del caballo, La rueda, Tiro con arco, Escritura, Mitología, Irrigación, Medicina y Moneda. |
 | `TechInfo.Effects` | Lo que mejora el avance en toda la nación, como `Modifiers`. |
 | `TechInfo` | Nombre, coste en puntos de ciencia, requisitos, descripción, efectos y recursos que revela (`Reveals`: Minería el carbón, Trabajo del hierro el hierro). |
 | `Techs.All`, `Techs.Info(avance)` | Todos los avances y la ficha de cada uno. |
@@ -486,7 +486,7 @@ Pantalla de la nación (botón «Nación» o tecla N). El tiempo sigue corriendo
 | `ProvinceCells(...)` | Celdas de población, humor (con tooltip de causas) y fertilidad, comunes a las dos tablas. |
 | `Header(...)`, `Sort(...)` | Cabeceras que ordenan al pulsarlas (nombre, población, humor, fertilidad; otra pulsación invierte el orden). |
 | `Rows(...)` | Filas visibles con desplazamiento por la rueda del ratón y barra de desplazamiento. |
-| `Science(...)`, `TechCard(...)`, `ProgressBar(...)` | Pestaña Ciencia: puntos al día (con su desglose), investigación actual con barra de progreso y tiempo estimado, y una tarjeta por avance con su estado, coste, efecto, requisitos, los edificios que permite y el botón Investigar. |
+| `Science(...)`, `TechCard(...)`, `ProgressBar(...)` | Pestaña Ciencia: puntos al día (con su desglose), investigación actual con barra de progreso y tiempo estimado, y una tarjeta por avance con su estado, coste, efecto, requisitos, los edificios y brigadas que permite y el botón Investigar (cinco tarjetas por fila). |
 | `Heading`, `Row`, `ViewButton`, `ProvinceName`, `Compact` | Ayudas de dibujo y formato. |
 
 ### `Graphics/MapRenderer.cs`
@@ -583,7 +583,7 @@ Uso: ver el README.
 | --- | --- |
 | `WorldGenerationTests.cs` | Ambos mapas salen con unas 25.000 provincias y todos los píxeles asignados. |
 | `GameplayTests.cs` | Inicio sin territorio y con los recursos correctos; fundar la capital; océanos y polos no reclamables; las unidades terrestres no entran al mar pero sí cruzan hielo; nada cruza el mar; provincias mayores en desiertos, polos y océanos; solo las unidades militares reclaman; velocidad de 10 km/h; migración diaria; migración forzada con su coste; consumo de comida; la capital gana humor y fertilidad; el hambre los hunde; los migrantes forzados llegan descontentos; las provincias descontentas no pagan impuestos; la fertilidad acelera el crecimiento; las reservas de comida alegran; las fiestas cuestan oro y duran un mes; las estadísticas de la nación suman bien; cada yacimiento es una bolsa finita que empieza llena; las bolsas se agotan y dejan de producir; las ciudades producen ciencia que descubre avances; los avances piden sus requisitos; la ciencia sin investigación se guarda; los avances mejoran la economía; los edificios cuestan y tardan, tienen sus requisitos y mejoran su provincia; al principio solo se conocen los recursos antiguos y los avances revelan los demás; los recursos desconocidos no se explotan; la IA se expande e investiga. `WorldFixture` genera un único mundo para todos. |
-| `MilitaryTests.cs` | Instrucción de brigadas (hombres, recursos y días); brigadas que piden su avance; unir, separar y velocidad de la brigada más lenta; no se entra en tierras ajenas sin guerra; ocupar tierra enemiga sin defensa; un ataque fuerte gana y uno débil se rompe; defensores rodeados destruidos; la paz devuelve lo ocupado; la IA solo acepta la paz pasado un tiempo; desgaste sin suministro; recuperación y refuerzos desde la capital; bonificación de mando en cadena y alcance; un cuerpo manda 5 divisiones como mucho. |
+| `MilitaryTests.cs` | Instrucción de brigadas (hombres, recursos y días); brigadas que piden su avance (o sus dos avances); unir, separar y velocidad de la brigada más lenta; no se entra en tierras ajenas sin guerra; ocupar tierra enemiga sin defensa; un ataque fuerte gana y uno débil se rompe; defensores rodeados destruidos; la paz devuelve lo ocupado; la IA solo acepta la paz pasado un tiempo; desgaste sin suministro; recuperación y refuerzos desde la capital; bonificación de mando en cadena y alcance; un cuerpo manda 5 divisiones como mucho. |
 | `ReleaseTests.cs` | La versión del `.csproj` coincide con la primera entrada del `CHANGELOG.md`. |
 
 ---

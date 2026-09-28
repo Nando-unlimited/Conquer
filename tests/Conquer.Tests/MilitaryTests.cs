@@ -73,11 +73,24 @@ public class MilitaryTests(WorldFixture world)
         var city = s.CityIn(a)!;
         a.Population = 1000;
         s.Human.Stockpile[ResourceType.Wood] = s.Human.Stockpile[ResourceType.Gold] = 500;
+        s.Human.Stockpile[ResourceType.Copper] = 100;
+
+        Assert.True(s.Train(0, city.Id, BrigadeType.Warriors).Ok); // warriors need nothing
+        Assert.False(s.Train(0, city.Id, BrigadeType.Archers).Ok);
+        s.Human.Learn(Tech.Archery);
+        Assert.True(s.Train(0, city.Id, BrigadeType.Archers).Ok);
 
         Assert.False(s.Train(0, city.Id, BrigadeType.Horsemen).Ok);
         s.Human.Learn(Tech.HorsebackRiding);
         Assert.True(s.Train(0, city.Id, BrigadeType.Horsemen).Ok);
         Assert.False(s.Train(0, city.Id, BrigadeType.Chariots).Ok); // needs the wheel
+
+        s.Human.Learn(Tech.TheWheel);
+        Assert.True(s.Train(0, city.Id, BrigadeType.ChariotArchers).Ok); // the wheel and archery
+        s.Human.Techs.Remove(Tech.Archery);
+        var noBows = s.CanTrain(city, BrigadeType.ChariotArchers);
+        Assert.False(noBows.Ok);
+        Assert.Contains("tiro con arco", noBows.Message);
     }
 
     [Fact]

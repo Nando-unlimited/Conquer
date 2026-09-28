@@ -296,7 +296,7 @@ public sealed partial class GameScreen
     {
         Ui.Text(x, y, "Entrenar brigadas", Theme.Text, bold: true);
         y += 26;
-        foreach (var type in Brigades.All.Where(t => t.Info().RequiresTech is not Tech tech || Human.Techs.Contains(tech)))
+        foreach (var type in Brigades.All.Where(t => t.Info().Requires.All(Human.Techs.Contains)))
         {
             var info = type.Info();
             var can = _session.CanTrain(city, type);

@@ -34,7 +34,7 @@ internal sealed partial class AiPlayer
     /// <summary>Food first, then the advances that pay for themselves.</summary>
     private static readonly Tech[] ResearchOrder =
         [
-            Tech.Agriculture, Tech.Writing, Tech.Mining, Tech.BronzeWorking, Tech.HorsebackRiding, Tech.IronWorking,
+            Tech.Agriculture, Tech.Writing, Tech.Archery, Tech.Mining, Tech.BronzeWorking, Tech.HorsebackRiding, Tech.IronWorking,
             Tech.Irrigation, Tech.Carpentry, Tech.TheWheel, Tech.Mythology, Tech.Currency, Tech.Medicine,
         ];
     private readonly GameSession _session;

@@ -187,7 +187,8 @@ public sealed partial class GameSession
         var info = type.Info();
         var player = Players[city.OwnerId];
         var p = Map.Provinces[city.ProvinceId];
-        if (info.RequiresTech is Tech tech && !player.Techs.Contains(tech)) return CommandResult.Fail($"Requiere {tech.Info().Name.ToLowerInvariant()}.");
+        var missing = info.Requires.Where(t => !player.Techs.Contains(t)).ToList();
+        if (missing.Count > 0) return CommandResult.Fail("Requiere " + string.Join(" y ", missing.Select(t => t.Info().Name.ToLowerInvariant())) + ".");
         if (p.IsOccupied) return CommandResult.Fail("La ciudad está ocupada por el enemigo.");
         if (p.Population - info.Men < GameRules.MinCityPopulation) return CommandResult.Fail($"Hacen falta {info.Men + GameRules.MinCityPopulation} habitantes.");
         if (!player.Stockpile.Has(info.Cost)) return CommandResult.Fail($"Cuesta {info.Cost}.");

@@ -300,11 +300,13 @@ public sealed partial class NationView
             y += 36;
         }
 
-        const float CardW = 250, CardH = 146, Gap = 12;
-        int perRow = Math.Max(1, (int)((r.W + Gap) / (CardW + Gap)));
+        const float CardH = 172, Gap = 12;
+        const int PerRow = 5;
+        float cardW = (r.W - Gap * (PerRow - 1)) / PerRow;
+        int perRow = PerRow;
         for (int i = 0; i < Techs.All.Length; i++)
         {
-            var card = new Rect(r.X + i % perRow * (CardW + Gap), y + i / perRow * (CardH + Gap), CardW, CardH);
+            var card = new Rect(r.X + i % perRow * (cardW + Gap), y + i / perRow * (CardH + Gap), cardW, CardH);
             TechCard(ui, card, Techs.All[i]);
         }
     }
@@ -323,19 +325,27 @@ public sealed partial class NationView
         ui.Text(x, y, info.Name, known ? Theme.Good : current ? Theme.Accent : can.Ok ? Theme.Text : Theme.TextDisabled, bold: true);
         double done = _player.ResearchProgress[(int)tech];
         string cost = known ? "Descubierto" : done > 0 ? $"{done:0} / {info.Cost:0}" : $"{info.Cost:0} puntos";
-        ui.Text(c.Right - 10 - ui.Font.Measure(cost, FontSize.Small), y + 3, cost, Theme.TextDim, FontSize.Small);
-        y += 26;
+        y += 22;
+        ui.Text(x, y, cost, Theme.TextDim, FontSize.Small);
+        y += 20;
         foreach (var line in ui.Font.Wrap(info.Description, c.W - 20, FontSize.Small).Take(2))
         {
             ui.Text(x, y, line, known || can.Ok ? Theme.Text : Theme.TextDim, FontSize.Small);
             y += ui.Font.LineHeight(FontSize.Small);
         }
         if (info.Requires.Length > 0)
-            ui.Text(x, c.Y + 72, "Requiere: " + string.Join(", ", info.Requires.Select(t => t.Info().Name)),
+            ui.Text(x, c.Y + 84, "Requiere: " + string.Join(", ", info.Requires.Select(t => t.Info().Name)),
                 info.Requires.All(_player.Techs.Contains) ? Theme.TextDim : Theme.Bad, FontSize.Small);
-        var unlocks = Buildings.All.Where(b => b.Info().RequiresTech == tech).Select(b => b.Info().Name).ToList();
+        // Buildings and brigades stay hidden until their advance is known, so the card says what it brings.
+        var unlocks = Buildings.All.Where(b => b.Info().RequiresTech == tech).Select(b => b.Info().Name)
+            .Concat(Brigades.All.Where(b => b.Info().Requires.Contains(tech)).Select(b => b.Info().Name)).ToList();
+        float uy = c.Y + 102;
         if (unlocks.Count > 0)
-            ui.Text(x, c.Y + 90, "Permite: " + string.Join(", ", unlocks), known || can.Ok ? Theme.Accent : Theme.TextDim, FontSize.Small);
+            foreach (var line in ui.Font.Wrap("Permite: " + string.Join(", ", unlocks), c.W - 20, FontSize.Small).Take(2))
+            {
+                ui.Text(x, uy, line, known || can.Ok ? Theme.Accent : Theme.TextDim, FontSize.Small);
+                uy += ui.Font.LineHeight(FontSize.Small);
+            }
 
         if (known) return;
         if (!current && done > 0) ProgressBar(ui, new Rect(x, c.Bottom - 40, c.W - 20, 4), done / info.Cost, Theme.TextDim);

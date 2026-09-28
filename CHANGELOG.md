@@ -2,6 +2,16 @@
 
 Todos los cambios del juego, del más reciente al más antiguo. Cada versión es un commit cuyo título es su número.
 
+## [1.8.1] - 2026-09-28
+
+### Añadido
+- Nuevo avance **Tiro con arco** (80): hace falta para entrenar arqueros.
+- Nueva brigada **Carros de arqueros** (50 madera, 40 oro, 10 cobre, 35 días; ataque 6, defensa 2, montada): requiere La rueda y Tiro con arco.
+- Las tarjetas de la pestaña Ciencia muestran también qué brigadas permite cada avance, y caben cinco por fila.
+
+### Cambiado
+- Los arqueros ya no están disponibles desde el principio: requieren Tiro con arco.
+
 ## [1.8.0] - 2026-09-28
 
 Ejército al estilo de Hearts of Iron III, en la Antigüedad.

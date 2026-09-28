@@ -89,6 +89,7 @@ public sealed partial class GameScreen : IScreen
         var city = _session.CityById(capitalId)!;
         Map.Provinces[city.ProvinceId].Population += 1000;
         foreach (var r in new[] { ResourceType.Wood, ResourceType.Gold }) Human.Stockpile[r] += 1000;
+        Human.Learn(Tech.Archery);
         foreach (var type in new[] { BrigadeType.Warriors, BrigadeType.Archers, BrigadeType.Warriors }) _session.Train(Human.Id, capitalId, type);
         _session.RaiseHeadquarters(Human.Id, capitalId, 1);
         for (int h = 0; h < 24 * 25; h++) _session.Step();
