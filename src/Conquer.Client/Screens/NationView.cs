@@ -1,5 +1,6 @@
 using Conquer.Client.Graphics;
 using Conquer.Client.UI;
+using Conquer.Game.Buildings;
 using Conquer.Game.Economy;
 using Conquer.Game.Entities;
 using Conquer.Game.Rules;
@@ -287,7 +288,7 @@ public sealed class NationView
             y += 36;
         }
 
-        const float CardW = 250, CardH = 128, Gap = 12;
+        const float CardW = 250, CardH = 146, Gap = 12;
         int perRow = Math.Max(1, (int)((r.W + Gap) / (CardW + Gap)));
         for (int i = 0; i < Techs.All.Length; i++)
         {
@@ -296,7 +297,7 @@ public sealed class NationView
         }
     }
 
-    /// <summary>One advance: its state, cost, effect, requirements and the button to research it.</summary>
+    /// <summary>One advance: its state, cost, effect, requirements, the buildings it unlocks and the button to research it.</summary>
     private void TechCard(Ui ui, Rect c, Tech tech)
     {
         var info = tech.Info();
@@ -320,6 +321,9 @@ public sealed class NationView
         if (info.Requires.Length > 0)
             ui.Text(x, c.Y + 72, "Requiere: " + string.Join(", ", info.Requires.Select(t => t.Info().Name)),
                 info.Requires.All(_player.Techs.Contains) ? Theme.TextDim : Theme.Bad, FontSize.Small);
+        var unlocks = Buildings.All.Where(b => b.Info().RequiresTech == tech).Select(b => b.Info().Name).ToList();
+        if (unlocks.Count > 0)
+            ui.Text(x, c.Y + 90, "Permite: " + string.Join(", ", unlocks), known || can.Ok ? Theme.Accent : Theme.TextDim, FontSize.Small);
 
         if (known) return;
         if (!current && done > 0) ProgressBar(ui, new Rect(x, c.Bottom - 40, c.W - 20, 4), done / info.Cost, Theme.TextDim);

@@ -359,7 +359,7 @@ La pantalla de juego.
 | `DrawTopBar()`, `Compact()` | Barra superior: nación, población y humor medio, fecha, velocidades, recursos conocidos y botones Nación (con «!» si no se investiga nada) y Menú (con números abreviados: 12,3k, 2,9M). |
 | `DrawSidePanel()`, `UnitPanel()`, `ProvincePanel()` | Panel derecho: datos y botones de la unidad o provincia seleccionada; el de provincia tiene pestañas General y Edificios (humor y fertilidad, yacimientos con lo que les queda, fundar, fiestas, reclamar, asentarse, reclutar, migración forzada). |
 | `MoodTooltip(provincia)` | Tooltip del humor con sus causas y su efecto en la producción. |
-| `BuildingsPanel(...)` | Pestaña Edificios: la obra en curso con su barra, los edificios terminados y, en tus provincias, un botón por cada edificio que puedes levantar; los demás dicen qué les falta. |
+| `BuildingsPanel(...)` | Pestaña Edificios: la obra en curso con su barra, los edificios terminados y, en tus provincias, un botón por cada edificio que puedes levantar; los que solo necesitan ciudad o yacimiento dicen qué les falta, y los de avances sin descubrir no aparecen (`IsBuildingKnown`). |
 | `Line()`, `Paragraph()` | Ayudas para escribir filas y párrafos en el panel. |
 | `DrawBottomBar()` | Modos de mapa y ayuda de controles. |
 | `DrawResourceFilter(barra)` | En el modo recursos, fila de botones para ver todos los yacimientos o solo uno de los recursos que conoces; hace de leyenda con el color de cada recurso. |
@@ -380,7 +380,7 @@ Pantalla de la nación (botón «Nación» o tecla N). El tiempo sigue corriendo
 | `ProvinceCells(...)` | Celdas de población, humor (con tooltip de causas) y fertilidad, comunes a las dos tablas. |
 | `Header(...)`, `Sort(...)` | Cabeceras que ordenan al pulsarlas (nombre, población, humor, fertilidad; otra pulsación invierte el orden). |
 | `Rows(...)` | Filas visibles con desplazamiento por la rueda del ratón y barra de desplazamiento. |
-| `Science(...)`, `TechCard(...)`, `ProgressBar(...)` | Pestaña Ciencia: puntos al día (con su desglose), investigación actual con barra de progreso y tiempo estimado, y una tarjeta por avance con su estado, coste, efecto, requisitos y el botón Investigar. |
+| `Science(...)`, `TechCard(...)`, `ProgressBar(...)` | Pestaña Ciencia: puntos al día (con su desglose), investigación actual con barra de progreso y tiempo estimado, y una tarjeta por avance con su estado, coste, efecto, requisitos, los edificios que permite y el botón Investigar. |
 | `Heading`, `Row`, `ViewButton`, `ProvinceName`, `Compact` | Ayudas de dibujo y formato. |
 
 ### `Graphics/MapRenderer.cs`

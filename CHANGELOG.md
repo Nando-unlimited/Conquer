@@ -2,6 +2,12 @@
 
 Todos los cambios del juego, del más reciente al más antiguo. Cada versión es un commit cuyo título es su número.
 
+## [1.7.1] - 2026-09-28
+
+### Cambiado
+- La lista de edificios de la provincia solo muestra los que ya puedes conocer: los que dependen de un avance no aparecen hasta descubrirlo. Los que solo necesitan una ciudad o un yacimiento siguen apareciendo con lo que les falta.
+- Las tarjetas de la pestaña Ciencia muestran qué edificios permite cada avance.
+
 ## [1.7.0] - 2026-09-28
 
 ### Cambiado

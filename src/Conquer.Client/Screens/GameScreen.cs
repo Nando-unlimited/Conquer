@@ -5,6 +5,7 @@ using Conquer.Game.Buildings;
 using Conquer.Game.Economy;
 using Conquer.Game.Entities;
 using Conquer.Game.Rules;
+using Conquer.Game.Science;
 using Conquer.Game.Simulation;
 using Conquer.Game.World;
 using Silk.NET.Input;
@@ -645,6 +646,7 @@ public sealed class GameScreen : IScreen
     /// <summary>
     /// The province's buildings: the one under construction, the finished ones and, in your own
     /// provinces, a button for each building you can put up; the rest say what they are missing.
+    /// Buildings whose advance you have not discovered are not listed.
     /// </summary>
     private void BuildingsPanel(Province p, float x, ref float y, float w)
     {
@@ -681,7 +683,8 @@ public sealed class GameScreen : IScreen
         Ui.Text(x, y, "Construir", Theme.Text, bold: true);
         y += 26;
         var missing = new List<(BuildingType Type, string Reason)>();
-        foreach (var type in Buildings.All.Where(t => !p.Buildings.Contains(t) && p.Constructing != t))
+        // Buildings of advances not yet discovered stay out of the list altogether.
+        foreach (var type in Buildings.All.Where(t => !p.Buildings.Contains(t) && p.Constructing != t && IsBuildingKnown(t)))
         {
             var available = _session.IsBuildingAvailable(p, type);
             if (!available.Ok)
@@ -704,6 +707,8 @@ public sealed class GameScreen : IScreen
             y += 20;
         }
     }
+
+    private bool IsBuildingKnown(BuildingType type) => type.Info().RequiresTech is not Tech tech || Human.Techs.Contains(tech);
 
     private void DrawBottomBar()
     {
