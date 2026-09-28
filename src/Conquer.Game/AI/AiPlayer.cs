@@ -55,7 +55,7 @@ internal sealed partial class AiPlayer
 
     public void Think(bool dailyDecisions)
     {
-        ClassifyNewDivisions();
+        ClassifyNewRegiments();
         bool atWar = _session.EnemiesOf(_player.Id).Any();
         var units = _session.Units.Where(u => u.OwnerId == _player.Id && !u.IsMoving && !u.AttackingProvinceId.HasValue).ToList();
         // Hungry soldiers go home and farm (never while at war).
@@ -193,13 +193,13 @@ internal sealed partial class AiPlayer
         _session.MoveUnit(_player.Id, unit.Id, best);
     }
 
-    /// <summary>Sends out settlers once its cities have grown, and trains warriors to claim land (see <see cref="ClassifyNewDivisions"/>).</summary>
+    /// <summary>Sends out settlers once its cities have grown, and trains warriors to claim land (see <see cref="ClassifyNewRegiments"/>).</summary>
     private void Recruit()
     {
         var cities = _session.Cities.Where(c => c.OwnerId == _player.Id).ToList();
         if (cities.Count == 0) return;
         int settlers = _session.Units.Count(u => u.OwnerId == _player.Id && u.Type == UnitType.Settlers);
-        int claimers = _claimers.Count + cities.Sum(c => c.Training.Count(o => o.Brigade == BrigadeType.Warriors));
+        int claimers = _claimers.Count + cities.Sum(c => c.Training.Count(o => o.Battalion == BattalionType.Warriors));
 
         foreach (var city in cities.OrderByDescending(c => Map.Provinces[c.ProvinceId].Population))
         {
@@ -212,7 +212,7 @@ internal sealed partial class AiPlayer
                 continue;
             }
             bool foodToSpare = _player.LastDayNet[(int)ResourceType.Food] > 3 || _player.Stockpile[ResourceType.Food] > 500;
-            if (claimers < 1 + cities.Count && pop > 250 && foodToSpare && _session.Train(_player.Id, city.Id, BrigadeType.Warriors).Ok)
+            if (claimers < 1 + cities.Count && pop > 250 && foodToSpare && _session.Train(_player.Id, city.Id, BattalionType.Warriors).Ok)
                 claimers++;
         }
     }

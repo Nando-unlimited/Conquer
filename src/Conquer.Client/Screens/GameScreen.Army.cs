@@ -25,7 +25,7 @@ public sealed partial class GameScreen
 
     /// <summary>
     /// NATO-style counters: a cross for infantry, a slash for mounted troops, the level marks for HQs
-    /// and a "C" for settlers. Divisions carry a strength bar (green) and an organisation bar (amber).
+    /// and a "C" for settlers. Regiments carry a strength bar (green) and an organisation bar (amber).
     /// </summary>
     private void DrawUnits()
     {
@@ -60,7 +60,7 @@ public sealed partial class GameScreen
             Batch.Rect(r.X + 2, r.Y + 2, r.W - 4, r.H - 4, color);
             if (unit.IsMilitary)
             {
-                bool mounted = unit.Brigades.Count(b => b.Info.Mounted) * 2 > unit.Brigades.Count;
+                bool mounted = unit.Battalions.Count(b => b.Info.Mounted) * 2 > unit.Battalions.Count;
                 Batch.Line(new(r.X + 2, r.Bottom - 2), new(r.Right - 2, r.Y + 2), Rgba.Black, 1.5f);
                 if (!mounted) Batch.Line(new(r.X + 2, r.Y + 2), new(r.Right - 2, r.Bottom - 2), Rgba.Black, 1.5f);
                 Bar(new Rect(r.X - 2, r.Bottom + 3, r.W + 4, 3), unit.StrengthShare, StrengthColor);
@@ -91,7 +91,7 @@ public sealed partial class GameScreen
     private string BattleSummary(Battle battle)
     {
         var attackers = battle.Attackers.Select(_session.UnitById).OfType<Unit>().ToList();
-        var defenders = _session.EnemyDivisionsIn(battle.ProvinceId, battle.AttackerId).ToList();
+        var defenders = _session.EnemyRegimentsIn(battle.ProvinceId, battle.AttackerId).ToList();
         string Side(string role, int player, List<Unit> units) =>
             $"{role}: {_session.Players[player].Name} · {units.Count} div. · {units.Sum(u => u.Citizens):N0} hombres · " +
             $"organización {(units.Count == 0 ? 0 : units.Average(u => u.OrganisationShare)):P0}";
@@ -115,10 +115,11 @@ public sealed partial class GameScreen
         var here = Map.Provinces[unit.ProvinceId];
         Ui.Text(x, y, unit.Name, Theme.Accent, FontSize.Large, bold: true);
         y += 32;
+        var era = owner.ArmyEra;
         string kind = unit.Type switch
         {
-            UnitType.Division => $"División de {unit.Brigades.Count} brigada{(unit.Brigades.Count == 1 ? "" : "s")}",
-            UnitType.Headquarters => $"Cuartel general de {CommandLevels.Info(unit.HeadquartersLevel).Name.ToLowerInvariant()}",
+            UnitType.Regiment => $"{Formations.LevelName(CommandLevels.Regiment, era)} de {Formations.BattalionCount(unit.Battalions.Count, era)}",
+            UnitType.Headquarters => $"Cuartel general de {Formations.LevelName(unit.HeadquartersLevel, era).ToLowerInvariant()}",
             _ => $"{unit.Citizens:N0} colonos",
         };
         Ui.Text(x, y, kind, Theme.TextDim, FontSize.Small);
@@ -127,7 +128,7 @@ public sealed partial class GameScreen
         Line(x, ref y, "Ubicación", _session.CityIn(here)?.Name ?? here.Info.Name);
         Line(x, ref y, "Estado", UnitState(unit, out var stateColor), stateColor);
 
-        if (unit.IsMilitary) DivisionDetails(unit, x, ref y, w);
+        if (unit.IsMilitary) RegimentDetails(unit, x, ref y, w);
         else if (unit.IsHeadquarters) HeadquartersDetails(unit, x, ref y, w);
         if (unit.OwnerId != Human.Id) return;
 
@@ -187,23 +188,23 @@ public sealed partial class GameScreen
         return "Esperando órdenes";
     }
 
-    private void DivisionDetails(Unit unit, float x, ref float y, float w)
+    private void RegimentDetails(Unit unit, float x, ref float y, float w)
     {
         bool supplied = _session.IsInSupply(unit);
-        Line(x, ref y, "Suministro", supplied ? "Abastecida" : "Sin suministro", supplied ? Theme.Good : Theme.Bad);
+        Line(x, ref y, "Suministro", supplied ? "Con suministro" : "Sin suministro", supplied ? Theme.Good : Theme.Bad);
         Line(x, ref y, "Velocidad", $"{unit.Speed * GameRules.CitizenSpeedKmh:0.#} km/h");
         CommandLine(unit, x, ref y);
         y += 4;
 
         bool mine = unit.OwnerId == Human.Id;
-        for (int i = 0; i < unit.Brigades.Count; i++)
+        for (int i = 0; i < unit.Battalions.Count; i++)
         {
-            var b = unit.Brigades[i];
-            Ui.Text(x, y, b.Info.Name, Theme.Text, FontSize.Small, bold: true);
+            var b = unit.Battalions[i];
+            Ui.Text(x, y, Formations.BattalionName(b.Info, unit.Owner.ArmyEra), Theme.Text, FontSize.Small, bold: true);
             string men = $"{b.Strength:0}/{b.Info.Men}";
-            Ui.Text(x + w - (mine && unit.Brigades.Count > 1 ? 74 : 0) - Ui.Font.Measure(men, FontSize.Small), y, men, Theme.TextDim, FontSize.Small);
-            if (mine && unit.Brigades.Count > 1 && Ui.Button(new Rect(x + w - 66, y - 2, 66, 20), "Separar", !unit.AttackingProvinceId.HasValue,
-                    tooltip: "Esta brigada forma una división nueva.", size: FontSize.Small))
+            Ui.Text(x + w - (mine && unit.Battalions.Count > 1 ? 74 : 0) - Ui.Font.Measure(men, FontSize.Small), y, men, Theme.TextDim, FontSize.Small);
+            if (mine && unit.Battalions.Count > 1 && Ui.Button(new Rect(x + w - 66, y - 2, 66, 20), "Separar", !unit.AttackingProvinceId.HasValue,
+                    tooltip: "Sale de esta unidad y forma una nueva.", size: FontSize.Small))
                 Show(_session.Split(Human.Id, unit.Id, i));
             var row = new Rect(x, y, w, 30);
             y += 19;
@@ -220,7 +221,7 @@ public sealed partial class GameScreen
         foreach (var other in others)
         {
             var can = _session.CanMerge(unit, other);
-            if (Ui.Button(new Rect(x, y, w, 26), $"Unir la {other.Name} ({other.Brigades.Count} br.)", can.Ok, tooltip: can.Ok ? null : can.Message, size: FontSize.Small))
+            if (Ui.Button(new Rect(x, y, w, 26), $"Unir la {other.Name} ({other.Battalions.Count} br.)", can.Ok, tooltip: can.Ok ? null : can.Message, size: FontSize.Small))
                 Show(_session.Merge(Human.Id, unit.Id, other.Id));
             y += 30;
         }
@@ -233,8 +234,8 @@ public sealed partial class GameScreen
         Line(x, ref y, "Alcance", $"{info.RangeKm:N0} km");
         CommandLine(hq, x, ref y);
         var subs = _session.SubordinatesOf(hq).ToList();
-        string below = CommandLevels.NameOf(hq.HeadquartersLevel - 1).ToLowerInvariant();
-        Ui.Text(x, y, $"Al mando ({subs.Count}/{info.MaxSubordinates} de {below})", Theme.Text, bold: true);
+        string below = Formations.LevelPlural(hq.HeadquartersLevel - 1, hq.Owner.ArmyEra);
+        Ui.Text(x, y, $"Al mando ({subs.Count}/{info.MaxSubordinates} {below})", Theme.Text, bold: true);
         y += 24;
         foreach (var sub in subs)
         {
@@ -284,23 +285,25 @@ public sealed partial class GameScreen
         if (unit.CommanderId.HasValue) y += 30;
         if (hqs.Count == 0 && unit.CommanderId is null)
         {
-            Ui.Text(x, y, $"Forma un cuartel de {CommandLevels.Info(unit.CommandLevel + 1).Name.ToLowerInvariant()} en una ciudad para darle mando.", Theme.TextDim, FontSize.Small);
+            Ui.Text(x, y, $"Forma un cuartel de {Formations.LevelName(unit.CommandLevel + 1, unit.Owner.ArmyEra).ToLowerInvariant()} en una ciudad para darle mando.", Theme.TextDim, FontSize.Small);
             y += 22;
         }
     }
 
     // ------------------------------------------------------------------ city: Ejército tab
 
-    /// <summary>Brigades the city can train (those of undiscovered advances are not listed), HQs, and what is in training.</summary>
+    /// <summary>Battalions the city can train (those of undiscovered advances are not listed), HQs, and what is in training.</summary>
     private void ArmyPanel(City city, float x, ref float y, float w)
     {
-        Ui.Text(x, y, "Entrenar brigadas", Theme.Text, bold: true);
+        var era = Human.ArmyEra;
+        string plural = Formations.BattalionPlural(era);
+        Ui.Text(x, y, $"Entrenar {plural}", Theme.Text, bold: true);
         y += 26;
-        foreach (var type in Brigades.All.Where(t => t.Info().Requires.All(Human.Techs.Contains)))
+        foreach (var type in Battalions.All.Where(t => t.Info().Requires.All(Human.Techs.Contains)))
         {
             var info = type.Info();
             var can = _session.CanTrain(city, type);
-            string tip = $"{info.Name}: {info.Men} hombres de la ciudad. Ataque {info.Attack:0.#}, defensa {info.Defense:0.#}, " +
+            string tip = $"{Formations.BattalionName(info, era)}: {info.Men} hombres de la ciudad. Ataque {info.Attack:0.#}, defensa {info.Defense:0.#}, " +
                          $"organización {info.MaxOrganisation:0}, {info.Speed * GameRules.CitizenSpeedKmh:0.#} km/h." +
                          (info.Mounted ? "\nMontada: ataca a la mitad en bosques, pantanos y montañas." : "") +
                          $"\nCoste: {info.Cost}. Tarda {info.TrainingDays} días." + (can.Ok ? "" : "\n" + can.Message);
@@ -315,10 +318,10 @@ public sealed partial class GameScreen
         foreach (var level in CommandLevels.All)
         {
             var can = _session.CanRaiseHeadquarters(city, level.Level);
-            string tip = $"Manda hasta {level.MaxSubordinates} unidades de {CommandLevels.NameOf(level.Level - 1).ToLowerInvariant()} a menos de {level.RangeKm:N0} km: " +
+            string tip = $"Manda hasta {level.MaxSubordinates} {Formations.LevelPlural(level.Level - 1, era)} a menos de {level.RangeKm:N0} km: " +
                          $"+{MilitaryRules.CommandBonus:P0} en combate y recuperación (+{MilitaryRules.HigherCommandBonus:P0} por cada nivel superior enlazado)." +
                          $"\n{level.Staff} hombres de la ciudad. Coste: {level.Cost}. Tarda {level.TrainingDays} días." + (can.Ok ? "" : "\n" + can.Message);
-            if (Ui.Button(new Rect(x, y, w, 28), $"{level.Name}  ·  {level.Cost}  ·  {level.TrainingDays} d", can.Ok, tooltip: tip, size: FontSize.Small))
+            if (Ui.Button(new Rect(x, y, w, 28), $"{Formations.LevelName(level.Level, era)}  ·  {level.Cost}  ·  {level.TrainingDays} d", can.Ok, tooltip: tip, size: FontSize.Small))
                 Show(_session.RaiseHeadquarters(Human.Id, city.Id, level.Level));
             y += 32;
         }
@@ -329,7 +332,7 @@ public sealed partial class GameScreen
         y += 26;
         foreach (var order in city.Training)
         {
-            Ui.Text(x, y, order.Name, Theme.Text, FontSize.Small);
+            Ui.Text(x, y, order.Name(era), Theme.Text, FontSize.Small);
             string days = $"{order.DaysLeft} d";
             Ui.Text(x + w - Ui.Font.Measure(days, FontSize.Small), y, days, Theme.TextDim, FontSize.Small);
             y += 18;

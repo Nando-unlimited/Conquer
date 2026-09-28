@@ -77,12 +77,12 @@ public sealed partial class GameScreen : IScreen
         if (Enum.TryParse<MapMode>(options.Mode, ignoreCase: true, out var mode)) _renderer.Mode = mode;
         if (Enum.TryParse<NationTab>(options.Nation, ignoreCase: true, out var tab)) { _nation.Tab = tab; _nation.Visible = true; }
         _provinceTab = options.Panel switch { "buildings" => ProvinceTab.Buildings, "army" => ProvinceTab.Army, _ => ProvinceTab.General };
-        if (options.Panel == "division" && Human.CapitalCityId is int capital) ShowSampleArmy(capital);
+        if (options.Panel == "regiment" && Human.CapitalCityId is int capital) ShowSampleArmy(capital);
     }
 
     /// <summary>
-    /// For <c>--panel division</c>: trains three brigades and a corps HQ in the capital, merges the
-    /// brigades into one division under the corps and selects it.
+    /// For <c>--panel regiment</c>: trains three battalions and a corps HQ in the capital, merges the
+    /// battalions into one regiment under the corps and selects it.
     /// </summary>
     private void ShowSampleArmy(int capitalId)
     {
@@ -90,13 +90,13 @@ public sealed partial class GameScreen : IScreen
         Map.Provinces[city.ProvinceId].Population += 1000;
         foreach (var r in new[] { ResourceType.Wood, ResourceType.Gold }) Human.Stockpile[r] += 1000;
         Human.Learn(Tech.Archery);
-        foreach (var type in new[] { BrigadeType.Warriors, BrigadeType.Archers, BrigadeType.Warriors }) _session.Train(Human.Id, capitalId, type);
+        foreach (var type in new[] { BattalionType.Warriors, BattalionType.Archers, BattalionType.Warriors }) _session.Train(Human.Id, capitalId, type);
         _session.RaiseHeadquarters(Human.Id, capitalId, 1);
         for (int h = 0; h < 24 * 25; h++) _session.Step();
-        var divisions = _session.Units.Where(u => u.OwnerId == Human.Id && u.IsMilitary).ToList();
-        foreach (var other in divisions.Skip(1)) _session.Merge(Human.Id, divisions[0].Id, other.Id);
-        if (_session.Units.FirstOrDefault(u => u.OwnerId == Human.Id && u.IsHeadquarters) is { } corps) _session.Attach(Human.Id, divisions[0].Id, corps.Id);
-        _selectedUnitId = divisions[0].Id;
+        var regiments = _session.Units.Where(u => u.OwnerId == Human.Id && u.IsMilitary).ToList();
+        foreach (var other in regiments.Skip(1)) _session.Merge(Human.Id, regiments[0].Id, other.Id);
+        if (_session.Units.FirstOrDefault(u => u.OwnerId == Human.Id && u.IsHeadquarters) is { } corps) _session.Attach(Human.Id, regiments[0].Id, corps.Id);
+        _selectedUnitId = regiments[0].Id;
         _selectedProvince = -1;
     }
 

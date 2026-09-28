@@ -9,7 +9,7 @@
     <AssemblyName>Conquer</AssemblyName>
     <RootNamespace>Conquer.Client</RootNamespace>
     <!-- Game version: bump on every change and add a matching entry at the top of CHANGELOG.md. -->
-    <Version>1.8.1</Version>
+    <Version>1.9.0</Version>
   </PropertyGroup>
 
   <ItemGroup>

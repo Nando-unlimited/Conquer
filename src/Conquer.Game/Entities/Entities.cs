@@ -38,6 +38,9 @@ public sealed class Player
     public double SpareScience { get; set; }
     public double LastDayScience { get; set; }
 
+    /// <summary>Whether its formations have Roman or modern names.</summary>
+    public ArmyEra ArmyEra => Formations.EraOf(Techs);
+
     public void Learn(Tech tech)
     {
         if (!Techs.Add(tech)) return;
@@ -66,7 +69,7 @@ public sealed class City
 
     public bool HasFestival(long nowHours) => FestivalUntilHours > nowHours;
 
-    /// <summary>Brigades and HQs being trained, in order; each counts down on its own.</summary>
+    /// <summary>Battalions and HQs being trained, in order; each counts down on its own.</summary>
     public List<TrainingOrder> Training { get; } = [];
 
     public City(int id, string name, int ownerId, int provinceId, long foundedHours)
@@ -80,26 +83,27 @@ public sealed class City
 }
 
 /// <summary>
-/// Something on the map that walks: a band of settlers, a division of 1 to 4 brigades, or the
-/// headquarters of a corps, army, army group or theatre.
+/// Something on the map that walks: a band of settlers, a regiment of 1 to 6 battalions (the smallest
+/// unit that fights), or the headquarters of a brigade, division, corps, army or army group.
 /// </summary>
 public sealed class Unit
 {
     private readonly int _citizens;
 
     public int Id { get; }
-    public int OwnerId { get; }
+    public Player Owner { get; }
+    public int OwnerId => Owner.Id;
     public UnitType Type { get; }
     public int ProvinceId { get; set; }
-    /// <summary>"1.ª División", "II Cuerpo"… (settlers are just "Colonos").</summary>
-    public string Name { get; }
-    /// <summary>A division's brigades; empty for other units.</summary>
-    public List<Brigade> Brigades { get; } = [];
-    /// <summary>For an HQ, 1 (corps) to 4 (theatre); 0 for divisions.</summary>
+    /// <summary>Its number among its nation's units of the same level (0 for settlers).</summary>
+    public int Number { get; }
+    /// <summary>A regiment's battalions; empty for other units.</summary>
+    public List<Battalion> Battalions { get; } = [];
+    /// <summary>For an HQ, 1 (brigade) to 5 (army group); 0 for regiments.</summary>
     public int HeadquartersLevel { get; }
     /// <summary>The HQ this unit reports to, one level up; null while unattached.</summary>
     public int? CommanderId { get; set; }
-    /// <summary>The province a division is attacking; it stays where it is until it wins.</summary>
+    /// <summary>The province a regiment is attacking; it stays where it is until it wins.</summary>
     public int? AttackingProvinceId { get; set; }
 
     /// <summary>Provinces still to enter, in order; empty when the unit is idle.</summary>
@@ -108,47 +112,50 @@ public sealed class Unit
     public double HoursToNext { get; set; }
     public double StepHours { get; set; }
 
-    public Unit(int id, int ownerId, UnitType type, int provinceId, int citizens, string name, int headquartersLevel = 0)
+    public Unit(int id, Player owner, UnitType type, int provinceId, int citizens, int number = 0, int headquartersLevel = 0)
     {
         Id = id;
-        OwnerId = ownerId;
+        Owner = owner;
         Type = type;
         ProvinceId = provinceId;
         _citizens = citizens;
-        Name = name;
+        Number = number;
         HeadquartersLevel = headquartersLevel;
     }
 
-    /// <summary>Citizens in the unit: its settlers or staff, or the men left in a division's brigades.</summary>
-    public int Citizens => Type == UnitType.Division ? (int)Math.Round(Brigades.Sum(b => b.Strength)) : _citizens;
-    public bool IsMilitary => Type == UnitType.Division;
+    /// <summary>"Legión III", "Vexilación I"… in its nation's era ("3.er Regimiento" in modern times); settlers are just "Colonos".</summary>
+    public string Name => Type == UnitType.Settlers ? "Colonos" : Formations.UnitName(CommandLevel, Number, Owner.ArmyEra);
+
+    /// <summary>Citizens in the unit: its settlers or staff, or the men left in a regiment's battalions.</summary>
+    public int Citizens => Type == UnitType.Regiment ? (int)Math.Round(Battalions.Sum(b => b.Strength)) : _citizens;
+    public bool IsMilitary => Type == UnitType.Regiment;
     public bool IsHeadquarters => Type == UnitType.Headquarters;
     public bool CanFoundCity => Type == UnitType.Settlers;
-    /// <summary>0 for divisions, 1-4 for HQs, -1 for units outside the chain of command.</summary>
+    /// <summary>0 for regiments, 1-5 for HQs, -1 for units outside the chain of command.</summary>
     public int CommandLevel => Type switch
     {
-        UnitType.Division => CommandLevels.Division,
+        UnitType.Regiment => CommandLevels.Regiment,
         UnitType.Headquarters => HeadquartersLevel,
         _ => -1,
     };
-    /// <summary>Marching speed as a multiple of a walking citizen's: the slowest brigade sets a division's pace.</summary>
+    /// <summary>Marching speed as a multiple of a walking citizen's: the slowest battalion sets a regiment's pace.</summary>
     public double Speed => Type switch
     {
-        UnitType.Division => Brigades.Count == 0 ? 1 : Brigades.Min(b => b.Info.Speed),
+        UnitType.Regiment => Battalions.Count == 0 ? 1 : Battalions.Min(b => b.Info.Speed),
         UnitType.Headquarters => MilitaryRules.HeadquartersSpeed,
         _ => 1,
     };
-    /// <summary>A division's organisation as a share of its maximum (0..1).</summary>
+    /// <summary>A regiment's organisation as a share of its maximum (0..1).</summary>
     public double OrganisationShare =>
-        Brigades.Count == 0 ? 0 : Brigades.Sum(b => b.Organisation) / Brigades.Sum(b => b.Info.MaxOrganisation);
-    /// <summary>A division's strength as a share of its full complement (0..1).</summary>
+        Battalions.Count == 0 ? 0 : Battalions.Sum(b => b.Organisation) / Battalions.Sum(b => b.Info.MaxOrganisation);
+    /// <summary>A regiment's strength as a share of its full complement (0..1).</summary>
     public double StrengthShare =>
-        Brigades.Count == 0 ? 0 : Brigades.Sum(b => b.Strength) / Brigades.Sum(b => b.Info.Men);
+        Battalions.Count == 0 ? 0 : Battalions.Sum(b => b.Strength) / Battalions.Sum(b => b.Info.Men);
     public string Symbol => Type switch
     {
         UnitType.Settlers => "C",
         UnitType.Headquarters => CommandLevels.Info(HeadquartersLevel).Symbol,
-        _ => Brigades.Count == 0 ? "?" : Brigades.GroupBy(b => b.Type).OrderByDescending(g => g.Count()).First().Key.Info().Symbol,
+        _ => Battalions.Count == 0 ? "?" : Battalions.GroupBy(b => b.Type).OrderByDescending(g => g.Count()).First().Key.Info().Symbol,
     };
 
     public bool IsMoving => Path.Count > 0;

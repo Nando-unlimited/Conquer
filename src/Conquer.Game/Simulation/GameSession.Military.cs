@@ -7,7 +7,7 @@ using Conquer.Game.World;
 namespace Conquer.Game.Simulation;
 
 /// <summary>
-/// Armies, as in Hearts of Iron III: divisions of brigades trained in cities, a chain of command of
+/// Armies, as in Hearts of Iron III: regiments of battalions trained in cities, a chain of command of
 /// HQs, supply from the nation's cities, hour-by-hour battles and the occupation of enemy land.
 /// </summary>
 public sealed partial class GameSession
@@ -23,53 +23,44 @@ public sealed partial class GameSession
 
     // ------------------------------------------------------------------ units
 
-    /// <summary>Puts a new division of the given brigades on the map, at full strength (tests and training).</summary>
-    internal Unit AddDivision(int ownerId, int provinceId, params BrigadeType[] brigades)
+    /// <summary>Puts a new regiment of the given battalions on the map, at full strength (tests and training).</summary>
+    internal Unit AddRegiment(int ownerId, int provinceId, params BattalionType[] battalions)
     {
-        var unit = AddUnit(ownerId, UnitType.Division, provinceId, 0, NextUnitName(ownerId, CommandLevels.Division));
-        foreach (var type in brigades) unit.Brigades.Add(new Brigade(type));
+        var unit = AddUnit(ownerId, UnitType.Regiment, provinceId, 0, NextUnitNumber(ownerId, CommandLevels.Regiment));
+        foreach (var type in battalions) unit.Battalions.Add(new Battalion(type));
         return unit;
     }
 
     internal Unit AddHeadquarters(int ownerId, int provinceId, int level) =>
-        AddUnit(ownerId, UnitType.Headquarters, provinceId, CommandLevels.Info(level).Staff, NextUnitName(ownerId, level), level);
+        AddUnit(ownerId, UnitType.Headquarters, provinceId, CommandLevels.Info(level).Staff, NextUnitNumber(ownerId, level), level);
 
-    /// <summary>"3.ª División", "II Cuerpo", "I Grupo de ejércitos"…</summary>
-    private string NextUnitName(int playerId, int level)
+    /// <summary>Units of each level are numbered in order for each nation: Legión I, Legión II…</summary>
+    private int NextUnitNumber(int playerId, int level)
     {
         int n = _unitNumbers.GetValueOrDefault((playerId, level)) + 1;
         _unitNumbers[(playerId, level)] = n;
-        return level == CommandLevels.Division ? $"{n}.ª División" : $"{Roman(n)} {CommandLevels.Info(level).Name}";
-    }
-
-    private static string Roman(int n)
-    {
-        (int Value, string Digits)[] table = [(1000, "M"), (900, "CM"), (500, "D"), (400, "CD"), (100, "C"), (90, "XC"), (50, "L"), (40, "XL"), (10, "X"), (9, "IX"), (5, "V"), (4, "IV"), (1, "I")];
-        var text = new System.Text.StringBuilder();
-        foreach (var (value, digits) in table)
-            for (; n >= value; n -= value) text.Append(digits);
-        return text.ToString();
+        return n;
     }
 
     public Unit? CommanderOf(Unit unit) => unit.CommanderId is int id ? UnitById(id) : null;
 
     public IEnumerable<Unit> SubordinatesOf(Unit hq) => Units.Where(u => u.CommanderId == hq.Id);
 
-    /// <summary>Rough fighting value of a division: its brigades' attack and defence, scaled by the men left.</summary>
-    public static double DivisionPower(Unit unit) => unit.Brigades.Sum(b => (b.Info.Attack + b.Info.Defense) / 2 * b.StrengthShare);
+    /// <summary>Rough fighting value of a regiment: its battalions' attack and defence, scaled by the men left.</summary>
+    public static double RegimentPower(Unit unit) => unit.Battalions.Sum(b => (b.Info.Attack + b.Info.Defense) / 2 * b.StrengthShare);
 
-    /// <summary>Fighting value of all of a nation's divisions.</summary>
-    public double MilitaryPower(int playerId) => Units.Where(u => u.OwnerId == playerId && u.IsMilitary).Sum(DivisionPower);
+    /// <summary>Fighting value of all of a nation's regiments.</summary>
+    public double MilitaryPower(int playerId) => Units.Where(u => u.OwnerId == playerId && u.IsMilitary).Sum(RegimentPower);
 
-    /// <summary>Enemy divisions (of anyone at war with the player) standing in a province.</summary>
-    public IEnumerable<Unit> EnemyDivisionsIn(int provinceId, int playerId) =>
+    /// <summary>Enemy regiments (of anyone at war with the player) standing in a province.</summary>
+    public IEnumerable<Unit> EnemyRegimentsIn(int provinceId, int playerId) =>
         Units.Where(u => u.IsMilitary && u.ProvinceId == provinceId && AtWar(u.OwnerId, playerId));
 
     // ------------------------------------------------------------------ movement
 
     /// <summary>
     /// Whether a unit may step into a province: free land and its own nation's always; a province
-    /// held by another nation only for divisions at war with it.
+    /// held by another nation only for regiments at war with it.
     /// </summary>
     public bool CanUnitEnter(Unit unit, int provinceId)
     {
@@ -110,8 +101,8 @@ public sealed partial class GameSession
     }
 
     /// <summary>
-    /// Every unit walks an hour along its path. A division stepping into a province held by enemy
-    /// divisions attacks it instead; one stepping into enemy land without defenders occupies it.
+    /// Every unit walks an hour along its path. A regiment stepping into a province held by enemy
+    /// regiments attacks it instead; one stepping into enemy land without defenders occupies it.
     /// </summary>
     private void MoveUnits()
     {
@@ -122,7 +113,7 @@ public sealed partial class GameSession
             while (unit.Path.Count > 0 && unit.HoursToNext <= 0)
             {
                 int next = unit.Path[0];
-                bool enemies = EnemyDivisionsIn(next, unit.OwnerId).Any();
+                bool enemies = EnemyRegimentsIn(next, unit.OwnerId).Any();
                 if (!CanUnitEnter(unit, next) || (enemies && !unit.IsMilitary))
                 {
                     unit.Path.Clear();
@@ -151,7 +142,7 @@ public sealed partial class GameSession
         }
     }
 
-    /// <summary>The unit arrives in the next province of its path; a division takes it from the enemy.</summary>
+    /// <summary>The unit arrives in the next province of its path; a regiment takes it from the enemy.</summary>
     private void EnterProvince(Unit unit, int provinceId)
     {
         unit.ProvinceId = provinceId;
@@ -182,7 +173,7 @@ public sealed partial class GameSession
 
     // ------------------------------------------------------------------ training
 
-    public CommandResult CanTrain(City city, BrigadeType type)
+    public CommandResult CanTrain(City city, BattalionType type)
     {
         var info = type.Info();
         var player = Players[city.OwnerId];
@@ -195,8 +186,8 @@ public sealed partial class GameSession
         return CommandResult.Success();
     }
 
-    /// <summary>Pays for a brigade and takes its men from the city; it forms a new division when trained.</summary>
-    public CommandResult Train(int playerId, int cityId, BrigadeType type)
+    /// <summary>Pays for a battalion and takes its men from the city; it forms a new regiment when trained.</summary>
+    public CommandResult Train(int playerId, int cityId, BattalionType type)
     {
         if (CityById(cityId) is not { } city || city.OwnerId != playerId) return CommandResult.Fail("Ciudad no válida.");
         var check = CanTrain(city, type);
@@ -228,7 +219,7 @@ public sealed partial class GameSession
         Players[playerId].Stockpile.TrySpend(info.Cost);
         Map.Provinces[city.ProvinceId].Population -= info.Staff;
         city.Training.Add(new TrainingOrder(level));
-        return CommandResult.Success($"Cuartel general de {info.Name.ToLowerInvariant()} en formación: {info.TrainingDays} días.");
+        return CommandResult.Success($"Cuartel general de {Formations.LevelName(level, Players[playerId].ArmyEra).ToLowerInvariant()} en formación: {info.TrainingDays} días.");
     }
 
     /// <summary>Every order a city is training advances a day; finished ones appear in the city.</summary>
@@ -240,10 +231,10 @@ public sealed partial class GameSession
             {
                 if (--order.DaysLeft > 0) continue;
                 city.Training.Remove(order);
-                var unit = order.Brigade is BrigadeType type
-                    ? AddDivision(player.Id, city.ProvinceId, type)
+                var unit = order.Battalion is BattalionType type
+                    ? AddRegiment(player.Id, city.ProvinceId, type)
                     : AddHeadquarters(player.Id, city.ProvinceId, order.HeadquartersLevel);
-                if (player.IsHuman) Notify(player.Id, $"{unit.Name} ({order.Name.ToLowerInvariant()}) lista en {city.Name}.");
+                if (player.IsHuman) Notify(player.Id, $"Nueva unidad en {city.Name}: {unit.Name} ({order.Name(player.ArmyEra).ToLowerInvariant()}).");
             }
         }
     }
@@ -252,22 +243,22 @@ public sealed partial class GameSession
 
     public CommandResult CanMerge(Unit unit, Unit other)
     {
-        if (!unit.IsMilitary || !other.IsMilitary || unit.Id == other.Id) return CommandResult.Fail("Solo se unen divisiones.");
+        if (!unit.IsMilitary || !other.IsMilitary || unit.Id == other.Id) return CommandResult.Fail($"Solo se unen {Formations.LevelPlural(CommandLevels.Regiment, unit.Owner.ArmyEra)}.");
         if (unit.OwnerId != other.OwnerId || unit.ProvinceId != other.ProvinceId) return CommandResult.Fail("Deben estar en la misma provincia.");
         if (unit.AttackingProvinceId.HasValue || other.AttackingProvinceId.HasValue) return CommandResult.Fail("Una de ellas está atacando.");
-        if (unit.Brigades.Count + other.Brigades.Count > MilitaryRules.MaxBrigadesPerDivision)
-            return CommandResult.Fail($"Una división tiene como mucho {MilitaryRules.MaxBrigadesPerDivision} brigadas.");
+        if (unit.Battalions.Count + other.Battalions.Count > MilitaryRules.MaxBattalionsPerRegiment)
+            return CommandResult.Fail($"Como mucho {Formations.BattalionCount(MilitaryRules.MaxBattalionsPerRegiment, unit.Owner.ArmyEra)} por unidad.");
         return CommandResult.Success();
     }
 
-    /// <summary>The other division's brigades join this one, and the other disappears.</summary>
+    /// <summary>The other regiment's battalions join this one, and the other disappears.</summary>
     public CommandResult Merge(int playerId, int unitId, int otherId)
     {
         if (UnitById(unitId) is not { } unit || unit.OwnerId != playerId || UnitById(otherId) is not { } other) return CommandResult.Fail("Unidad no válida.");
         var check = CanMerge(unit, other);
         if (!check.Ok) return check;
-        unit.Brigades.AddRange(other.Brigades);
-        other.Brigades.Clear();
+        unit.Battalions.AddRange(other.Battalions);
+        other.Battalions.Clear();
         unit.CommanderId ??= other.CommanderId;
         RemoveUnit(other);
         unit.Path.Clear();
@@ -275,18 +266,18 @@ public sealed partial class GameSession
         return CommandResult.Success($"{other.Name} se une a {unit.Name}.");
     }
 
-    /// <summary>One brigade leaves its division and forms a new one in the same province.</summary>
-    public CommandResult Split(int playerId, int unitId, int brigadeIndex)
+    /// <summary>One battalion leaves its regiment and forms a new one in the same province.</summary>
+    public CommandResult Split(int playerId, int unitId, int battalionIndex)
     {
         if (UnitById(unitId) is not { } unit || unit.OwnerId != playerId || !unit.IsMilitary) return CommandResult.Fail("Unidad no válida.");
-        if (unit.Brigades.Count < 2) return CommandResult.Fail("La división solo tiene una brigada.");
-        if (unit.AttackingProvinceId.HasValue) return CommandResult.Fail("La división está atacando.");
-        if (brigadeIndex < 0 || brigadeIndex >= unit.Brigades.Count) return CommandResult.Fail("Brigada no válida.");
-        var brigade = unit.Brigades[brigadeIndex];
-        unit.Brigades.RemoveAt(brigadeIndex);
-        var split = AddUnit(playerId, UnitType.Division, unit.ProvinceId, 0, NextUnitName(playerId, CommandLevels.Division));
-        split.Brigades.Add(brigade);
-        return CommandResult.Success($"{brigade.Info.Name} forman la {split.Name}.");
+        if (unit.Battalions.Count < 2) return CommandResult.Fail($"Solo tiene {Formations.BattalionCount(1, unit.Owner.ArmyEra)}.");
+        if (unit.AttackingProvinceId.HasValue) return CommandResult.Fail("Está atacando.");
+        if (battalionIndex < 0 || battalionIndex >= unit.Battalions.Count) return CommandResult.Fail("Tropa no válida.");
+        var battalion = unit.Battalions[battalionIndex];
+        unit.Battalions.RemoveAt(battalionIndex);
+        var split = AddUnit(playerId, UnitType.Regiment, unit.ProvinceId, 0, NextUnitNumber(playerId, CommandLevels.Regiment));
+        split.Battalions.Add(battalion);
+        return CommandResult.Success($"{Formations.BattalionName(battalion.Info, unit.Owner.ArmyEra)} forma una unidad nueva: {split.Name}.");
     }
 
     public CommandResult CanAttach(Unit unit, Unit hq)
@@ -294,7 +285,7 @@ public sealed partial class GameSession
         if (unit.CommandLevel < 0) return CommandResult.Fail("Esta unidad no forma parte de la cadena de mando.");
         if (!hq.IsHeadquarters || hq.OwnerId != unit.OwnerId) return CommandResult.Fail("Cuartel general no válido.");
         if (hq.HeadquartersLevel != unit.CommandLevel + 1)
-            return CommandResult.Fail($"Una unidad de {CommandLevels.NameOf(unit.CommandLevel).ToLowerInvariant()} depende de un cuartel de {CommandLevels.Info(unit.CommandLevel + 1).Name.ToLowerInvariant()}.");
+            return CommandResult.Fail($"Esta unidad solo puede depender de un cuartel de {Formations.LevelName(unit.CommandLevel + 1, unit.Owner.ArmyEra).ToLowerInvariant()}.");
         if (unit.CommanderId == hq.Id) return CommandResult.Fail("Ya depende de él.");
         if (SubordinatesOf(hq).Count() >= CommandLevels.Info(hq.HeadquartersLevel).MaxSubordinates) return CommandResult.Fail($"{hq.Name} ya está completo.");
         return CommandResult.Success();
@@ -371,7 +362,7 @@ public sealed partial class GameSession
         unit.AttackingProvinceId.HasValue || _battles.Any(b => b.ProvinceId == unit.ProvinceId && AtWar(b.AttackerId, unit.OwnerId));
 
     /// <summary>
-    /// Once a day: training advances; supply is worked out; divisions in supply and out of combat
+    /// Once a day: training advances; supply is worked out; regiments in supply and out of combat
     /// recover organisation and get reinforcements from the capital, and those without supply wither.
     /// </summary>
     private void DailyMilitary(Player player)
@@ -385,7 +376,7 @@ public sealed partial class GameSession
         {
             if (!IsInSupply(unit))
             {
-                foreach (var b in unit.Brigades)
+                foreach (var b in unit.Battalions)
                 {
                     b.Organisation = Math.Max(0, b.Organisation - b.Info.MaxOrganisation * MilitaryRules.OutOfSupplyOrganisationLoss);
                     b.Strength = Math.Max(0, b.Strength - b.Info.Men * MilitaryRules.OutOfSupplyAttrition);
@@ -395,7 +386,7 @@ public sealed partial class GameSession
             }
             if (InBattle(unit)) continue;
             double recovery = MilitaryRules.OrganisationRecovery * (1 + CommandBonus(unit)) * (unit.IsMoving ? 0.5 : 1);
-            foreach (var b in unit.Brigades)
+            foreach (var b in unit.Battalions)
             {
                 b.Organisation = Math.Min(b.Info.MaxOrganisation, b.Organisation + b.Info.MaxOrganisation * recovery);
                 double missing = b.Info.Men - b.Strength;
@@ -410,7 +401,7 @@ public sealed partial class GameSession
 
     // ------------------------------------------------------------------ combat
 
-    /// <summary>The division stops at the border and attacks the enemy divisions in the province ahead.</summary>
+    /// <summary>The regiment stops at the border and attacks the enemy regiments in the province ahead.</summary>
     private void StartAttack(Unit unit, int provinceId)
     {
         unit.AttackingProvinceId = provinceId;
@@ -418,7 +409,7 @@ public sealed partial class GameSession
         var battle = _battles.FirstOrDefault(b => b.ProvinceId == provinceId && b.AttackerId == unit.OwnerId);
         if (battle == null)
         {
-            int defender = EnemyDivisionsIn(provinceId, unit.OwnerId).First().OwnerId;
+            int defender = EnemyRegimentsIn(provinceId, unit.OwnerId).First().OwnerId;
             battle = new Battle(provinceId, unit.OwnerId, defender, Date.Hours);
             _battles.Add(battle);
             string place = CityIn(Map.Provinces[provinceId])?.Name ?? Map.Provinces[provinceId].Info.Name.ToLowerInvariant();
@@ -428,7 +419,7 @@ public sealed partial class GameSession
         if (!battle.Attackers.Contains(unit.Id)) battle.Attackers.Add(unit.Id);
     }
 
-    /// <summary>The division gives up its attack and stays where it is.</summary>
+    /// <summary>The regiment gives up its attack and stays where it is.</summary>
     private void CancelAttack(Unit unit)
     {
         if (unit.AttackingProvinceId is null) return;
@@ -447,7 +438,7 @@ public sealed partial class GameSession
         {
             var province = Map.Provinces[battle.ProvinceId];
             var attackers = battle.Attackers.Select(UnitById).OfType<Unit>().Where(u => u.AttackingProvinceId == battle.ProvinceId).ToList();
-            var defenders = EnemyDivisionsIn(battle.ProvinceId, battle.AttackerId).ToList();
+            var defenders = EnemyRegimentsIn(battle.ProvinceId, battle.AttackerId).ToList();
             if (attackers.Count == 0 || defenders.Count == 0)
             {
                 EndBattle(battle, attackers, attackersWon: attackers.Count > 0);
@@ -473,13 +464,13 @@ public sealed partial class GameSession
     private static bool Broken(Unit unit) => unit.OrganisationShare < MilitaryRules.BreakingOrganisation || unit.Citizens < 1;
 
     /// <summary>
-    /// Damage a division deals in an hour: each brigade's attack or defence, scaled by its men and
+    /// Damage a regiment deals in an hour: each battalion's attack or defence, scaled by its men and
     /// organisation, the chain of command, supply, terrain and a little luck.
     /// </summary>
     private double Fire(Unit unit, Province province, bool attacking)
     {
         double fire = 0;
-        foreach (var b in unit.Brigades)
+        foreach (var b in unit.Battalions)
         {
             double value = attacking ? b.Info.Attack : b.Info.Defense;
             if (attacking && b.Info.Mounted && MilitaryRules.IsRough(province.Biome)) value *= MilitaryRules.MountedRoughTerrainAttack;
@@ -491,15 +482,15 @@ public sealed partial class GameSession
         return fire * (1 + (_random.NextDouble() * 2 - 1) * MilitaryRules.CombatRandomness);
     }
 
-    /// <summary>Spreads a side's fire over the enemy brigades as lost organisation and men.</summary>
+    /// <summary>Spreads a side's fire over the enemy battalions as lost organisation and men.</summary>
     private static void Damage(List<Unit> units, double fire)
     {
-        int brigades = units.Sum(u => u.Brigades.Count);
-        if (brigades == 0) return;
-        foreach (var b in units.SelectMany(u => u.Brigades))
+        int battalions = units.Sum(u => u.Battalions.Count);
+        if (battalions == 0) return;
+        foreach (var b in units.SelectMany(u => u.Battalions))
         {
-            b.Organisation = Math.Max(0, b.Organisation - fire * MilitaryRules.OrganisationDamage / brigades);
-            b.Strength = Math.Max(0, b.Strength - fire * MilitaryRules.StrengthDamage / brigades);
+            b.Organisation = Math.Max(0, b.Organisation - fire * MilitaryRules.OrganisationDamage / battalions);
+            b.Strength = Math.Max(0, b.Strength - fire * MilitaryRules.StrengthDamage / battalions);
         }
     }
 
@@ -533,7 +524,7 @@ public sealed partial class GameSession
         unit.Path.Clear();
         unit.StepHours = unit.HoursToNext = 0;
         var refuge = Map.Provinces[unit.ProvinceId].Neighbors
-            .Where(n => CanUnitEnter(unit, n) && !EnemyDivisionsIn(n, unit.OwnerId).Any())
+            .Where(n => CanUnitEnter(unit, n) && !EnemyRegimentsIn(n, unit.OwnerId).Any())
             .Where(n => !Map.Provinces[n].IsOwned || Map.Provinces[n].ControllerId == unit.OwnerId)
             .OrderByDescending(n => Map.Provinces[n].ControllerId == unit.OwnerId)
             .Select(n => (int?)n)

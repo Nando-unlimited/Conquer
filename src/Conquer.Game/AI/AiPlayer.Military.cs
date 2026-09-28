@@ -8,7 +8,7 @@ namespace Conquer.Game.AI;
 
 /// <summary>
 /// The rival's army. In peace a few lone warriors claim land while the rest train and garrison;
-/// divisions are merged, put under corps HQs and those under an army HQ. It declares war on a weaker
+/// regiments are merged and put under brigade, division and corps HQs. It declares war on a weaker
 /// neighbour now and then, attacks the least defended enemy provinces, rushes to cities under attack
 /// and makes peace when a war goes badly.
 /// </summary>
@@ -16,68 +16,73 @@ internal sealed partial class AiPlayer
 {
     /// <summary>No wars in the first years, while nations settle.</summary>
     private const double PeacefulDays = 2 * 365;
-    /// <summary>Divisions attack once they have recovered this share of their organisation.</summary>
+    /// <summary>Regiments attack once they have recovered this share of their organisation.</summary>
     private const double ReadyOrganisation = 0.6;
-    private const int BrigadesPerDivision = 3;
+    private const int BattalionsPerRegiment = 4;
+    /// <summary>The highest HQ level it raises: brigades, divisions and corps.</summary>
+    private const int HighestHeadquarters = 3;
 
-    /// <summary>Lone warriors that claim free land; every other division belongs to the army.</summary>
+    /// <summary>Lone warriors that claim free land; every other regiment belongs to the army.</summary>
     private readonly HashSet<int> _claimers = [];
-    private readonly HashSet<int> _knownDivisions = [];
+    private readonly HashSet<int> _knownRegiments = [];
 
     private IEnumerable<Unit> Army => _session.Units.Where(u => u.OwnerId == _player.Id && u.IsMilitary && !_claimers.Contains(u.Id));
 
     /// <summary>
-    /// New divisions fill the claimer slots first if they are lone warriors (one per city, plus one);
+    /// New regiments fill the claimer slots first if they are lone warriors (one per city, plus one);
     /// the rest join the army.
     /// </summary>
-    private void ClassifyNewDivisions()
+    private void ClassifyNewRegiments()
     {
         _claimers.RemoveWhere(id => _session.UnitById(id) is null);
         int wanted = 1 + _session.Cities.Count(c => c.OwnerId == _player.Id);
-        foreach (var unit in _session.Units.Where(u => u.OwnerId == _player.Id && u.IsMilitary && _knownDivisions.Add(u.Id)))
-            if (_claimers.Count < wanted && unit.Brigades.Count == 1 && unit.Brigades[0].Type == BrigadeType.Warriors)
+        foreach (var unit in _session.Units.Where(u => u.OwnerId == _player.Id && u.IsMilitary && _knownRegiments.Add(u.Id)))
+            if (_claimers.Count < wanted && unit.Battalions.Count == 1 && unit.Battalions[0].Type == BattalionType.Warriors)
                 _claimers.Add(unit.Id);
     }
 
-    /// <summary>Trains the best brigade it can afford until the army reaches 2 brigades per city (4 at war).</summary>
+    /// <summary>Trains the best battalion it can afford until the army reaches 2 battalions per city (4 at war).</summary>
     private void BuildArmy()
     {
         var cities = _session.Cities.Where(c => c.OwnerId == _player.Id).ToList();
         if (cities.Count == 0 || _session.Date.Days < 180) return;
         int target = cities.Count * (_session.EnemiesOf(_player.Id).Any() ? 4 : 2);
-        int brigades = Army.Sum(u => u.Brigades.Count) + cities.Sum(c => c.Training.Count(o => o.Brigade is BrigadeType t && t != BrigadeType.Warriors));
-        if (brigades >= target) return;
+        int battalions = Army.Sum(u => u.Battalions.Count) + cities.Sum(c => c.Training.Count(o => o.Battalion is BattalionType t && t != BattalionType.Warriors));
+        if (battalions >= target) return;
 
         var city = cities.OrderByDescending(c => Map.Provinces[c.ProvinceId].Population).First();
         if (Map.Provinces[city.ProvinceId].Population < 400) return;
-        var best = Brigades.All
+        var best = Battalions.All
             .Where(t => _session.CanTrain(city, t).Ok && Spare(t.Info().Cost))
             .OrderByDescending(t => t.Info().Attack + t.Info().Defense)
-            .Cast<BrigadeType?>().FirstOrDefault();
-        if (best is BrigadeType type) _session.Train(_player.Id, city.Id, type);
+            .Cast<BattalionType?>().FirstOrDefault();
+        if (best is BattalionType type) _session.Train(_player.Id, city.Id, type);
     }
 
     /// <summary>Whether it can pay and still keep enough wood and gold for settlers and warriors.</summary>
     private bool Spare(ResourceCost cost) => cost.Items.All(i =>
         _player.Stockpile[i.Type] - i.Amount >= (i.Type == ResourceType.Wood ? WoodKeptForRecruiting : i.Type == ResourceType.Gold ? GoldKeptForRecruiting : 0));
 
-    /// <summary>Merges small divisions, raises corps and army HQs as the army grows, and attaches everyone.</summary>
+    /// <summary>Merges small regiments, raises brigade, division and corps HQs as the army grows, and attaches everyone.</summary>
     private void OrganiseArmy()
     {
         foreach (var group in Army.Where(u => !u.IsMoving && !_session.InBattle(u)).GroupBy(u => u.ProvinceId))
         {
-            var divisions = group.OrderByDescending(u => u.Brigades.Count).ToList();
-            foreach (var small in divisions.Where(u => u.Brigades.Count < BrigadesPerDivision).ToList())
+            var regiments = group.OrderByDescending(u => u.Battalions.Count).ToList();
+            foreach (var small in regiments.Where(u => u.Battalions.Count < BattalionsPerRegiment).ToList())
             {
-                var host = divisions.FirstOrDefault(u => u != small && _session.UnitById(u.Id) != null && u.Brigades.Count + small.Brigades.Count <= BrigadesPerDivision);
+                var host = regiments.FirstOrDefault(u => u != small && _session.UnitById(u.Id) != null && u.Battalions.Count + small.Battalions.Count <= BattalionsPerRegiment);
                 if (host != null && _session.UnitById(small.Id) != null) _session.Merge(_player.Id, host.Id, small.Id);
             }
         }
 
         var army = Army.ToList();
         var hqs = _session.Units.Where(u => u.OwnerId == _player.Id && u.IsHeadquarters).ToList();
-        RaiseAndAttach(army, hqs.Where(h => h.HeadquartersLevel == 1).ToList(), level: 1);
-        RaiseAndAttach(hqs.Where(h => h.HeadquartersLevel == 1).ToList(), hqs.Where(h => h.HeadquartersLevel == 2).ToList(), level: 2);
+        for (int level = 1; level <= HighestHeadquarters; level++)
+        {
+            var below = level == 1 ? army : hqs.Where(h => h.HeadquartersLevel == level - 1).ToList();
+            RaiseAndAttach(below, hqs.Where(h => h.HeadquartersLevel == level).ToList(), level);
+        }
     }
 
     /// <summary>Attaches unattached subordinates to the nearest HQ of the level with room, raising a new HQ when all are full.</summary>
@@ -90,7 +95,7 @@ internal sealed partial class AiPlayer
                 .OrderBy(h => Map.DistanceKm(Map.Provinces[h.ProvinceId], Map.Provinces[unit.ProvinceId])).FirstOrDefault();
             if (hq != null) _session.Attach(_player.Id, unit.Id, hq.Id);
         }
-        bool needed = subordinates.Count(u => u.CommanderId is null) >= 2 || (level == 2 && subordinates.Count >= 2 && hqs.Count == 0);
+        bool needed = subordinates.Count(u => u.CommanderId is null) >= 2 || (level >= 2 && subordinates.Count >= 2 && hqs.Count == 0);
         bool forming = _session.Cities.Any(c => c.OwnerId == _player.Id && c.Training.Any(o => o.HeadquartersLevel == level));
         if (!needed || forming || _player.CapitalCityId is not int capital || !Spare(info.Cost)) return;
         _session.RaiseHeadquarters(_player.Id, capital, level);
@@ -107,7 +112,7 @@ internal sealed partial class AiPlayer
 
     /// <summary>
     /// At war: rush to a city of its own under attack, else attack the weakest enemy province next door,
-    /// else march towards the nearest enemy land its supply reaches. Tired divisions rest first, and
+    /// else march towards the nearest enemy land its supply reaches. Tired regiments rest first, and
     /// those cut off from supply head home.
     /// </summary>
     private void GuideSoldier(Unit unit)
@@ -122,10 +127,10 @@ internal sealed partial class AiPlayer
             return;
         }
 
-        double here = _session.Units.Where(u => u.OwnerId == _player.Id && u.IsMilitary && u.ProvinceId == unit.ProvinceId).Sum(GameSession.DivisionPower);
+        double here = _session.Units.Where(u => u.OwnerId == _player.Id && u.IsMilitary && u.ProvinceId == unit.ProvinceId).Sum(GameSession.RegimentPower);
         var target = Map.Provinces[unit.ProvinceId].Neighbors
             .Where(n => IsEnemyLand(n) && _session.CanUnitEnter(unit, n))
-            .Select(n => (Province: n, Defence: _session.EnemyDivisionsIn(n, _player.Id).Sum(GameSession.DivisionPower)))
+            .Select(n => (Province: n, Defence: _session.EnemyRegimentsIn(n, _player.Id).Sum(GameSession.RegimentPower)))
             .Where(t => t.Defence == 0 || here >= t.Defence * 1.3)
             .OrderBy(t => t.Defence).ThenByDescending(t => Map.Provinces[t.Province].CityId.HasValue)
             .Select(t => (int?)t.Province).FirstOrDefault();
@@ -143,7 +148,7 @@ internal sealed partial class AiPlayer
         if (nearest >= 0) _session.MoveUnit(_player.Id, unit.Id, nearest);
     }
 
-    /// <summary>A division out of supply walks back to the capital before hunger and desertion finish it.</summary>
+    /// <summary>A regiment out of supply walks back to the capital before hunger and desertion finish it.</summary>
     private bool GoHomeIfCutOff(Unit unit)
     {
         if (_session.IsInSupply(unit) || _player.CapitalCityId is not int capital || _session.CityById(capital) is not { } city) return false;
@@ -166,7 +171,7 @@ internal sealed partial class AiPlayer
             if (_session.WarDays(_player.Id, enemy.Id) >= 120 && !enemy.IsHuman && !Winning(enemy.Id))
                 _session.ProposePeace(_player.Id, enemy.Id);
 
-        if (_session.EnemiesOf(_player.Id).Any() || _session.Date.Days < PeacefulDays || Army.Sum(u => u.Brigades.Count) < 4) return;
+        if (_session.EnemiesOf(_player.Id).Any() || _session.Date.Days < PeacefulDays || Army.Sum(u => u.Battalions.Count) < 4) return;
         if (_random.Next(90) != 0) return;
         double power = _session.MilitaryPower(_player.Id);
         var victim = Neighbours().Where(n => _session.MilitaryPower(n) < power * 0.6)

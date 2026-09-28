@@ -15,19 +15,20 @@ public sealed partial class NationView
     // ------------------------------------------------------------------ army
 
     /// <summary>
-    /// The order of battle: every HQ with the units under it, as a tree, then the divisions without an
+    /// The order of battle: every HQ with the units under it, as a tree, then the regiments without an
     /// HQ. Each row shows where the unit is, its men, organisation, supply and what it is doing.
     /// </summary>
     private void Army(Ui ui, Rect r)
     {
         var mine = _session.Units.Where(u => u.OwnerId == _player.Id && u.CommandLevel >= 0).ToList();
-        var divisions = mine.Where(u => u.IsMilitary).ToList();
-        ui.Text(r.X, r.Y, $"{Plural(divisions.Count, "división", "divisiones")} · {Plural(divisions.Sum(u => u.Brigades.Count), "brigada", "brigadas")} · {divisions.Sum(u => u.Citizens):N0} hombres · " +
+        var regiments = mine.Where(u => u.IsMilitary).ToList();
+        var era = _player.ArmyEra;
+        ui.Text(r.X, r.Y, $"{Plural(regiments.Count, Formations.LevelName(CommandLevels.Regiment, era).ToLowerInvariant(), Formations.LevelPlural(CommandLevels.Regiment, era))} · {Formations.BattalionCount(regiments.Sum(u => u.Battalions.Count), era)} · {regiments.Sum(u => u.Citizens):N0} hombres · " +
                           $"poder militar {_session.MilitaryPower(_player.Id):0}", Theme.Text, bold: true);
         var body = new Rect(r.X, r.Y + 34, r.W, r.H - 34);
         if (mine.Count == 0)
         {
-            ui.Text(body.X, body.Y, "No tienes ejército. Entrena brigadas en la pestaña Ejército de tus ciudades.", Theme.TextDim);
+            ui.Text(body.X, body.Y, $"No tienes ejército. Entrena {Formations.BattalionPlural(era)} en la pestaña Ejército de tus ciudades.", Theme.TextDim);
             return;
         }
 
@@ -39,7 +40,7 @@ public sealed partial class NationView
         }
         foreach (var top in mine.Where(u => u.IsHeadquarters && _session.CommanderOf(u) is null).OrderByDescending(u => u.HeadquartersLevel).ThenBy(u => u.Name))
             AddTree(top, 0);
-        foreach (var loose in divisions.Where(u => _session.CommanderOf(u) is null).OrderBy(u => u.Name)) rows.Add((loose, 0));
+        foreach (var loose in regiments.Where(u => _session.CommanderOf(u) is null).OrderBy(u => u.Name)) rows.Add((loose, 0));
 
         (string Title, float Width)[] columns = [("Unidad", 290), ("Ubicación", 170), ("Hombres", 100), ("Organización", 130), ("Suministro", 110), ("Estado", 170), ("", 60)];
         float x0 = body.X;

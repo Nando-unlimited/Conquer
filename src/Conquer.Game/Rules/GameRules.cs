@@ -119,6 +119,6 @@ public static class GameRules
 public enum UnitType
 {
     Settlers,
-    Division,
+    Regiment,
     Headquarters,
 }

@@ -229,13 +229,13 @@ public sealed partial class NationView
             if (ui.Button(new Rect(x, rowY + 3, bw, RowHeight - 6), "Colonos", settlers.Ok, tooltip: settlersTip, size: FontSize.Small))
                 _show(_session.RecruitSettlers(_player.Id, city.Id));
             x += bw + 4;
-            var warriors = BrigadeType.Warriors.Info();
-            var train = _session.CanTrain(city, BrigadeType.Warriors);
-            string trainTip = $"Entrena una brigada de {warriors.Name.ToLowerInvariant()} ({warriors.Men} hombres). Coste: {warriors.Cost}. " +
+            var warriors = BattalionType.Warriors.Info();
+            var train = _session.CanTrain(city, BattalionType.Warriors);
+            string trainTip = $"Entrena {Formations.BattalionName(warriors, _player.ArmyEra).ToLowerInvariant()} ({warriors.Men} hombres). Coste: {warriors.Cost}. " +
                               $"Tarda {warriors.TrainingDays} días." + (city.Training.Count > 0 ? $"\nEn instrucción: {city.Training.Count}." : "") +
                               (train.Ok ? "" : "\n" + train.Message);
             if (ui.Button(new Rect(x, rowY + 3, bw, RowHeight - 6), warriors.Name, train.Ok, tooltip: trainTip, size: FontSize.Small))
-                _show(_session.Train(_player.Id, city.Id, BrigadeType.Warriors));
+                _show(_session.Train(_player.Id, city.Id, BattalionType.Warriors));
             x = r.X + 8 + columns.Take(6).Sum(c => c.Width);
             ViewButton(ui, x, rowY, columns[6].Width, p.Id);
         }
@@ -336,9 +336,9 @@ public sealed partial class NationView
         if (info.Requires.Length > 0)
             ui.Text(x, c.Y + 84, "Requiere: " + string.Join(", ", info.Requires.Select(t => t.Info().Name)),
                 info.Requires.All(_player.Techs.Contains) ? Theme.TextDim : Theme.Bad, FontSize.Small);
-        // Buildings and brigades stay hidden until their advance is known, so the card says what it brings.
+        // Buildings and battalions stay hidden until their advance is known, so the card says what it brings.
         var unlocks = Buildings.All.Where(b => b.Info().RequiresTech == tech).Select(b => b.Info().Name)
-            .Concat(Brigades.All.Where(b => b.Info().Requires.Contains(tech)).Select(b => b.Info().Name)).ToList();
+            .Concat(Battalions.All.Where(b => b.Info().Requires.Contains(tech)).Select(b => b.Info().Name)).ToList();
         float uy = c.Y + 102;
         if (unlocks.Count > 0)
             foreach (var line in ui.Font.Wrap("Permite: " + string.Join(", ", unlocks), c.W - 20, FontSize.Small).Take(2))

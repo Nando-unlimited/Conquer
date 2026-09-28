@@ -644,9 +644,9 @@ public sealed partial class GameSession
     /// <summary>Raised with the province id whenever a province changes hands (the client recolours the map).</summary>
     public event Action<int>? OwnershipChanged;
 
-    internal Unit AddUnit(int ownerId, UnitType type, int provinceId, int citizens, string name = "Colonos", int headquartersLevel = 0)
+    internal Unit AddUnit(int ownerId, UnitType type, int provinceId, int citizens, int number = 0, int headquartersLevel = 0)
     {
-        var unit = new Unit(_nextUnitId++, ownerId, type, provinceId, citizens, name, headquartersLevel);
+        var unit = new Unit(_nextUnitId++, Players[ownerId], type, provinceId, citizens, number, headquartersLevel);
         Units.Add(unit);
         _unitsById[unit.Id] = unit;
         return unit;

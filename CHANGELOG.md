@@ -2,6 +2,20 @@
 
 Todos los cambios del juego, del más reciente al más antiguo. Cada versión es un commit cuyo título es su número.
 
+## [1.9.0] - 2026-09-28
+
+### Cambiado
+- **Formaciones más detalladas**, preparadas para regimientos con batallones especializados: batallón → regimiento → brigada → división → cuerpo → ejército → grupo de ejércitos.
+  - Lo que se entrena en las ciudades es el **batallón**, la tropa especializada: guerreros, arqueros, jinetes, etc.
+  - Los batallones forman **regimientos**, la unidad mínima que se mueve y lucha, de hasta 6 batallones (antes, divisiones de hasta 4 brigadas).
+- La cadena de mando tiene ahora cinco niveles de cuartel general: **brigada** (hasta 4 regimientos, 150 km), **división** (hasta 4 brigadas, 300 km), **cuerpo** (600 km), **ejército** (1.200 km) y **grupo de ejércitos** (2.500 km). El teatro desaparece.
+- **Nombres romanos**: mientras tu ejército no se modernice, las formaciones llevan nombres romanos:
+  - El batallón es una cohorte (o un ala si es montado).
+  - El regimiento es una legión, la brigada una vexilación, la división un ejército consular, el cuerpo un ejército provincial, el ejército un ejército de campaña y el grupo de ejércitos una prefectura.
+  - Las unidades se numeran a la romana: «Legión III», «Vexilación I».
+- Los nombres modernos («3.er Regimiento», «1.ª Brigada», «II Cuerpo») ya están listos y los traerá un avance de una época posterior, cuando exista.
+- La IA forma cuarteles de brigada, división y cuerpo, y regimientos de hasta 4 batallones.
+
 ## [1.8.1] - 2026-09-28
 
 ### Añadido
