@@ -2,6 +2,15 @@
 
 Todos los cambios del juego, del más reciente al más antiguo. Cada versión es un commit cuyo título es su número.
 
+## [1.3.0] - 2026-09-28
+
+### Añadido
+- **Pantalla de la nación** para gestionar el país: se abre con el botón «Nación» de la barra superior o con la tecla N. El tiempo sigue corriendo mientras está abierta (Espacio para pausar).
+- Pestaña **Resumen**: población total, en sus provincias, en unidades y migrando; fertilidad media; humor medio y cuántos habitantes están contentos, tranquilos, inquietos o descontentos; capital, provincias, ciudades y unidades; comida, su balance diario y los días de reserva; y el resto de recursos con su cambio diario.
+- Pestaña **Ciudades**: todas tus ciudades con su población, humor y fertilidad, y botones para celebrar fiestas, reclutar colonos o guerreros y verlas en el mapa.
+- Pestaña **Provincias**: todas tus provincias con población, humor, fertilidad, terreno y migrantes en camino, y un botón para verlas en el mapa.
+- Las tablas se ordenan pulsando las cabeceras (nombre, población, humor o fertilidad) y se desplazan con la rueda del ratón.
+
 ## [1.2.0] - 2026-09-28
 
 ### Añadido

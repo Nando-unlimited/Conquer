@@ -80,7 +80,7 @@ Todas las constantes de equilibrio (por día de juego salvo que se diga otra cos
 | `StarvingFertility` | Parte de la fertilidad que queda con hambre (20 %). |
 | `MoodProductivity(humor)` | Multiplicador de la producción: ×0,75 con humor 0, ×1 con 50, ×1,25 con 100. |
 | `TargetFertility(humor, hambre)` | Fertilidad hacia la que tiende una provincia: 0,5 + humor/100, por 0,2 si hay hambre. |
-| `MoodName(humor)` | Descontento, Inquieto, Tranquilo o Contento. |
+| `MoodNames`, `MoodLevel(humor)`, `MoodName(humor)` | Los cuatro niveles de humor (Descontento, Inquieto, Tranquilo, Contento), el nivel (0-3) de un valor y su nombre. |
 | `UnitType` | Tipos de unidad: `Settlers` (colonos) y `Warriors` (guerreros). |
 | `UnitTypeInfo` | Nombre, símbolo, ciudadanos, si es militar, si funda ciudades y coste. |
 | `UnitTypes.Info(type)` | Devuelve la ficha de un tipo de unidad. |
@@ -127,7 +127,7 @@ El corazón del juego: una partida en marcha.
 | `CapacityOf(provincia)` | Habitantes que puede alimentar una provincia, contando la bonificación de ciudad. |
 | `MoodFactors(provincia)` | Lista de (causa, puntos) que forman el humor objetivo: base, ciudad, capital o distancia a ella, fiestas, reservas de comida, hacinamiento y hambre. |
 | `TargetMood(provincia)` | Suma de esos factores, entre 0 y 100. |
-| `AverageMood(jugador)` | Humor medio de su población, ponderado por habitantes. |
+| `Stats(jugador)` | Totales de la nación (`NationStats`): población asentada, en unidades y migrando; provincias, ciudades y unidades; humor y fertilidad medios ponderados por habitantes, y habitantes en cada nivel de humor. |
 | `Step()` | Avanza una hora: mueve unidades, hace llegar migrantes; a medianoche economía y migración; cada 6 h piensan las IA. |
 | `MoveUnits()` | Avanza cada unidad por su ruta y la cambia de provincia al terminar cada tramo. |
 | `ArriveMigrations()` | Suma los migrantes que llegan a su destino (si el destino se perdió, van a la capital), mezclando su humor. |
@@ -279,7 +279,7 @@ Punto de entrada. Pone el formato de números en español y lee los argumentos.
 
 | Elemento | Qué es |
 | --- | --- |
-| `StartOptions.Parse(args)` | Opciones de línea de comandos para pruebas: `--new random|earth`, `--seed`, `--players`, `--days` (funda la capital y avanza N días), `--zoom`, `--mode terrain|political|population` y `--screenshot fichero.png` (guarda una captura del juego y se cierra). |
+| `StartOptions.Parse(args)` | Opciones de línea de comandos para pruebas: `--new random|earth`, `--seed`, `--players`, `--days` (funda la capital y avanza N días), `--zoom`, `--mode terrain|political|population|mood|fertility`, `--nation summary|cities|provinces` (abre la pantalla de la nación) y `--screenshot fichero.png` (guarda una captura del juego y se cierra). |
 | `QuickStart` | Partida que empieza directamente, sin menús. |
 
 ### `ConquerApp.cs`
@@ -305,26 +305,43 @@ La pantalla de juego.
 | Función | Qué hace |
 | --- | --- |
 | `GameScreen(...)` | Crea el renderizador y la cámara y centra la vista en tus colonos. |
-| `ApplyTestOptions(...)` | Aplica `--days`, `--zoom` y `--mode`. |
+| `ApplyTestOptions(...)` | Aplica `--days`, `--zoom`, `--mode` y `--nation`. |
 | `Frame(dt)` | Fotograma: teclas, tiempo, refresco del mapa, dibujo del mapa, marcadores, paneles e interacción. |
 | `AdvanceTime(dt)` | Convierte tiempo real en horas de juego según la velocidad (pausa, 1 h/s … 7 días/s). |
-| `SetSpeed`, `HandleKeys` | Velocidad y teclado (Espacio, 1-5, Tab, Inicio, +/-, WASD, Esc). |
+| `SetSpeed`, `HandleKeys` | Velocidad y teclado (Espacio, 1-5, Tab, Inicio, N, +/-, WASD, Esc). |
 | `HandleMapMouse()` | Rueda para el zoom, arrastrar para mover el mapa, clics. |
 | `LeftClick()` | Selecciona unidad o provincia, o elige el destino de una migración forzada. |
 | `RightClick()` | Da orden de mover la unidad seleccionada. |
 | `CenterOnHome()` | Centra la vista en la capital. |
+| `NationRect`, `ViewProvince(provincia)` | Rectángulo de la pantalla de la nación, y seleccionar y centrar una provincia cuando se pide desde ella. |
 | `Show(resultado)`, `CollectNotifications()` | Mensajes temporales en pantalla. |
 | `Center`, `Between`, `OnScreen` | Posición de una provincia, punto intermedio entre dos (cruzando el borde del mapa por el lado corto) y si algo está en pantalla. |
 | `DrawCities()` | Marcadores de ciudad y sus nombres. |
 | `DrawMigrations()` | Puntos que representan a los migrantes en camino. |
 | `DrawUnits()`, `DrawPath()` | Fichas de unidades (estilo OTAN: aspa para infantería, "C" para colonos) y la ruta de la seleccionada. |
-| `DrawTopBar()`, `Compact()` | Barra superior: nación, población y humor medio, fecha, velocidades y recursos (con números abreviados: 12,3k, 2,9M). |
+| `DrawTopBar()`, `Compact()` | Barra superior: nación, población y humor medio, fecha, velocidades, recursos y botones Nación y Menú (con números abreviados: 12,3k, 2,9M). |
 | `DrawSidePanel()`, `UnitPanel()`, `ProvincePanel()` | Panel derecho: datos y botones de la unidad o provincia seleccionada (humor y fertilidad, fundar, fiestas, reclamar, asentarse, reclutar, migración forzada). |
-| `MoodColor(humor, normal)`, `MoodTooltip(provincia)` | Color del humor (rojo si hay descontento, verde si está contento) y tooltip con sus causas y su efecto en la producción. |
+| `MoodTooltip(provincia)` | Tooltip del humor con sus causas y su efecto en la producción. |
 | `Line()`, `Paragraph()` | Ayudas para escribir filas y párrafos en el panel. |
 | `DrawBottomBar()` | Modos de mapa y ayuda de controles. |
 | `DrawMessages()`, `HoverTooltip()` | Mensajes y tooltip de la provincia bajo el ratón. |
 | `DrawPauseMenu()` | Menú de pausa (Esc). |
+
+### `Screens/NationView.cs`
+Pantalla de la nación (botón «Nación» o tecla N). El tiempo sigue corriendo mientras está abierta.
+
+| Elemento | Qué es |
+| --- | --- |
+| `NationTab` | Pestañas: `Summary` (Resumen), `Cities` (Ciudades), `Provinces` (Provincias). |
+| `NationView(partida, jugador, verProvincia, mostrar)` | Recibe qué hacer al pulsar «Ver» (centrar el mapa) y cómo mostrar el resultado de las órdenes. |
+| `Frame(ui, área)` | Dibuja el panel opaco con las pestañas y el botón Cerrar. |
+| `Summary(...)` | Resumen: población (total, asentada, en unidades, migrando), fertilidad media, humor medio con su barra por niveles (`MoodBar`), territorio, comida con sus días de reserva y el resto de recursos con su balance diario. |
+| `Cities(...)` | Tabla de ciudades: población / capacidad, humor, fertilidad, fiestas, reclutar colonos o guerreros y «Ver». |
+| `Provinces(...)` | Tabla de todas las provincias: población, humor, fertilidad, terreno, migrantes en camino y «Ver». |
+| `ProvinceCells(...)` | Celdas de población, humor (con tooltip de causas) y fertilidad, comunes a las dos tablas. |
+| `Header(...)`, `Sort(...)` | Cabeceras que ordenan al pulsarlas (nombre, población, humor, fertilidad; otra pulsación invierte el orden). |
+| `Rows(...)` | Filas visibles con desplazamiento por la rueda del ratón y barra de desplazamiento. |
+| `Heading`, `Row`, `ViewButton`, `ProvinceName`, `Compact` | Ayudas de dibujo y formato. |
 
 ### `Graphics/MapRenderer.cs`
 Dibuja el mapa entero con un único shader.
@@ -383,7 +400,7 @@ Interfaz propia de "modo inmediato": los botones se declaran en cada fotograma y
 | --- | --- |
 | `Rect` | Rectángulo con `Contains` e `Inset`. |
 | `InputState` | Estado del ratón y del teclado en el fotograma. |
-| `Theme` | Colores de la interfaz. |
+| `Theme` | Colores de la interfaz. `Theme.Mood(humor, normal)` colorea un humor: rojo si hay descontento, verde si está contento. |
 | `Ui.Panel`, `Text`, `TextCentered`, `Button`, `Hover`, `Tooltip` | Piezas de la interfaz. |
 | `Ui.MouseOverUi`, `Block` | Si el ratón está sobre la interfaz (para no hacer clic en el mapa a través de un panel). |
 | `BeginFrame`, `EndFrame` | Empezar el fotograma / dibujar el tooltip al final. |
@@ -415,7 +432,7 @@ Uso: ver el README.
 | Fichero | Qué comprueba |
 | --- | --- |
 | `WorldGenerationTests.cs` | Ambos mapas salen con unas 25.000 provincias y todos los píxeles asignados. |
-| `GameplayTests.cs` | Inicio sin territorio y con los recursos correctos; fundar la capital; océanos y polos no reclamables; las unidades terrestres no entran al mar pero sí cruzan hielo; nada cruza el mar; provincias mayores en desiertos, polos y océanos; solo las unidades militares reclaman; velocidad de 10 km/h; migración diaria; migración forzada con su coste; consumo de comida; la capital gana humor y fertilidad; el hambre los hunde; los migrantes forzados llegan descontentos; las provincias descontentas no pagan impuestos; la fertilidad acelera el crecimiento; las reservas de comida alegran; las fiestas cuestan oro y duran un mes; la IA se expande. `WorldFixture` genera un único mundo para todos. |
+| `GameplayTests.cs` | Inicio sin territorio y con los recursos correctos; fundar la capital; océanos y polos no reclamables; las unidades terrestres no entran al mar pero sí cruzan hielo; nada cruza el mar; provincias mayores en desiertos, polos y océanos; solo las unidades militares reclaman; velocidad de 10 km/h; migración diaria; migración forzada con su coste; consumo de comida; la capital gana humor y fertilidad; el hambre los hunde; los migrantes forzados llegan descontentos; las provincias descontentas no pagan impuestos; la fertilidad acelera el crecimiento; las reservas de comida alegran; las fiestas cuestan oro y duran un mes; las estadísticas de la nación suman bien; la IA se expande. `WorldFixture` genera un único mundo para todos. |
 | `ReleaseTests.cs` | La versión del `.csproj` coincide con la primera entrada del `CHANGELOG.md`. |
 
 ---

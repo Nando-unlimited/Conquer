@@ -342,6 +342,30 @@ public class GameplayTests(WorldFixture world)
     }
 
     [Fact]
+    public void NationStatsAddUpPeopleWhereverTheyAre()
+    {
+        var s = NewSession();
+        var (a, b) = GrasslandPair();
+        s.FoundCity(0, s.AddUnit(0, UnitType.Settlers, a.Id, 300).Id);
+        s.Claim(0, s.AddUnit(0, UnitType.Warriors, b.Id, 100).Id);
+        a.Population = 1000;
+        a.Mood = 80;
+        b.Population = 500;
+        b.Mood = 20;
+        s.ForceMigration(0, a.Id, b.Id, 100);
+
+        var stats = s.Stats(s.Human);
+        Assert.Equal(1400, stats.Settled);
+        Assert.Equal(300 + 100, stats.InUnits); // the starting settlers are still waiting, plus the warriors
+        Assert.Equal(100, stats.Migrating);
+        Assert.Equal(1900, stats.Total);
+        Assert.Equal((2, 1, 2), (stats.Provinces, stats.Cities, stats.Units));
+        Assert.Equal((900 * 80 + 500 * 20) / 1400.0, stats.AverageMood, 6);
+        Assert.Equal(500, stats.PopulationByMood[0]); // unrest
+        Assert.Equal(900, stats.PopulationByMood[3]); // content
+    }
+
+    [Fact]
     public void ComputerRivalsFoundCitiesAndExpand()
     {
         var s = NewSession(players: 4);

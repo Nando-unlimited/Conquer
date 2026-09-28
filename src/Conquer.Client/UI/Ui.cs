@@ -1,5 +1,6 @@
 using System.Numerics;
 using Conquer.Client.Graphics;
+using Conquer.Game.Rules;
 
 namespace Conquer.Client.UI;
 
@@ -44,6 +45,10 @@ public static class Theme
     public static readonly Rgba Accent = new(0xFFE0B656);
     public static readonly Rgba Good = new(0xFF7FCB6A);
     public static readonly Rgba Bad = new(0xFFE06A5A);
+
+    /// <summary>Red in unrest, green when content, <paramref name="normal"/> in between.</summary>
+    public static Rgba Mood(double mood, Rgba normal) =>
+        mood < GameRules.UnrestMood ? Bad : GameRules.MoodLevel(mood) == 3 ? Good : normal;
 }
 
 /// <summary>

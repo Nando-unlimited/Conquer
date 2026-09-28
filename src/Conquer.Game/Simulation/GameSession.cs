@@ -12,6 +12,17 @@ public readonly record struct CommandResult(bool Ok, string Message)
     public static CommandResult Fail(string message) => new(false, message);
 }
 
+/// <param name="Settled">Citizens living in the nation's provinces.</param>
+/// <param name="InUnits">Citizens serving in units.</param>
+/// <param name="Migrating">Citizens on the road to a new home.</param>
+/// <param name="PopulationByMood">Settled citizens at each mood level, worst first (see <see cref="GameRules.MoodNames"/>).</param>
+public sealed record NationStats(
+    double Settled, int InUnits, int Migrating, int Provinces, int Cities, int Units,
+    double AverageMood, double AverageFertility, double[] PopulationByMood)
+{
+    public double Total => Settled + InUnits + Migrating;
+}
+
 /// <summary>
 /// One running game. Time advances in fixed one-hour steps through <see cref="Step"/>; the economy
 /// and migration run once per in-game day, at midnight. Player 0 is the human.
@@ -117,17 +128,30 @@ public sealed class GameSession
 
     public double TargetMood(Province p) => Math.Clamp(MoodFactors(p).Sum(f => f.Points), 0, 100);
 
-    /// <summary>Mood of a player's people, weighted by the population of each province.</summary>
-    public double AverageMood(Player player)
+    /// <summary>Totals and averages of a player's nation, for the nation screen.</summary>
+    public NationStats Stats(Player player)
     {
-        double people = 0, sum = 0;
+        double settled = 0, mood = 0, fertility = 0;
+        var byMood = new double[GameRules.MoodNames.Length];
         foreach (int id in player.Provinces)
         {
             var p = Map.Provinces[id];
-            people += p.Population;
-            sum += p.Population * p.Mood;
+            if (p.Population <= 0) continue;
+            settled += p.Population;
+            mood += p.Population * p.Mood;
+            fertility += p.Population * p.Fertility;
+            byMood[GameRules.MoodLevel(p.Mood)] += p.Population;
         }
-        return people > 0 ? sum / people : GameRules.StartingMood;
+        return new NationStats(
+            settled,
+            Units.Where(u => u.OwnerId == player.Id).Sum(u => u.Citizens),
+            Migrations.Where(m => m.OwnerId == player.Id).Sum(m => m.People),
+            player.Provinces.Count,
+            Cities.Count(c => c.OwnerId == player.Id),
+            Units.Count(u => u.OwnerId == player.Id),
+            settled > 0 ? mood / settled : GameRules.StartingMood,
+            settled > 0 ? fertility / settled : 1,
+            byMood);
     }
 
     // ------------------------------------------------------------------ time

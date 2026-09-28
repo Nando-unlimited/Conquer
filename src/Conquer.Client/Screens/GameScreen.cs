@@ -22,6 +22,7 @@ public sealed class GameScreen : IScreen
     private readonly MapRenderer _renderer;
     private readonly Camera _camera;
     private readonly ChangelogView _changelog = new();
+    private readonly NationView _nation;
     private readonly List<(int UnitId, Rect Bounds)> _unitHitBoxes = [];
     private readonly List<(string Text, double Time, bool Ok)> _messages = [];
 
@@ -47,6 +48,7 @@ public sealed class GameScreen : IScreen
         _renderer = new MapRenderer(app.Gl, session.Map, pixels);
         _camera = new Camera(session.Map.Width, session.Map.Height) { Screen = app.ScreenSize };
         session.OwnershipChanged += _ => _mapDirty = true;
+        _nation = new NationView(session, session.Human, ViewProvince, Show);
 
         var settlers = session.Units.First(u => u.OwnerId == GameSession.HumanPlayerId);
         _selectedUnitId = settlers.Id;
@@ -67,6 +69,7 @@ public sealed class GameScreen : IScreen
         }
         if (options.Zoom is float zoom) _camera.LookAt(_camera.Center, zoom);
         if (Enum.TryParse<MapMode>(options.Mode, ignoreCase: true, out var mode)) _renderer.Mode = mode;
+        if (Enum.TryParse<NationTab>(options.Nation, ignoreCase: true, out var tab)) { _nation.Tab = tab; _nation.Visible = true; }
     }
 
     public void Frame(double dt)
@@ -93,14 +96,15 @@ public sealed class GameScreen : IScreen
         DrawUnits();
 
         DrawTopBar();
-        DrawSidePanel();
+        if (!_nation.Visible) DrawSidePanel();
         DrawBottomBar();
+        _nation.Frame(Ui, NationRect);
         DrawMessages();
         if (_menuOpen) DrawPauseMenu();
         _changelog.Frame(Ui, new Rect(_app.ScreenSize.X / 2 - 380, 70, 760, _app.ScreenSize.Y - 140));
 
-        if (!_menuOpen && !_changelog.Visible) HandleMapMouse();
-        if (!Ui.MouseOverUi && !_menuOpen && _hoverProvince >= 0 && !_dragging) HoverTooltip();
+        if (!_menuOpen && !_changelog.Visible && !_nation.Visible) HandleMapMouse();
+        if (!Ui.MouseOverUi && !_menuOpen && !_nation.Visible && _hoverProvince >= 0 && !_dragging) HoverTooltip();
     }
 
     // ------------------------------------------------------------------ time and input
@@ -130,6 +134,7 @@ public sealed class GameScreen : IScreen
             {
                 case Key.Escape:
                     if (_changelog.Visible) _changelog.Visible = false;
+                    else if (_nation.Visible) _nation.Visible = false;
                     else if (_choosingMigrationTarget) _choosingMigrationTarget = false;
                     else if (_selectedUnitId.HasValue || _selectedProvince >= 0) { _selectedUnitId = null; _selectedProvince = -1; }
                     else _menuOpen = !_menuOpen;
@@ -138,6 +143,7 @@ public sealed class GameScreen : IScreen
                 case >= Key.Number1 and <= Key.Number5: SetSpeed(key - Key.Number1 + 1); break;
                 case Key.Tab: _renderer.Mode = (MapMode)(((int)_renderer.Mode + 1) % Enum.GetValues<MapMode>().Length); _mapDirty = true; break;
                 case Key.Home: CenterOnHome(); break;
+                case Key.N when !_menuOpen: _nation.Visible = !_nation.Visible; break;
                 case Key.KeypadAdd or Key.Equal: _camera.ZoomAt(_camera.Screen / 2, 1.25f); break;
                 case Key.KeypadSubtract or Key.Minus: _camera.ZoomAt(_camera.Screen / 2, 0.8f); break;
             }
@@ -207,6 +213,17 @@ public sealed class GameScreen : IScreen
         if (_selectedUnitId is not int id || _session.UnitById(id) is not { } unit || unit.OwnerId != Human.Id || _hoverProvince < 0) return;
         var result = _session.MoveUnit(Human.Id, unit.Id, _hoverProvince);
         Show(result);
+    }
+
+    private Rect NationRect => new(Math.Max(8, _app.ScreenSize.X / 2 - 540), TopBarHeight + 12, Math.Min(1080, _app.ScreenSize.X - 16), _app.ScreenSize.Y - TopBarHeight - 76);
+
+    /// <summary>Selects a province and centres the map on it (from the nation screen).</summary>
+    private void ViewProvince(int provinceId)
+    {
+        _selectedUnitId = null;
+        _selectedProvince = provinceId;
+        _choosingMigrationTarget = false;
+        _camera.LookAt(Center(provinceId));
     }
 
     private void CenterOnHome()
@@ -342,9 +359,9 @@ public sealed class GameScreen : IScreen
         Batch.Rect(x + 2, 18, 20, 20, new Rgba(Human.Color));
         x += 32;
         Ui.Text(x, 8, Human.Name, Theme.Text, FontSize.Normal, bold: true);
-        double population = Human.Provinces.Sum(id => Map.Provinces[id].Population);
-        double mood = _session.AverageMood(Human);
-        Ui.Text(x, 30, $"{population:N0} hab. · humor {mood:0}", MoodColor(mood, Theme.TextDim), FontSize.Small);
+        var stats = _session.Stats(Human);
+        double population = stats.Settled, mood = stats.AverageMood;
+        Ui.Text(x, 30, $"{population:N0} hab. · humor {mood:0}", Theme.Mood(mood, Theme.TextDim), FontSize.Small);
         if (Ui.Hover(new Rect(x, 28, 150, 20)))
             Ui.Tooltip($"{population:N0} habitantes\nHumor medio: {mood:0} ({GameRules.MoodName(mood)})");
         x += 150;
@@ -372,9 +389,10 @@ public sealed class GameScreen : IScreen
             }
             if (Ui.Hover(rect)) Ui.Tooltip($"{r.Name()}: {amount:N1}\nCambio en el último día: {net:+0.##;-0.##;0}");
             x += 90;
-            if (x > s.X - 110) break;
+            if (x > s.X - 290) break;
         }
 
+        if (Ui.Button(new Rect(s.X - 190, 12, 92, 32), "Nación", active: _nation.Visible, tooltip: "Gestionar el país (N)")) _nation.Visible = !_nation.Visible;
         if (Ui.Button(new Rect(s.X - 90, 12, 78, 32), "Menú")) _menuOpen = true;
     }
 
@@ -415,9 +433,6 @@ public sealed class GameScreen : IScreen
         Ui.Text(x + 130, y, value, valueColor ?? Theme.Text);
         y += 24;
     }
-
-    private static Rgba MoodColor(double mood, Rgba normal) =>
-        mood < GameRules.UnrestMood ? Theme.Bad : mood >= 65 ? Theme.Good : normal;
 
     /// <summary>Current mood, where it is heading and why, and what it does to the province.</summary>
     private string MoodTooltip(Province p)
@@ -513,7 +528,7 @@ public sealed class GameScreen : IScreen
             if (p.Population >= 1)
             {
                 var row = new Rect(x, y, w, 24);
-                Line(x, ref y, "Humor", $"{p.Mood:0} · {GameRules.MoodName(p.Mood)}", MoodColor(p.Mood, Theme.Text));
+                Line(x, ref y, "Humor", $"{p.Mood:0} · {GameRules.MoodName(p.Mood)}", Theme.Mood(p.Mood, Theme.Text));
                 if (Ui.Hover(row)) Ui.Tooltip(MoodTooltip(p));
                 row = new Rect(x, y, w, 24);
                 Line(x, ref y, "Fertilidad", $"{p.Fertility:P0}", p.Fertility < 0.75 ? Theme.Bad : p.Fertility >= 1.15 ? Theme.Good : Theme.Text);

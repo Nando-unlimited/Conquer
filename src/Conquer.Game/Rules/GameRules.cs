@@ -89,13 +89,18 @@ public static class GameRules
     /// <summary>Fertility a province tends to: 0.5 at mood 0, 1 at mood 50, 1.5 at mood 100; hunger cuts it.</summary>
     public static double TargetFertility(double mood, bool starving) => (0.5 + mood / 100) * (starving ? StarvingFertility : 1);
 
-    public static string MoodName(double mood) => mood switch
+    /// <summary>Mood levels from worst to best, as <see cref="MoodLevel"/> numbers them.</summary>
+    public static readonly string[] MoodNames = ["Descontento", "Inquieto", "Tranquilo", "Contento"];
+
+    public static int MoodLevel(double mood) => mood switch
     {
-        < UnrestMood => "Descontento",
-        < 45 => "Inquieto",
-        < 65 => "Tranquilo",
-        _ => "Contento",
+        < UnrestMood => 0,
+        < 45 => 1,
+        < 65 => 2,
+        _ => 3,
     };
+
+    public static string MoodName(double mood) => MoodNames[MoodLevel(mood)];
 }
 
 public enum UnitType
