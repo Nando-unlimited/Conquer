@@ -42,6 +42,7 @@ public sealed class MapRenderer : IDisposable
         uniform int uSelected;
         uniform int uHover;
         uniform float uProvinceBorders;
+        uniform float uSmoothZoom;
 
         int idAt(vec2 m) {
             ivec2 p = ivec2(int(mod(floor(m.x), uMapSize.x)), clamp(int(floor(m.y)), 0, int(uMapSize.y) - 1));
@@ -54,26 +55,79 @@ public sealed class MapRenderer : IDisposable
             return int(o.r * 255.0 + 0.5);
         }
 
+        // Coverage (0..1) of an anti-aliased line of the given half-width, from the distance to it in screen pixels.
+        float lineCoverage(float distancePx, float halfWidth) {
+            return 1.0 - clamp(distancePx - halfWidth + 0.5, 0.0, 1.0);
+        }
+
+        // Zoomed in: blend the 2x2 surrounding map pixels so each region (province or owner) becomes
+        // a smooth field. The region shown is the strongest; its border runs where the top two tie.
+        // The distance to that border is the margin between them over its gradient, which is exact
+        // for the bilinear weights (screen-space derivatives break down right on the border).
+        void strongest(int keys[4], float w[4], vec2 dw[4], out int index, out float distancePx) {
+            float share[4];
+            vec2 grad[4];
+            index = 0;
+            for (int i = 0; i < 4; i++) {
+                share[i] = 0.0;
+                grad[i] = vec2(0.0);
+                for (int j = 0; j < 4; j++) {
+                    if (keys[j] == keys[i]) { share[i] += w[j]; grad[i] += dw[j]; }
+                }
+                if (share[i] > share[index]) index = i;
+            }
+            int runner = -1;
+            for (int i = 0; i < 4; i++)
+                if (keys[i] != keys[index] && (runner < 0 || share[i] > share[runner])) runner = i;
+            if (runner < 0) { distancePx = 1e6; return; }
+            float margin = share[index] - share[runner];
+            float slope = max(length(grad[index] - grad[runner]), 1e-4);
+            distancePx = margin / slope * uZoom;
+        }
+
+        void smoothRegions(vec2 m, out int id, out float provinceDistance, out float ownerDistance) {
+            vec2 p = m - 0.5;
+            vec2 f = fract(p);
+            vec2 b = floor(p) + 0.5;
+            int ids[4] = int[4](idAt(b), idAt(b + vec2(1.0, 0.0)), idAt(b + vec2(0.0, 1.0)), idAt(b + vec2(1.0, 1.0)));
+            int owners[4] = int[4](ownerOf(ids[0]), ownerOf(ids[1]), ownerOf(ids[2]), ownerOf(ids[3]));
+            float w[4] = float[4]((1.0 - f.x) * (1.0 - f.y), f.x * (1.0 - f.y), (1.0 - f.x) * f.y, f.x * f.y);
+            vec2 dw[4] = vec2[4](vec2(f.y - 1.0, f.x - 1.0), vec2(1.0 - f.y, -f.x), vec2(-f.y, 1.0 - f.x), vec2(f.y, f.x));
+
+            int top, topOwner;
+            strongest(ids, w, dw, top, provinceDistance);
+            strongest(owners, w, dw, topOwner, ownerDistance);
+            id = ids[top];
+        }
+
         void main() {
             vec2 frag = vec2(gl_FragCoord.x, uScreen.y * uPixelScale - gl_FragCoord.y) / uPixelScale;
             vec2 m = uCenter + (frag - uScreen * 0.5) / uZoom;
             if (m.y < 0.0 || m.y >= uMapSize.y) { FragColor = vec4(0.05, 0.07, 0.1, 1.0); return; }
 
-            int id = idAt(m);
             vec3 col = texture(uTerrain, m / uMapSize).rgb;
+            int id;
+            float provinceLine, countryLine;
+            if (uZoom >= uSmoothZoom) {
+                float provinceDistance, ownerDistance;
+                smoothRegions(m, id, provinceDistance, ownerDistance);
+                provinceLine = lineCoverage(provinceDistance, 0.6);
+                countryLine = lineCoverage(ownerDistance, 1.4);
+            } else {
+                // Zoomed out a map pixel is smaller than a screen pixel: compare with the next screen pixel.
+                id = idAt(m);
+                float px = 1.0 / uZoom;
+                int idR = idAt(m + vec2(px, 0.0));
+                int idD = idAt(m + vec2(0.0, px));
+                int own = ownerOf(id);
+                provinceLine = (id != idR || id != idD) ? 1.0 : 0.0;
+                countryLine = (own != ownerOf(idR) || own != ownerOf(idD)) ? 1.0 : 0.0;
+            }
+
             vec4 pc = texelFetch(uProvColor, slot(id), 0);
             col = mix(col, pc.rgb, pc.a);
-
-            float px = 1.0 / uZoom;
-            int idR = idAt(m + vec2(px, 0.0));
-            int idD = idAt(m + vec2(0.0, px));
-            if (id != idR || id != idD) col = mix(col, vec3(0.08, 0.08, 0.08), uProvinceBorders);
-
-            int own = ownerOf(id);
-            int ownR = ownerOf(idR), ownD = ownerOf(idD);
-            int idR2 = idAt(m + vec2(2.0 * px, 0.0)), idD2 = idAt(m + vec2(0.0, 2.0 * px));
-            bool thick = uZoom > 2.0 && (own != ownerOf(idR2) || own != ownerOf(idD2));
-            if (own != ownR || own != ownD || thick) col = mix(col, vec3(0.05, 0.03, 0.02), 0.85);
+            col = mix(col, vec3(0.08, 0.08, 0.08), provinceLine * uProvinceBorders);
+            col = mix(col, vec3(0.05, 0.03, 0.02), countryLine * 0.85);
 
             if (id == uSelected) col = mix(col, vec3(1.0, 1.0, 0.85), 0.35);
             else if (id == uHover) col = mix(col, vec3(1.0), 0.12);
@@ -117,6 +171,39 @@ public sealed class MapRenderer : IDisposable
         gl.VertexAttribPointer(0, 2, VertexAttribPointerType.Float, false, 8, (void*)0);
         gl.BindVertexArray(0);
     }
+
+    /// <summary>
+    /// The province drawn at a map position, matching the shader: zoomed in, the strongest province
+    /// of the 2x2 blended map pixels; zoomed out, the map pixel itself. -1 off the map.
+    /// </summary>
+    public static int ProvinceAt(WorldMap map, System.Numerics.Vector2 m, float zoom)
+    {
+        if (m.Y < 0 || m.Y >= map.Height) return -1;
+        if (zoom < SmoothZoom) return map.ProvinceAt((int)MathF.Floor(m.X), (int)MathF.Floor(m.Y))?.Id ?? -1;
+
+        float px = m.X - 0.5f, py = m.Y - 0.5f;
+        int bx = (int)MathF.Floor(px), by = (int)MathF.Floor(py);
+        float fx = px - bx, fy = py - by;
+        Span<int> ids = stackalloc int[4];
+        Span<float> w = [(1 - fx) * (1 - fy), fx * (1 - fy), (1 - fx) * fy, fx * fy];
+        for (int i = 0; i < 4; i++)
+        {
+            int y = Math.Clamp(by + i / 2, 0, map.Height - 1);
+            ids[i] = map.ProvinceIds[y * map.Width + map.WrapX(bx + i % 2)];
+        }
+        int best = ids[0];
+        float bestShare = -1;
+        for (int i = 0; i < 4; i++)
+        {
+            float share = 0;
+            for (int j = 0; j < 4; j++) if (ids[j] == ids[i]) share += w[j];
+            if (share > bestShare) (best, bestShare) = (ids[i], share);
+        }
+        return best;
+    }
+
+    /// <summary>Zoom (screen pixels per map pixel) from which borders are smoothed.</summary>
+    public const float SmoothZoom = 2;
 
     private static byte[] EncodeIds(WorldMap map)
     {
@@ -181,6 +268,7 @@ public sealed class MapRenderer : IDisposable
         _shader.Use();
         _shader.Set("uScreen", camera.Screen.X, camera.Screen.Y);
         _shader.Set("uPixelScale", pixelScale);
+        _shader.Set("uSmoothZoom", SmoothZoom);
         _shader.Set("uCenter", camera.Center.X, camera.Center.Y);
         _shader.Set("uZoom", camera.Zoom);
         _shader.Set("uMapSize", _map.Width, _map.Height);

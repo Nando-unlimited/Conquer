@@ -85,7 +85,7 @@ public sealed class GameScreen : IScreen
         }
 
         var mouseMap = _camera.ScreenToMap(Ui.Input.Mouse);
-        _hoverProvince = Map.ProvinceAt((int)MathF.Floor(mouseMap.X), (int)MathF.Floor(mouseMap.Y))?.Id ?? -1;
+        _hoverProvince = MapRenderer.ProvinceAt(Map, mouseMap, _camera.Zoom);
 
         _renderer.Draw(_camera, _selectedProvince, _hoverProvince, _app.PixelScale);
         DrawCities();

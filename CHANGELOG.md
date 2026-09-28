@@ -2,6 +2,12 @@
 
 Todos los cambios del juego, del más reciente al más antiguo. Cada versión es un commit cuyo título es su número.
 
+## [1.0.1] - 2026-09-28
+
+### Cambiado
+- Las fronteras de provincias y países se ven suaves y sin escalones al acercar el zoom, en lugar de seguir los píxeles del mapa.
+- Al hacer clic cerca de una frontera se selecciona la provincia que se ve en pantalla.
+
 ## [1.0.0] - 2026-09-28
 
 Primera versión jugable.
