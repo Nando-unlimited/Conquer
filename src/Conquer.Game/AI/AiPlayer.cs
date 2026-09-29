@@ -40,14 +40,14 @@ internal sealed partial class AiPlayer
         Tech.Agriculture, Tech.Writing, Tech.Archery, Tech.Carpentry, Tech.Mythology, Tech.HorsebackRiding, Tech.Irrigation,
         Tech.Mining, Tech.Pottery, Tech.Medicine, Tech.BronzeWorking, Tech.TheWheel, Tech.Currency, Tech.CodeOfLaws, Tech.IronWorking,
         Tech.Mathematics, Tech.MilitaryTactics, Tech.Trade, Tech.Philosophy, Tech.Construction, Tech.Engineering, Tech.SiegeEngines,
-        Tech.Administration, Tech.DramaAndPoetry, Tech.Fortifications, Tech.HeavyCavalry,
+        Tech.Administration, Tech.DramaAndPoetry, Tech.Fortifications, Tech.HeavyCavalry, Tech.Navigation,
         Tech.CropRotation, Tech.Education, Tech.Machinery, Tech.Guilds, Tech.Theology, Tech.Stirrup, Tech.Banking, Tech.Astronomy,
         Tech.Castles, Tech.PrintingPress, Tech.Gunpowder, Tech.Economics, Tech.Anatomy, Tech.DeepMining, Tech.Metallurgy,
         Tech.ScientificMethod, Tech.MilitaryScience, Tech.Cartography,
         Tech.Rifling, Tech.SteamEngine, Tech.PublicEducation, Tech.Industrialization, Tech.Sanitation, Tech.Chemistry, Tech.Steel,
         Tech.Railroad, Tech.MachineGuns,
         Tech.Electricity, Tech.Fertilizers, Tech.OilRefining, Tech.Combustion, Tech.Antibiotics, Tech.HeavyArtillery, Tech.Electronics,
-        Tech.Armour, Tech.AssemblyLine,
+        Tech.Armour, Tech.AssemblyLine, Tech.Aviation,
     ];
     private readonly GameSession _session;
     private readonly Player _player;

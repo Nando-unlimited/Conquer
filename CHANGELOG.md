@@ -2,6 +2,15 @@
 
 Todos los cambios del juego, del más reciente al más antiguo. Cada versión es un commit cuyo título es su número.
 
+## [1.23.0] - 2026-09-29
+
+### Añadido
+- **Navegación**: con **Navegación a vela** (nuevo avance de Economía, nivel 5) tus unidades cruzan mares costeros y lagos en barco. Con **Cartografía**, también el océano. En el mar van el doble de rápido que a pie, pero sin suministro.
+- **Aviación** (nuevo avance Militar, nivel 13): **bombarderos**, muy rápidos y con mucho ataque, que gastan aluminio y petróleo. Un regimiento que solo tenga aviones puede cruzar cualquier mar sin barcos.
+
+### Cambiado
+- Los migrantes y el suministro siguen yendo solo por tierra.
+
 ## [1.22.0] - 2026-09-29
 
 ### Añadido

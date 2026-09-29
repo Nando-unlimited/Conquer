@@ -5,10 +5,11 @@ using Conquer.Game.World;
 namespace Conquer.Game.Simulation;
 
 /// <summary>
-/// Travel over land through the province graph. Seas and lakes are closed (only naval units may
-/// sail them); polar ice can be crossed although it cannot be claimed. A step between neighbours
+/// Travel through the province graph. Without a rule of its own a traveller goes over land only;
+/// a rule (<c>canEnter</c>) decides everything, the sea included, as it does for nations that sail and
+/// for aircraft. Polar ice can be crossed although it cannot be claimed. A step between neighbours
 /// takes the distance between their centres divided by the walking speed, scaled by how easy both
-/// terrains are to cross and how fast their roads are.
+/// terrains are to cross and how fast their roads are; ships sail faster.
 /// </summary>
 public sealed class Pathfinder
 {
@@ -16,8 +17,10 @@ public sealed class Pathfinder
 
     public Pathfinder(WorldMap map) => _map = map;
 
-    /// <summary>Whether land travellers (units and migrants) may enter the province.</summary>
+    /// <summary>Whether land travellers (migrants, and anyone without a rule of their own) may enter the province.</summary>
     public bool CanEnter(int province) => !_map.Provinces[province].IsWater;
+
+    private bool Allowed(int province, Func<int, bool>? canEnter) => canEnter?.Invoke(province) ?? CanEnter(province);
 
     public double StepHours(int from, int to)
     {
@@ -27,21 +30,21 @@ public sealed class Pathfinder
         return _map.DistanceKm(a, b) / speed;
     }
 
-    /// <summary>How fast a province is crossed: its terrain, sped up by its roads and railways.</summary>
-    private static double Speed(Province p) => p.Info.MoveSpeed * (1 + p.BuildingBonuses.MoveSpeed);
+    /// <summary>How fast a province is crossed: its terrain, sped up by its roads and railways; the sea at sailing speed.</summary>
+    private static double Speed(Province p) => p.IsWater ? GameRules.SailingSpeed : p.Info.MoveSpeed * (1 + p.BuildingBonuses.MoveSpeed);
 
-    /// <summary>The fastest a province can be crossed: the best terrain with every road-like building on it.</summary>
-    private static readonly double FastestSpeed = Enum.GetValues<Biome>().Max(b => b.Info().MoveSpeed)
-        * (1 + Enum.GetValues<BuildingType>().Sum(b => b.Info().Effects.MoveSpeed));
+    /// <summary>The fastest a province can be crossed: the best terrain with every road-like building on it, or the sea.</summary>
+    private static readonly double FastestSpeed = Math.Max(GameRules.SailingSpeed,
+        Enum.GetValues<Biome>().Max(b => b.Info().MoveSpeed) * (1 + Enum.GetValues<BuildingType>().Sum(b => b.Info().Effects.MoveSpeed)));
 
     /// <summary>
     /// Fastest route (A*), excluding the start province, or null when unreachable. <paramref name="canEnter"/>
-    /// narrows where this traveller may go (a foreign country at peace, for an army).
+    /// is where this traveller may go (not a foreign country at peace, for an army; the sea, for a nation that sails).
     /// </summary>
     public (List<int> Path, double Hours)? FindPath(int from, int to, Func<int, bool>? canEnter = null)
     {
         if (from == to) return ([], 0);
-        if (!CanEnter(to) || canEnter?.Invoke(to) == false) return null;
+        if (!Allowed(to, canEnter)) return null;
         int n = _map.Provinces.Count;
         var cost = new double[n];
         Array.Fill(cost, double.PositiveInfinity);
@@ -56,7 +59,7 @@ public sealed class Pathfinder
             if (priority - Heuristic(current, to) > cost[current] + 1e-9) continue;
             foreach (int next in _map.Provinces[current].Neighbors)
             {
-                if (!CanEnter(next) || canEnter?.Invoke(next) == false) continue;
+                if (!Allowed(next, canEnter)) continue;
                 double c = cost[current] + StepHours(current, next);
                 if (c >= cost[next]) continue;
                 cost[next] = c;
@@ -75,8 +78,8 @@ public sealed class Pathfinder
     /// <summary>
     /// Travel hours from the nearest of several sources to every province (Dijkstra), and which source
     /// that is. Provinces beyond <paramref name="maxHours"/> stay at infinity. With
-    /// <paramref name="targets"/>, the search stops once all of them are settled; only their results are then final. <paramref name="canEnter"/>
-    /// narrows the provinces it may cross.
+    /// <paramref name="targets"/>, the search stops once all of them are settled; only their results are then final. <paramref name="canEnter"/>, as in <see cref="FindPath"/>,
+    /// is where it may go.
     /// </summary>
     public (double[] Hours, int[] Source) FromSources(IEnumerable<int> sources, double maxHours = double.PositiveInfinity,
         IReadOnlySet<int>? targets = null, Func<int, bool>? canEnter = null)
@@ -101,7 +104,7 @@ public sealed class Pathfinder
             if (targets != null && targets.Contains(current) && --remaining == 0) break;
             foreach (int next in _map.Provinces[current].Neighbors)
             {
-                if (!CanEnter(next) || canEnter?.Invoke(next) == false) continue;
+                if (!Allowed(next, canEnter)) continue;
                 double c = h + StepHours(current, next);
                 if (c >= hours[next] || c > maxHours) continue;
                 hours[next] = c;

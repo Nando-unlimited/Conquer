@@ -61,16 +61,22 @@ public sealed partial class GameSession
 
     /// <summary>
     /// Whether a unit may step into a province: free land and its own nation's always; a province
-    /// held by another nation only for regiments at war with it.
+    /// held by another nation only for regiments at war with it; the sea as far as its nation can sail,
+    /// or anywhere for aircraft.
     /// </summary>
     public bool CanUnitEnter(Unit unit, int provinceId)
     {
         var p = Map.Provinces[provinceId];
-        if (p.IsWater) return false;
+        if (p.IsWater) return unit.Flies || CanSail(Players[unit.OwnerId], p);
         int holder = p.IsOwned ? p.ControllerId : -1;
         if (holder < 0 || holder == unit.OwnerId) return true;
         return unit.IsMilitary && AtWar(unit.OwnerId, holder);
     }
+
+    /// <summary>Navigation opens coastal seas and lakes; cartography, the open ocean too.</summary>
+    public static bool CanSail(Player player, Province sea) => sea.Biome is Biome.ShallowSea or Biome.Lake
+        ? player.Techs.Contains(Tech.Navigation)
+        : player.Techs.Contains(Tech.Cartography);
 
     /// <summary>Hours a unit needs to walk from one province to its neighbour, at its own pace.</summary>
     private double UnitStepHours(Unit unit, int from, int to) => Pathfinder.StepHours(from, to) / unit.Speed;
@@ -88,12 +94,12 @@ public sealed partial class GameSession
         var target = Map.Provinces[targetProvinceId];
         if (!CanUnitEnter(unit, targetProvinceId))
         {
-            if (target.IsWater) return CommandResult.Fail("No hay camino por tierra hasta allí.");
+            if (target.IsWater) return CommandResult.Fail(target.Biome is Biome.ShallowSea or Biome.Lake ? "Hace falta la navegación a vela para ir por mar." : "Hace falta la cartografía para cruzar el océano.");
             string holder = Players[target.ControllerId].Name;
             return CommandResult.Fail(unit.IsMilitary ? $"No estás en guerra con {holder}." : $"No puede entrar en tierras de {holder}.");
         }
         if (Pathfinder.FindPath(unit.ProvinceId, targetProvinceId, id => CanUnitEnter(unit, id)) is not { } route)
-            return CommandResult.Fail("No hay camino por tierra hasta allí.");
+            return CommandResult.Fail("No hay camino hasta allí.");
         var (path, hours) = route;
         unit.Path.Clear();
         unit.Path.AddRange(path);
@@ -421,7 +427,7 @@ public sealed partial class GameSession
         var supplied = new HashSet<int>();
         if (sources.Count == 0) return supplied;
         var (hours, _) = Pathfinder.FromSources(sources, MilitaryRules.SupplyRangeHours,
-            canEnter: id => !Map.Provinces[id].IsOwned || Map.Provinces[id].ControllerId == player.Id);
+            canEnter: id => !Map.Provinces[id].IsWater && (!Map.Provinces[id].IsOwned || Map.Provinces[id].ControllerId == player.Id));
         for (int id = 0; id < hours.Length; id++)
         {
             if (double.IsPositiveInfinity(hours[id])) continue;

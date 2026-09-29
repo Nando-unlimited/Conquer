@@ -16,6 +16,8 @@ public static class GameRules
     // Movement
     /// <summary>How far a citizen walks in an hour on open ground; units and migrants travel at this pace.</summary>
     public const double CitizenSpeedKmh = 10;
+    /// <summary>Ships cross the sea this many times faster than people walk.</summary>
+    public const double SailingSpeed = 2;
 
     // Population
     /// <summary>Food each citizen eats per day (units and migrants on the road too).</summary>

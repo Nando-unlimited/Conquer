@@ -90,6 +90,8 @@ public enum Tech
     Combustion,
     HeavyArtillery,
     Armour,
+    Navigation,
+    Aviation,
 }
 
 /// <param name="Level">Its level in its branch, from 1; a level opens once enough of the one below is known (<see cref="GameRules.LevelUnlockShare"/>).</param>
@@ -127,13 +129,15 @@ public static class Techs
         [Tech.Construction] = new("Construcción", TechBranch.Economy, 4, "Las obras se terminan un 25 % antes.", new() { BuildSpeed = 0.25 }, Era: Era.Classical),
         [Tech.Engineering] = new("Ingeniería", TechBranch.Economy, 5, "Canales: la tierra alimenta un 15 % más de gente.", new() { Capacity = 0.15 },
             [Tech.Construction, Tech.Mathematics], Era: Era.Classical),
+        [Tech.Navigation] = new("Navegación a vela", TechBranch.Economy, 5, "Barcos que llevan a tus unidades por mares costeros y lagos.", Modifiers.None,
+            [Tech.Trade], Era: Era.Classical),
         [Tech.CropRotation] = new("Rotación de cultivos", TechBranch.Economy, 6, "+20 % de comida y la tierra alimenta un 10 % más de gente.",
             new() { Food = 0.2, Capacity = 0.1 }, [Tech.Irrigation], Era: Era.Medieval),
         [Tech.Guilds] = new("Gremios", TechBranch.Economy, 6, "+20 % de madera y de yacimientos.", new() { Wood = 0.2, Deposits = 0.2 }, [Tech.Trade], Era: Era.Medieval),
         [Tech.Banking] = new("Banca", TechBranch.Economy, 7, "Bancos para las ciudades.", Modifiers.None, [Tech.Guilds], Era: Era.Medieval),
         [Tech.Economics] = new("Economía", TechBranch.Economy, 8, "+20 % de oro de los impuestos.", new() { Taxes = 0.2 }, [Tech.Banking], Era: Era.Renaissance),
         [Tech.DeepMining] = new("Minería profunda", TechBranch.Economy, 8, "Galerías y bombas: +30 % de yacimientos.", new() { Deposits = 0.3 }, [Tech.Guilds], Era: Era.Renaissance),
-        [Tech.Cartography] = new("Cartografía", TechBranch.Economy, 9, "Rutas de comercio: +10 % de oro de los impuestos.", new() { Taxes = 0.1 },
+        [Tech.Cartography] = new("Cartografía", TechBranch.Economy, 9, "Rutas de comercio y barcos que cruzan el océano: +10 % de oro de los impuestos.", new() { Taxes = 0.1 },
             [Tech.Astronomy], Era: Era.Renaissance),
         [Tech.SteamEngine] = new("Máquina de vapor", TechBranch.Economy, 10, "Bombas y máquinas: +25 % de yacimientos.", new() { Deposits = 0.25 },
             [Tech.DeepMining], Era: Era.Industrial),
@@ -196,6 +200,8 @@ public static class Techs
         [Tech.Combustion] = new("Motor de combustión", TechBranch.Military, 12, "Camiones para mover a la infantería.", Modifiers.None, [Tech.OilRefining], Era: Era.Modern),
         [Tech.HeavyArtillery] = new("Artillería pesada", TechBranch.Military, 12, "Obuses de gran calibre.", Modifiers.None, [Tech.Steel], Era: Era.Modern),
         [Tech.Armour] = new("Blindados", TechBranch.Military, 13, "Carros de combate.", Modifiers.None, [Tech.Combustion, Tech.Steel], Era: Era.Modern),
+        [Tech.Aviation] = new("Aviación", TechBranch.Military, 13, "Bombarderos que vuelan sobre cualquier terreno y sobre el mar.", Modifiers.None,
+            [Tech.Combustion, Tech.Electricity], Era: Era.Modern),
     };
 
     public static TechInfo Info(this Tech tech) => Table[tech];

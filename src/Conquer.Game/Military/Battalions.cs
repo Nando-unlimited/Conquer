@@ -27,6 +27,7 @@ public enum BattalionType
     MotorisedInfantry,
     HeavyArtillery,
     Tanks,
+    Bombers,
 }
 
 /// <param name="Men">Citizens the battalion takes from its city, and its full strength.</param>
@@ -37,9 +38,10 @@ public enum BattalionType
 /// <param name="MaxOrganisation">How long it keeps fighting; at zero it breaks and retreats.</param>
 /// <param name="Speed">Marching speed as a multiple of a walking citizen's.</param>
 /// <param name="Mounted">Horses and chariots fight badly in forests, marshes and mountains.</param>
+/// <param name="Flies">Aircraft: a regiment of them alone may cross the sea.</param>
 public sealed record BattalionInfo(
     string Name, string Symbol, int Men, ResourceCost Cost, int TrainingDays, Tech[] Requires,
-    double Attack, double Defense, double MaxOrganisation, double Speed, bool Mounted);
+    double Attack, double Defense, double MaxOrganisation, double Speed, bool Mounted, bool Flies = false);
 
 public static class Battalions
 {
@@ -89,6 +91,8 @@ public static class Battalions
             new ResourceCost((ResourceType.Gold, 120), (ResourceType.Iron, 80), (ResourceType.Coal, 30), (ResourceType.Oil, 10)), 50, [Tech.HeavyArtillery], 38, 6, 30, 0.6, false),
         [BattalionType.Tanks] = new("Tanques", "X", 100,
             new ResourceCost((ResourceType.Gold, 150), (ResourceType.Iron, 80), (ResourceType.Oil, 40), (ResourceType.Rubber, 20)), 50, [Tech.Armour], 45, 25, 60, 2, true),
+        [BattalionType.Bombers] = new("Bombarderos", "V", 100,
+            new ResourceCost((ResourceType.Gold, 200), (ResourceType.Aluminium, 40), (ResourceType.Oil, 40)), 60, [Tech.Aviation], 55, 8, 40, 4, false, Flies: true),
     };
 
     public static BattalionInfo Info(this BattalionType type) => Table[type];

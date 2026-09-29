@@ -166,6 +166,8 @@ public sealed class Unit
         UnitType.Headquarters => MilitaryRules.HeadquartersSpeed,
         _ => 1,
     };
+    /// <summary>A regiment made only of aircraft, which may fly over the sea.</summary>
+    public bool Flies => Type == UnitType.Regiment && Battalions.Count > 0 && Battalions.All(b => b.Info.Flies);
     /// <summary>A regiment's organisation as a share of its maximum (0..1).</summary>
     public double OrganisationShare =>
         Battalions.Count == 0 ? 0 : Battalions.Sum(b => b.Organisation) / Battalions.Sum(b => b.Info.MaxOrganisation);
