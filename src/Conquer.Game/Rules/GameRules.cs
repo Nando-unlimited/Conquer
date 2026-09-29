@@ -160,4 +160,6 @@ public enum UnitType
     Settlers,
     Regiment,
     Headquarters,
+    /// <summary>Ships: warships fight other fleets, transports carry troops over the sea.</summary>
+    Fleet,
 }

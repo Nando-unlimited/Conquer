@@ -69,7 +69,8 @@ internal sealed partial class AiPlayer
     {
         ClassifyNewRegiments();
         bool atWar = _session.EnemiesOf(_player.Id).Any();
-        var units = _session.Units.Where(u => u.OwnerId == _player.Id && !u.IsMoving && !u.AttackingProvinceId.HasValue).ToList();
+        // Fleets keep to their ports (see BuildNavy); troops aboard wait for their ships.
+        var units = _session.Units.Where(u => u.OwnerId == _player.Id && !u.IsFleet && !u.IsAboard && !u.IsMoving && !u.AttackingProvinceId.HasValue).ToList();
         // Hungry soldiers go home and farm (never while at war).
         if (_player.IsStarving && !atWar && units.FirstOrDefault(u => u.IsMilitary && Map.Provinces[u.ProvinceId].OwnerId == _player.Id) is { } idle)
         {
@@ -94,6 +95,7 @@ internal sealed partial class AiPlayer
             AdoptInstitutions();
             Recruit();
             BuildArmy();
+            BuildNavy();
             OrganiseArmy();
             Diplomacy();
             Construct();

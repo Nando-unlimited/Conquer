@@ -110,7 +110,8 @@ public sealed record TrainingSave(
 
 public sealed record UnitSave(
     int Id, int OwnerId, UnitType Type, int ProvinceId, int Citizens, int Number, int HeadquartersLevel,
-    List<BattalionSave> Battalions, int? CommanderId, int? AttackingProvinceId, List<int> Path, double HoursToNext, double StepHours);
+    List<BattalionSave> Battalions, int? CommanderId, int? AttackingProvinceId, List<int> Path, double HoursToNext, double StepHours,
+    int? CarrierId = null);
 
 public sealed record BattalionSave(BattalionType Type, double Strength, double Organisation);
 

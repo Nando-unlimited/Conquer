@@ -22,7 +22,7 @@ public sealed partial class NationView
     /// </summary>
     private void Army(Ui ui, Rect r)
     {
-        var mine = _session.Units.Where(u => u.OwnerId == _player.Id && u.CommandLevel >= 0).ToList();
+        var mine = _session.Units.Where(u => u.OwnerId == _player.Id && (u.CommandLevel >= 0 || u.IsFleet)).ToList();
         var regiments = mine.Where(u => u.IsMilitary).ToList();
         var era = _player.ArmyEra;
         ui.Text(r.X, r.Y, $"{Plural(regiments.Count, Formations.LevelName(CommandLevels.Regiment, era).ToLowerInvariant(), Formations.LevelPlural(CommandLevels.Regiment, era))} · {Formations.BattalionCount(regiments.Sum(u => u.Battalions.Count), era)} · {regiments.Sum(u => u.Citizens):N0} hombres · " +
@@ -43,6 +43,7 @@ public sealed partial class NationView
         foreach (var top in mine.Where(u => u.IsHeadquarters && _session.CommanderOf(u) is null).OrderByDescending(u => u.HeadquartersLevel).ThenBy(u => u.Name))
             AddTree(top, 0);
         foreach (var loose in regiments.Where(u => _session.CommanderOf(u) is null).OrderBy(u => u.Name)) rows.Add((loose, 0));
+        foreach (var fleet in mine.Where(u => u.IsFleet).OrderBy(u => u.Name)) rows.Add((fleet, 0));
 
         (string Title, float Width)[] columns = [("Unidad", 290), ("Ubicación", 170), ("Hombres", 100), ("Organización", 130), ("Suministro", 110), ("Estado", 170), ("", 60)];
         float x0 = body.X;
@@ -64,7 +65,7 @@ public sealed partial class NationView
             ui.Text(x, rowY + 6, _session.PlaceName(p), Theme.TextDim);
             x += columns[1].Width;
 
-            if (unit.IsMilitary)
+            if (unit.IsMilitary || unit.IsFleet)
             {
                 ui.Text(x, rowY + 6, $"{unit.Citizens:N0}", unit.StrengthShare < 0.5 ? Theme.Bad : Theme.Text);
                 ui.Batch.Rect(x, rowY + 26, columns[2].Width - 20, 3, Theme.ButtonDisabled);
@@ -72,8 +73,9 @@ public sealed partial class NationView
                 x += columns[2].Width;
                 ProgressBar(ui, new Rect(x, rowY + 13, columns[3].Width - 20, 8), unit.OrganisationShare, OrganisationBar);
                 x += columns[3].Width;
-                bool supplied = _session.IsInSupply(unit);
-                ui.Text(x, rowY + 6, supplied ? "Sí" : "No", supplied ? Theme.Good : Theme.Bad);
+                bool supplied = unit.IsAboard || _session.IsInSupply(unit);
+                if (unit.IsFleet) ui.Text(x, rowY + 6, _session.IsPort(p, unit.OwnerId) ? "Puerto" : "En el mar", Theme.TextDim);
+                else ui.Text(x, rowY + 6, supplied ? "Sí" : "No", supplied ? Theme.Good : Theme.Bad);
             }
             else
             {
@@ -96,6 +98,7 @@ public sealed partial class NationView
 
     private string UnitActivity(Unit unit)
     {
+        if (unit.CarrierId is int carrier && _session.UnitById(carrier) is { } fleet) return $"A bordo de {fleet.Name}";
         if (unit.AttackingProvinceId is int target) return $"Atacando {_session.PlaceName(_session.Map.Provinces[target])}";
         if (_session.InBattle(unit)) return "Defendiendo";
         if (unit.IsMoving && unit.Destination is int dest) return $"Hacia {_session.PlaceName(_session.Map.Provinces[dest])}";
@@ -174,7 +177,8 @@ public sealed partial class NationView
         y += 10;
         ui.Text(x, y, "Añadir", Theme.Text, bold: true);
         y += 26;
-        var known = Battalions.All.Where(t => t.Info().Requires.All(_player.Techs.Contains)).ToList();
+        // Ships are built one by one in ports, never from templates.
+        var known = Battalions.All.Where(t => !t.Info().Naval && t.Info().Requires.All(_player.Techs.Contains)).ToList();
         float bw = (w * 0.6f - 12) / 3;
         for (int i = 0; i < known.Count; i++)
         {

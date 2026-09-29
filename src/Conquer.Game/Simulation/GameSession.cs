@@ -203,6 +203,7 @@ public sealed partial class GameSession
         Date = new GameDate(Date.Hours + 1);
         MoveUnits();
         ResolveBattles();
+        ResolveNavalBattles();
         ArriveMigrations();
         if (Date.Hour == 0)
         {
@@ -752,6 +753,8 @@ public sealed partial class GameSession
         if (UnitById(unitId) is not { } unit || unit.OwnerId != playerId) return CommandResult.Fail("Unidad no válida.");
         var p = Map.Provinces[unit.ProvinceId];
         if (p.OwnerId != playerId) return CommandResult.Fail("Solo puede asentarse en una provincia propia.");
+        // A fleet paid off in port lands what it carries first.
+        foreach (var cargo in Units.Where(u => u.CarrierId == unit.Id)) cargo.CarrierId = null;
         Settle(p, unit.Citizens, GameRules.StartingMood);
         RemoveUnit(unit);
         return CommandResult.Success();

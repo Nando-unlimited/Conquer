@@ -33,7 +33,8 @@ public sealed partial class GameScreen
         var stackIndex = new Dictionary<int, int>();
         foreach (var unit in _session.Units)
         {
-            var pos = unit.IsMoving && !unit.AttackingProvinceId.HasValue ? Between(unit.ProvinceId, unit.Path[0], unit.StepProgress) : Center(unit.ProvinceId);
+            if (unit.IsAboard) continue; // shown in its fleet's panel
+            var pos =unit.IsMoving && !unit.AttackingProvinceId.HasValue ? Between(unit.ProvinceId, unit.Path[0], unit.StepProgress) : Center(unit.ProvinceId);
             var s = _camera.MapToScreen(pos);
             if (!OnScreen(s)) continue;
             int stack = stackIndex.GetValueOrDefault(unit.ProvinceId);
@@ -63,6 +64,19 @@ public sealed partial class GameScreen
                 bool mounted = unit.Battalions.Count(b => b.Info.Mounted) * 2 > unit.Battalions.Count;
                 Batch.Line(new(r.X + 2, r.Bottom - 2), new(r.Right - 2, r.Y + 2), Rgba.Black, 1.5f);
                 if (!mounted) Batch.Line(new(r.X + 2, r.Y + 2), new(r.Right - 2, r.Bottom - 2), Rgba.Black, 1.5f);
+            }
+            else if (unit.IsFleet)
+            {
+                // A hull under the ship letter; a dot for every unit aboard.
+                Batch.Line(new(r.X + 3, r.Bottom - 4), new(r.Right - 3, r.Bottom - 4), Rgba.Black, 2);
+                Batch.Line(new(r.X + 3, r.Bottom - 4), new(r.X + 7, r.Bottom - 1), Rgba.Black, 1.5f);
+                Batch.Line(new(r.Right - 3, r.Bottom - 4), new(r.Right - 7, r.Bottom - 1), Rgba.Black, 1.5f);
+                if (scale > 0.7f) Ui.TextCentered(new Rect(r.X, r.Y - 2, r.W, r.H - 4), unit.Symbol, Rgba.Black, FontSize.Small, bold: true);
+                int aboard = _session.CargoOf(unit).Count();
+                for (int i = 0; i < aboard; i++) Batch.Rect(r.Right + 3, r.Y + i * 5, 3, 3, Rgba.White);
+            }
+            if (unit.IsMilitary || unit.IsFleet)
+            {
                 Bar(new Rect(r.X - 2, r.Bottom + 3, r.W + 4, 3), unit.StrengthShare, StrengthColor);
                 Bar(new Rect(r.X - 2, r.Bottom + 7, r.W + 4, 3), unit.OrganisationShare, OrganisationColor);
             }
@@ -73,19 +87,30 @@ public sealed partial class GameScreen
         }
     }
 
-    /// <summary>Crossed swords over every province being fought for; hovering shows both sides.</summary>
+    /// <summary>Crossed swords over every province being fought for, on land or at sea; hovering shows both sides.</summary>
     private void DrawBattles()
     {
-        foreach (var battle in _session.Battles)
-        {
-            var s = _camera.MapToScreen(Center(battle.ProvinceId));
-            if (!OnScreen(s)) continue;
-            float size = 9 + 2 * (float)Math.Sin(_realTime * 6);
-            Batch.Rect(s.X - size - 2, s.Y - size - 2, 2 * size + 4, 2 * size + 4, Rgba.Black.WithAlpha(0.6f));
-            Batch.Line(new(s.X - size, s.Y - size), new(s.X + size, s.Y + size), BattleColor, 3);
-            Batch.Line(new(s.X - size, s.Y + size), new(s.X + size, s.Y - size), BattleColor, 3);
-            if (Ui.Hover(new Rect(s.X - size, s.Y - size, 2 * size, 2 * size))) Ui.Tooltip(BattleSummary(battle));
-        }
+        foreach (var battle in _session.Battles) DrawBattleMark(battle.ProvinceId, BattleSummary(battle));
+        foreach (int sea in _session.NavalBattleProvinces()) DrawBattleMark(sea, NavalBattleSummary(sea));
+    }
+
+    private void DrawBattleMark(int provinceId, string summary)
+    {
+        var s = _camera.MapToScreen(Center(provinceId));
+        if (!OnScreen(s)) return;
+        float size = 9 + 2 * (float)Math.Sin(_realTime * 6);
+        Batch.Rect(s.X - size - 2, s.Y - size - 2, 2 * size + 4, 2 * size + 4, Rgba.Black.WithAlpha(0.6f));
+        Batch.Line(new(s.X - size, s.Y - size), new(s.X + size, s.Y + size), BattleColor, 3);
+        Batch.Line(new(s.X - size, s.Y + size), new(s.X + size, s.Y - size), BattleColor, 3);
+        if (Ui.Hover(new Rect(s.X - size, s.Y - size, 2 * size, 2 * size))) Ui.Tooltip(summary);
+    }
+
+    private string NavalBattleSummary(int provinceId)
+    {
+        var sides = _session.Units.Where(u => u.IsFleet && u.ProvinceId == provinceId).GroupBy(u => u.OwnerId)
+            .Select(g => $"{_session.Players[g.Key].Name}: {Formations.ShipCount(g.Sum(f => f.Battalions.Count))} · " +
+                         $"organización {g.Average(f => f.OrganisationShare):P0}");
+        return $"Batalla naval en {Map.Provinces[provinceId].DisplayName}\n" + string.Join("\n", sides);
     }
 
     private string BattleSummary(Battle battle)
@@ -120,6 +145,7 @@ public sealed partial class GameScreen
         {
             UnitType.Regiment => $"{Formations.LevelName(CommandLevels.Regiment, era)} de {Formations.BattalionCount(unit.Battalions.Count, era)}",
             UnitType.Headquarters => $"Cuartel general de {Formations.LevelName(unit.HeadquartersLevel, era).ToLowerInvariant()}",
+            UnitType.Fleet => $"Flota de {Formations.ShipCount(unit.Battalions.Count)}",
             _ => $"{unit.Citizens:N0} colonos",
         };
         Ui.Text(x, y, kind, Theme.TextDim, FontSize.Small);
@@ -128,11 +154,17 @@ public sealed partial class GameScreen
         Line(x, ref y, "Ubicación", _session.PlaceName(here));
         Line(x, ref y, "Estado", UnitState(unit, out var stateColor), stateColor);
 
-        if (unit.IsMilitary) RegimentDetails(unit, x, ref y, w);
+        if (unit.IsMilitary || unit.IsFleet) RegimentDetails(unit, x, ref y, w);
         else if (unit.IsHeadquarters) HeadquartersDetails(unit, x, ref y, w);
         if (unit.OwnerId != Human.Id) return;
 
         y += 6;
+        if (unit.IsAboard)
+        {
+            Paragraph(x, ref y, w, "Clic derecho en la costa junto a su flota (o en su puerto) para desembarcar. En tierra enemiga sin tropas, desembarcar la ocupa.", Theme.TextDim);
+            return;
+        }
+        EmbarkButtons(unit, x, ref y, w);
         float half = (w - 6) / 2;
         if (unit.CanFoundCity)
         {
@@ -149,7 +181,7 @@ public sealed partial class GameScreen
             y += 38;
         }
         bool canSettle = here.OwnerId == Human.Id && !here.IsOccupied;
-        if (Ui.Button(new Rect(x, y, half, 32), unit.IsMilitary || unit.IsHeadquarters ? "Licenciar" : "Asentarse", canSettle,
+        if (Ui.Button(new Rect(x, y, half, 32), unit.CanFoundCity ? "Asentarse" : "Licenciar", canSettle,
                 tooltip: canSettle ? "Disuelve la unidad; sus ciudadanos se quedan a vivir en esta provincia." : "Solo en una provincia tuya.", size: FontSize.Small))
         {
             Show(_session.Disband(Human.Id, unit.Id));
@@ -159,14 +191,39 @@ public sealed partial class GameScreen
         if (Ui.Button(new Rect(x + half + 6, y, half, 32), "Detener", unit.IsMoving || unit.AttackingProvinceId.HasValue, size: FontSize.Small))
             _session.MoveUnit(Human.Id, unit.Id, unit.ProvinceId);
         y += 40;
-        Paragraph(x, ref y, w, unit.IsMilitary
-            ? "Clic derecho para mover. Mover a una provincia enemiga con tropas la ataca; sin tropas, la ocupa. Solo se entra en tierras de naciones con las que estás en guerra."
-            : "Clic derecho para mover. No puede entrar en tierras de otras naciones.", Theme.TextDim);
+        Paragraph(x, ref y, w, unit.IsFleet
+            ? "Clic derecho para navegar: por mares costeros con Navegación a vela y por el océano con Cartografía; atraca en tus ciudades con costa. Las flotas enemigas que se encuentran combaten."
+            : unit.IsMilitary
+            ? "Clic derecho para mover. Mover a una provincia enemiga con tropas la ataca; sin tropas, la ocupa. Solo se entra en tierras de naciones con las que estás en guerra. Para cruzar el mar, clic derecho sobre una flota tuya con transportes."
+            : "Clic derecho para mover. No puede entrar en tierras de otras naciones. Para cruzar el mar, clic derecho sobre una flota tuya con transportes.", Theme.TextDim);
+    }
+
+    /// <summary>Buttons to board one of the player's fleets with room, in this province or the sea next to it.</summary>
+    private void EmbarkButtons(Unit unit, float x, ref float y, float w)
+    {
+        if (unit.IsFleet) return;
+        var here = Map.Provinces[unit.ProvinceId];
+        var fleets = _session.Units.Where(f => f.IsFleet && f.OwnerId == unit.OwnerId && f.Capacity > 0
+                                               && (f.ProvinceId == here.Id || here.Neighbors.Contains(f.ProvinceId))).Take(3);
+        foreach (var fleet in fleets)
+        {
+            var can = _session.CanEmbark(unit, fleet);
+            int room = fleet.Capacity - _session.CargoMen(fleet);
+            if (Ui.Button(new Rect(x, y, w, 28), $"Embarcar en {fleet.Name} (sitio para {room:N0})", can.Ok, tooltip: can.Ok ? null : can.Message, size: FontSize.Small))
+                Show(_session.Embark(Human.Id, unit.Id, fleet.Id));
+            y += 32;
+        }
     }
 
     private string UnitState(Unit unit, out Rgba color)
     {
         color = Theme.Text;
+        if (unit.CarrierId is int carrier && _session.UnitById(carrier) is { } fleet) return $"A bordo de {fleet.Name}";
+        if (unit.IsFleet && _session.EnemyFleetsIn(unit.ProvinceId, unit.OwnerId).Any())
+        {
+            color = BattleColor;
+            return "Combatiendo en el mar";
+        }
         if (unit.AttackingProvinceId is int target)
         {
             color = BattleColor;
@@ -188,12 +245,31 @@ public sealed partial class GameScreen
         return "Esperando órdenes";
     }
 
+    /// <summary>A regiment's battalions, or a fleet's ships and cargo, with the buttons to split and merge them.</summary>
     private void RegimentDetails(Unit unit, float x, ref float y, float w)
     {
-        bool supplied = _session.IsInSupply(unit);
-        Line(x, ref y, "Suministro", supplied ? "Con suministro" : "Sin suministro", supplied ? Theme.Good : Theme.Bad);
-        Line(x, ref y, "Velocidad", $"{unit.Speed * GameRules.CitizenSpeedKmh:0.#} km/h");
-        CommandLine(unit, x, ref y);
+        if (unit.IsFleet)
+        {
+            Line(x, ref y, "Velocidad en el mar", $"{unit.Speed * GameRules.SailingSpeed * GameRules.CitizenSpeedKmh:0.#} km/h");
+            bool port = _session.IsPort(Map.Provinces[unit.ProvinceId], unit.OwnerId);
+            Line(x, ref y, "Reparaciones", port ? "En puerto" : "Solo en puerto", port ? Theme.Good : Theme.TextDim);
+            if (unit.Capacity > 0)
+            {
+                Line(x, ref y, "Carga", $"{_session.CargoMen(unit):N0} / {unit.Capacity:N0} hombres");
+                foreach (var cargo in _session.CargoOf(unit))
+                {
+                    Ui.Text(x + 8, y, $"{cargo.Name} ({cargo.Citizens:N0})", Theme.Text, FontSize.Small);
+                    y += 18;
+                }
+            }
+        }
+        else
+        {
+            bool supplied = _session.IsInSupply(unit) || unit.IsAboard;
+            Line(x, ref y, "Suministro", unit.IsAboard ? "Víveres del barco" : supplied ? "Con suministro" : "Sin suministro", supplied ? Theme.Good : Theme.Bad);
+            Line(x, ref y, "Velocidad", $"{unit.Speed * GameRules.CitizenSpeedKmh:0.#} km/h");
+            CommandLine(unit, x, ref y);
+        }
         y += 4;
 
         bool mine = unit.OwnerId == Human.Id;
@@ -212,20 +288,23 @@ public sealed partial class GameScreen
             Bar(new Rect(x, y + 5, w, 4), b.OrganisationShare, OrganisationColor);
             if (Ui.Hover(row))
                 Ui.Tooltip($"{b.Info.Name}: ataque {b.Info.Attack:0.#}, defensa {b.Info.Defense:0.#}, organización {b.Organisation:0}/{b.Info.MaxOrganisation:0}" +
-                           (b.Info.Mounted ? "\nMontada: rápida, pero ataca a la mitad en bosques, pantanos y montañas." : ""));
+                           (b.Info.Mounted ? "\nMontada: rápida, pero ataca a la mitad en bosques, pantanos y montañas." : "") +
+                           (b.Info.Capacity > 0 ? $"\nLleva {b.Info.Capacity:N0} hombres." : ""));
             y += 16;
         }
-        if (!mine) return;
+        if (!mine || unit.IsAboard) return;
 
-        var others = _session.Units.Where(u => u.IsMilitary && u.OwnerId == Human.Id && u.ProvinceId == unit.ProvinceId && u.Id != unit.Id).Take(3).ToList();
+        var others = _session.Units.Where(u => u.IsFleet == unit.IsFleet && (u.IsMilitary || u.IsFleet) && !u.IsAboard
+                                               && u.OwnerId == Human.Id && u.ProvinceId == unit.ProvinceId && u.Id != unit.Id).Take(3).ToList();
         foreach (var other in others)
         {
             var can = _session.CanMerge(unit, other);
-            if (Ui.Button(new Rect(x, y, w, 26), $"Unir la {other.Name} ({other.Battalions.Count} br.)", can.Ok, tooltip: can.Ok ? null : can.Message, size: FontSize.Small))
+            string size = other.IsFleet ? Formations.ShipCount(other.Battalions.Count) : $"{other.Battalions.Count} br.";
+            if (Ui.Button(new Rect(x, y, w, 26), $"Unir {other.Name} ({size})", can.Ok, tooltip: can.Ok ? null : can.Message, size: FontSize.Small))
                 Show(_session.Merge(Human.Id, unit.Id, other.Id));
             y += 30;
         }
-        AttachButtons(unit, x, ref y, w);
+        if (!unit.IsFleet) AttachButtons(unit, x, ref y, w);
     }
 
     private void HeadquartersDetails(Unit hq, float x, ref float y, float w)

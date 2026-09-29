@@ -53,21 +53,22 @@ public sealed partial class GameSession
     /// <summary>Fighting value of all of a nation's regiments.</summary>
     public double MilitaryPower(int playerId) => Units.Where(u => u.OwnerId == playerId && u.IsMilitary).Sum(RegimentPower);
 
-    /// <summary>Enemy regiments (of anyone at war with the player) standing in a province.</summary>
+    /// <summary>Enemy regiments (of anyone at war with the player) standing in a province; those aboard a ship do not count.</summary>
     public IEnumerable<Unit> EnemyRegimentsIn(int provinceId, int playerId) =>
-        Units.Where(u => u.IsMilitary && u.ProvinceId == provinceId && AtWar(u.OwnerId, playerId));
+        Units.Where(u => u.IsMilitary && !u.IsAboard && u.ProvinceId == provinceId && AtWar(u.OwnerId, playerId));
 
     // ------------------------------------------------------------------ movement
 
     /// <summary>
     /// Whether a unit may step into a province: free land and its own nation's always; a province
-    /// held by another nation only for regiments at war with it; the sea as far as its nation can sail,
-    /// or anywhere for aircraft.
+    /// held by another nation only for regiments at war with it; the sea only for aircraft (troops go by
+    /// ship). A fleet sails the sea its nation can navigate and enters its own ports.
     /// </summary>
     public bool CanUnitEnter(Unit unit, int provinceId)
     {
         var p = Map.Provinces[provinceId];
-        if (p.IsWater) return unit.Flies || CanSail(Players[unit.OwnerId], p);
+        if (unit.IsFleet) return CanFleetEnter(unit, p);
+        if (p.IsWater) return unit.Flies;
         int holder = p.IsOwned ? p.ControllerId : -1;
         if (holder < 0 || holder == unit.OwnerId) return true;
         return unit.IsMilitary && AtWar(unit.OwnerId, holder);
@@ -84,6 +85,15 @@ public sealed partial class GameSession
     public CommandResult MoveUnit(int playerId, int unitId, int targetProvinceId)
     {
         if (UnitById(unitId) is not { } unit || unit.OwnerId != playerId) return CommandResult.Fail("Unidad no válida.");
+        // Aboard, a move is a landing; on land, a move onto one's own fleet at sea is boarding it.
+        if (unit.IsAboard) return targetProvinceId == unit.ProvinceId ? CommandResult.Success() : Disembark(playerId, unitId, targetProvinceId);
+        var target = Map.Provinces[targetProvinceId];
+        if (target.IsWater && !unit.IsFleet && !unit.Flies)
+        {
+            var fleet = Units.FirstOrDefault(f => f.IsFleet && f.ProvinceId == targetProvinceId && CanEmbark(unit, f).Ok);
+            return fleet != null ? Embark(playerId, unitId, fleet.Id)
+                : CommandResult.Fail("Para cruzar el mar hay que embarcar: clic derecho sobre una flota tuya con transportes, junto a la costa.");
+        }
         CancelAttack(unit);
         if (targetProvinceId == unit.ProvinceId)
         {
@@ -91,10 +101,10 @@ public sealed partial class GameSession
             unit.StepHours = unit.HoursToNext = 0;
             return CommandResult.Success();
         }
-        var target = Map.Provinces[targetProvinceId];
         if (!CanUnitEnter(unit, targetProvinceId))
         {
             if (target.IsWater) return CommandResult.Fail(target.Biome is Biome.ShallowSea or Biome.Lake ? "Hace falta la navegación a vela para ir por mar." : "Hace falta la cartografía para cruzar el océano.");
+            if (unit.IsFleet) return CommandResult.Fail("Las flotas solo atracan en tus ciudades con costa.");
             string holder = Players[target.ControllerId].Name;
             return CommandResult.Fail(unit.IsMilitary ? $"No estás en guerra con {holder}." : $"No puede entrar en tierras de {holder}.");
         }
@@ -135,6 +145,14 @@ public sealed partial class GameSession
                 }
                 double carry = unit.HoursToNext;
                 EnterProvince(unit, next);
+                if (unit.IsFleet && EnemyFleetsIn(next, unit.OwnerId).Any())
+                {
+                    // Enemy ships ahead: the fleet stops and fights.
+                    NotifyNavalEncounter(unit, next);
+                    unit.Path.Clear();
+                    unit.StepHours = unit.HoursToNext = 0;
+                    break;
+                }
                 if (unit.Path.Count > 0)
                 {
                     unit.StepHours = UnitStepHours(unit, unit.ProvinceId, unit.Path[0]);
@@ -149,11 +167,12 @@ public sealed partial class GameSession
         }
     }
 
-    /// <summary>The unit arrives in the next province of its path; a regiment takes it from the enemy.</summary>
+    /// <summary>The unit arrives in the next province of its path; a fleet brings its cargo; a regiment takes it from the enemy.</summary>
     private void EnterProvince(Unit unit, int provinceId)
     {
         unit.ProvinceId = provinceId;
         if (unit.Path.Count > 0 && unit.Path[0] == provinceId) unit.Path.RemoveAt(0);
+        if (unit.IsFleet) SyncCargo(unit);
         if (!unit.IsMilitary) return;
         var p = Map.Provinces[provinceId];
         if (p.IsOwned && p.ControllerId != unit.OwnerId && AtWar(unit.OwnerId, p.ControllerId)) Occupy(p, unit.OwnerId);
@@ -168,7 +187,8 @@ public sealed partial class GameSession
         int previous = p.ControllerId;
         p.ControllerId = playerId;
         OwnershipChanged?.Invoke(p.Id);
-        foreach (var civilian in Units.Where(u => u.ProvinceId == p.Id && !u.IsMilitary && AtWar(u.OwnerId, playerId)).ToList())
+        // Civilians and fleets in port get away; those aboard go with their ships.
+        foreach (var civilian in Units.Where(u => u.ProvinceId == p.Id && !u.IsMilitary && !u.IsAboard && AtWar(u.OwnerId, playerId)).ToList())
             Retreat(civilian);
 
         string place = PlaceName(p);
@@ -180,8 +200,11 @@ public sealed partial class GameSession
 
     // ------------------------------------------------------------------ training
 
-    public CommandResult CanTrain(City city, BattalionType type) =>
-        CanRaiseTroops(city, type.Info().Men, type.Info().Cost, type.Info().Requires);
+    public CommandResult CanTrain(City city, BattalionType type)
+    {
+        if (type.Info().Naval && !IsPort(Map.Provinces[city.ProvinceId], city.OwnerId)) return CommandResult.Fail("Los barcos solo se construyen en ciudades con costa.");
+        return CanRaiseTroops(city, type.Info().Men, type.Info().Cost, type.Info().Requires);
+    }
 
     /// <summary>Whether a city can raise troops: the advances are known, it is free, has the men to spare and the nation can pay.</summary>
     private CommandResult CanRaiseTroops(City city, int men, Economy.ResourceCost cost, IEnumerable<Tech> requires)
@@ -241,7 +264,8 @@ public sealed partial class GameSession
             {
                 if (--order.DaysLeft > 0) continue;
                 city.Training.Remove(order);
-                var unit = order.Battalion is BattalionType type ? AddRegiment(player.Id, city.ProvinceId, type)
+                var unit = order.Battalion is BattalionType ship && ship.Info().Naval ? AddFleet(player.Id, city.ProvinceId, ship)
+                    : order.Battalion is BattalionType type ? AddRegiment(player.Id, city.ProvinceId, type)
                     : order.TemplateBattalions.Count > 0 ? AddRegiment(player.Id, city.ProvinceId, [.. order.TemplateBattalions])
                     : AddHeadquarters(player.Id, city.ProvinceId, order.HeadquartersLevel);
                 if (player.IsHuman) Notify(player.Id, $"Nueva unidad en {city.Name}: {unit.Name} ({order.Name(player.ArmyEra).ToLowerInvariant()}).");
@@ -286,6 +310,7 @@ public sealed partial class GameSession
 
     public CommandResult CanAddToTemplate(Player player, RegimentTemplate template, BattalionType type)
     {
+        if (type.Info().Naval) return CommandResult.Fail("Los barcos no van en plantillas: se construyen sueltos en los puertos.");
         if (template.Battalions.Count >= MilitaryRules.MaxBattalionsPerRegiment)
             return CommandResult.Fail($"Como mucho {Formations.BattalionCount(MilitaryRules.MaxBattalionsPerRegiment, player.ArmyEra)} por regimiento.");
         var missing = type.Info().Requires.Where(t => !player.Techs.Contains(t)).ToList();
@@ -332,15 +357,18 @@ public sealed partial class GameSession
 
     public CommandResult CanMerge(Unit unit, Unit other)
     {
-        if (!unit.IsMilitary || !other.IsMilitary || unit.Id == other.Id) return CommandResult.Fail($"Solo se unen {Formations.LevelPlural(CommandLevels.Regiment, unit.Owner.ArmyEra)}.");
+        if (unit.Id == other.Id || unit.IsAboard || other.IsAboard || !(unit.IsMilitary && other.IsMilitary || unit.IsFleet && other.IsFleet))
+            return CommandResult.Fail($"Solo se unen {Formations.LevelPlural(CommandLevels.Regiment, unit.Owner.ArmyEra)} entre sí, o flotas entre sí.");
         if (unit.OwnerId != other.OwnerId || unit.ProvinceId != other.ProvinceId) return CommandResult.Fail("Deben estar en la misma provincia.");
         if (unit.AttackingProvinceId.HasValue || other.AttackingProvinceId.HasValue) return CommandResult.Fail("Una de ellas está atacando.");
-        if (unit.Battalions.Count + other.Battalions.Count > MilitaryRules.MaxBattalionsPerRegiment)
+        if (unit.IsFleet && unit.Battalions.Count + other.Battalions.Count > MilitaryRules.MaxShipsPerFleet)
+            return CommandResult.Fail($"Como mucho {Formations.ShipCount(MilitaryRules.MaxShipsPerFleet)} por flota.");
+        if (unit.IsMilitary && unit.Battalions.Count + other.Battalions.Count > MilitaryRules.MaxBattalionsPerRegiment)
             return CommandResult.Fail($"Como mucho {Formations.BattalionCount(MilitaryRules.MaxBattalionsPerRegiment, unit.Owner.ArmyEra)} por unidad.");
         return CommandResult.Success();
     }
 
-    /// <summary>The other regiment's battalions join this one, and the other disappears.</summary>
+    /// <summary>The other regiment's battalions (or fleet's ships, and what they carry) join this one, and the other disappears.</summary>
     public CommandResult Merge(int playerId, int unitId, int otherId)
     {
         if (UnitById(unitId) is not { } unit || unit.OwnerId != playerId || UnitById(otherId) is not { } other) return CommandResult.Fail("Unidad no válida.");
@@ -348,6 +376,7 @@ public sealed partial class GameSession
         if (!check.Ok) return check;
         unit.Battalions.AddRange(other.Battalions);
         other.Battalions.Clear();
+        foreach (var cargo in CargoOf(other).ToList()) cargo.CarrierId = unit.Id;
         unit.CommanderId ??= other.CommanderId;
         RemoveUnit(other);
         unit.Path.Clear();
@@ -358,13 +387,14 @@ public sealed partial class GameSession
     /// <summary>One battalion leaves its regiment and forms a new one in the same province.</summary>
     public CommandResult Split(int playerId, int unitId, int battalionIndex)
     {
-        if (UnitById(unitId) is not { } unit || unit.OwnerId != playerId || !unit.IsMilitary) return CommandResult.Fail("Unidad no válida.");
-        if (unit.Battalions.Count < 2) return CommandResult.Fail($"Solo tiene {Formations.BattalionCount(1, unit.Owner.ArmyEra)}.");
+        if (UnitById(unitId) is not { } unit || unit.OwnerId != playerId || !(unit.IsMilitary || unit.IsFleet) || unit.IsAboard) return CommandResult.Fail("Unidad no válida.");
+        if (unit.Battalions.Count < 2) return CommandResult.Fail(unit.IsFleet ? "Solo tiene un barco." : $"Solo tiene {Formations.BattalionCount(1, unit.Owner.ArmyEra)}.");
         if (unit.AttackingProvinceId.HasValue) return CommandResult.Fail("Está atacando.");
         if (battalionIndex < 0 || battalionIndex >= unit.Battalions.Count) return CommandResult.Fail("Tropa no válida.");
         var battalion = unit.Battalions[battalionIndex];
+        if (unit.IsFleet && CargoMen(unit) > unit.Capacity - battalion.Info.Capacity) return CommandResult.Fail("La carga no cabría en el resto de la flota.");
         unit.Battalions.RemoveAt(battalionIndex);
-        var split = AddUnit(playerId, UnitType.Regiment, unit.ProvinceId, 0, NextUnitNumber(playerId, CommandLevels.Regiment));
+        var split = AddUnit(playerId, unit.Type, unit.ProvinceId, 0, NextUnitNumber(playerId, unit.IsFleet ? FleetNumbering : CommandLevels.Regiment));
         split.Battalions.Add(battalion);
         return CommandResult.Success($"{Formations.BattalionName(battalion.Info, unit.Owner.ArmyEra)} forma una unidad nueva: {split.Name}.");
     }
@@ -461,9 +491,11 @@ public sealed partial class GameSession
         var capital = player.CapitalCityId is int c && CityById(c) is { } city && !Map.Provinces[city.ProvinceId].IsOccupied
             ? Map.Provinces[city.ProvinceId] : null;
 
-        foreach (var unit in Units.Where(u => u.OwnerId == player.Id && u.IsMilitary).ToList())
+        foreach (var unit in Units.Where(u => u.OwnerId == player.Id && (u.IsMilitary || u.IsFleet)).ToList())
         {
-            if (!IsInSupply(unit))
+            // Troops aboard live off the ships' stores; fleets are repaired and crewed only in their ports.
+            if (unit.IsAboard || unit.IsFleet && !IsPort(Map.Provinces[unit.ProvinceId], player.Id)) continue;
+            if (unit.IsMilitary && !IsInSupply(unit))
             {
                 foreach (var b in unit.Battalions)
                 {
@@ -613,6 +645,11 @@ public sealed partial class GameSession
     /// </summary>
     private void Retreat(Unit unit)
     {
+        if (unit.IsFleet)
+        {
+            FleeOrSink(unit);
+            return;
+        }
         CancelAttack(unit);
         unit.Path.Clear();
         unit.StepHours = unit.HoursToNext = 0;

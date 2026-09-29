@@ -2,6 +2,28 @@
 
 Todos los cambios del juego, del más reciente al más antiguo. Cada versión es un commit cuyo título es su número.
 
+## [1.24.0] - 2026-09-29
+
+### Añadido
+- **Flotas**: los barcos se construyen sueltos en ciudades con costa, y cada uno forma una flota nueva. Las flotas navegan por el mar costero con Navegación a vela y por el océano con Cartografía, y atracan en tus puertos. Se unen y se separan como los regimientos, hasta 10 barcos.
+- **Barcos**:
+  - **Trirreme**: de combate, con Navegación a vela.
+  - **Barco de transporte**: lleva 600 hombres, con Navegación a vela.
+  - **Galeón**: de combate, y lleva 200 hombres, con Cartografía.
+  - **Vapor de transporte**: lleva 1.500 hombres, con Máquina de vapor.
+  - **Acorazado**: de combate, con Acero.
+- **Transporte de tropas**:
+  - **Embarcar**: regimientos, cuarteles y colonos suben a una flota con transportes que esté en su provincia o en el mar de al lado. Se hace con el botón «Embarcar» o con clic derecho sobre la flota.
+  - **En el barco**: viajan con ella sin desgaste.
+  - **Desembarcar**: clic derecho en la costa junto a la flota. En tierra enemiga sin tropas, desembarcar la ocupa; una costa con tropas enemigas no se puede tomar desde el mar.
+- **Batallas navales**: las flotas de naciones en guerra que coinciden en un mar combaten hora a hora. La que se rompe huye a otro mar, o se hunde con todo lo que lleva. Aparecen en el mapa como las batallas en tierra.
+- **Reparaciones**: las flotas recuperan organización y tripulación en sus puertos.
+- **Los rivales** mantienen una flota de guerra por cada tres puertos.
+- La pestaña Ejército de la nación también lista las flotas.
+
+### Cambiado
+- **Las tropas ya no cruzan el mar solas**: hace falta embarcarlas. Solo los regimientos de aviones siguen volando sobre el mar.
+
 ## [1.23.0] - 2026-09-29
 
 ### Añadido

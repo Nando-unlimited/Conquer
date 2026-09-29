@@ -28,6 +28,11 @@ public enum BattalionType
     HeavyArtillery,
     Tanks,
     Bombers,
+    Trireme,
+    Transport,
+    Galleon,
+    SteamTransport,
+    Ironclad,
 }
 
 /// <param name="Men">Citizens the battalion takes from its city, and its full strength.</param>
@@ -39,9 +44,11 @@ public enum BattalionType
 /// <param name="Speed">Marching speed as a multiple of a walking citizen's.</param>
 /// <param name="Mounted">Horses and chariots fight badly in forests, marshes and mountains.</param>
 /// <param name="Flies">Aircraft: a regiment of them alone may cross the sea.</param>
+/// <param name="Naval">A ship: trained in ports, it forms fleets that sail the sea. Its men are the crew, its attack its guns.</param>
+/// <param name="Capacity">Men a ship can carry: troops, staff or settlers.</param>
 public sealed record BattalionInfo(
     string Name, string Symbol, int Men, ResourceCost Cost, int TrainingDays, Tech[] Requires,
-    double Attack, double Defense, double MaxOrganisation, double Speed, bool Mounted, bool Flies = false);
+    double Attack, double Defense, double MaxOrganisation, double Speed, bool Mounted, bool Flies = false, bool Naval = false, int Capacity = 0);
 
 public static class Battalions
 {
@@ -93,6 +100,19 @@ public static class Battalions
             new ResourceCost((ResourceType.Gold, 150), (ResourceType.Iron, 80), (ResourceType.Oil, 40), (ResourceType.Rubber, 20)), 50, [Tech.Armour], 45, 25, 60, 2, true),
         [BattalionType.Bombers] = new("Bombarderos", "V", 100,
             new ResourceCost((ResourceType.Gold, 200), (ResourceType.Aluminium, 40), (ResourceType.Oil, 40)), 60, [Tech.Aviation], 55, 8, 40, 4, false, Flies: true),
+
+        // Ships (lower-case symbols) sail at their speed times the sailing speed; their attack is their fire at sea.
+        [BattalionType.Trireme] = new("Trirreme", "r", 150,
+            new ResourceCost((ResourceType.Wood, 90), (ResourceType.Gold, 30)), 40, [Tech.Navigation], 8, 6, 30, 1, false, Naval: true),
+        [BattalionType.Transport] = new("Barco de transporte", "t", 50,
+            new ResourceCost((ResourceType.Wood, 70), (ResourceType.Gold, 20)), 30, [Tech.Navigation], 1, 2, 20, 0.9, false, Naval: true, Capacity: 600),
+        [BattalionType.Galleon] = new("Galeón", "g", 250,
+            new ResourceCost((ResourceType.Wood, 160), (ResourceType.Gold, 80), (ResourceType.Iron, 20)), 60, [Tech.Cartography], 20, 15, 45, 1.2, false, Naval: true, Capacity: 200),
+        [BattalionType.SteamTransport] = new("Vapor de transporte", "v", 80,
+            new ResourceCost((ResourceType.Wood, 60), (ResourceType.Gold, 80), (ResourceType.Iron, 60), (ResourceType.Coal, 30)), 45, [Tech.SteamEngine], 2, 4, 30, 1.8, false,
+            Naval: true, Capacity: 1500),
+        [BattalionType.Ironclad] = new("Acorazado", "a", 400,
+            new ResourceCost((ResourceType.Gold, 200), (ResourceType.Iron, 150), (ResourceType.Coal, 60)), 90, [Tech.Steel], 50, 40, 60, 2, false, Naval: true),
     };
 
     public static BattalionInfo Info(this BattalionType type) => Table[type];

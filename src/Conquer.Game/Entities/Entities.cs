@@ -104,8 +104,9 @@ public sealed class City
 }
 
 /// <summary>
-/// Something on the map that walks: a band of settlers, a regiment of 1 to 6 battalions (the smallest
-/// unit that fights), or the headquarters of a brigade, division, corps, army or army group.
+/// Something on the map that walks or sails: a band of settlers, a regiment of 1 to 6 battalions (the
+/// smallest unit that fights on land), the headquarters of a brigade, division, corps, army or army group,
+/// or a fleet of ships.
 /// </summary>
 public sealed class Unit
 {
@@ -126,6 +127,8 @@ public sealed class Unit
     public int? CommanderId { get; set; }
     /// <summary>The province a regiment is attacking; it stays where it is until it wins.</summary>
     public int? AttackingProvinceId { get; set; }
+    /// <summary>The fleet carrying this unit over the sea; null on land. It goes wherever the fleet goes.</summary>
+    public int? CarrierId { get; set; }
 
     /// <summary>Provinces still to enter, in order; empty when the unit is idle.</summary>
     public List<int> Path { get; } = [];
@@ -145,12 +148,22 @@ public sealed class Unit
     }
 
     /// <summary>"Legión III", "Vexilación I"… in its nation's era ("3.er Regimiento" in modern times); settlers are just "Colonos".</summary>
-    public string Name => Type == UnitType.Settlers ? "Colonos" : Formations.UnitName(CommandLevel, Number, Owner.ArmyEra);
+    public string Name => Type switch
+    {
+        UnitType.Settlers => "Colonos",
+        UnitType.Fleet => Formations.FleetName(Number, Owner.ArmyEra),
+        _ => Formations.UnitName(CommandLevel, Number, Owner.ArmyEra),
+    };
 
-    /// <summary>Citizens in the unit: its settlers or staff, or the men left in a regiment's battalions.</summary>
-    public int Citizens => Type == UnitType.Regiment ? (int)Math.Round(Battalions.Sum(b => b.Strength)) : _citizens;
+    /// <summary>Citizens in the unit: its settlers or staff, or the men left in a regiment's battalions or a fleet's crews.</summary>
+    public int Citizens => Type is UnitType.Regiment or UnitType.Fleet ? (int)Math.Round(Battalions.Sum(b => b.Strength)) : _citizens;
     public bool IsMilitary => Type == UnitType.Regiment;
     public bool IsHeadquarters => Type == UnitType.Headquarters;
+    public bool IsFleet => Type == UnitType.Fleet;
+    /// <summary>Carried by a fleet rather than standing on land.</summary>
+    public bool IsAboard => CarrierId.HasValue;
+    /// <summary>Men a fleet can carry: the sum of its ships' holds.</summary>
+    public int Capacity => IsFleet ? Battalions.Sum(b => b.Info.Capacity) : 0;
     public bool CanFoundCity => Type == UnitType.Settlers;
     /// <summary>0 for regiments, 1-5 for HQs, -1 for units outside the chain of command.</summary>
     public int CommandLevel => Type switch
@@ -159,10 +172,10 @@ public sealed class Unit
         UnitType.Headquarters => HeadquartersLevel,
         _ => -1,
     };
-    /// <summary>Marching speed as a multiple of a walking citizen's: the slowest battalion sets a regiment's pace.</summary>
+    /// <summary>Speed as a multiple of a walking citizen's (a ship's, of the sailing speed): the slowest battalion or ship sets the pace.</summary>
     public double Speed => Type switch
     {
-        UnitType.Regiment => Battalions.Count == 0 ? 1 : Battalions.Min(b => b.Info.Speed),
+        UnitType.Regiment or UnitType.Fleet => Battalions.Count == 0 ? 1 : Battalions.Min(b => b.Info.Speed),
         UnitType.Headquarters => MilitaryRules.HeadquartersSpeed,
         _ => 1,
     };

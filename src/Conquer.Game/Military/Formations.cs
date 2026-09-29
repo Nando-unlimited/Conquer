@@ -49,9 +49,10 @@ public static class Formations
     public static string BattalionCount(int n, ArmyEra era) =>
         $"{n} {(n == 1 ? (era == ArmyEra.Modern ? "batallón" : "cohorte") : BattalionPlural(era))}";
 
-    /// <summary>"Cohorte de guerreros", "Ala de jinetes", "Batallón de arqueros".</summary>
+    /// <summary>"Cohorte de guerreros", "Ala de jinetes", "Batallón de arqueros"; a ship is just its kind ("Trirreme").</summary>
     public static string BattalionName(BattalionInfo info, ArmyEra era)
     {
+        if (info.Naval) return info.Name;
         string word = BattalionWord(info, era);
         return char.ToUpperInvariant(word[0]) + word[1..] + " de " + info.Name.ToLowerInvariant();
     }
@@ -68,6 +69,12 @@ public static class Formations
         if (level == 3) return $"{Roman(number)} {names.Modern}";
         return $"{number}{Ordinal(number, names.Feminine)} {names.Modern}";
     }
+
+    /// <summary>A fleet: "Classis II" in Roman times, "2.ª Flota" in modern ones.</summary>
+    public static string FleetName(int number, ArmyEra era) => era == ArmyEra.Classical ? $"Classis {Roman(number)}" : $"{number}.ª Flota";
+
+    /// <summary>"1 barco", "3 barcos".</summary>
+    public static string ShipCount(int n) => n == 1 ? "1 barco" : $"{n} barcos";
 
     private static string Ordinal(int n, bool feminine)
     {

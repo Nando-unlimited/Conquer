@@ -72,10 +72,28 @@ internal sealed partial class AiPlayer
         if (size >= 2 && ArmyTemplate(size) is var template && Spare(template.Cost)
             && _session.TrainTemplate(_player.Id, city.Id, template.Id).Ok) return;
         var best = Battalions.All
-            .Where(t => _session.CanTrain(city, t).Ok && Spare(t.Info().Cost))
+            .Where(t => !t.Info().Naval && _session.CanTrain(city, t).Ok && Spare(t.Info().Cost))
             .OrderByDescending(t => t.Info().Attack + t.Info().Defense)
             .Cast<BattalionType?>().FirstOrDefault();
         if (best is BattalionType type) _session.Train(_player.Id, city.Id, type);
+    }
+
+    /// <summary>
+    /// A small navy to guard the coast: a warship fleet for every three ports, the hardest-hitting ship it
+    /// can build in its biggest port. The fleets stay in port.
+    /// </summary>
+    private void BuildNavy()
+    {
+        var ports = _session.Cities.Where(c => c.OwnerId == _player.Id && _session.IsPort(Map.Provinces[c.ProvinceId], _player.Id)).ToList();
+        if (ports.Count == 0) return;
+        int fleets = _session.Units.Count(u => u.IsFleet && u.OwnerId == _player.Id)
+                     + ports.Sum(c => c.Training.Count(o => o.Battalion is BattalionType t && t.Info().Naval));
+        if (fleets >= (ports.Count + 2) / 3) return;
+        var port = ports.MaxBy(c => Map.Provinces[c.ProvinceId].Population)!;
+        var warship = Battalions.All
+            .Where(t => t.Info().Naval && t.Info().Capacity < t.Info().Men && _session.CanTrain(port, t).Ok && Spare(t.Info().Cost))
+            .Cast<BattalionType?>().MaxBy(t => t!.Value.Info().Attack);
+        if (warship is BattalionType type) _session.Train(_player.Id, port.Id, type);
     }
 
     /// <summary>
@@ -84,7 +102,7 @@ internal sealed partial class AiPlayer
     /// </summary>
     private RegimentTemplate ArmyTemplate(int size)
     {
-        var known = Battalions.All.Where(t => t.Info().Requires.All(_player.Techs.Contains) && CanSupply(t)).ToList();
+        var known = Battalions.All.Where(t => !t.Info().Naval && t.Info().Requires.All(_player.Techs.Contains) && CanSupply(t)).ToList();
         var infantry = known.Where(t => !t.Info().Mounted).MaxBy(t => t.Info().Defense);
         var striker = known.MaxBy(t => t.Info().Attack);
         BattalionType[] design = [.. new[] { infantry, infantry, striker, infantry }.Take(size)];

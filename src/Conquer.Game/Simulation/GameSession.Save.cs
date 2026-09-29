@@ -33,9 +33,9 @@ public sealed partial class GameSession
         Cities = Cities.Select(c => new CitySave(c.Id, c.Name, c.OwnerId, c.ProvinceId, c.FoundedHours, c.FestivalUntilHours,
             [.. c.Training.Select(o => new TrainingSave(o.Battalion, o.TemplateName, [.. o.TemplateBattalions], o.HeadquartersLevel, o.DaysLeft, o.TotalDays))])).ToList(),
         Units = Units.Select(u => new UnitSave(
-            u.Id, u.OwnerId, u.Type, u.ProvinceId, u.Type == UnitType.Regiment ? 0 : u.Citizens, u.Number, u.HeadquartersLevel,
+            u.Id, u.OwnerId, u.Type, u.ProvinceId, u.Type is UnitType.Regiment or UnitType.Fleet ? 0 : u.Citizens, u.Number, u.HeadquartersLevel,
             [.. u.Battalions.Select(b => new BattalionSave(b.Type, b.Strength, b.Organisation))],
-            u.CommanderId, u.AttackingProvinceId, [.. u.Path], u.HoursToNext, u.StepHours)).ToList(),
+            u.CommanderId, u.AttackingProvinceId, [.. u.Path], u.HoursToNext, u.StepHours, u.CarrierId)).ToList(),
         Migrations = Migrations.Select(m => new MigrationSave(m.Id, m.OwnerId, m.FromProvinceId, m.ToProvinceId, m.People,
             m.DepartHours, m.ArriveHours, m.Forced, m.Mood)).ToList(),
         Battles = _battles.Select(b => new BattleSave(b.ProvinceId, b.AttackerId, b.DefenderId, b.StartHours, [.. b.Attackers])).ToList(),
@@ -129,6 +129,7 @@ public sealed partial class GameSession
             {
                 CommanderId = u.CommanderId,
                 AttackingProvinceId = u.AttackingProvinceId,
+                CarrierId = u.CarrierId,
                 HoursToNext = u.HoursToNext,
                 StepHours = u.StepHours,
             };
