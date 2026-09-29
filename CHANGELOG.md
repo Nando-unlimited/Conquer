@@ -2,6 +2,26 @@
 
 Todos los cambios del juego, del más reciente al más antiguo. Cada versión es un commit cuyo título es su número.
 
+## [1.19.0] - 2026-09-29
+
+### Añadido
+- **La era Medieval**: niveles 6 y 7 de cada rama, que cuestan 1.100 y 1.600 puntos.
+  - **Economía**: Rotación de cultivos (+20 % de comida y +10 % de capacidad) y Gremios (+20 % de madera y de yacimientos); después, Banca (bancos).
+  - **Sociedad**: Teología (+5 de humor) y Educación (universidades); después, Astronomía (+20 % de ciencia).
+  - **Militar**: Estribo (caballeros) y Maquinaria (ballesteros); después, Castillos.
+- **El Feudalismo**, institución de la era Medieval.
+  - **Dónde nace**: en la capital de la primera nación que llega a 8 ciudades.
+  - **Qué da al adoptarlo**: +10 % de impuestos y +3 de humor.
+  - **Qué pasa si no lo adoptas**: los avances medievales te cuestan un 50 % más.
+- **Nuevos edificios de ciudad**:
+  - **Universidad**: +50 % de ciencia.
+  - **Banco**: +50 % de impuestos.
+  - **Castillo**: los defensores hacen el doble de daño; se suma a la muralla.
+- **Nuevos batallones**: **Caballeros**, caballería pesada, y **Ballesteros**.
+
+### Cambiado
+- La pestaña Ciencia pone los botones de era en una segunda fila, marca con «(+)» las eras que te cuestan más y muestra al lado de los puntos solo la institución de la era que estás viendo.
+
 ## [1.18.0] - 2026-09-29
 
 ### Añadido

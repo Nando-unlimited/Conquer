@@ -60,8 +60,10 @@ public static class GameRules
     public const double LevelUnlockShare = 0.5;
 
     // Institutions
-    /// <summary>Urbanism is born in the first city this big.</summary>
+    /// <summary>Urbanism is born in the first city this big...</summary>
     public const double UrbanismBirthPopulation = 5000;
+    /// <summary>...and feudalism in the capital of the first nation with this many cities.</summary>
+    public const int FeudalismBirthCities = 8;
     /// <summary>Daily chance that an institution passes to a settled province from each neighbour that has it...</summary>
     public const double InstitutionSpreadChance = 0.01;
     /// <summary>...this many times higher when the receiving province has a city.</summary>

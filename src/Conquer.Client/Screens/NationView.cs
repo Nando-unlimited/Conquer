@@ -298,21 +298,22 @@ public sealed partial class NationView
                        $"\nCada vecino que ya conoce un avance te lo abarata un {GameRules.NeighbourResearchDiscount:P0} (hasta {GameRules.MaxNeighbourDiscounts})." +
                        (_player.SpareScience >= 1 ? "\nLos puntos guardados entran en el próximo avance que elijas." : ""));
 
-        // One age at a time: a button for each, the one shown highlighted.
+        // One age at a time: a button for each on the second row, and the institution that opens the one shown on the right.
         var eras = Techs.All.Select(t => t.Info().Era).Distinct().Order().ToList();
         var shown = _scienceEra ?? eras.FirstOrDefault(e => Techs.All.Any(t => t.Info().Era == e && !_player.Techs.Contains(t)), eras[^1]);
-        float ex = r.X + 420;
+        float ix = r.Right;
+        foreach (var institution in Institutions.All.Where(i => i.Info().Opens == shown)) ix = InstitutionStatus(ui, ix, y - 4, institution) - 24;
+        y += 30;
+        float ex = r.X;
         foreach (var era in eras)
         {
             double multiplier = GameSession.EraCostMultiplier(_player, era);
             string? tip = multiplier > 1 ? $"Sus avances te cuestan un {multiplier - 1:P0} más hasta que adoptes su institución." : null;
-            if (ui.Button(new Rect(ex, y - 4, 130, 28), era.Name(), active: era == shown, tooltip: tip, size: FontSize.Small)) _scienceEra = era;
+            if (ui.Button(new Rect(ex, y, 130, 26), era.Name() + (multiplier > 1 ? " (+)" : ""), active: era == shown, tooltip: tip, size: FontSize.Small))
+                _scienceEra = era;
             ex += 136;
         }
-
-        float ix = r.Right;
-        foreach (var institution in Institutions.All.Reverse()) ix = InstitutionStatus(ui, ix, y - 4, institution) - 24;
-        y += 34;
+        y += 38;
 
         const float Gap = 16;
         float colW = (r.W - Gap * 2) / 3;
@@ -378,10 +379,10 @@ public sealed partial class NationView
             bool any = Techs.InBranch(branch).Any(t => GameSession.CanResearch(_player, t).Ok);
             ui.Text(x, y, done ? "Rama completa: su ciencia va a las demás." : any ? "Elige qué investigar: mientras, su ciencia va a las demás."
                 : "Nada disponible: faltan avances de otras ramas.", done ? Theme.Good : any ? Theme.Accent : Theme.TextDim, FontSize.Small);
-            y += 38;
+            y += 30;
         }
 
-        const float CardH = 96, CardGap = 8;
+        const float CardH = 88, CardGap = 6;
         foreach (int level in Techs.InBranch(branch).Where(t => t.Info().Era == era).Select(t => t.Info().Level).Distinct())
         {
             bool open = GameSession.IsLevelOpen(_player, branch, level);
@@ -390,7 +391,7 @@ public sealed partial class NationView
             else if (level < Techs.Levels(branch) && Techs.InLevel(branch, level).Count() > 1)
                 title += $" · {Techs.NeededToOpenNext(branch, level)} de {Techs.InLevel(branch, level).Count()} abren el siguiente";
             ui.Text(x, y, title, open ? Theme.TextDim : Theme.TextDisabled, FontSize.Small);
-            y += 18;
+            y += 16;
             foreach (var tech in Techs.InLevel(branch, level))
             {
                 TechCard(ui, new Rect(x, y, r.W, CardH), tech, neighbours);

@@ -9,6 +9,7 @@ namespace Conquer.Game.Science;
 public enum Institution
 {
     Urbanism,
+    Feudalism,
 }
 
 /// <param name="Opens">The age whose advances cost more until the nation adopts it.</param>
@@ -32,6 +33,9 @@ public static class Institutions
         [Institution.Urbanism] = new("Urbanismo", Era.Classical,
             $"Nace en la primera ciudad que llega a {GameRules.UrbanismBirthPopulation:N0} habitantes.",
             "Da +10 % de ciencia y +10 % de fertilidad.", new() { Science = 0.1, Fertility = 0.1 }, 0xFFD9A441),
+        [Institution.Feudalism] = new("Feudalismo", Era.Medieval,
+            $"Nace en la capital de la primera nación que llega a {GameRules.FeudalismBirthCities} ciudades.",
+            "Da +10 % de impuestos y +3 de humor.", new() { Taxes = 0.1, Mood = 3 }, 0xFF8E5BB5),
     };
 
     public static InstitutionInfo Info(this Institution institution) => Table[institution];

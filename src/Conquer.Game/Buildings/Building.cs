@@ -22,6 +22,9 @@ public enum BuildingType
     Amphitheatre,
     Walls,
     Road,
+    University,
+    Bank,
+    Castle,
 }
 
 /// <param name="Days">Days of work to build it.</param>
@@ -63,6 +66,12 @@ public static class Buildings
             new ResourceCost((ResourceType.Wood, 150), (ResourceType.Gold, 50)), 90, Tech.Fortifications, true, false, new() { Defense = 0.5 }),
         [BuildingType.Road] = new("Calzada", "La provincia se cruza un 50 % más deprisa.",
             new ResourceCost((ResourceType.Wood, 80), (ResourceType.Gold, 30)), 40, Tech.Engineering, false, false, new() { MoveSpeed = 0.5 }),
+        [BuildingType.University] = new("Universidad", "+50 % de ciencia de la ciudad.",
+            new ResourceCost((ResourceType.Wood, 150), (ResourceType.Gold, 120)), 90, Tech.Education, true, false, new() { Science = 0.5 }),
+        [BuildingType.Bank] = new("Banco", "+50 % de oro de los impuestos de la provincia.",
+            new ResourceCost((ResourceType.Wood, 100), (ResourceType.Gold, 150)), 80, Tech.Banking, true, false, new() { Taxes = 0.5 }),
+        [BuildingType.Castle] = new("Castillo", "Quien defiende la provincia hace el doble de daño.",
+            new ResourceCost((ResourceType.Wood, 250), (ResourceType.Gold, 100), (ResourceType.Iron, 20)), 150, Tech.Castles, true, false, new() { Defense = 1 }),
     };
 
     public static BuildingInfo Info(this BuildingType type) => Table[type];

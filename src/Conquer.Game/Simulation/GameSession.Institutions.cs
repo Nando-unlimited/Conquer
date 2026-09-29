@@ -30,6 +30,8 @@ public sealed partial class GameSession
     {
         Institution.Urbanism => Cities.Select(c => Map.Provinces[c.ProvinceId])
             .Where(p => p.Population >= GameRules.UrbanismBirthPopulation).MaxBy(p => p.Population),
+        Institution.Feudalism => Players.Where(p => Cities.Count(c => c.OwnerId == p.Id) >= GameRules.FeudalismBirthCities)
+            .Select(p => p.CapitalCityId is int id ? CityById(id) : null).OfType<City>().Select(c => Map.Provinces[c.ProvinceId]).FirstOrDefault(),
         _ => null,
     };
 
