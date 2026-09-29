@@ -89,7 +89,7 @@ public sealed record TemplateSave(int Id, int Number, List<BattalionType> Battal
 /// <summary>Only what changes during a game; the rest of each province comes from the generated map.</summary>
 public sealed record ProvinceSave(
     int Id, int OwnerId, int ControllerId, double Population, int? CityId, double Mood, double Fertility,
-    double[] Reserves, List<BuildingType> Buildings, BuildingType? Constructing, int ConstructionDaysLeft);
+    double[] Reserves, List<BuildingType> Buildings, BuildingType? Constructing, int ConstructionDaysLeft, string? PlannedCityName = null);
 
 public sealed record CitySave(int Id, string Name, int OwnerId, int ProvinceId, long FoundedHours, long FestivalUntilHours, List<TrainingSave> Training);
 

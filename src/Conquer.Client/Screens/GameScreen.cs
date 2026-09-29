@@ -34,6 +34,9 @@ public sealed partial class GameScreen : IScreen
     private bool _mapDirty = true, _menuOpen, _dragging;
     private long _lastRefreshDay = -1;
     private int _seenNotifications;
+    /// <summary>The city being named: founded by settlers (UnitId) or built by a province's citizens; null when no dialog is open.</summary>
+    private (int? UnitId, int ProvinceId)? _naming;
+    private string _cityName = "";
     private int? _selectedUnitId;
     private int _selectedProvince = -1, _hoverProvince = -1;
     private bool _choosingMigrationTarget;
@@ -87,6 +90,7 @@ public sealed partial class GameScreen : IScreen
         if (Enum.TryParse<NationTab>(options.Nation, ignoreCase: true, out var tab)) { _nation.Tab = tab; _nation.Visible = true; }
         _provinceTab = options.Panel switch { "buildings" => ProvinceTab.Buildings, "army" => ProvinceTab.Army, _ => ProvinceTab.General };
         if (options.Panel == "regiment" && Human.CapitalCityId is int capital) ShowSampleArmy(capital);
+        if (options.Panel == "found" && _session.UnitById(settlers.Id) != null) OpenCityNaming(settlers.Id, settlers.ProvinceId);
     }
 
     /// <summary>
@@ -139,18 +143,20 @@ public sealed partial class GameScreen : IScreen
         DrawBottomBar();
         _nation.Frame(Ui, NationRect);
         DrawMessages();
+        if (_naming.HasValue) DrawCityNaming();
         if (_menuOpen) DrawPauseMenu();
         _changelog.Frame(Ui, new Rect(_app.ScreenSize.X / 2 - 380, 70, 760, _app.ScreenSize.Y - 140));
 
-        if (!_menuOpen && !_changelog.Visible && !_nation.Visible) HandleMapMouse();
-        if (!Ui.MouseOverUi && !_menuOpen && !_nation.Visible && _hoverProvince >= 0 && !_dragging) HoverTooltip();
+        bool modal = _menuOpen || _naming.HasValue;
+        if (!modal && !_changelog.Visible && !_nation.Visible) HandleMapMouse();
+        if (!Ui.MouseOverUi && !modal && !_nation.Visible && _hoverProvince >= 0 && !_dragging) HoverTooltip();
     }
 
     // ------------------------------------------------------------------ time and input
 
     private void AdvanceTime(double dt)
     {
-        if (_menuOpen || _changelog.Visible || _speed == 0) return;
+        if (_menuOpen || _changelog.Visible || _naming.HasValue || _speed == 0) return;
         _hourAccumulator += dt * HoursPerSecond[_speed];
         int steps = Math.Min((int)_hourAccumulator, 400);
         _hourAccumulator -= steps;
@@ -167,6 +173,13 @@ public sealed partial class GameScreen : IScreen
     private void HandleKeys(double dt)
     {
         var input = Ui.Input;
+        if (_naming.HasValue)
+        {
+            // While the city's name is being typed, keys belong to the text field.
+            if (input.KeysPressed.Contains(Key.Escape)) _naming = null;
+            else if (input.KeysPressed.Contains(Key.Enter) || input.KeysPressed.Contains(Key.KeypadEnter)) ConfirmCityName();
+            return;
+        }
         foreach (var key in input.KeysPressed)
         {
             switch (key)
@@ -496,11 +509,11 @@ public sealed partial class GameScreen : IScreen
     private void ProvincePanel(Province p, float x, ref float y, float w)
     {
         var city = _session.CityIn(p);
-        Ui.Text(x, y, city?.Name ?? p.Info.Name, Theme.Accent, FontSize.Large, bold: true);
+        Ui.Text(x, y, city?.Name ?? p.DisplayName, Theme.Accent, FontSize.Large, bold: true);
         y += 36;
         if (p.IsOwned)
         {
-            string buildings = p.Constructing.HasValue ? $"Edificios ({p.Buildings.Count}+1)" : $"Edificios ({p.Buildings.Count})";
+            string buildings = p.Constructing.HasValue || p.PlannedCityName != null ? $"Edificios ({p.Buildings.Count}+1)" : $"Edificios ({p.Buildings.Count})";
             bool army = city != null && p.OwnerId == Human.Id;
             if (!army && _provinceTab == ProvinceTab.Army) _provinceTab = ProvinceTab.General;
             string[] tabs = army ? ["General", buildings, city!.Training.Count > 0 ? $"Ejército ({city.Training.Count})" : "Ejército"] : ["General", buildings];
@@ -519,7 +532,9 @@ public sealed partial class GameScreen : IScreen
                 return;
             }
         }
-        if (city != null) Line(x, ref y, "Terreno", p.Info.Name);
+        if (city != null) Line(x, ref y, "Provincia", p.DisplayName);
+        if (p.PlannedCityName != null) Line(x, ref y, "Ciudad en obras", p.PlannedCityName, Theme.Accent);
+        if (p.Name.Length > 0 || city != null) Line(x, ref y, "Terreno", p.Info.Name);
         Line(x, ref y, "Superficie", $"{p.AreaKm2:N0} km²");
         Line(x, ref y, "Altitud media", $"{p.MeanElevation:N0} m");
         if (p.RiverFlow > 0)
@@ -647,12 +662,14 @@ public sealed partial class GameScreen : IScreen
     /// </summary>
     private void BuildingsPanel(Province p, float x, ref float y, float w)
     {
-        if (p.Constructing is BuildingType building)
+        if (p.Constructing.HasValue || p.PlannedCityName != null)
         {
-            var info = building.Info();
-            Ui.Text(x, y, $"En obras: {info.Name}", Theme.Accent, bold: true);
+            var (name, days) = p.Constructing is BuildingType building
+                ? (building.Info().Name, building.Info().Days)
+                : ($"ciudad de {p.PlannedCityName}", GameRules.CityBuildingDays);
+            Ui.Text(x, y, $"En obras: {name}", Theme.Accent, bold: true);
             y += 26;
-            float done = 1 - p.ConstructionDaysLeft / (float)info.Days;
+            float done = 1 - p.ConstructionDaysLeft / (float)days;
             Batch.Rect(x, y, w, 8, Theme.ButtonDisabled);
             Batch.Rect(x, y, w * done, 8, Theme.Accent);
             y += 14;
@@ -679,14 +696,28 @@ public sealed partial class GameScreen : IScreen
         y += 10;
         Ui.Text(x, y, "Construir", Theme.Text, bold: true);
         y += 26;
-        var missing = new List<(BuildingType Type, string Reason)>();
+        var missing = new List<(string Name, string Reason)>();
+        if (!p.CityId.HasValue && p.PlannedCityName == null)
+        {
+            var site = _session.IsCitySite(Human.Id, p);
+            if (!site.Ok) missing.Add(("Ciudad", site.Message));
+            else
+            {
+                var can = _session.CanBuildCity(Human.Id, p);
+                string tip = $"Los habitantes de la provincia levantan una ciudad con el nombre que elijas.\nCoste: {GameRules.CityCost}. Tarda {GameRules.CityBuildingDays} días."
+                    + (can.Ok ? "" : "\n" + can.Message);
+                if (Ui.Button(new Rect(x, y, w, 30), $"Ciudad  ·  {GameRules.CityCost}  ·  {GameRules.CityBuildingDays} d", can.Ok, tooltip: tip, size: FontSize.Small))
+                    OpenCityNaming(null, p.Id);
+                y += 34;
+            }
+        }
         // Buildings of advances not yet discovered stay out of the list altogether.
         foreach (var type in Buildings.All.Where(t => !p.Buildings.Contains(t) && p.Constructing != t && IsBuildingKnown(t)))
         {
             var available = _session.IsBuildingAvailable(p, type);
             if (!available.Ok)
             {
-                missing.Add((type, available.Message));
+                missing.Add((type.Info().Name, available.Message));
                 continue;
             }
             var info = type.Info();
@@ -698,9 +729,9 @@ public sealed partial class GameScreen : IScreen
         }
         if (missing.Count == 0) return;
         y += 6;
-        foreach (var (type, reason) in missing)
+        foreach (var (name, reason) in missing)
         {
-            Ui.Text(x, y, $"{type.Info().Name}: {reason.TrimEnd('.').ToLowerInvariant()}", Theme.TextDisabled, FontSize.Small);
+            Ui.Text(x, y, $"{name}: {reason.TrimEnd('.').ToLowerInvariant()}", Theme.TextDisabled, FontSize.Small);
             y += 20;
         }
     }
@@ -809,7 +840,9 @@ public sealed partial class GameScreen : IScreen
     {
         var p = Map.Provinces[_hoverProvince];
         string owner = !p.IsClaimable ? "No reclamable" : p.IsOwned ? _session.Players[p.OwnerId].Name : "Sin dueño";
-        string text = $"{p.Info.Name}  ·  {owner}";
+        var city = _session.CityIn(p);
+        string text = (city != null ? $"{city.Name}  ·  {p.DisplayName}" : p.DisplayName)
+            + (p.Name.Length > 0 ? $"  ·  {p.Info.Name.ToLowerInvariant()}" : "") + $"  ·  {owner}";
         if (p.HasRiver) text += "  ·  gran río";
         if (p.IsOwned) text += $"\n{p.Population:N0} habitantes";
         if (p.IsOwned && p.Population >= 1) text += $"\nHumor {p.Mood:0} ({GameRules.MoodName(p.Mood)})  ·  Fertilidad {p.Fertility:P0}";
@@ -835,6 +868,57 @@ public sealed partial class GameScreen : IScreen
         if (Ui.Button(new Rect(x, y + 150, w, 40), "Menú principal")) _app.Show(new MainMenuScreen(_app));
         if (Ui.Button(new Rect(x, y + 200, w, 40), "Salir del juego")) _app.Quit();
         Ui.TextCentered(new Rect(panel.X, panel.Bottom - 30, panel.W, 24), $"Conquer {ConquerApp.Version}", Theme.TextDim, FontSize.Small);
+    }
+
+    /// <summary>Opens the dialog to name a city founded by these settlers, or built by this province's citizens.</summary>
+    private void OpenCityNaming(int? unitId, int provinceId)
+    {
+        _naming = (unitId, provinceId);
+        _cityName = _session.SuggestCityName();
+    }
+
+    private void ConfirmCityName()
+    {
+        if (_naming is not var (unitId, provinceId)) return;
+        var result = unitId is int unit ? _session.FoundCity(Human.Id, unit, _cityName) : _session.BuildCity(Human.Id, provinceId, _cityName);
+        Show(result);
+        if (!result.Ok) return;
+        _naming = null;
+        if (unitId.HasValue)
+        {
+            _selectedUnitId = null;
+            _selectedProvince = provinceId;
+        }
+    }
+
+    /// <summary>Modal dialog: the city's name, suggested and editable, and whether it is free.</summary>
+    private void DrawCityNaming()
+    {
+        var (unitId, provinceId) = _naming!.Value;
+        var s = _app.ScreenSize;
+        Batch.Rect(0, 0, s.X, s.Y, Rgba.Black.WithAlpha(0.45f));
+        Ui.Block(new Rect(0, 0, s.X, s.Y));
+        var panel = new Rect(s.X / 2 - 230, s.Y / 2 - 130, 460, 250);
+        Ui.Panel(panel);
+        float x = panel.X + 24, y = panel.Y + 20, w = panel.W - 48;
+        Ui.Text(x, y, unitId.HasValue ? "Fundar ciudad" : "Construir ciudad", Theme.Accent, FontSize.Large, bold: true);
+        y += 34;
+        string where = unitId.HasValue
+            ? $"Los colonos fundarán la ciudad en {Map.Provinces[provinceId].DisplayName}."
+            : $"Coste: {GameRules.CityCost}. Estará lista en {GameRules.CityBuildingDays} días.";
+        Ui.Text(x, y, where, Theme.TextDim, FontSize.Small);
+        y += 26;
+        Ui.Text(x, y, "Nombre de la ciudad", Theme.Text);
+        y += 24;
+        _cityName = Ui.TextField(new Rect(x, y, w - 130, 36), _cityName, GameRules.MaxCityNameLength);
+        if (Ui.Button(new Rect(x + w - 120, y, 120, 36), "Otro nombre", size: FontSize.Small)) _cityName = _session.SuggestCityName();
+        y += 42;
+        var check = _session.CheckCityName(_cityName);
+        if (!check.Ok) Ui.Text(x, y, check.Message, Theme.Bad, FontSize.Small);
+
+        float by = panel.Bottom - 56, bw = (w - 12) / 2;
+        if (Ui.Button(new Rect(x, by, bw, 40), "Cancelar")) _naming = null;
+        if (Ui.Button(new Rect(x + bw + 12, by, bw, 40), unitId.HasValue ? "Fundar" : "Construir", check.Ok)) ConfirmCityName();
     }
 
     private void SaveCurrentGame()

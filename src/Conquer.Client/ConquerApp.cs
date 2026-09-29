@@ -120,6 +120,7 @@ public sealed class ConquerApp
                 _input.KeysDown.Add(key);
             };
             keyboard.KeyUp += (_, key, _) => _input.KeysDown.Remove(key);
+            keyboard.KeyChar += (_, c) => _input.Chars.Add(c);
         }
 
         _screen = Options switch

@@ -2,6 +2,19 @@
 
 Todos los cambios del juego, del más reciente al más antiguo. Cada versión es un commit cuyo título es su número.
 
+## [1.12.0] - 2026-09-29
+
+### Añadido
+- **Construir ciudades en tus provincias** sin necesidad de colonos: en la pestaña Edificios de una provincia con al menos 500 habitantes aparece **Ciudad** (150 de madera, 50 de oro, 60 días). No puede haber otra ciudad al lado, ni hecha ni en obras.
+- **Tú eliges el nombre de cada ciudad**, tanto al fundarla con colonos como al construirla. El juego propone uno, puedes escribir otro o pedir **Otro nombre**. No se pueden repetir nombres.
+- **Las provincias tienen nombre propio** («Pararira», «Casanela»…), distinto del de la ciudad que se funde en ellas. Se ve en el panel, en el tooltip del mapa, en las tablas y en los avisos.
+- **Granero**: en su provincia, el hambre mata a la mitad de gente. Se suma a Medicina: con los dos, muere la cuarta parte.
+- Los rivales también construyen ciudades en sus provincias más pobladas.
+
+### Cambiado
+- Solo **granjas, graneros, aserraderos y minas** se construyen sin ciudad. Templos, acueductos y herbolarios necesitan ahora una ciudad, como ya la necesitaban bibliotecas y mercados. Los que ya estuvieran construidos en provincias sin ciudad siguen funcionando.
+- Las partidas guardadas con versiones anteriores se pueden cargar; las provincias reciben su nombre al cargarlas.
+
 ## [1.11.0] - 2026-09-29
 
 ### Añadido

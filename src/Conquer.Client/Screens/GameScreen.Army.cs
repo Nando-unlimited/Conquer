@@ -96,7 +96,7 @@ public sealed partial class GameScreen
             $"{role}: {_session.Players[player].Name} · {units.Count} div. · {units.Sum(u => u.Citizens):N0} hombres · " +
             $"organización {(units.Count == 0 ? 0 : units.Average(u => u.OrganisationShare)):P0}";
         var p = Map.Provinces[battle.ProvinceId];
-        return $"Batalla por {_session.CityIn(p)?.Name ?? p.Info.Name} ({GameSession.FormatHours(_session.Date.Hours - battle.StartHours)})\n" +
+        return $"Batalla por {_session.PlaceName(p)} ({GameSession.FormatHours(_session.Date.Hours - battle.StartHours)})\n" +
                Side("Atacante", battle.AttackerId, attackers) + "\n" + Side("Defensor", battle.DefenderId, defenders) +
                $"\nDefensa por el terreno{(p.HasRiver ? " y el río" : "")}: ×{MilitaryRules.DefenseMultiplier(p):0.##}";
     }
@@ -125,7 +125,7 @@ public sealed partial class GameScreen
         Ui.Text(x, y, kind, Theme.TextDim, FontSize.Small);
         y += 24;
         Line(x, ref y, "Nación", owner.Name, new Rgba(owner.Color));
-        Line(x, ref y, "Ubicación", _session.CityIn(here)?.Name ?? here.Info.Name);
+        Line(x, ref y, "Ubicación", _session.PlaceName(here));
         Line(x, ref y, "Estado", UnitState(unit, out var stateColor), stateColor);
 
         if (unit.IsMilitary) RegimentDetails(unit, x, ref y, w);
@@ -138,7 +138,7 @@ public sealed partial class GameScreen
         {
             var can = _session.CanFoundCity(unit);
             if (Ui.Button(new Rect(x, y, w, 32), "Fundar ciudad", can.Ok, tooltip: can.Ok ? "Reclama esta provincia y funda una ciudad con estos colonos." : can.Message))
-                Show(_session.FoundCity(Human.Id, unit.Id));
+                OpenCityNaming(unit.Id, unit.ProvinceId);
             y += 38;
         }
         if (unit.IsMilitary)
@@ -171,7 +171,7 @@ public sealed partial class GameScreen
         {
             color = BattleColor;
             var p = Map.Provinces[target];
-            return $"Atacando {_session.CityIn(p)?.Name ?? p.Info.Name}";
+            return $"Atacando {_session.PlaceName(p)}";
         }
         if (_session.InBattle(unit))
         {
@@ -183,7 +183,7 @@ public sealed partial class GameScreen
             double hours = unit.HoursToNext;
             for (int i = 0; i + 1 < unit.Path.Count; i++) hours += _session.Pathfinder.StepHours(unit.Path[i], unit.Path[i + 1]) / unit.Speed;
             var p = Map.Provinces[dest];
-            return $"Hacia {_session.CityIn(p)?.Name ?? p.Info.Name} ({GameSession.FormatHours(hours)})";
+            return $"Hacia {_session.PlaceName(p)} ({GameSession.FormatHours(hours)})";
         }
         return "Esperando órdenes";
     }

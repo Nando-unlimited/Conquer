@@ -4,10 +4,14 @@ using Conquer.Game.Science;
 
 namespace Conquer.Game.Buildings;
 
-/// <summary>The buildings a province can have, one of each. The order is the order they are listed in.</summary>
+/// <summary>
+/// The buildings a province can have, one of each. The order is the order they are listed in. Farms,
+/// granaries, sawmills and mines work the land and go anywhere; the rest need a city.
+/// </summary>
 public enum BuildingType
 {
     Farm,
+    Granary,
     Sawmill,
     Mine,
     Temple,
@@ -34,20 +38,22 @@ public static class Buildings
     {
         [BuildingType.Farm] = new("Granja", "+25 % de comida en la provincia.",
             new ResourceCost((ResourceType.Wood, 40), (ResourceType.Gold, 10)), 20, null, false, false, new() { Food = 0.25 }),
+        [BuildingType.Granary] = new("Granero", "El hambre mata a la mitad de gente en la provincia.",
+            new ResourceCost((ResourceType.Wood, 50), (ResourceType.Gold, 15)), 25, null, false, false, new() { FamineSurvival = 0.5 }),
         [BuildingType.Sawmill] = new("Aserradero", "+50 % de madera en la provincia.",
             new ResourceCost((ResourceType.Wood, 30), (ResourceType.Gold, 10)), 15, null, false, false, new() { Wood = 0.5 }),
         [BuildingType.Mine] = new("Mina", "+50 % de producción de los yacimientos de la provincia.",
             new ResourceCost((ResourceType.Wood, 60), (ResourceType.Gold, 20)), 30, Tech.Mining, false, true, new() { Deposits = 0.5 }),
         [BuildingType.Temple] = new("Templo", "+10 de humor en la provincia.",
-            new ResourceCost((ResourceType.Wood, 50), (ResourceType.Gold, 30)), 30, Tech.Mythology, false, false, new() { Mood = 10 }),
+            new ResourceCost((ResourceType.Wood, 50), (ResourceType.Gold, 30)), 30, Tech.Mythology, true, false, new() { Mood = 10 }),
         [BuildingType.Library] = new("Biblioteca", "+50 % de ciencia de la ciudad.",
             new ResourceCost((ResourceType.Wood, 60), (ResourceType.Gold, 40)), 40, Tech.Writing, true, false, new() { Science = 0.5 }),
         [BuildingType.Market] = new("Mercado", "+50 % de oro de los impuestos de la provincia.",
             new ResourceCost((ResourceType.Wood, 80), (ResourceType.Gold, 50)), 45, Tech.Currency, true, false, new() { Taxes = 0.5 }),
         [BuildingType.Aqueduct] = new("Acueducto", "La tierra de la provincia alimenta un 25 % más de gente.",
-            new ResourceCost((ResourceType.Wood, 100), (ResourceType.Gold, 40)), 60, Tech.Irrigation, false, false, new() { Capacity = 0.25 }),
+            new ResourceCost((ResourceType.Wood, 100), (ResourceType.Gold, 40)), 60, Tech.Irrigation, true, false, new() { Capacity = 0.25 }),
         [BuildingType.HerbalistHut] = new("Herbolario", "+20 % de fertilidad en la provincia.",
-            new ResourceCost((ResourceType.Wood, 40), (ResourceType.Gold, 30)), 30, Tech.Medicine, false, false, new() { Fertility = 0.2 }),
+            new ResourceCost((ResourceType.Wood, 40), (ResourceType.Gold, 30)), 30, Tech.Medicine, true, false, new() { Fertility = 0.2 }),
     };
 
     public static BuildingInfo Info(this BuildingType type) => Table[type];

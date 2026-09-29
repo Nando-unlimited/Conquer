@@ -7,6 +7,8 @@ namespace Conquer.Game.World;
 public sealed class Province
 {
     public int Id { get; }
+    /// <summary>Its own name, which a city founded in it does not change; empty for oceans and poles.</summary>
+    public string Name { get; internal set; } = "";
     public Biome Biome { get; internal set; }
     /// <summary>A pixel inside the province used to place labels, units and cities.</summary>
     public int CenterX { get; internal set; }
@@ -45,6 +47,8 @@ public sealed class Province
     /// <summary>The building under construction, if any, and the days of work it still needs.</summary>
     public BuildingType? Constructing { get; set; }
     public int ConstructionDaysLeft { get; set; }
+    /// <summary>The name of the city being built here, if any; it takes <see cref="ConstructionDaysLeft"/> days like a building.</summary>
+    public string? PlannedCityName { get; set; }
 
     public void AddBuilding(BuildingType type)
     {
@@ -58,11 +62,14 @@ public sealed class Province
         BuildingBonuses = Modifiers.None;
         Constructing = null;
         ConstructionDaysLeft = 0;
+        PlannedCityName = null;
     }
 
     public Province(int id) => Id = id;
 
     public BiomeInfo Info => Biome.Info();
+    /// <summary>Its name, or its biome's for oceans and poles.</summary>
+    public string DisplayName => Name.Length > 0 ? Name : Info.Name;
     public bool IsWater => Info.IsWater;
     public bool IsClaimable => Info.Habitable;
     public bool IsOwned => OwnerId >= 0;

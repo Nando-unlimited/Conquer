@@ -61,7 +61,7 @@ public sealed partial class NationView
             x += columns[0].Width;
 
             var p = _session.Map.Provinces[unit.ProvinceId];
-            ui.Text(x, rowY + 6, _session.CityIn(p)?.Name ?? p.Info.Name, Theme.TextDim);
+            ui.Text(x, rowY + 6, _session.PlaceName(p), Theme.TextDim);
             x += columns[1].Width;
 
             if (unit.IsMilitary)
@@ -96,9 +96,9 @@ public sealed partial class NationView
 
     private string UnitActivity(Unit unit)
     {
-        if (unit.AttackingProvinceId is int target) return $"Atacando {_session.CityIn(_session.Map.Provinces[target])?.Name ?? _session.Map.Provinces[target].Info.Name}";
+        if (unit.AttackingProvinceId is int target) return $"Atacando {_session.PlaceName(_session.Map.Provinces[target])}";
         if (_session.InBattle(unit)) return "Defendiendo";
-        if (unit.IsMoving && unit.Destination is int dest) return $"Hacia {_session.CityIn(_session.Map.Provinces[dest])?.Name ?? _session.Map.Provinces[dest].Info.Name}";
+        if (unit.IsMoving && unit.Destination is int dest) return $"Hacia {_session.PlaceName(_session.Map.Provinces[dest])}";
         return "En reserva";
     }
 

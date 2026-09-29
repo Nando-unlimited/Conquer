@@ -64,6 +64,11 @@ public static class GameRules
     /// <summary>Settled provinces attract migrants until they reach this share of their capacity.</summary>
     public const double MigrationTargetShare = 0.5;
     public const int MinCityPopulation = 100;
+    /// <summary>A province needs this many citizens before they can build themselves a city.</summary>
+    public const int CityBuildingPopulation = 500;
+    public static readonly ResourceCost CityCost = new((ResourceType.Wood, 150), (ResourceType.Gold, 50));
+    public const int CityBuildingDays = 60;
+    public const int MaxCityNameLength = 24;
     /// <summary>Gold paid per 10 citizens moved by a forced migration.</summary>
     public const double ForcedMigrationGoldPerTen = 1;
 

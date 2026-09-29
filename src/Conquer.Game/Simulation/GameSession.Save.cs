@@ -27,7 +27,7 @@ public sealed partial class GameSession
         // Provinces nobody has touched keep their generated state, so only the rest are stored.
         Provinces = Map.Provinces.Where(Changed).Select(p => new ProvinceSave(
             p.Id, p.OwnerId, p.ControllerId, p.Population, p.CityId, p.Mood, p.Fertility, [.. p.Reserves],
-            [.. p.Buildings.Order()], p.Constructing, p.ConstructionDaysLeft)).ToList(),
+            [.. p.Buildings.Order()], p.Constructing, p.ConstructionDaysLeft, p.PlannedCityName)).ToList(),
         Cities = Cities.Select(c => new CitySave(c.Id, c.Name, c.OwnerId, c.ProvinceId, c.FoundedHours, c.FestivalUntilHours,
             [.. c.Training.Select(o => new TrainingSave(o.Battalion, o.TemplateName, [.. o.TemplateBattalions], o.HeadquartersLevel, o.DaysLeft, o.TotalDays))])).ToList(),
         Units = Units.Select(u => new UnitSave(
@@ -51,7 +51,7 @@ public sealed partial class GameSession
     /// <summary>Whether the province differs from how <see cref="ResetProvinces"/> leaves it.</summary>
     private static bool Changed(Province p) =>
         p.OwnerId != -1 || p.ControllerId != -1 || p.Population != 0 || p.CityId.HasValue
-        || p.Mood != GameRules.StartingMood || p.Fertility != 1 || p.Buildings.Count > 0 || p.Constructing.HasValue
+        || p.Mood != GameRules.StartingMood || p.Fertility != 1 || p.Buildings.Count > 0 || p.Constructing.HasValue || p.PlannedCityName != null
         || Resources.Deposits.Any(r => p.Reserves[(int)r] != p.DepositSizes[(int)r] * GameRules.DepositSizeMultiplier);
 
     /// <summary>
@@ -81,6 +81,7 @@ public sealed partial class GameSession
             foreach (var b in ps.Buildings) p.AddBuilding(b);
             p.Constructing = ps.Constructing;
             p.ConstructionDaysLeft = ps.ConstructionDaysLeft;
+            p.PlannedCityName = ps.PlannedCityName;
         }
 
         foreach (var s in save.Players)

@@ -63,6 +63,7 @@ public class SaveGameTests(WorldFixture world)
     {
         var again = WorldGenerator.Generate(new WorldSettings(MapKind.Random, 42));
         Assert.Equal(GameSession.Fingerprint(_map), GameSession.Fingerprint(again));
+        Assert.Equal(_map.Provinces.Select(p => p.Name), again.Provinces.Select(p => p.Name));
     }
 
     [Fact]

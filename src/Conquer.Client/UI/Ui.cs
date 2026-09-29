@@ -22,12 +22,15 @@ public sealed class InputState
     public Vector2 LeftPressPosition;
     public readonly List<Silk.NET.Input.Key> KeysPressed = [];
     public readonly HashSet<Silk.NET.Input.Key> KeysDown = [];
+    /// <summary>Characters typed this frame, for text fields.</summary>
+    public readonly List<char> Chars = [];
 
     public void EndFrame()
     {
         LeftPressed = LeftReleased = RightPressed = false;
         Scroll = 0;
         KeysPressed.Clear();
+        Chars.Clear();
     }
 }
 
@@ -112,6 +115,25 @@ public sealed class Ui
         TextCentered(r, label, enabled ? Theme.Text : Theme.TextDisabled, size);
         if (hover && tooltip != null) _tooltip = tooltip;
         return enabled && hover && Input.LeftReleased && r.Contains(Input.LeftPressPosition);
+    }
+
+    /// <summary>
+    /// A one-line text box that takes this frame's typing (Backspace deletes) and returns the new text.
+    /// Only characters the font can draw are accepted. There is one field on screen at a time, so it always has the focus.
+    /// </summary>
+    public string TextField(Rect r, string text, int maxLength)
+    {
+        foreach (char c in Input.Chars)
+            if (c >= ' ' && c <= (char)255 && !char.IsControl(c) && text.Length < maxLength) text += c;
+        if (Input.KeysPressed.Contains(Silk.NET.Input.Key.Backspace) && text.Length > 0) text = text[..^1];
+
+        _blockers.Add(r);
+        Batch.Rect(r.X, r.Y, r.W, r.H, new Rgba(0xFF0E1218));
+        Batch.Outline(r.X, r.Y, r.W, r.H, Theme.Accent);
+        float h = Font.LineHeight(FontSize.Normal);
+        float end = Text(r.X + 10, r.Y + (r.H - h) / 2, text);
+        Batch.Rect(r.X + 11 + end, r.Y + 7, 2, r.H - 14, Theme.Accent);
+        return text;
     }
 
     public void Tooltip(string text) => _tooltip = text;

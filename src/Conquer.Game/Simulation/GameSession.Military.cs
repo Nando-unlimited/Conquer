@@ -165,7 +165,7 @@ public sealed partial class GameSession
         foreach (var civilian in Units.Where(u => u.ProvinceId == p.Id && !u.IsMilitary && AtWar(u.OwnerId, playerId)).ToList())
             Retreat(civilian);
 
-        string place = CityIn(p)?.Name ?? p.Info.Name.ToLowerInvariant();
+        string place = PlaceName(p);
         if (playerId == HumanPlayerId)
             Notify(HumanPlayerId, p.OwnerId == playerId ? $"Liberada {place}." : $"Nuestras tropas ocupan {place}.");
         else if (previous == HumanPlayerId)
@@ -495,7 +495,7 @@ public sealed partial class GameSession
             int defender = EnemyRegimentsIn(provinceId, unit.OwnerId).First().OwnerId;
             battle = new Battle(provinceId, unit.OwnerId, defender, Date.Hours);
             _battles.Add(battle);
-            string place = CityIn(Map.Provinces[provinceId])?.Name ?? Map.Provinces[provinceId].Info.Name.ToLowerInvariant();
+            string place = PlaceName(Map.Provinces[provinceId]);
             if (unit.OwnerId == HumanPlayerId) Notify(HumanPlayerId, $"Atacamos {place}.");
             else if (defender == HumanPlayerId) Notify(HumanPlayerId, $"{Players[unit.OwnerId].Name} ataca {place}.");
         }
@@ -581,7 +581,7 @@ public sealed partial class GameSession
     {
         _battles.Remove(battle);
         var province = Map.Provinces[battle.ProvinceId];
-        string place = CityIn(province)?.Name ?? province.Info.Name.ToLowerInvariant();
+        string place = PlaceName(province);
         if (attackersWon)
         {
             foreach (var unit in attackers)

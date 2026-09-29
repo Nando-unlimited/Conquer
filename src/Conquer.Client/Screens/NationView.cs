@@ -271,7 +271,7 @@ public sealed partial class NationView
     }
 
     /// <summary>A city's name, or the province's terrain and number for the countryside.</summary>
-    private string ProvinceName(Province p) => _session.CityIn(p)?.Name ?? $"{p.Info.Name} {p.Id}";
+    private string ProvinceName(Province p) => _session.CityIn(p) is { } city ? $"{city.Name} ({p.DisplayName})" : p.DisplayName;
 
     // ------------------------------------------------------------------ science
 

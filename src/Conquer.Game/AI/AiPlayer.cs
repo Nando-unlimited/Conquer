@@ -28,7 +28,7 @@ internal sealed partial class AiPlayer
     private const double MinWorkersForBuilding = 200;
     private static readonly BuildingType[] BuildOrder =
     [
-        BuildingType.Farm, BuildingType.Temple, BuildingType.Library, BuildingType.Market,
+        BuildingType.Farm, BuildingType.Granary, BuildingType.Temple, BuildingType.Library, BuildingType.Market,
         BuildingType.Mine, BuildingType.Sawmill, BuildingType.Aqueduct, BuildingType.HerbalistHut,
     ];
     /// <summary>Food first, then the advances that pay for themselves.</summary>
@@ -93,8 +93,9 @@ internal sealed partial class AiPlayer
     /// </summary>
     private void Construct()
     {
+        if (BuildCityIfWorthIt()) return;
         var provinces = _player.Provinces.Select(id => Map.Provinces[id])
-            .Where(p => p.Population >= GameRules.SettledPopulation && !p.Constructing.HasValue)
+            .Where(p => p.Population >= GameRules.SettledPopulation && !p.Constructing.HasValue && p.PlannedCityName == null)
             .OrderByDescending(p => p.CityId.HasValue).ThenByDescending(p => p.Population);
         foreach (var p in provinces)
         foreach (var type in BuildOrder)
@@ -105,6 +106,24 @@ internal sealed partial class AiPlayer
             if (spare) _session.Build(_player.Id, p.Id, type);
             return;
         }
+    }
+
+    /// <summary>
+    /// Below <see cref="MaxCities"/>, turns its most populous province without a city into one once it
+    /// can pay while keeping enough to recruit. Returns whether it started (or is saving up for) one.
+    /// </summary>
+    private bool BuildCityIfWorthIt()
+    {
+        int cities = _session.Cities.Count(c => c.OwnerId == _player.Id) + _player.Provinces.Count(id => Map.Provinces[id].PlannedCityName != null);
+        if (cities >= MaxCities) return false;
+        var site = _player.Provinces.Select(id => Map.Provinces[id])
+            .Where(p => p.Population >= 2 * GameRules.CityBuildingPopulation && _session.IsCitySite(_player.Id, p).Ok)
+            .MaxBy(p => p.Population);
+        if (site == null) return false;
+        bool spare = GameRules.CityCost.Items.All(i =>
+            _player.Stockpile[i.Type] - i.Amount >= (i.Type == ResourceType.Wood ? WoodKeptForRecruiting : GoldKeptForRecruiting));
+        if (spare) _session.BuildCity(_player.Id, site.Id, _session.NextCityName());
+        return true;
     }
 
     /// <summary>Whether a building would pay off here: enough people to benefit, wooded land for sawmills, restless people for temples.</summary>

@@ -27,13 +27,69 @@ internal static class CityNames
     private static readonly string[] Middles = ["", "", "a", "e", "i", "o", "an", "en", "ar", "or"];
     private static readonly string[] Ends = ["dor", "gar", "heim", "ia", "is", "mar", "polis", "ra", "tum", "via", "burg", "on", "ea", "ante"];
 
-    /// <summary>A new city name, avoiding those already in <paramref name="used"/>.</summary>
+    /// <summary>A new city name, avoiding those already in <paramref name="used"/>, and adds it there.</summary>
     public static string Next(ISet<string> used, Random random)
+    {
+        string name = Suggest(used, random);
+        used.Add(name);
+        return name;
+    }
+
+    /// <summary>A name not in <paramref name="used"/> (after 50 tries, any name), without taking it.</summary>
+    public static string Suggest(ISet<string> used, Random random)
     {
         for (int attempt = 0; ; attempt++)
         {
             string name = Starts[random.Next(Starts.Length)] + Middles[random.Next(Middles.Length)] + Ends[random.Next(Ends.Length)];
-            if (used.Add(name) || attempt > 50) return name;
+            if (!used.Contains(name) || attempt > 50) return name;
         }
+    }
+}
+
+/// <summary>Names for every habitable province, from syllables of their own so they read differently from city names.</summary>
+internal static class ProvinceNames
+{
+    private static readonly string[] Starts =
+    [
+        "Ab", "Ber", "Cal", "Del", "Es", "Fen", "Gual", "Her", "Ib", "Jar", "Lan", "Mor", "Nal", "Ol", "Pen", "Quer",
+        "Ren", "Sor", "Tel", "Ul", "Ver", "Yal", "Zor", "Arn", "Bel", "Cas", "Dor", "Fal", "Gor", "Lis", "Mon", "Tor",
+        "Al", "Bur", "Cer", "Dal", "Em", "Fir", "Gal", "Hel", "Mir", "Nor", "Par", "Rim", "Sil", "Tam", "Val", "Zar",
+    ];
+    private static readonly string[] Middles = ["", "a", "e", "i", "o", "u", "ar", "en", "il", "or", "an", "es", "ur", "al", "ov", "im"];
+    private static readonly string[] Ends =
+    [
+        "ia", "ena", "ona", "ara", "ada", "illa", "enia", "ora", "ana", "este", "uria", "anda", "eda", "ina", "osa", "unia",
+        "alia", "ero", "ano", "al", "ar", "on", "ez", "ante", "ado", "iles", "ueña", "ios", "iza", "ela", "era", "ota",
+        "abia", "edo", "ica", "ueva", "orca", "ines", "ava", "igo", "uca", "oria", "osia", "anto", "ulia", "ejo", "ata", "ira",
+    ];
+
+    /// <summary>Gives each habitable province a name, as distinct as the syllables allow; the same seed gives the same names.</summary>
+    public static void Assign(IReadOnlyList<World.Province> provinces, int seed)
+    {
+        var random = new Random(seed ^ 0x4E414D45);
+        var used = new HashSet<string>();
+        foreach (var p in provinces)
+        {
+            if (!p.IsClaimable) continue;
+            string name = "";
+            for (int attempt = 0; attempt < 40; attempt++)
+            {
+                name = Starts[random.Next(Starts.Length)] + Middles[random.Next(Middles.Length)] + Ends[random.Next(Ends.Length)];
+                if (ReadsWell(name) && used.Add(name)) break;
+            }
+            p.Name = name;
+        }
+    }
+
+    /// <summary>No doubled vowel ("Penuulia") and no three vowels in a row ("Rimiueva").</summary>
+    private static bool ReadsWell(string name)
+    {
+        static bool Vowel(char c) => "aeiouáéíóú".Contains(char.ToLowerInvariant(c));
+        for (int i = 1; i < name.Length; i++)
+        {
+            if (Vowel(name[i]) && char.ToLowerInvariant(name[i]) == char.ToLowerInvariant(name[i - 1])) return false;
+            if (i >= 2 && Vowel(name[i]) && Vowel(name[i - 1]) && Vowel(name[i - 2])) return false;
+        }
+        return true;
     }
 }

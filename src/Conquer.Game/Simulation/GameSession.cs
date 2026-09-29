@@ -282,7 +282,8 @@ public sealed partial class GameSession
             UpdateMoodAndFertility(p, player, starving);
             if (starving)
             {
-                p.Population *= 1 - GameRules.StarvationRate * (1 - player.Bonuses.FamineSurvival);
+                // The nation's advances and the province's granary each spare their share of those who would die.
+                p.Population *= 1 - GameRules.StarvationRate * (1 - player.Bonuses.FamineSurvival) * (1 - p.BuildingBonuses.FamineSurvival);
             }
             else
             {
@@ -380,7 +381,7 @@ public sealed partial class GameSession
         if (p.Buildings.Contains(type)) return CommandResult.Fail("Ya está construido.");
         var available = IsBuildingAvailable(p, type);
         if (!available.Ok) return available;
-        if (p.Constructing is BuildingType busy) return CommandResult.Fail($"Ya se está construyendo {busy.Info().Name.ToLowerInvariant()}.");
+        if (Busy(p) is { } busy) return busy;
         if (p.Population < GameRules.SettledPopulation) return CommandResult.Fail($"Hacen falta al menos {GameRules.SettledPopulation} habitantes.");
         if (!Players[playerId].Stockpile.Has(type.Info().Cost)) return CommandResult.Fail($"Cuesta {type.Info().Cost}.");
         return CommandResult.Success();
@@ -398,18 +399,92 @@ public sealed partial class GameSession
         return CommandResult.Success($"{type.Info().Name} en obras: {type.Info().Days} días.");
     }
 
-    /// <summary>Every construction advances a day; finished buildings start working at once.</summary>
+    /// <summary>Why nothing new can start here: a building or a city already under construction.</summary>
+    private static CommandResult? Busy(Province p) =>
+        p.Constructing is BuildingType building ? CommandResult.Fail($"Ya se está construyendo {building.Info().Name.ToLowerInvariant()}.")
+        : p.PlannedCityName != null ? CommandResult.Fail($"Ya se está construyendo la ciudad de {p.PlannedCityName}.")
+        : null;
+
+    /// <summary>
+    /// Whether the citizens of a province of the player's could build themselves a city, cost aside: enough
+    /// of them, no city in it or next to it (built or being built), and nothing else under construction.
+    /// </summary>
+    public CommandResult IsCitySite(int playerId, Province p)
+    {
+        if (p.OwnerId != playerId) return CommandResult.Fail("La provincia no es tuya.");
+        if (p.IsOccupied) return CommandResult.Fail("La provincia está ocupada por el enemigo.");
+        if (p.CityId.HasValue) return CommandResult.Fail("Ya hay una ciudad aquí.");
+        if (Busy(p) is { } busy) return busy;
+        if (p.Neighbors.Any(n => Map.Provinces[n].CityId.HasValue || Map.Provinces[n].PlannedCityName != null))
+            return CommandResult.Fail("Demasiado cerca de otra ciudad.");
+        if (p.Population < GameRules.CityBuildingPopulation)
+            return CommandResult.Fail($"Hacen falta al menos {GameRules.CityBuildingPopulation} habitantes.");
+        return CommandResult.Success();
+    }
+
+    public CommandResult CanBuildCity(int playerId, Province p)
+    {
+        var site = IsCitySite(playerId, p);
+        if (!site.Ok) return site;
+        if (!Players[playerId].Stockpile.Has(GameRules.CityCost)) return CommandResult.Fail($"Cuesta {GameRules.CityCost}.");
+        return CommandResult.Success();
+    }
+
+    /// <summary>Pays for a city and starts building it; it is founded with this name after <see cref="GameRules.CityBuildingDays"/> days.</summary>
+    public CommandResult BuildCity(int playerId, int provinceId, string name)
+    {
+        var p = Map.Provinces[provinceId];
+        var check = CanBuildCity(playerId, p);
+        if (!check.Ok) return check;
+        var nameCheck = CheckCityName(name);
+        if (!nameCheck.Ok) return nameCheck;
+        Players[playerId].Stockpile.TrySpend(GameRules.CityCost);
+        p.PlannedCityName = name.Trim();
+        p.ConstructionDaysLeft = GameRules.CityBuildingDays;
+        return CommandResult.Success($"La ciudad de {p.PlannedCityName} en obras: {GameRules.CityBuildingDays} días.");
+    }
+
+    /// <summary>A city name must have letters, fit on the map and not belong to another city, built or planned.</summary>
+    public CommandResult CheckCityName(string name)
+    {
+        name = name.Trim();
+        if (name.Length == 0) return CommandResult.Fail("Escribe un nombre para la ciudad.");
+        if (name.Length > GameRules.MaxCityNameLength) return CommandResult.Fail($"El nombre es demasiado largo (máximo {GameRules.MaxCityNameLength} letras).");
+        if (Cities.Any(c => c.Name.Equals(name, StringComparison.OrdinalIgnoreCase))
+            || Map.Provinces.Any(p => name.Equals(p.PlannedCityName, StringComparison.OrdinalIgnoreCase)))
+            return CommandResult.Fail($"Ya hay una ciudad llamada {name}.");
+        return CommandResult.Success();
+    }
+
+    /// <summary>A city name nobody uses yet, to offer the player; it is not reserved.</summary>
+    public string SuggestCityName() => CityNames.Suggest(_usedCityNames, Random.Shared);
+
+    /// <summary>A free city name from the game's own random numbers, so computer rivals stay deterministic.</summary>
+    internal string NextCityName() => CityNames.Suggest(_usedCityNames, _random);
+
+    /// <summary>What to call a place in messages: its city if it has one, otherwise the province.</summary>
+    public string PlaceName(Province p) => CityIn(p)?.Name ?? p.DisplayName;
+
+    /// <summary>Every construction advances a day; finished buildings start working at once and finished cities are founded.</summary>
     private void DailyConstruction(Player player)
     {
         foreach (int id in player.Provinces)
         {
             var p = Map.Provinces[id];
-            if (p.Constructing is not BuildingType type || p.IsOccupied || --p.ConstructionDaysLeft > 0) continue;
-            p.AddBuilding(type);
-            p.Constructing = null;
+            if ((!p.Constructing.HasValue && p.PlannedCityName == null) || p.IsOccupied || --p.ConstructionDaysLeft > 0) continue;
             p.ConstructionDaysLeft = 0;
-            if (player.IsHuman)
-                Notify(player.Id, $"Terminada la obra: {type.Info().Name} en {CityIn(p)?.Name ?? p.Info.Name.ToLowerInvariant()}.");
+            if (p.Constructing is BuildingType type)
+            {
+                p.AddBuilding(type);
+                p.Constructing = null;
+                if (player.IsHuman) Notify(player.Id, $"Terminada la obra: {type.Info().Name} en {PlaceName(p)}.");
+            }
+            else
+            {
+                string name = p.PlannedCityName!;
+                p.PlannedCityName = null;
+                AddCity(player, p, name);
+            }
         }
     }
 
@@ -422,7 +497,7 @@ public sealed partial class GameSession
         {
             p.Reserves[(int)r] = 0;
             if (p.OwnerId == HumanPlayerId)
-                Notify(p.OwnerId, $"Se ha agotado el yacimiento de {r.Name().ToLowerInvariant()} en {CityIn(p)?.Name ?? p.Info.Name.ToLowerInvariant()}.");
+                Notify(p.OwnerId, $"Se ha agotado el yacimiento de {r.Name().ToLowerInvariant()} en {PlaceName(p)}.");
         }
         return taken;
     }
@@ -512,30 +587,42 @@ public sealed partial class GameSession
         if (p.OwnerId >= 0 && p.OwnerId != unit.OwnerId) return CommandResult.Fail("Esta provincia tiene dueño.");
         if (p.IsOccupied) return CommandResult.Fail("La provincia está ocupada por el enemigo.");
         if (p.CityId.HasValue) return CommandResult.Fail("Ya hay una ciudad aquí.");
-        if (p.Neighbors.Any(n => Map.Provinces[n].CityId.HasValue)) return CommandResult.Fail("Demasiado cerca de otra ciudad.");
+        if (p.PlannedCityName != null) return CommandResult.Fail($"Ya se está construyendo la ciudad de {p.PlannedCityName}.");
+        if (p.Neighbors.Any(n => Map.Provinces[n].CityId.HasValue || Map.Provinces[n].PlannedCityName != null))
+            return CommandResult.Fail("Demasiado cerca de otra ciudad.");
         return CommandResult.Success();
     }
 
-    /// <summary>The settlers claim their province (if nobody owns it) and become the population of a new city.</summary>
-    public CommandResult FoundCity(int playerId, int unitId)
+    /// <summary>
+    /// The settlers claim their province (if nobody owns it) and become the population of a new city,
+    /// called <paramref name="name"/> or, without one, a name of the game's choosing.
+    /// </summary>
+    public CommandResult FoundCity(int playerId, int unitId, string? name = null)
     {
         if (UnitById(unitId) is not { } unit || unit.OwnerId != playerId) return CommandResult.Fail("Unidad no válida.");
         var check = CanFoundCity(unit);
         if (!check.Ok) return check;
+        if (name != null && CheckCityName(name) is { Ok: false } badName) return badName;
 
-        var player = Players[playerId];
         var p = Map.Provinces[unit.ProvinceId];
         SetOwner(p, playerId);
-        var city = new City(_nextCityId++, CityNames.Next(_usedCityNames, _random), playerId, p.Id, Date.Hours);
-        Cities.Add(city);
-        p.CityId = city.Id;
         Settle(p, unit.Citizens, GameRules.StartingMood);
         RemoveUnit(unit);
+        AddCity(Players[playerId], p, name?.Trim() ?? CityNames.Next(_usedCityNames, _random));
+        return CommandResult.Success();
+    }
+
+    /// <summary>Founds a city in a province of the player's; the first one becomes the capital.</summary>
+    private void AddCity(Player player, Province p, string name)
+    {
+        _usedCityNames.Add(name);
+        var city = new City(_nextCityId++, name, player.Id, p.Id, Date.Hours);
+        Cities.Add(city);
+        p.CityId = city.Id;
 
         bool capital = player.CapitalCityId is null;
         if (capital) player.CapitalCityId = city.Id;
-        Notify(playerId, capital ? $"Fundada {city.Name}, capital de {player.Name}." : $"Fundada la ciudad de {city.Name}.");
-        return CommandResult.Success();
+        Notify(player.Id, capital ? $"Fundada {city.Name}, capital de {player.Name}." : $"Fundada la ciudad de {city.Name} en {p.DisplayName}.");
     }
 
     public CommandResult CanClaim(Unit unit)
@@ -647,6 +734,8 @@ public sealed partial class GameSession
     private void SetOwner(Province p, int playerId)
     {
         if (p.OwnerId >= 0) Players[p.OwnerId].Provinces.Remove(p.Id);
+        // A city still being built belongs to the people who planned it; a new owner starts over.
+        if (p.OwnerId != playerId) p.PlannedCityName = null;
         p.OwnerId = p.ControllerId = playerId;
         Players[playerId].Provinces.Add(p.Id);
         OwnershipChanged?.Invoke(p.Id);

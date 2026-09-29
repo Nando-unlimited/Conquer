@@ -59,7 +59,7 @@ Todas las constantes de equilibrio (por día de juego salvo que se diga otra cos
 | `FoodPerCitizen` | Comida que come cada ciudadano al día (0,1). |
 | `FoodPerWorker` | Comida que produce cada trabajador en tierra de rendimiento 1 (0,13). |
 | `GrowthRate`, `CityGrowthMultiplier` | Crecimiento diario de la población; las ciudades crecen el doble. |
-| `StarvationRate` | Población que muere al día si no hay comida. |
+| `StarvationRate` | Población que muere al día si no hay comida. Los avances (Medicina) y el granero de la provincia salvan cada uno su parte: con los dos, muere la cuarta parte. |
 | `CityCapacityMultiplier` | Una ciudad alimenta 2,5 veces más gente que la tierra sola. |
 | `TaxGoldPerCitizen` | Oro por habitante y día. |
 | `DepositFullWorkers` | Habitantes necesarios para que un yacimiento rinda al máximo. |
@@ -72,6 +72,7 @@ Todas las constantes de equilibrio (por día de juego salvo que se diga otra cos
 | `SettledPopulation` | Habitantes con los que una provincia se considera asentada. |
 | `MigrationTargetShare` | Las provincias atraen migrantes hasta llenar esta parte de su capacidad. |
 | `MinCityPopulation` | Población mínima que debe quedar en una ciudad al reclutar o migrar. |
+| `CityBuildingPopulation`, `CityCost`, `CityBuildingDays`, `MaxCityNameLength` | Para construir una ciudad sin colonos: 500 habitantes en la provincia, 150 de madera y 50 de oro, 60 días; el nombre tiene como mucho 24 letras. |
 | `ForcedMigrationCost(citizens)` | Oro que cuesta una migración forzada (1 por cada 10 ciudadanos). |
 | `StartingMood`, `BaseMood`, `CityMood`, `CapitalMood` | Humor inicial (60) y factores fijos del humor: base 50, +10 con ciudad, +15 en la capital. |
 | `KmPerMoodPoint`, `MaxDistanceMoodPenalty` | −1 de humor por cada 50 km a la capital, hasta −20. |
@@ -148,7 +149,7 @@ Los edificios que se construyen en las provincias. **Aquí se añaden y equilibr
 
 | Elemento | Qué es |
 | --- | --- |
-| `BuildingType` | Granja, Aserradero, Mina, Templo, Biblioteca, Mercado, Acueducto y Herbolario. |
+| `BuildingType` | Granja, Granero, Aserradero, Mina, Templo, Biblioteca, Mercado, Acueducto y Herbolario. Granja, granero, aserradero y mina se construyen en cualquier provincia; el resto solo donde hay ciudad. |
 | `BuildingInfo` | Nombre, descripción, coste (madera y oro), días de obra, avance que requiere, si solo va en ciudades, si necesita un yacimiento sin agotar y sus efectos (`Modifiers`) en la provincia. |
 | `Buildings.All`, `Buildings.Info(tipo)` | Todos los edificios y la ficha de cada uno. |
 
@@ -218,9 +219,12 @@ El corazón del juego: una partida en marcha. Es una clase parcial: el ejército
 | `CanResearch(jugador, avance)` / `Research(...)` | Comprueba (no conocido y con sus requisitos) / pone la ciencia del país en un avance; la ciencia guardada entra en él de inmediato. |
 | `IsBuildingAvailable(provincia, tipo)` | ¿Podría construirse aquí algún día? Tiene dueño, se conoce su avance y hay ciudad o yacimiento conocido si los necesita (sin mirar coste ni obras). |
 | `CanBuild(jugador, provincia, tipo)` / `Build(...)` | Comprueba (es tuya, no está construido, está disponible, no hay otra obra, tiene al menos 10 habitantes y puedes pagarlo) / paga y empieza la obra. |
-| `DailyConstruction(jugador)` | Cada obra avanza un día; al terminar, el edificio empieza a funcionar y avisa al jugador. |
+| `DailyConstruction(jugador)` | Cada obra avanza un día; al terminar, el edificio empieza a funcionar (o se funda la ciudad) y avisa al jugador. |
+| `IsCitySite(jugador, provincia)` / `CanBuildCity(...)` / `BuildCity(jugador, provincia, nombre)` | ¿Pueden sus habitantes levantar una ciudad (es tuya, sin ciudad ni otra obra, ninguna ciudad hecha o en obras al lado, al menos 500 habitantes)? / lo mismo y además puedes pagarla / paga y empieza la obra, que ocupa la provincia como un edificio (`PlannedCityName`). |
+| `CheckCityName(nombre)`, `SuggestCityName()` | El nombre no puede estar vacío, pasar de 24 letras ni repetir el de otra ciudad (hecha o en obras) / propone uno libre para el jugador. |
+| `PlaceName(provincia)` | Cómo llamar a un lugar en los mensajes: su ciudad si la tiene, si no la provincia. |
 | `DailyMigration(jugador)` | Cada ciudad no ocupada envía parte de su gente a las provincias propias poco pobladas; primero las vacías y las cercanas. Guarda las fracciones de persona para el día siguiente. |
-| `CanFoundCity(unidad)` / `FoundCity(...)` | Comprueba / funda una ciudad con colonos: reclama la provincia, crea la ciudad (capital si es la primera) y los colonos pasan a ser su población. |
+| `CanFoundCity(unidad)` / `FoundCity(jugador, unidad, nombre)` | Comprueba / funda una ciudad con colonos: reclama la provincia, crea la ciudad con ese nombre (o uno al azar) y los colonos pasan a ser su población. `AddCity` la crea, la hace capital si es la primera y avisa. |
 | `CanClaim(unidad)` / `Claim(...)` | Comprueba / reclama con una unidad militar la provincia libre en la que está. |
 | `CanRecruitSettlers(ciudad)` / `RecruitSettlers(...)` | Comprueba / envía colonos desde una ciudad, pagando recursos y habitantes. |
 | `Disband(...)` | La unidad se disuelve: sus ciudadanos pasan a vivir en la provincia (propia) donde está. |
@@ -303,7 +307,8 @@ navales); el hielo polar se puede cruzar.
 | Elemento | Qué es |
 | --- | --- |
 | `PlayerNames.Pick(n, random)` | Nombres de naciones al azar; `Colors` son sus colores. |
-| `CityNames.Next(usados, random)` | Genera un nombre de ciudad por sílabas sin repetir. |
+| `CityNames.Next(usados, random)`, `Suggest(...)` | Genera un nombre de ciudad por sílabas sin repetir (y lo reserva, o solo lo propone). |
+| `ProvinceNames.Assign(provincias, semilla)` | Da nombre a cada provincia habitable con otras sílabas (unas 37.000 combinaciones), sin repetir y sin vocales dobles ni tres seguidas. La misma semilla da los mismos nombres. |
 
 ### `AI/AiPlayer.cs`
 Rival controlado por el ordenador. Clase parcial: el ejército está en `AiPlayer.Military.cs`. Determinista (usa su propia semilla).
@@ -313,6 +318,7 @@ Rival controlado por el ordenador. Clase parcial: el ejército está en `AiPlaye
 | `Think(decisionesDiarias)` | Turno de la IA: clasifica regimientos nuevos, licencia soldados si hay hambre en paz, guía a colonos, reclamadores, soldados (en guerra) y cuarteles, y trae a casa las divisiones sin suministro; `PlayerId` identifica la nación; una vez al día, celebra fiestas, elige investigación, recluta y construye. |
 | `HoldFestivals()` | Paga fiestas en las ciudades con humor por debajo de 45 si, tras pagarlas, le quedan 30 de oro para reclutar. |
 | `ChooseResearch()`, `ResearchOrder` | Cuando no investiga nada, elige el primer avance disponible de su orden de preferencia (Agricultura, Escritura, Minería, Trabajo del hierro, Irrigación...). |
+| `BuildCityIfWorthIt()` | Mientras tenga menos de 8 ciudades, convierte en ciudad su provincia sin ciudad más poblada (con al menos 1.000 habitantes) cuando puede pagarla guardando para reclutar. |
 | `Construct()`, `BuildOrder`, `WorthBuilding(...)` | Elige su edificio más deseado (ciudades primero, luego por población y orden de preferencia) donde compense: al menos 200 habitantes, aserraderos en tierra con madera, templos donde hay inquietud, acueductos al 60 % de la capacidad. Lo empieza cuando puede pagarlo guardando madera y oro para reclutar; si no, ahorra. |
 | `GuideSettlers(unidad)` | Busca el mejor sitio cercano para una ciudad, va allí y la funda. |
 | `GuideWarriors(unidad)` | Reclamadores en paz: Reclama la provincia si está libre; si no, va a la mejor provincia libre de su frontera. No reclama más rápido de lo que llegan los migrantes. |
@@ -345,12 +351,12 @@ El ejército de un rival.
 | `Biomes.Info(bioma)` | Devuelve la ficha. **Aquí se equilibra cada tipo de terreno.** |
 
 ### `World/Province.cs`
-`Province`: id, bioma dominante, centro (píxel y lat/lon), área en km², altitud media, vecinas,
+`Province`: id, nombre propio (`Name`; vacío en océanos y polos, que usan el del bioma en `DisplayName`), bioma dominante, centro (píxel y lat/lon), área en km², altitud media, vecinas,
 yacimientos (`Deposits`: producción diaria; `DepositSizes`: tamaño de la bolsa; `Reserves`: lo que queda en la partida), dueño, población, ciudad, humor (`Mood`, 0-100) y fertilidad
 (`Fertility`, multiplicador de nacimientos, 1 = normal). `ControllerId` es quién la tiene en la guerra (su dueño, o el enemigo que la ocupa) e `IsOccupied` si la ocupa otro. `IsWater`, `IsClaimable`, `IsOwned`,
 `RiverFlow` (agua del mayor río que la cruza, 0 sin río), `HasRiver` (la cruza un gran río), `FoodYield` (rendimiento de comida de su bioma, más en un gran río),
 `Capacity` (habitantes que alimenta su tierra, más en un gran río) y `HasDeposit(recurso)` (tiene ese yacimiento sin agotar) son atajos.
-Edificios: los terminados (`Buildings`) y la suma de sus efectos (`BuildingBonuses`), el que está en obras (`Constructing`) y los días que le quedan (`ConstructionDaysLeft`). `AddBuilding(tipo)` añade uno terminado; `ClearBuildings()` los quita todos (nueva partida).
+Edificios: los terminados (`Buildings`) y la suma de sus efectos (`BuildingBonuses`), el que está en obras (`Constructing`) o la ciudad en obras (`PlannedCityName`) y los días que le quedan (`ConstructionDaysLeft`). `AddBuilding(tipo)` añade uno terminado; `ClearBuildings()` los quita todos (nueva partida).
 
 ### `World/WorldMap.cs`
 | Elemento | Qué es |
@@ -367,7 +373,7 @@ Edificios: los terminados (`Buildings`) y la suma de sus efectos (`BuildingBonus
 | Elemento | Qué es |
 | --- | --- |
 | `WorldSettings` | Tipo de mapa, semilla y número objetivo de provincias (25.000). |
-| `Generate(ajustes, progreso)` | Crea el mundo en cinco pasos: relieve → clima y biomas → provincias → recursos → ríos (cada provincia guarda el mayor que la cruza). Informa del paso en curso para la pantalla de carga. |
+| `Generate(ajustes, progreso)` | Crea el mundo en seis pasos: relieve → clima y biomas → provincias → recursos → ríos (cada provincia guarda el mayor que la cruza) → nombres de provincia. Informa del paso en curso para la pantalla de carga. |
 
 ### `World/EarthData.cs`
 Formato del fichero `Assets/earth.gz` (Tierra real, 3600×1800): altitud en metros y marcas de tierra,
@@ -498,7 +504,8 @@ La pantalla de juego. Clase parcial: el ejército en pantalla está en `GameScre
 | `DrawTopBar()`, `Compact()` | Barra superior: nación, población y humor medio, fecha, velocidades, recursos conocidos y botones Nación (con «!» si no se investiga nada) y Menú (con números abreviados: 12,3k, 2,9M). |
 | `DrawSidePanel()`, `UnitPanel()`, `ProvincePanel()` | Panel derecho: datos y botones de la unidad o provincia seleccionada; el de provincia tiene pestañas General, Edificios y Ejército (humor y fertilidad, yacimientos con lo que les queda, fundar, fiestas, reclamar, asentarse, reclutar, migración forzada). |
 | `MoodTooltip(provincia)` | Tooltip del humor con sus causas y su efecto en la producción. |
-| `BuildingsPanel(...)` | Pestaña Edificios: la obra en curso con su barra, los edificios terminados y, en tus provincias, un botón por cada edificio que puedes levantar; los que solo necesitan ciudad o yacimiento dicen qué les falta, y los de avances sin descubrir no aparecen (`IsBuildingKnown`). |
+| `OpenCityNaming(...)`, `DrawCityNaming()`, `ConfirmCityName()` | Diálogo para nombrar una ciudad al fundarla con colonos o al construirla: propone un nombre, se puede escribir otro o pedir otro al azar, avisa si no vale y la funda o empieza la obra (Intro confirma, Esc cancela). Mientras está abierto el tiempo se para y las teclas van a la caja de texto. |
+| `BuildingsPanel(...)` | Pestaña Edificios: la obra en curso (edificio o ciudad) con su barra, el botón «Ciudad» en provincias sin ciudad, los edificios terminados y, en tus provincias, un botón por cada edificio que puedes levantar; los que solo necesitan ciudad o yacimiento dicen qué les falta, y los de avances sin descubrir no aparecen (`IsBuildingKnown`). |
 | `Line()`, `Paragraph()` | Ayudas para escribir filas y párrafos en el panel. |
 | `DrawBottomBar()` | Modos de mapa y ayuda de controles (la ayuda se oculta con la pantalla de la nación abierta). |
 | `DrawResourceFilter(barra)` | En el modo recursos, fila de botones para ver todos los yacimientos o solo uno de los recursos que conoces; hace de leyenda con el color de cada recurso. |
@@ -611,6 +618,7 @@ Interfaz propia de "modo inmediato": los botones se declaran en cada fotograma y
 | `InputState` | Estado del ratón y del teclado en el fotograma. |
 | `Theme` | Colores de la interfaz. `Theme.Mood(humor, normal)` colorea un humor: rojo si hay descontento, verde si está contento. |
 | `Ui.Panel`, `Text`, `TextCentered`, `Button`, `Hover`, `Tooltip` | Piezas de la interfaz. |
+| `TextField(área, texto, máximo)` | Caja de texto de una línea: añade lo tecleado en el fotograma (`InputState.Chars`) y borra con Retroceso. Solo admite caracteres que la fuente sabe dibujar. |
 | `Ui.MouseOverUi`, `Block` | Si el ratón está sobre la interfaz (para no hacer clic en el mapa a través de un panel). |
 | `BeginFrame`, `EndFrame` | Empezar el fotograma / dibujar el tooltip al final. |
 
@@ -643,6 +651,7 @@ Uso: ver el README.
 | `WorldGenerationTests.cs` | Ambos mapas salen con unas 25.000 provincias y todos los píxeles asignados. |
 | `GameplayTests.cs` | Inicio sin territorio y con los recursos correctos; fundar la capital; océanos y polos no reclamables; las unidades terrestres no entran al mar pero sí cruzan hielo; nada cruza el mar; provincias mayores en desiertos, polos y océanos; solo las unidades militares reclaman; velocidad de 10 km/h; migración diaria; migración forzada con su coste; consumo de comida; la capital gana humor y fertilidad; el hambre los hunde; los migrantes forzados llegan descontentos; las provincias descontentas no pagan impuestos; la fertilidad acelera el crecimiento; las reservas de comida alegran; las fiestas cuestan oro y duran un mes; las estadísticas de la nación suman bien; cada yacimiento es una bolsa finita que empieza llena; las bolsas se agotan y dejan de producir; las ciudades producen ciencia que descubre avances; los avances piden sus requisitos; la ciencia sin investigación se guarda; los avances mejoran la economía; los edificios cuestan y tardan, tienen sus requisitos y mejoran su provincia; al principio solo se conocen los recursos antiguos y los avances revelan los demás; los recursos desconocidos no se explotan; la IA se expande e investiga. `WorldFixture` genera un único mundo para todos. |
 | `MilitaryTests.cs` | Instrucción de batallones (hombres, recursos y días); batallones que piden su avance (o sus dos avances); unir (hasta 6), separar y velocidad del batallón más lento; no se entra en tierras ajenas sin guerra; ocupar tierra enemiga sin defensa; un ataque fuerte gana y uno débil se rompe; defensores rodeados destruidos; la paz devuelve lo ocupado; la IA solo acepta la paz pasado un tiempo; desgaste sin suministro; recuperación y refuerzos desde la capital; bonificación de mando en cadena y alcance; nombres romanos y modernos de las formaciones; una vexilación manda 4 regimientos como mucho; cada nación empieza con una plantilla de dos guerreros; las plantillas se editan dentro de sus límites; una plantilla entrena un regimiento entero a la vez. |
+| `CityTests.cs` | Solo granja, granero, aserradero y mina van sin ciudad; los habitantes construyen una ciudad con el nombre que eligen y la provincia conserva el suyo; hacen falta 500 habitantes, sitio y un nombre libre; el granero salva a la mitad de los que morirían de hambre; una ciudad en obras se guarda y se termina tras cargar; cada provincia habitable tiene un nombre distinto. |
 | `SaveGameTests.cs` | Cargar una partida y volver a guardarla da exactamente el mismo fichero; la partida cargada sigue jugándose; los mismos ajustes generan el mismo mapa; se rechazan las partidas de otro mapa y las dañadas. |
 | `InterfaceTests.cs` | Los nombres se ordenan alfabéticamente en español (sin tildes, ñ tras n). |
 | `ReleaseTests.cs` | La versión del `.csproj` coincide con la primera entrada del `CHANGELOG.md`. |
