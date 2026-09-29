@@ -28,8 +28,21 @@ public sealed class ConquerApp
     public Batch2D Batch { get; private set; } = null!;
     public Font Font { get; private set; } = null!;
     public Ui Ui { get; private set; } = null!;
-    public Vector2 ScreenSize => new(_window.Size.X, _window.Size.Y);
-    public float PixelScale => _window.Size.X == 0 ? 1 : _window.FramebufferSize.X / (float)_window.Size.X;
+    /// <summary>
+    /// The interface is laid out for at least this many logical pixels; smaller windows shrink
+    /// everything by <see cref="UiScale"/> so no screen spills off the edge.
+    /// </summary>
+    private const float MinUiWidth = 1280, MinUiHeight = 820;
+
+    public float UiScale => _window.Size.X <= 0 || _window.Size.Y <= 0
+        ? 1
+        : Math.Min(1, Math.Min(_window.Size.X / MinUiWidth, _window.Size.Y / MinUiHeight));
+
+    /// <summary>Window size in logical pixels, the units every screen lays itself out in.</summary>
+    public Vector2 ScreenSize => new Vector2(_window.Size.X, _window.Size.Y) / UiScale;
+
+    /// <summary>Framebuffer pixels per logical pixel (HiDPI times <see cref="UiScale"/>).</summary>
+    public float PixelScale => ScreenSize.X <= 0 ? 1 : _window.FramebufferSize.X / ScreenSize.X;
     public StartOptions Options { get; }
 
     public static string Version { get; } = ReadVersion();
@@ -39,7 +52,7 @@ public sealed class ConquerApp
         Options = options;
         var windowOptions = WindowOptions.Default with
         {
-            Size = new Vector2D<int>(1600, 900),
+            Size = InitialSize(),
             Title = $"Conquer {Version}",
             API = new GraphicsAPI(ContextAPI.OpenGL, ContextProfile.Core, ContextFlags.ForwardCompatible, new APIVersion(3, 3)),
             VSync = true,
@@ -50,6 +63,18 @@ public sealed class ConquerApp
         _window.Render += OnRender;
         _window.FramebufferResize += size => Gl?.Viewport(size);
         _window.Closing += () => _screen?.Dispose();
+    }
+
+    /// <summary>1600×900, or smaller so the window fits on the monitor with room for its frame and the taskbar.</summary>
+    private static Vector2D<int> InitialSize()
+    {
+        var size = new Vector2D<int>(1600, 900);
+        if (Silk.NET.Windowing.Monitor.GetMainMonitor(null).VideoMode.Resolution is { } screen)
+        {
+            float fit = Math.Min(1, Math.Min(screen.X * 0.9f / size.X, screen.Y * 0.85f / size.Y));
+            size = new Vector2D<int>((int)(size.X * fit), (int)(size.Y * fit));
+        }
+        return size;
     }
 
     public void Run() => _window.Run();
@@ -74,7 +99,7 @@ public sealed class ConquerApp
                 if (button == MouseButton.Left)
                 {
                     _input.LeftDown = _input.LeftPressed = true;
-                    _input.LeftPressPosition = m.Position;
+                    _input.LeftPressPosition = m.Position / UiScale;
                 }
                 else if (button == MouseButton.Right) _input.RightPressed = true;
             };
@@ -84,7 +109,7 @@ public sealed class ConquerApp
                 _input.LeftDown = false;
                 _input.LeftReleased = true;
             };
-            mouse.MouseMove += (_, position) => _input.Mouse = position;
+            mouse.MouseMove += (_, position) => _input.Mouse = position / UiScale;
             mouse.Scroll += (_, wheel) => _input.Scroll += wheel.Y;
         }
         foreach (var keyboard in input.Keyboards)

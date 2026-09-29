@@ -441,7 +441,8 @@ Punto de entrada. Comprueba OpenGL 3.3 (`GlSupport.Ensure`), pone el formato de 
 | Función | Qué hace |
 | --- | --- |
 | `IScreen` | Interfaz de una pantalla: `Frame(dt)` actualiza y dibuja un fotograma. |
-| `ConquerApp(options)` | Crea la ventana de 1600×900 con OpenGL 3.3. |
+| `ConquerApp(options)` | Crea la ventana con OpenGL 3.3: 1600×900, o menor si no cabe en el monitor (`InitialSize`). |
+| `UiScale`, `ScreenSize`, `PixelScale` | Las pantallas se colocan en píxeles lógicos (`ScreenSize`). Si la ventana es menor de 1280×820, `UiScale` (< 1) encoge toda la interfaz en proporción para que nada se salga; el ratón se divide por la misma escala. `PixelScale` son los píxeles reales por píxel lógico (pantallas HiDPI por la escala). |
 | `Run()`, `Quit()`, `Show(pantalla)` | Arranca, cierra, cambia de pantalla al acabar el fotograma. |
 | `OnLoad()` | Inicia OpenGL, la fuente, la interfaz y los eventos de ratón y teclado; muestra el menú o la partida rápida. |
 | `OnRender(dt)` | Cada fotograma: limpia, dibuja la pantalla actual, la interfaz y el tooltip. |
@@ -481,9 +482,9 @@ La pantalla de juego. Clase parcial: el ejército en pantalla está en `GameScre
 | `MoodTooltip(provincia)` | Tooltip del humor con sus causas y su efecto en la producción. |
 | `BuildingsPanel(...)` | Pestaña Edificios: la obra en curso con su barra, los edificios terminados y, en tus provincias, un botón por cada edificio que puedes levantar; los que solo necesitan ciudad o yacimiento dicen qué les falta, y los de avances sin descubrir no aparecen (`IsBuildingKnown`). |
 | `Line()`, `Paragraph()` | Ayudas para escribir filas y párrafos en el panel. |
-| `DrawBottomBar()` | Modos de mapa y ayuda de controles. |
+| `DrawBottomBar()` | Modos de mapa y ayuda de controles (la ayuda se oculta con la pantalla de la nación abierta). |
 | `DrawResourceFilter(barra)` | En el modo recursos, fila de botones para ver todos los yacimientos o solo uno de los recursos que conoces; hace de leyenda con el color de cada recurso. |
-| `DrawMessages()`, `HoverTooltip()` | Mensajes (más arriba si está abierto el filtro de recursos) y tooltip de la provincia bajo el ratón (con sus yacimientos en el modo recursos). |
+| `DrawMessages()`, `HoverTooltip()` | Mensajes (más arriba si está abierto el filtro de recursos; con la pantalla de la nación abierta, solo el último, en la franja junto a los modos de mapa, con `DrawLatestMessageInStrip`) y tooltip de la provincia bajo el ratón (con sus yacimientos en el modo recursos). |
 | `DrawPauseMenu()` | Menú de pausa (Esc). |
 
 ### `Screens/GameScreen.Army.cs`
@@ -521,6 +522,7 @@ Pantalla de la nación (botón «Nación» o tecla N). El tiempo sigue corriendo
 | `Provinces(...)` | Tabla de todas las provincias: población, humor, fertilidad, terreno, migrantes en camino y «Ver». |
 | `ProvinceCells(...)` | Celdas de población, humor (con tooltip de causas) y fertilidad, comunes a las dos tablas. |
 | `Header(...)`, `Sort(...)` | Cabeceras que ordenan al pulsarlas (nombre, población, humor, fertilidad; otra pulsación invierte el orden). |
+| `SpanishSortKey(nombre)` | Clave para ordenar nombres en orden alfabético español sin ICU: sin mayúsculas ni tildes, y la ñ después de la n. |
 | `Rows(...)` | Filas visibles con desplazamiento por la rueda del ratón y barra de desplazamiento. |
 | `Science(...)`, `TechCard(...)`, `ProgressBar(...)` | Pestaña Ciencia: puntos al día (con su desglose), investigación actual con barra de progreso y tiempo estimado, y una tarjeta por avance con su estado, coste, efecto, requisitos, los edificios y batallones que permite y el botón Investigar (cinco tarjetas por fila). |
 | `Heading`, `Row`, `ViewButton`, `ProvinceName`, `Compact` | Ayudas de dibujo y formato. |
@@ -623,6 +625,7 @@ Uso: ver el README.
 | `WorldGenerationTests.cs` | Ambos mapas salen con unas 25.000 provincias y todos los píxeles asignados. |
 | `GameplayTests.cs` | Inicio sin territorio y con los recursos correctos; fundar la capital; océanos y polos no reclamables; las unidades terrestres no entran al mar pero sí cruzan hielo; nada cruza el mar; provincias mayores en desiertos, polos y océanos; solo las unidades militares reclaman; velocidad de 10 km/h; migración diaria; migración forzada con su coste; consumo de comida; la capital gana humor y fertilidad; el hambre los hunde; los migrantes forzados llegan descontentos; las provincias descontentas no pagan impuestos; la fertilidad acelera el crecimiento; las reservas de comida alegran; las fiestas cuestan oro y duran un mes; las estadísticas de la nación suman bien; cada yacimiento es una bolsa finita que empieza llena; las bolsas se agotan y dejan de producir; las ciudades producen ciencia que descubre avances; los avances piden sus requisitos; la ciencia sin investigación se guarda; los avances mejoran la economía; los edificios cuestan y tardan, tienen sus requisitos y mejoran su provincia; al principio solo se conocen los recursos antiguos y los avances revelan los demás; los recursos desconocidos no se explotan; la IA se expande e investiga. `WorldFixture` genera un único mundo para todos. |
 | `MilitaryTests.cs` | Instrucción de batallones (hombres, recursos y días); batallones que piden su avance (o sus dos avances); unir (hasta 6), separar y velocidad del batallón más lento; no se entra en tierras ajenas sin guerra; ocupar tierra enemiga sin defensa; un ataque fuerte gana y uno débil se rompe; defensores rodeados destruidos; la paz devuelve lo ocupado; la IA solo acepta la paz pasado un tiempo; desgaste sin suministro; recuperación y refuerzos desde la capital; bonificación de mando en cadena y alcance; nombres romanos y modernos de las formaciones; una vexilación manda 4 regimientos como mucho; cada nación empieza con una plantilla de dos guerreros; las plantillas se editan dentro de sus límites; una plantilla entrena un regimiento entero a la vez. |
+| `InterfaceTests.cs` | Los nombres se ordenan alfabéticamente en español (sin tildes, ñ tras n). |
 | `ReleaseTests.cs` | La versión del `.csproj` coincide con la primera entrada del `CHANGELOG.md`. |
 
 ---

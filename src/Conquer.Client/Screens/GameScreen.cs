@@ -713,6 +713,8 @@ public sealed partial class GameScreen : IScreen
             }
         }
         if (_renderer.Mode == MapMode.Resources) DrawResourceFilter(bar);
+        // With the nation screen open this strip shows the latest message instead (see DrawMessages).
+        if (_nation.Visible) return;
 
         string help = _choosingMigrationTarget
             ? "Clic izquierdo: elegir provincia de destino  ·  Esc: cancelar"
@@ -755,6 +757,11 @@ public sealed partial class GameScreen : IScreen
         const double Lifetime = 8;
         _messages.RemoveAll(m => _realTime - m.Time > Lifetime);
         var s = _app.ScreenSize;
+        if (_nation.Visible)
+        {
+            DrawLatestMessageInStrip(Lifetime);
+            return;
+        }
         float y = s.Y - (_renderer.Mode == MapMode.Resources ? 120 : 70); // above the resource filter when it is open
         foreach (var (text, time, ok) in _messages.AsEnumerable().Reverse().Take(5))
         {
@@ -765,6 +772,28 @@ public sealed partial class GameScreen : IScreen
             Ui.TextCentered(r, text, (ok ? Theme.Text : Theme.Bad).WithAlpha(alpha));
             y -= 32;
         }
+    }
+
+    /// <summary>
+    /// The nation screen covers the space where messages stack, so only the latest one shows, in the
+    /// strip beside the map modes, cut short if it does not fit.
+    /// </summary>
+    private void DrawLatestMessageInStrip(double lifetime)
+    {
+        if (_messages.Count == 0) return;
+        var (text, time, ok) = _messages[^1];
+        var s = _app.ScreenSize;
+        float x = 8 + 732 + 6, maxW = s.X - x - 8;
+        if (Ui.Font.Measure(text, FontSize.Small) + 20 > maxW)
+        {
+            while (text.Length > 0 && Ui.Font.Measure(text + "...", FontSize.Small) + 20 > maxW) text = text[..^1];
+            text = text.TrimEnd() + "...";
+        }
+        float alpha = (float)Math.Clamp((lifetime - (_realTime - time)) / 1.5, 0, 1);
+        var r = new Rect(x, s.Y - 44, Ui.Font.Measure(text, FontSize.Small) + 20, 30);
+        Batch.Rect(r.X, r.Y, r.W, r.H, Theme.Panel.WithAlpha(0.9f * alpha));
+        Batch.Outline(r.X, r.Y, r.W, r.H, Theme.PanelBorder.WithAlpha(alpha));
+        Ui.Text(r.X + 10, r.Y + 6, text, (ok ? Theme.Text : Theme.Bad).WithAlpha(alpha), FontSize.Small);
     }
 
     private void HoverTooltip()

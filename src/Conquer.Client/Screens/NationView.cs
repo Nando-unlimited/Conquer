@@ -420,12 +420,42 @@ public sealed partial class NationView
         return r.Y + 36;
     }
 
+    /// <summary>
+    /// Key that sorts names in Spanish alphabetical order with plain ordinal comparison (the game runs
+    /// without ICU, so culture-aware comparison is not available): case and accents are ignored and ñ goes after n.
+    /// </summary>
+    internal static string SpanishSortKey(string name)
+    {
+        var key = new System.Text.StringBuilder(name.Length + 2);
+        foreach (char ch in name)
+        {
+            char c = char.ToLowerInvariant(ch);
+            switch (c)
+            {
+                case 'à' or 'á' or 'â' or 'ã' or 'ä' or 'å': key.Append('a'); break;
+                case 'ç': key.Append('c'); break;
+                case 'è' or 'é' or 'ê' or 'ë': key.Append('e'); break;
+                case 'ì' or 'í' or 'î' or 'ï': key.Append('i'); break;
+                case 'ò' or 'ó' or 'ô' or 'õ' or 'ö': key.Append('o'); break;
+                case 'ù' or 'ú' or 'û' or 'ü': key.Append('u'); break;
+                case 'ý' or 'ÿ': key.Append('y'); break;
+                // '~' sorts after every letter, so "ñ" lands between "nz" and "o".
+                case 'ñ': key.Append("n~"); break;
+                default: key.Append(c); break;
+            }
+        }
+        return key.ToString();
+    }
+
     /// <summary>Orders rows by the tab's sort column: name, population, mood or fertility.</summary>
     private IEnumerable<T> Sort<T>(NationTab tab, IEnumerable<T> rows, Func<T, Province> province, Func<T, string> name)
     {
         int t = (int)tab;
         if (_sortColumn[t] == 0)
-            return _sortAscending[t] ? rows.OrderBy(name, StringComparer.CurrentCulture) : rows.OrderByDescending(name, StringComparer.CurrentCulture);
+        {
+            Func<T, string> sortName = row => SpanishSortKey(name(row));
+            return _sortAscending[t] ? rows.OrderBy(sortName, StringComparer.Ordinal) : rows.OrderByDescending(sortName, StringComparer.Ordinal);
+        }
         Func<T, double> key = _sortColumn[t] switch
         {
             1 => row => province(row).Population,

@@ -2,6 +2,14 @@
 
 Todos los cambios del juego, del más reciente al más antiguo. Cada versión es un commit cuyo título es su número.
 
+## [1.10.3] - 2026-09-29
+
+### Arreglado
+- En pantallas pequeñas (por ejemplo, portátiles de 1366×768) los menús ya no se salen de la ventana: si es menor de 1280×820, toda la interfaz se encoge en proporción para que se vean todas las opciones.
+- La ventana se abre a un tamaño que cabe en la pantalla.
+- Los avisos ya no tapan la pantalla de la nación: mientras está abierta, el último aviso sale abajo a la derecha, junto a los modos de mapa.
+- Las tablas de ciudades y provincias vuelven a ordenarse alfabéticamente en español (sin importar tildes y con la ñ tras la n); desde la 1.10.1 los nombres con tilde iban al final.
+
 ## [1.10.2] - 2026-09-29
 
 ### Arreglado
