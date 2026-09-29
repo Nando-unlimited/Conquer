@@ -30,8 +30,8 @@ public static class Formations
         new("Grupo de ejércitos", "grupos de ejércitos", false, "Prefectura", "prefecturas"),
     ];
 
-    /// <summary>The advance that brings modern names; none exists yet, so every army keeps the Roman ones.</summary>
-    public static Tech? ModernisedBy => null;
+    /// <summary>The advance that brings modern names.</summary>
+    public static Tech? ModernisedBy => Tech.MilitaryScience;
 
     public static ArmyEra EraOf(IReadOnlySet<Tech> techs) => ModernisedBy is Tech t && techs.Contains(t) ? ArmyEra.Modern : ArmyEra.Classical;
 

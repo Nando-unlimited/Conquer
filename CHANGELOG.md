@@ -2,6 +2,22 @@
 
 Todos los cambios del juego, del más reciente al más antiguo. Cada versión es un commit cuyo título es su número.
 
+## [1.20.0] - 2026-09-29
+
+### Añadido
+- **El Renacimiento**: niveles 8 y 9 de cada rama, que cuestan 2.300 y 3.200 puntos.
+  - **Economía**: Economía (+20 % de impuestos) y Minería profunda (+30 % de yacimientos); después, Cartografía (+10 % de impuestos).
+  - **Sociedad**: Imprenta (+25 % de ciencia) y Anatomía (+15 % de fertilidad); después, Método científico (+20 % de ciencia).
+  - **Militar**: Pólvora (arcabuceros) y Metalurgia (cañones); después, Ciencia militar (mosqueteros).
+- **El Humanismo**, institución del Renacimiento.
+  - **Dónde nace**: en la ciudad más poblada que tenga universidad.
+  - **Qué da al adoptarlo**: +10 % de ciencia y +3 de humor.
+- **Ciencia militar moderniza el ejército**: las legiones pasan a llamarse regimientos, y las vexilaciones, brigadas.
+- **Nuevos batallones**, que gastan hierro y carbón:
+  - **Arcabuceros**.
+  - **Cañones**: mucho ataque, poca defensa y lentos.
+  - **Mosqueteros**.
+
 ## [1.19.0] - 2026-09-29
 
 ### Añadido

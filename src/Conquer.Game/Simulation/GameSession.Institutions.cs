@@ -1,3 +1,4 @@
+using Conquer.Game.Buildings;
 using Conquer.Game.Entities;
 using Conquer.Game.Rules;
 using Conquer.Game.Science;
@@ -32,6 +33,8 @@ public sealed partial class GameSession
             .Where(p => p.Population >= GameRules.UrbanismBirthPopulation).MaxBy(p => p.Population),
         Institution.Feudalism => Players.Where(p => Cities.Count(c => c.OwnerId == p.Id) >= GameRules.FeudalismBirthCities)
             .Select(p => p.CapitalCityId is int id ? CityById(id) : null).OfType<City>().Select(c => Map.Provinces[c.ProvinceId]).FirstOrDefault(),
+        Institution.Humanism => Cities.Select(c => Map.Provinces[c.ProvinceId]).Where(p => p.Buildings.Contains(BuildingType.University))
+            .MaxBy(p => p.Population),
         _ => null,
     };
 

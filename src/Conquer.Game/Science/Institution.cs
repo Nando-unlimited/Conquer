@@ -10,6 +10,7 @@ public enum Institution
 {
     Urbanism,
     Feudalism,
+    Humanism,
 }
 
 /// <param name="Opens">The age whose advances cost more until the nation adopts it.</param>
@@ -36,6 +37,8 @@ public static class Institutions
         [Institution.Feudalism] = new("Feudalismo", Era.Medieval,
             $"Nace en la capital de la primera nación que llega a {GameRules.FeudalismBirthCities} ciudades.",
             "Da +10 % de impuestos y +3 de humor.", new() { Taxes = 0.1, Mood = 3 }, 0xFF8E5BB5),
+        [Institution.Humanism] = new("Humanismo", Era.Renaissance, "Nace en la ciudad más poblada que tenga universidad.",
+            "Da +10 % de ciencia y +3 de humor.", new() { Science = 0.1, Mood = 3 }, 0xFF4FA3A5),
     };
 
     public static InstitutionInfo Info(this Institution institution) => Table[institution];

@@ -39,6 +39,7 @@ public class EraTests(WorldFixture world)
     [Theory]
     [InlineData(Era.Classical)]
     [InlineData(Era.Medieval)]
+    [InlineData(Era.Renaissance)]
     public void EachAgeCostsMoreUntilItsInstitutionIsAdopted(Era era)
     {
         var (s, _) = WithCapital();
@@ -53,6 +54,7 @@ public class EraTests(WorldFixture world)
     [Theory]
     [InlineData(Era.Classical)]
     [InlineData(Era.Medieval)]
+    [InlineData(Era.Renaissance)]
     public void AnAgeOpensOnceTheOneBeforeIsKnown(Era era)
     {
         var (s, _) = WithCapital();
@@ -106,6 +108,9 @@ public class EraTests(WorldFixture world)
     [Theory]
     [InlineData(BattalionType.Knights, Tech.Stirrup)]
     [InlineData(BattalionType.Crossbowmen, Tech.Machinery)]
+    [InlineData(BattalionType.Arquebusiers, Tech.Gunpowder)]
+    [InlineData(BattalionType.Cannons, Tech.Metallurgy)]
+    [InlineData(BattalionType.Musketeers, Tech.MilitaryScience)]
     public void BattalionsNeedTheirAdvance(BattalionType type, Tech tech)
     {
         var (s, a) = WithCapital();
@@ -113,5 +118,27 @@ public class EraTests(WorldFixture world)
         Assert.False(s.Train(0, city.Id, type).Ok);
         s.Human.Learn(tech);
         Assert.True(s.Train(0, city.Id, type).Ok);
+    }
+
+    [Fact]
+    public void HumanismIsBornInTheBiggestCityWithAUniversity()
+    {
+        var (s, a) = WithCapital();
+        for (int h = 0; h < 24; h++) s.Step();
+        Assert.False(s.IsBorn(Institution.Humanism));
+
+        a.AddBuilding(BuildingType.University);
+        for (int h = 0; h < 24; h++) s.Step();
+
+        Assert.Equal(a.Id, s.BirthplaceOf(Institution.Humanism));
+    }
+
+    [Fact]
+    public void MilitaryScienceBringsModernNames()
+    {
+        var (s, _) = WithCapital();
+        Assert.Equal(ArmyEra.Classical, s.Human.ArmyEra);
+        s.Human.Learn(Tech.MilitaryScience);
+        Assert.Equal(ArmyEra.Modern, s.Human.ArmyEra);
     }
 }

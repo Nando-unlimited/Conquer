@@ -41,7 +41,8 @@ internal sealed partial class AiPlayer
         Tech.Mathematics, Tech.MilitaryTactics, Tech.Trade, Tech.Philosophy, Tech.Construction, Tech.Engineering, Tech.SiegeEngines,
         Tech.Administration, Tech.DramaAndPoetry, Tech.Fortifications, Tech.HeavyCavalry,
         Tech.CropRotation, Tech.Education, Tech.Machinery, Tech.Guilds, Tech.Theology, Tech.Stirrup, Tech.Banking, Tech.Astronomy,
-        Tech.Castles,
+        Tech.Castles, Tech.PrintingPress, Tech.Gunpowder, Tech.Economics, Tech.Anatomy, Tech.DeepMining, Tech.Metallurgy,
+        Tech.ScientificMethod, Tech.MilitaryScience, Tech.Cartography,
     ];
     private readonly GameSession _session;
     private readonly Player _player;
