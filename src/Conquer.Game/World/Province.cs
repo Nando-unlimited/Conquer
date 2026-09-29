@@ -1,6 +1,7 @@
 using Conquer.Game.Buildings;
 using Conquer.Game.Economy;
 using Conquer.Game.Rules;
+using Conquer.Game.Science;
 
 namespace Conquer.Game.World;
 
@@ -39,6 +40,8 @@ public sealed class Province
     public double Mood { get; set; } = GameRules.StartingMood;
     /// <summary>Birth-rate multiplier (1 = normal); follows mood and food slowly.</summary>
     public double Fertility { get; set; } = 1;
+    /// <summary>Institutions that have reached the province.</summary>
+    public HashSet<Institution> Institutions { get; } = [];
 
     /// <summary>Finished buildings.</summary>
     public HashSet<BuildingType> Buildings { get; } = [];

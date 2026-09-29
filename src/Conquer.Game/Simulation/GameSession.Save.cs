@@ -25,11 +25,11 @@ public sealed partial class GameSession
             [.. p.LastDayNet], p.IsStarving, p.FoodReserveDays, [.. p.Techs.Order()],
             [.. p.ResearchProgress], p.SpareScience, p.LastDayScience,
             [.. p.Templates.Select(t => new TemplateSave(t.Id, t.Number, [.. t.Battalions]))], [.. p.ResearchPriorities],
-            [.. p.Researching.OfType<Tech>()])).ToList(),
+            [.. p.Researching.OfType<Tech>()], [.. p.Institutions.Order()])).ToList(),
         // Provinces nobody has touched keep their generated state, so only the rest are stored.
         Provinces = Map.Provinces.Where(Changed).Select(p => new ProvinceSave(
             p.Id, p.OwnerId, p.ControllerId, p.Population, p.CityId, p.Mood, p.Fertility, [.. p.Reserves],
-            [.. p.Buildings.Order()], p.Constructing, p.ConstructionDaysLeft, p.PlannedCityName)).ToList(),
+            [.. p.Buildings.Order()], p.Constructing, p.ConstructionDaysLeft, p.PlannedCityName, [.. p.Institutions.Order()])).ToList(),
         Cities = Cities.Select(c => new CitySave(c.Id, c.Name, c.OwnerId, c.ProvinceId, c.FoundedHours, c.FestivalUntilHours,
             [.. c.Training.Select(o => new TrainingSave(o.Battalion, o.TemplateName, [.. o.TemplateBattalions], o.HeadquartersLevel, o.DaysLeft, o.TotalDays))])).ToList(),
         Units = Units.Select(u => new UnitSave(
@@ -48,12 +48,14 @@ public sealed partial class GameSession
         NextCityId = _nextCityId,
         NextMigrationId = _nextMigrationId,
         NextTemplateId = _nextTemplateId,
+        InstitutionBirths = _institutionBirths.OrderBy(b => b.Key).Select(b => new InstitutionBirthSave(b.Key, b.Value.ProvinceId, b.Value.Hours)).ToList(),
     };
 
     /// <summary>Whether the province differs from how <see cref="ResetProvinces"/> leaves it.</summary>
     private static bool Changed(Province p) =>
         p.OwnerId != -1 || p.ControllerId != -1 || p.Population != 0 || p.CityId.HasValue
         || p.Mood != GameRules.StartingMood || p.Fertility != 1 || p.Buildings.Count > 0 || p.Constructing.HasValue || p.PlannedCityName != null
+        || p.Institutions.Count > 0
         || Resources.Deposits.Any(r => p.Reserves[(int)r] != p.DepositSizes[(int)r] * GameRules.DepositSizeMultiplier);
 
     /// <summary>
@@ -69,6 +71,7 @@ public sealed partial class GameSession
         int seed = unchecked(map.Seed * 31 + (int)save.Hours);
         ResetProvinces(map);
         var session = new GameSession(map, seed) { _computerRivals = save.ComputerRivals, Date = new GameDate(save.Hours) };
+        foreach (var b in save.InstitutionBirths ?? []) session._institutionBirths[b.Institution] = (b.ProvinceId, b.Hours);
 
         foreach (var ps in save.Provinces)
         {
@@ -88,6 +91,7 @@ public sealed partial class GameSession
             p.Constructing = ps.Constructing;
             p.ConstructionDaysLeft = ps.ConstructionDaysLeft;
             p.PlannedCityName = ps.PlannedCityName;
+            p.Institutions.UnionWith(ps.Institutions ?? []);
         }
 
         foreach (var s in save.Players)
@@ -101,6 +105,7 @@ public sealed partial class GameSession
             // Saves from before the branches have no priorities and leave the default ones.
             s.ResearchPriorities?.CopyTo(player.ResearchPriorities, 0);
             foreach (var tech in s.CurrentResearch ?? []) player.Researching[(int)tech.Info().Branch] = tech;
+            foreach (var institution in s.Institutions ?? []) player.Adopt(institution);
             s.ResearchProgress.CopyTo(player.ResearchProgress, 0);
             player.SpareScience = s.SpareScience;
             player.LastDayScience = s.LastDayScience;

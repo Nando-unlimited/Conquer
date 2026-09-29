@@ -110,6 +110,7 @@ public sealed partial class GameSession
             p.CityId = null;
             p.Mood = GameRules.StartingMood;
             p.Fertility = 1;
+            p.Institutions.Clear();
             p.ClearBuildings();
             foreach (var r in Resources.Deposits)
                 p.Reserves[(int)r] = p.DepositSizes[(int)r] * GameRules.DepositSizeMultiplier;
@@ -207,6 +208,7 @@ public sealed partial class GameSession
             foreach (var player in Players) DailyEconomy(player);
             foreach (var player in Players) DailyMigration(player);
             foreach (var player in Players) DailyScience(player);
+            DailyInstitutions();
             foreach (var player in Players) DailyConstruction(player);
             foreach (var player in Players) DailyMilitary(player);
         }
@@ -410,12 +412,12 @@ public sealed partial class GameSession
         return nations;
     }
 
-    /// <summary>What an advance costs the player: cheaper for each bordering nation that already knows it.</summary>
+    /// <summary>What an advance costs the player: cheaper for each bordering nation that already knows it, dearer while its age's institution is not adopted.</summary>
     public double ResearchCost(Player player, Tech tech, IReadOnlySet<int>? neighbours = null)
     {
         neighbours ??= NeighbourNations(player);
         int knowers = Math.Min(GameRules.MaxNeighbourDiscounts, neighbours.Count(id => Players[id].Techs.Contains(tech)));
-        return tech.Info().Cost * (1 - GameRules.NeighbourResearchDiscount * knowers);
+        return tech.Info().Cost * (1 - GameRules.NeighbourResearchDiscount * knowers) * EraCostMultiplier(player, tech.Info().Era);
     }
 
     /// <summary>How much of the nation's science a branch gets, relative to the other two.</summary>

@@ -58,6 +58,21 @@ public static class GameRules
     public const int DefaultResearchPriority = 1;
     /// <summary>A branch's next level opens once this share of the advances of the level below is known.</summary>
     public const double LevelUnlockShare = 0.5;
+
+    // Institutions
+    /// <summary>Urbanism is born in the first city this big.</summary>
+    public const double UrbanismBirthPopulation = 5000;
+    /// <summary>Daily chance that an institution passes to a settled province from each neighbour that has it...</summary>
+    public const double InstitutionSpreadChance = 0.01;
+    /// <summary>...this many times higher when the receiving province has a city.</summary>
+    public const double CityInstitutionSpread = 3;
+    /// <summary>A nation adopts an institution on its own once this share of its settled people have it.</summary>
+    public const double InstitutionAdoptionShare = 0.5;
+    /// <summary>Gold to adopt it earlier, per citizen who does not have it yet; never less than the minimum.</summary>
+    public const double InstitutionGoldPerCitizen = 0.1;
+    public const double MinInstitutionGold = 50;
+    /// <summary>Until then, the advances of the age it opens cost this much more.</summary>
+    public const double InstitutionPenalty = 0.5;
     /// <summary>An advance costs this much less for each bordering nation that already knows it...</summary>
     public const double NeighbourResearchDiscount = 0.1;
     /// <summary>...counting this many at most.</summary>

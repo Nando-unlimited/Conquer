@@ -67,6 +67,10 @@ Todas las constantes de equilibrio (por día de juego salvo que se diga otra cos
 | `ScienceBasePerCity`, `SciencePerCityCitizen` | Ciencia diaria de cada ciudad: 0,5 fijos más 0,001 por habitante (antes de humor y avances). |
 | `MaxResearchPriority`, `DefaultResearchPriority` | Prioridad de cada rama de la investigación: de 0 a 10, 1 al empezar. |
 | `LevelUnlockShare` | Parte de los avances de un nivel que hay que conocer para abrir el siguiente (la mitad: 1 de 2). |
+| `UrbanismBirthPopulation` | El Urbanismo nace en la primera ciudad de 5.000 habitantes. |
+| `InstitutionSpreadChance`, `CityInstitutionSpread` | Cada día, una provincia asentada recibe una institución con un 1 % de probabilidad por cada vecina que la tiene; el triple si tiene ciudad. |
+| `InstitutionAdoptionShare`, `InstitutionGoldPerCitizen`, `MinInstitutionGold` | Una nación adopta sola una institución cuando la tiene la mitad de su población; antes cuesta 1 de oro por cada 10 habitantes que aún no la tienen (mínimo 50). |
+| `InstitutionPenalty` | Mientras no se adopta, los avances de la era que abre cuestan un 50 % más. |
 | `NeighbourResearchDiscount`, `MaxNeighbourDiscounts` | Un avance cuesta un 10 % menos por cada nación vecina que ya lo conoce, contando 3 como mucho. |
 | `MinRiverFlow`, `GreatRiverFlow` | Agua que ha de reunir un tramo para ser río (60) y para ser gran río (300); solo los grandes ríos cambian el juego. |
 | `RiverFertility` | La tierra de un gran río da un 25 % más de comida y de capacidad. |
@@ -170,11 +174,21 @@ Los avances que se pueden investigar, en tres ramas con niveles; en cada nivel s
 
 | Elemento | Qué es |
 | --- | --- |
+| `Era`, `Name(era)` | Las eras: Antigüedad, Clásica, Medieval, Renacimiento, Industrial y Moderna. Cada una después de la primera se abre con una institución. |
 | `TechBranch`, `Name(rama)` | Las tres ramas: Economía, Sociedad y Militar. |
 | `Tech` | Los avances. Los nuevos van al final del enum, porque las partidas guardadas guardan el progreso por posición. Por rama y nivel: Economía (1: Agricultura, Carpintería; 2: Minería, Irrigación; 3: Moneda), Sociedad (1: Escritura, Mitología; 2: Alfarería, Medicina; 3: Código de leyes) y Militar (1: Tiro con arco, Doma del caballo; 2: Trabajo del bronce, La rueda; 3: Trabajo del hierro). |
-| `TechInfo` | Nombre, rama, nivel (se abre al conocer la mitad del nivel anterior de su rama), descripción, efectos en toda la nación (`Effects`, como `Modifiers`), avances que también pide, de su rama o de otra (`Requires`: Irrigación pide Agricultura; La rueda, Doma del caballo; Medicina, Escritura; Moneda, Escritura y Minería; Trabajo del bronce, Minería; Trabajo del hierro, Trabajo del bronce) y recursos que revela (`Reveals`: Minería el carbón, Trabajo del hierro el hierro). `Cost` sale de su nivel. |
+| `TechInfo` | Nombre, rama, nivel (se abre al conocer la mitad del nivel anterior de su rama), descripción, efectos en toda la nación (`Effects`, como `Modifiers`), avances que también pide, de su rama o de otra (`Requires`: Irrigación pide Agricultura; La rueda, Doma del caballo; Medicina, Escritura; Moneda, Escritura y Minería; Trabajo del bronce, Minería; Trabajo del hierro, Trabajo del bronce) , recursos que revela (`Reveals`: Minería el carbón, Trabajo del hierro el hierro) y su era (`Era`; todos los actuales son de la Antigüedad). `Cost` sale de su nivel. |
 | `LevelCost(nivel)`, `LevelCosts` | Lo que cuesta cada nivel, igual en las tres ramas: 70, 160 y 300 puntos. **Aquí se equilibra la velocidad de la investigación.** |
 | `Techs.All`, `Branches`, `Info(avance)`, `InBranch(rama)`, `InLevel(rama, nivel)`, `Levels(rama)`, `NeededToOpenNext(rama, nivel)` | Todos los avances, las ramas, la ficha de cada avance, los de una rama por nivel, los de un nivel, cuántos niveles tiene una rama y cuántos avances de un nivel abren el siguiente. |
+
+### `Science/Institution.cs`
+Las instituciones, como en Europa Universalis: ideas que abren cada era. **Aquí se añaden y equilibran.**
+
+| Elemento | Qué es |
+| --- | --- |
+| `Institution` | Las instituciones. Por ahora solo el Urbanismo, que abre la era Clásica. |
+| `InstitutionInfo` | Nombre, era que abre (`Opens`), dónde nace (`Birth`, para la interfaz), descripción, bonus al adoptarla (`Bonus`, como `Modifiers`: el Urbanismo da +10 % de ciencia y +10 % de fertilidad), color en el mapa y género (`Feminine`); `The` es su nombre con artículo («el Urbanismo»). |
+| `Institutions.All`, `Info(institución)` | Todas las instituciones y la ficha de cada una. |
 
 ### `Economy/ResourceType.cs`
 | Elemento | Qué es |
@@ -193,7 +207,7 @@ Los objetos de una partida.
 
 | Elemento | Qué es |
 | --- | --- |
-| `Player` | Jugador: id, nombre, color, si es humano, almacén, provincias que posee, capital, balance del último día (`LastDayNet`), si pasa hambre y cuántos días duraría su comida (`FoodReserveDays`).; avances conocidos (`Techs`) y la suma de sus efectos (`Bonuses`), prioridad de cada rama (`ResearchPriorities`, de 0 a 10) y la parte de la ciencia que le toca (`ScienceShare(rama)`), el avance que investiga cada rama (`Researching[rama]`, nulo mientras no elige), época de su ejército (`ArmyEra`), puntos puestos en cada avance (`ResearchProgress`), ciencia que ninguna rama pudo aceptar porque no investigaban nada (`SpareScience`) y ciencia del último día. recursos que conoce (`KnownResources`, `Knows(recurso)`); `Learn(avance)` añade un avance y sus efectos y revela sus recursos; sus plantillas de regimiento (`Templates`) |
+| `Player` | Jugador: id, nombre, color, si es humano, almacén, provincias que posee, capital, balance del último día (`LastDayNet`), si pasa hambre y cuántos días duraría su comida (`FoodReserveDays`).; avances conocidos (`Techs`) y la suma de sus efectos (`Bonuses`), prioridad de cada rama (`ResearchPriorities`, de 0 a 10) y la parte de la ciencia que le toca (`ScienceShare(rama)`), el avance que investiga cada rama (`Researching[rama]`, nulo mientras no elige), época de su ejército (`ArmyEra`), puntos puestos en cada avance (`ResearchProgress`), ciencia que ninguna rama pudo aceptar porque no investigaban nada (`SpareScience`) y ciencia del último día. recursos que conoce (`KnownResources`, `Knows(recurso)`); `Learn(avance)` añade un avance y sus efectos y revela sus recursos; sus plantillas de regimiento (`Templates`); instituciones adoptadas (`Institutions`), y `Adopt(institución)` suma su bonus a `Bonuses`. |
 | `City` | Ciudad: id, nombre, dueño, provincia, fecha de fundación y hasta cuándo dura su fiesta (`FestivalUntilHours`, `HasFestival(ahora)`).; lo que está entrenando (`Training`). |
 | `Unit` | Unidad en el mapa: colonos, regimiento o cuartel general. Tipo, dueño (`Owner`), provincia, número, nombre (según el nivel, el número y la época de su nación), batallones (regimiento), nivel (cuartel), cuartel del que depende (`CommanderId`), provincia que ataca (`AttackingProvinceId`) y ruta pendiente (`Path`). `Citizens` son los colonos, el personal o los hombres de sus brigadas; `Speed`, la de su brigada más lenta; `OrganisationShare`/`StrengthShare`, su estado; `CommandLevel` y `Symbol`, para la cadena de mando y la ficha. `HoursToNext`/`StepHours` miden el tramo actual; `StepProgress` da el avance (0..1) para dibujarla entre provincias. |
 | `Migration` | Grupo de migrantes en camino: origen, destino, personas, salida, llegada, si es forzada y el humor que llevan (`Mood`). `Progress(ahora)` da el avance del viaje. |
@@ -221,7 +235,7 @@ El corazón del juego: una partida en marcha. Es una clase parcial: el ejército
 | `MoodFactors(provincia)` | Lista de (causa, puntos) que forman el humor objetivo: base, ciudad, capital o distancia a ella, fiestas, reservas de comida, hacinamiento, hambre, ocupación enemiga, avances que dan humor (Mitología) y edificios que dan humor (Templo). |
 | `TargetMood(provincia)` | Suma de esos factores, entre 0 y 100. |
 | `Stats(jugador)` | Totales de la nación (`NationStats`): población asentada, en unidades y migrando; provincias, ciudades y unidades; humor y fertilidad medios ponderados por habitantes, habitantes en cada nivel de humor y lo que queda en los yacimientos de sus provincias (`Reserves`). |
-| `Step()` | Avanza una hora: mueve unidades, resuelve las batallas, hace llegar migrantes; a medianoche economía, migración, ciencia, obras y ejército; cada 6 h piensan las IA. |
+| `Step()` | Avanza una hora: mueve unidades, resuelve las batallas, hace llegar migrantes; a medianoche economía, migración, ciencia, instituciones, obras y ejército; cada 6 h piensan las IA. |
 | `ArriveMigrations()` | Suma los migrantes que llegan a su destino (si el destino se perdió o está ocupado, van a la capital), mezclando su humor. |
 | `DailyEconomy(jugador)` | Las provincias ocupadas no producen ni comen para su dueño. Producción del día (comida, madera, oro, yacimientos) multiplicada por el humor, los avances y los edificios de cada provincia; los yacimientos sacan de su bolsa hasta agotarla (`Extract`), solo los de recursos que el jugador conoce; sin impuestos en provincias descontentas; consumo de comida, hambre, días de reserva de comida, humor y fertilidad, y crecimiento de la población (proporcional a la fertilidad). |
 | `Extract(provincia, recurso, cantidad)` | Saca de la bolsa de un yacimiento lo que se pide o lo que queda, y avisa al jugador cuando se agota. |
@@ -287,6 +301,20 @@ El ejército dentro de la partida.
 | `Fire(...)`, `Damage(...)`, `Broken(...)` | Fuego de un regimiento (ataque o defensa, hombres, organización, mando, suministro, terreno y azar) y su reparto como daño. |
 | `EndBattle(...)`, `Retreat(...)`, `Destroy(...)` | Final de la batalla y avisos; retirada a una provincia vecina sin enemigos (o destrucción si está rodeada). |
 
+### `Simulation/GameSession.Institutions.cs`
+Las instituciones dentro de la partida.
+
+| Función | Qué hace |
+| --- | --- |
+| `DailyInstitutions()` | Cada día: hace nacer las instituciones cuyas condiciones se cumplen, las extiende y hace que las naciones adopten las que tiene la mitad de su población. |
+| `Birthplace(institución)`, `Born(...)` | Dónde nace hoy (el Urbanismo, en la ciudad más poblada de al menos 5.000 habitantes) / la hace nacer allí y avisa. |
+| `IsBorn(institución)`, `BirthplaceOf(...)` | Si ya ha nacido / la provincia donde nació. |
+| `SpreadInstitutions()` | Cada provincia asentada sin la institución puede recibirla de cada vecina que la tiene (más fácil si tiene ciudad); se decide para todas antes de aplicar, así que avanza una provincia al día como mucho. |
+| `Reach(provincia, institución)` | La institución llega a una provincia; avisa al jugador la primera vez que entra en su nación. |
+| `InstitutionShare(jugador, institución)` | Parte de la población de la nación que vive donde ha llegado. |
+| `AdoptionCost(...)`, `CanAdopt(...)` / `Adopt(jugador, institución)` | Oro para adoptarla antes de tiempo / comprueba (ha nacido, ha llegado a alguna de sus provincias y hay oro) / la paga y la adopta. |
+| `EraCostMultiplier(jugador, era)` | Lo que se encarecen los avances de una era: un 50 % más por cada institución suya sin adoptar. |
+
 ### `Simulation/GameSession.Save.cs`
 Guardar y cargar partidas.
 
@@ -297,7 +325,7 @@ Guardar y cargar partidas.
 | `Fingerprint(mapa)` | Huella del mapa (bioma, tamaño, posición, vecinos y ríos de cada provincia) para comprobar que el generador sigue haciendo el mismo mundo. |
 
 ### `Simulation/SaveGame.cs`
-`SaveGame`: la partida guardada como datos, escrita en JSON comprimido con gzip. El mapa no se guarda: se vuelve a generar a partir de `World`. `Write(flujo)` la escribe; `Read(flujo)` la lee y lanza `InvalidDataException` si está dañada o su formato (`Format`) es de otra versión. `ExtraDeposits` marca las partidas guardadas desde la 1.13.0: al cargar una anterior, los yacimientos que su generador no ponía empiezan llenos. Los registros `PlayerSave`, `ProvinceSave`, `CitySave`, `UnitSave`, etc. son sus partes.
+`SaveGame`: la partida guardada como datos, escrita en JSON comprimido con gzip. El mapa no se guarda: se vuelve a generar a partir de `World`. `Write(flujo)` la escribe; `Read(flujo)` la lee y lanza `InvalidDataException` si está dañada o su formato (`Format`) es de otra versión. `InstitutionBirths` guarda dónde y cuándo nació cada institución (vacío en partidas anteriores). `ExtraDeposits` marca las partidas guardadas desde la 1.13.0: al cargar una anterior, los yacimientos que su generador no ponía empiezan llenos. Los registros `PlayerSave`, `ProvinceSave`, `CitySave`, `UnitSave`, etc. son sus partes.
 
 ### `Simulation/GameSession.Diplomacy.cs`
 Guerra y paz.
@@ -337,6 +365,7 @@ Rival controlado por el ordenador. Clase parcial: el ejército está en `AiPlaye
 | `HoldFestivals()` | Paga fiestas en las ciudades con humor por debajo de 45 si, tras pagarlas, le quedan 30 de oro para reclutar. |
 | `SetResearchPriorities()` | Prioridades de la investigación: Economía 2, Sociedad 1 y Militar 1 en paz; Economía 3 si pasa hambre; Militar 3 en guerra. |
 | `ChooseResearch()`, `ResearchOrder` | Cada rama sin investigación elige el primer avance que puede de su orden de preferencia (Agricultura, Escritura, Tiro con arco, Carpintería...). |
+| `AdoptInstitutions()` | Compra las instituciones que ya han llegado a su nación si, tras pagarlas, le quedan 30 de oro para reclutar. |
 | `BuildCityIfWorthIt()` | Mientras tenga menos de 8 ciudades, convierte en ciudad su provincia sin ciudad más poblada (con al menos 1.000 habitantes) cuando puede pagarla guardando para reclutar. |
 | `Construct()`, `BuildOrder`, `WorthBuilding(...)` | Elige su edificio más deseado (ciudades primero, luego por población y orden de preferencia) donde compense: al menos 200 habitantes, aserraderos en tierra con madera, templos donde hay inquietud, acueductos al 60 % de la capacidad. Lo empieza cuando puede pagarlo guardando madera y oro para reclutar; si no, ahorra. |
 | `GuideSettlers(unidad)` | Busca el mejor sitio cercano para una ciudad, va allí y la funda. |
@@ -372,7 +401,7 @@ El ejército de un rival.
 ### `World/Province.cs`
 `Province`: id, nombre propio (`Name`; vacío en océanos y polos, que usan el del bioma en `DisplayName`), bioma dominante, centro (píxel y lat/lon), área en km², altitud media, vecinas,
 yacimientos (`Deposits`: producción diaria; `DepositSizes`: tamaño de la bolsa; `Reserves`: lo que queda en la partida), dueño, población, ciudad, humor (`Mood`, 0-100) y fertilidad
-(`Fertility`, multiplicador de nacimientos, 1 = normal). `ControllerId` es quién la tiene en la guerra (su dueño, o el enemigo que la ocupa) e `IsOccupied` si la ocupa otro. `IsWater`, `IsClaimable`, `IsOwned`,
+(`Fertility`, multiplicador de nacimientos, 1 = normal), instituciones que han llegado (`Institutions`). `ControllerId` es quién la tiene en la guerra (su dueño, o el enemigo que la ocupa) e `IsOccupied` si la ocupa otro. `IsWater`, `IsClaimable`, `IsOwned`,
 `RiverFlow` (agua del mayor río que la cruza, 0 sin río), `HasRiver` (la cruza un gran río), `FoodYield` (rendimiento de comida de su bioma, más en un gran río),
 `Capacity` (habitantes que alimenta su tierra, más en un gran río) y `HasDeposit(recurso)` (tiene ese yacimiento sin agotar) son atajos.
 Edificios: los terminados (`Buildings`) y la suma de sus efectos (`BuildingBonuses`), el que está en obras (`Constructing`) o la ciudad en obras (`PlannedCityName`) y los días que le quedan (`ConstructionDaysLeft`). `AddBuilding(tipo)` añade uno terminado; `ClearBuildings()` los quita todos (nueva partida).
@@ -473,7 +502,7 @@ Punto de entrada. Comprueba OpenGL 3.3 (`GlSupport.Ensure`), pone el formato de 
 
 | Elemento | Qué es |
 | --- | --- |
-| `StartOptions.Parse(args)` | Opciones de línea de comandos para pruebas: `--new random|earth`, `--seed`, `--players`, `--difficulty veryeasy|easy|normal|hard|veryhard`, `--days` (funda la capital y avanza N días), `--zoom`, `--mode terrain|political|population|mood|fertility|resources`, `--nation summary|cities|provinces|science|army|templates|diplomacy` (abre la pantalla de la nación), `--panel buildings|army|regiment|found` (una pestaña de la provincia seleccionada, un regimiento de muestra o el diálogo para nombrar la primera ciudad), `--load fichero.conquer` (carga una partida guardada), `--menu new|load` (abre esa pantalla del menú) y `--screenshot fichero.png` (guarda una captura del juego y se cierra). |
+| `StartOptions.Parse(args)` | Opciones de línea de comandos para pruebas: `--new random|earth`, `--seed`, `--players`, `--difficulty veryeasy|easy|normal|hard|veryhard`, `--days` (funda la capital y avanza N días), `--zoom`, `--mode terrain|political|population|mood|fertility|resources|institutions`, `--nation summary|cities|provinces|science|army|templates|diplomacy` (abre la pantalla de la nación), `--panel buildings|army|regiment|found` (una pestaña de la provincia seleccionada, un regimiento de muestra o el diálogo para nombrar la primera ciudad), `--load fichero.conquer` (carga una partida guardada), `--menu new|load` (abre esa pantalla del menú) y `--screenshot fichero.png` (guarda una captura del juego y se cierra). |
 | `QuickStart` | Partida que empieza directamente, sin menús. |
 
 ### `ConquerApp.cs`
@@ -527,9 +556,9 @@ La pantalla de juego. Clase parcial: el ejército en pantalla está en `GameScre
 | `OpenCityNaming(...)`, `DrawCityNaming()`, `ConfirmCityName()` | Diálogo para nombrar una ciudad al fundarla con colonos o al construirla: propone un nombre, se puede escribir otro o pedir otro al azar, avisa si no vale y la funda o empieza la obra (Intro confirma, Esc cancela). Mientras está abierto el tiempo se para y las teclas van a la caja de texto. |
 | `BuildingsPanel(...)` | Pestaña Edificios: la obra en curso (edificio o ciudad) con su barra, el botón «Ciudad» en provincias sin ciudad, los edificios terminados y, en tus provincias, un botón por cada edificio que puedes levantar; los que solo necesitan ciudad o yacimiento dicen qué les falta, y los de avances sin descubrir no aparecen (`IsBuildingKnown`). |
 | `Line()`, `Paragraph()` | Ayudas para escribir filas y párrafos en el panel. |
-| `DrawBottomBar()` | Modos de mapa y ayuda de controles (la ayuda se oculta con la pantalla de la nación abierta). |
+| `DrawBottomBar()`, `ModeBarWidth` | Modos de mapa (un botón de 120 píxeles por modo) y ayuda de controles (la ayuda se oculta con la pantalla de la nación abierta). |
 | `DrawResourceFilter(barra)` | En el modo recursos, fila de botones para ver todos los yacimientos o solo uno de los recursos que conoces; hace de leyenda con el color de cada recurso. |
-| `DrawMessages()`, `HoverTooltip()` | Mensajes (más arriba si está abierto el filtro de recursos; con la pantalla de la nación abierta, solo el último, en la franja junto a los modos de mapa, con `DrawLatestMessageInStrip`) y tooltip de la provincia bajo el ratón (con sus yacimientos en el modo recursos). |
+| `DrawMessages()`, `HoverTooltip()` | Mensajes (más arriba si está abierto el filtro de recursos; con la pantalla de la nación abierta, solo el último, en la franja junto a los modos de mapa, con `DrawLatestMessageInStrip`) y tooltip de la provincia bajo el ratón (con sus yacimientos en el modo recursos y sus instituciones en el modo instituciones). |
 | `DrawPauseMenu()`, `SaveCurrentGame()` | Menú de pausa (Esc): continuar, guardar la partida (`SaveFiles.Save`), historial de versiones, volver a la pantalla inicial o salir. |
 
 ### `Screens/GameScreen.Army.cs`
@@ -562,14 +591,14 @@ Pantalla de la nación (botón «Nación» o tecla N). El tiempo sigue corriendo
 | `NationTab` | Pestañas: `Summary` (Resumen), `Cities` (Ciudades), `Provinces` (Provincias), `Science` (Ciencia), `Army` (Ejército), `Templates` (Plantillas) y `Diplomacy` (Diplomacia). |
 | `NationView(partida, jugador, verProvincia, verUnidad, mostrar)` | Recibe qué hacer al pulsar «Ver» (centrar el mapa en una provincia o una unidad) y cómo mostrar el resultado de las órdenes. |
 | `Frame(ui, área)` | Dibuja el panel opaco con las pestañas y el botón Cerrar. |
-| `Summary(...)` | Resumen: población (total, asentada, en unidades, migrando), fertilidad media, humor medio con su barra por niveles (`MoodBar`), territorio, ciencia por día y, por rama, su parte y el avance en curso, comida con sus días de reserva y el resto de recursos conocidos con su almacén, balance diario y lo que queda en sus bolsas. |
+| `Summary(...)` | Resumen: población (total, asentada, en unidades, migrando), fertilidad media, humor medio con su barra por niveles (`MoodBar`), territorio, ciencia por día y, por rama, su parte y el avance en curso, cada institución (adoptada, cuánto de tu población la tiene o sin nacer), comida con sus días de reserva y el resto de recursos conocidos con su almacén, balance diario y lo que queda en sus bolsas. |
 | `Cities(...)` | Tabla de ciudades: población / capacidad, humor, fertilidad, fiestas, enviar colonos o entrenar guerreros y «Ver». |
 | `Provinces(...)` | Tabla de todas las provincias: población, humor, fertilidad, terreno, migrantes en camino y «Ver». |
 | `ProvinceCells(...)` | Celdas de población, humor (con tooltip de causas) y fertilidad, comunes a las dos tablas. |
 | `Header(...)`, `Sort(...)` | Cabeceras que ordenan al pulsarlas (nombre, población, humor, fertilidad; otra pulsación invierte el orden). |
 | `SpanishSortKey(nombre)` | Clave para ordenar nombres en orden alfabético español sin ICU: sin mayúsculas ni tildes, y la ñ después de la n. |
 | `Rows(...)` | Filas visibles con desplazamiento por la rueda del ratón y barra de desplazamiento. |
-| `Science(...)`, `Branch(...)`, `TechCard(...)`, `ProgressBar(...)` | Pestaña Ciencia: puntos al día (con su desglose y los guardados), y una columna por rama con su prioridad (− y +) y su parte, lo que investiga con barra y tiempo estimado (o un aviso para elegir), y sus niveles: cada uno con lo que hace falta para abrirlo y una tarjeta por avance con su estado, coste (con el descuento por vecinos), efecto, requisitos, los edificios y batallones que permite y el botón Investigar. |
+| `Science(...)`, `Branch(...)`, `TechCard(...)`, `ProgressBar(...)` | Pestaña Ciencia: puntos al día (con su desglose y los guardados), las instituciones a la derecha (`InstitutionStatus`: adoptada, cuánto se ha extendido y el botón para adoptarla con oro, o sin nacer), y una columna por rama con su prioridad (− y +) y su parte, lo que investiga con barra y tiempo estimado (o un aviso para elegir), y sus niveles: cada uno con lo que hace falta para abrirlo y una tarjeta por avance con su estado, coste (con el descuento por vecinos), efecto, requisitos, los edificios y batallones que permite y el botón Investigar. |
 | `Heading`, `Row`, `ViewButton`, `ProvinceName`, `Compact` | Ayudas de dibujo y formato. |
 
 ### `Graphics/MapRenderer.cs`
@@ -577,7 +606,7 @@ Dibuja el mapa entero con un único shader.
 
 | Elemento | Qué es |
 | --- | --- |
-| `MapMode` | Terreno, político, población, humor, fertilidad, recursos. |
+| `MapMode` | Terreno, político, población, humor, fertilidad, recursos e instituciones. |
 | `ResourceFilter` | En el modo recursos, el único recurso que se muestra (o `null` para todos). |
 | `IsResourceKnown` | Qué recursos conoce quien mira; los demás no se dibujan. |
 | Shader de fragmentos | Para cada píxel de pantalla calcula el punto del mapa, busca la provincia en la textura de ids y la colorea según su dueño o su población. Con zoom alto mezcla las 4 celdas vecinas (`smoothRegions`, `strongest`) para trazar fronteras suaves; con zoom lejano compara con el píxel vecino. Resalta la provincia seleccionada y la que está bajo el ratón. |
@@ -589,6 +618,7 @@ Dibuja el mapa entero con un único shader.
 | `ScaleColor(valor)` | Rojo-amarillo-verde de 0 a 1, para los modos humor y fertilidad. |
 | `DepositColor(provincia)` | Color del modo recursos: el del yacimiento principal que queda de los conocidos, o con filtro ese recurso más intenso cuanto más queda. Gris si no hay nada. |
 | `ResourceColor(recurso)` | Color de cada recurso en el mapa y en la leyenda. |
+| `InstitutionColor(provincia)` | Color del modo instituciones: el de la institución más reciente que ha llegado (más fuerte en las ciudades); gris si ninguna. |
 | `Draw(cámara, ...)` | Pasa los parámetros al shader y dibuja. |
 
 ### `Graphics/TerrainColors.cs`
@@ -672,6 +702,7 @@ Uso: ver el README.
 | `GameplayTests.cs` | Inicio sin territorio y con los recursos correctos; fundar la capital; océanos y polos no reclamables; las unidades terrestres no entran al mar pero sí cruzan hielo; nada cruza el mar; provincias mayores en desiertos, polos y océanos; solo las unidades militares reclaman; velocidad de 10 km/h; migración diaria; migración forzada con su coste; consumo de comida; la capital gana humor y fertilidad; el hambre los hunde; los migrantes forzados llegan descontentos; las provincias descontentas no pagan impuestos; la fertilidad acelera el crecimiento; las reservas de comida alegran; las fiestas cuestan oro y duran un mes; las estadísticas de la nación suman bien; cada yacimiento es una bolsa finita que empieza llena; muchas provincias tienen yacimientos y algunas varios; las bolsas se agotan y dejan de producir; las ciudades producen ciencia que descubre avances; los niveles se abren con un avance del anterior; elegir otro avance de la rama sustituye al que investigaba; la ciencia se reparte según la prioridad entre las ramas que investigan algo; sin nada elegido la ciencia se guarda y entra en el siguiente avance elegido; los vecinos que conocen un avance lo abaratan; los avances mejoran la economía; los edificios cuestan y tardan, tienen sus requisitos y mejoran su provincia; al principio solo se conocen los recursos antiguos y los avances revelan los demás; los recursos desconocidos no se explotan; la IA se expande e investiga. `WorldFixture` genera un único mundo para todos. |
 | `MilitaryTests.cs` | Instrucción de batallones (hombres, recursos y días); batallones que piden su avance (o sus dos avances); unir (hasta 6), separar y velocidad del batallón más lento; no se entra en tierras ajenas sin guerra; ocupar tierra enemiga sin defensa; un ataque fuerte gana y uno débil se rompe; defensores rodeados destruidos; la paz devuelve lo ocupado; la IA solo acepta la paz pasado un tiempo; desgaste sin suministro; recuperación y refuerzos desde la capital; bonificación de mando en cadena y alcance; nombres romanos y modernos de las formaciones; una vexilación manda 4 regimientos como mucho; cada nación empieza con una plantilla de dos guerreros; las plantillas se editan dentro de sus límites; una plantilla entrena un regimiento entero a la vez. |
 | `CityTests.cs` | Solo granja, granero, aserradero y mina van sin ciudad; los habitantes construyen una ciudad con el nombre que eligen y la provincia conserva el suyo; hacen falta 500 habitantes, sitio y un nombre libre; el granero salva a la mitad de los que morirían de hambre; una ciudad en obras se guarda y se termina tras cargar; cada provincia habitable tiene un nombre distinto. |
+| `InstitutionTests.cs` | El Urbanismo nace en la primera ciudad grande; se extiende solo a provincias asentadas; una nación lo adopta cuando lo tiene la mitad de su población y gana su bonus; se puede adoptar antes pagando oro; los avances de una era cuestan más hasta adoptar su institución; las instituciones se guardan con la partida. |
 | `DifficultyTests.cs` | En Muy difícil hay menos yacimientos, los mismos de la primera tirada y con la mitad de bolsa; el humano empieza con los recursos de su dificultad y los rivales con los normales; los rivales producen más ciencia en dificultades altas; la dificultad se guarda con la partida. `VeryHardWorldFixture` genera el mismo mundo en Muy difícil. |
 | `SaveGameTests.cs` | Cargar una partida y volver a guardarla da exactamente el mismo fichero; la partida cargada sigue jugándose; los mismos ajustes generan el mismo mapa; las partidas anteriores a la 1.13.0 reciben llenos los yacimientos nuevos; se rechazan las partidas de otro mapa y las dañadas. |
 | `InterfaceTests.cs` | Los nombres se ordenan alfabéticamente en español (sin tildes, ñ tras n). |

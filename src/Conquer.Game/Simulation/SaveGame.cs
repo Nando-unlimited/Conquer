@@ -51,6 +51,8 @@ public sealed record SaveGame
     public required int NextCityId { get; init; }
     public required int NextMigrationId { get; init; }
     public required int NextTemplateId { get; init; }
+    /// <summary>Absent in saves from before institutions existed.</summary>
+    public List<InstitutionBirthSave>? InstitutionBirths { get; init; }
 
     private static readonly JsonSerializerOptions Options = new()
     {
@@ -88,14 +90,18 @@ public sealed record PlayerSave(
     int Id, string Name, uint Color, bool IsHuman, double[] Stockpile, int? CapitalCityId,
     double[] LastDayNet, bool IsStarving, double FoodReserveDays, List<Tech> Techs,
     double[] ResearchProgress, double SpareScience, double LastDayScience, List<TemplateSave> Templates,
-    int[]? ResearchPriorities = null, List<Tech>? CurrentResearch = null);
+    int[]? ResearchPriorities = null, List<Tech>? CurrentResearch = null, List<Institution>? Institutions = null);
+
+/// <summary>Where and when an institution was born.</summary>
+public sealed record InstitutionBirthSave(Institution Institution, int ProvinceId, long Hours);
 
 public sealed record TemplateSave(int Id, int Number, List<BattalionType> Battalions);
 
 /// <summary>Only what changes during a game; the rest of each province comes from the generated map.</summary>
 public sealed record ProvinceSave(
     int Id, int OwnerId, int ControllerId, double Population, int? CityId, double Mood, double Fertility,
-    double[] Reserves, List<BuildingType> Buildings, BuildingType? Constructing, int ConstructionDaysLeft, string? PlannedCityName = null);
+    double[] Reserves, List<BuildingType> Buildings, BuildingType? Constructing, int ConstructionDaysLeft, string? PlannedCityName = null,
+    List<Institution>? Institutions = null);
 
 public sealed record CitySave(int Id, string Name, int OwnerId, int ProvinceId, long FoundedHours, long FestivalUntilHours, List<TrainingSave> Training);
 

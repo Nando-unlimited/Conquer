@@ -740,12 +740,15 @@ public sealed partial class GameScreen : IScreen
 
     private bool IsBuildingKnown(BuildingType type) => type.Info().RequiresTech is not Tech tech || Human.Techs.Contains(tech);
 
+    /// <summary>One 120-pixel button per map mode.</summary>
+    private static readonly float ModeBarWidth = Enum.GetValues<MapMode>().Length * 120 + 12;
+
     private void DrawBottomBar()
     {
         var s = _app.ScreenSize;
-        var bar = new Rect(8, s.Y - 52, 732, 44);
+        var bar = new Rect(8, s.Y - 52, ModeBarWidth, 44);
         Ui.Panel(bar);
-        string[] names = ["Terreno", "Político", "Población", "Humor", "Fertilidad", "Recursos"];
+        string[] names = ["Terreno", "Político", "Población", "Humor", "Fertilidad", "Recursos", "Instituciones"];
         for (int i = 0; i < names.Length; i++)
         {
             if (Ui.Button(new Rect(bar.X + 6 + i * 120, bar.Y + 6, 114, 32), names[i], active: (int)_renderer.Mode == i, tooltip: "Modo de mapa (Tab)"))
@@ -825,7 +828,7 @@ public sealed partial class GameScreen : IScreen
         if (_messages.Count == 0) return;
         var (text, time, ok) = _messages[^1];
         var s = _app.ScreenSize;
-        float x = 8 + 732 + 6, maxW = s.X - x - 8;
+        float x = 8 + ModeBarWidth + 6, maxW = s.X - x - 8;
         if (Ui.Font.Measure(text, FontSize.Small) + 20 > maxW)
         {
             while (text.Length > 0 && Ui.Font.Measure(text + "...", FontSize.Small) + 20 > maxW) text = text[..^1];
@@ -851,6 +854,9 @@ public sealed partial class GameScreen : IScreen
         if (_renderer.Mode == MapMode.Resources)
             foreach (var r in Resources.Deposits.Where(r => p.Deposits[(int)r] > 0 && Human.Knows(r)))
                 text += p.HasDeposit(r) ? $"\n{r.Name()}: {p.Deposits[(int)r]:0.0}/día, quedan {Compact(p.Reserves[(int)r])}" : $"\n{r.Name()}: agotado";
+        if (_renderer.Mode == MapMode.Institutions)
+            text += p.Institutions.Count > 0 ? "\n" + string.Join(", ", Institutions.All.Where(p.Institutions.Contains).Select(i => i.Info().Name))
+                : Institutions.All.Any(_session.IsBorn) ? "\nSin instituciones" : "\nTodavía no ha nacido ninguna institución";
         if (_choosingMigrationTarget) text += "\nClic para enviar aquí a los migrantes";
         Ui.Tooltip(text);
     }

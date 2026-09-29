@@ -1,4 +1,5 @@
 using Conquer.Game.Economy;
+using Conquer.Game.Science;
 using Conquer.Game.Simulation;
 using Conquer.Game.World;
 using Silk.NET.OpenGL;
@@ -13,6 +14,7 @@ public enum MapMode
     Mood,
     Fertility,
     Resources,
+    Institutions,
 }
 
 /// <summary>
@@ -261,6 +263,9 @@ public sealed class MapRenderer : IDisposable
                     if (p.IsOwned && p.Population > 0) color = ScaleColor(p.Fertility - 0.5);
                     else if (p.IsClaimable) color = new Rgba(0xFF808080).WithAlpha(0.55f);
                     break;
+                case MapMode.Institutions:
+                    if (p.IsClaimable) color = InstitutionColor(p);
+                    break;
                 case MapMode.Resources:
                     if (p.IsClaimable) color = DepositColor(p);
                     break;
@@ -297,6 +302,17 @@ public sealed class MapRenderer : IDisposable
         }
         var main = Resources.Deposits.Where(r => p.HasDeposit(r) && IsResourceKnown(r)).OrderByDescending(r => p.Deposits[(int)r] / Richness(r)).Cast<ResourceType?>().FirstOrDefault();
         return main is ResourceType r ? ResourceColor(r).WithAlpha(0.9f) : none;
+    }
+
+    /// <summary>
+    /// Institutions mode: the colour of the newest institution that has reached the province, strongest in
+    /// cities; grey where none has, fainter where nobody lives.
+    /// </summary>
+    private static Rgba InstitutionColor(Province p)
+    {
+        var newest = Institutions.All.LastOrDefault(p.Institutions.Contains);
+        if (!p.Institutions.Contains(newest)) return new Rgba(0xFF606060).WithAlpha(p.Population > 0 ? 0.6f : 0.35f);
+        return new Rgba(newest.Info().Color).WithAlpha(p.CityId.HasValue ? 1f : 0.92f);
     }
 
     /// <summary>Gold and silver pockets are small, so they compare by a smaller yardstick.</summary>

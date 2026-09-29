@@ -2,6 +2,20 @@
 
 Todos los cambios del juego, del más reciente al más antiguo. Cada versión es un commit cuyo título es su número.
 
+## [1.16.0] - 2026-09-29
+
+### Añadido
+- **Instituciones, como en Europa Universalis.** La primera es el **Urbanismo**:
+  - **Dónde nace**: en la primera ciudad del mundo que llega a 5.000 habitantes, sea tuya o de un rival.
+  - **Cómo se extiende**: de provincia en provincia, más deprisa hacia las ciudades. Solo llega a provincias habitadas.
+  - **Cuándo se adopta**: tu nación lo adopta sola cuando lo tiene la mitad de tu población, o antes pagando oro (1 por cada 10 habitantes que aún no lo tienen) si ya ha llegado a alguna de tus provincias.
+  - **Qué da al adoptarlo**: +10 % de ciencia y +10 % de fertilidad.
+  - **Qué pasa si no lo adoptas**: cuando llegue la era Clásica, sus avances te costarán un 50 % más.
+- Nuevo modo de mapa **Instituciones** para ver por dónde se ha extendido.
+- La pestaña Ciencia y el resumen de la nación muestran cada institución: si la has adoptado, cuánta de tu población la tiene y el botón para adoptarla.
+- Los rivales compran las instituciones cuando les sobra el oro.
+- Las partidas guardadas con versiones anteriores se pueden cargar; en ellas, el Urbanismo aún no ha nacido.
+
 ## [1.15.0] - 2026-09-29
 
 ### Cambiado

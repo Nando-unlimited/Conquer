@@ -122,6 +122,12 @@ public sealed partial class NationView
             Row(ui, x, ref y, colW, $"{branch.Name()} ({_player.ScienceShare(branch):P0})", _player.Researching[(int)branch] is Tech current
                 ? $"{current.Info().Name} ({_player.ResearchProgress[(int)current] / _session.ResearchCost(_player, current):P0})"
                 : "Nada", _player.Researching[(int)branch] is null ? Theme.Accent : Theme.Text);
+        foreach (var institution in Institutions.All)
+        {
+            bool adopted = _player.Institutions.Contains(institution), born = _session.IsBorn(institution);
+            Row(ui, x, ref y, colW, institution.Info().Name, adopted ? "Adoptado" : born ? $"{_session.InstitutionShare(_player, institution):P0} de tu población" : "Sin nacer",
+                adopted ? Theme.Good : Theme.Text);
+        }
 
         x = r.X + colW + 30;
         y = r.Y;
@@ -289,6 +295,8 @@ public sealed partial class NationView
                        $"\nCada vecino que ya conoce un avance te lo abarata un {GameRules.NeighbourResearchDiscount:P0} (hasta {GameRules.MaxNeighbourDiscounts}).");
         if (_player.SpareScience >= 1)
             ui.Text(r.X + 320, y + 2, $"{_player.SpareScience:0} puntos guardados: elige qué investigar.", Theme.Accent, FontSize.Small);
+        float ix = r.Right;
+        foreach (var institution in Institutions.All.Reverse()) ix = InstitutionStatus(ui, ix, y - 4, institution) - 24;
         y += 34;
 
         const float Gap = 16;
@@ -296,6 +304,31 @@ public sealed partial class NationView
         var neighbours = _session.NeighbourNations(_player);
         foreach (var branch in Techs.Branches)
             Branch(ui, new Rect(r.X + (int)branch * (colW + Gap), y, colW, r.Bottom - y), branch, perDay, neighbours);
+    }
+
+    /// <summary>An institution, right-aligned at <paramref name="right"/>: adopted, how far it has spread and the button to adopt it, or not yet born.</summary>
+    /// <returns>Where its left edge ended up.</returns>
+    private float InstitutionStatus(Ui ui, float right, float y, Institution institution)
+    {
+        var info = institution.Info();
+        bool adopted = _player.Institutions.Contains(institution), born = _session.IsBorn(institution);
+        if (born && !adopted)
+        {
+            double cost = _session.AdoptionCost(_player, institution);
+            var can = _session.CanAdopt(_player, institution);
+            var button = new Rect(right - 150, y, 150, 28);
+            if (ui.Button(button, $"Adoptar ({cost:N0} oro)", can.Ok, tooltip: can.Ok ? info.Description : can.Message, size: FontSize.Small))
+                _show(_session.Adopt(_player.Id, institution));
+            right -= 158;
+        }
+        string text = adopted ? $"{info.Name}: adoptado" : born ? $"{info.Name}: {_session.InstitutionShare(_player, institution):P0} de tu población"
+            : $"{info.Name}: aún no ha nacido";
+        float w = ui.Font.Measure(text, FontSize.Small);
+        ui.Text(right - w, y + 7, text, adopted ? Theme.Good : born ? Theme.Accent : Theme.TextDim, FontSize.Small);
+        if (ui.Hover(new Rect(right - w, y, w, 28)))
+            ui.Tooltip($"{info.Birth}\n{info.Description}\nMientras no lo adoptes, los avances de la era {info.Opens.Name()} cuestan un " +
+                       $"{GameRules.InstitutionPenalty:P0} más. Se adopta al llegar a la {GameRules.InstitutionAdoptionShare:P0} de tu población, o antes pagando oro.");
+        return right - w;
     }
 
     private void Branch(Ui ui, Rect r, TechBranch branch, double perDay, IReadOnlySet<int> neighbours)

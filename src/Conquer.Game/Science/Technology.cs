@@ -3,6 +3,17 @@ using Conquer.Game.Rules;
 
 namespace Conquer.Game.Science;
 
+/// <summary>The ages of history. Each after the first opens with an institution (<see cref="Institution"/>).</summary>
+public enum Era
+{
+    Ancient,
+    Classical,
+    Medieval,
+    Renaissance,
+    Industrial,
+    Modern,
+}
+
 /// <summary>The three lines research advances along. Each has levels of one to three advances to choose from, as in Civilization.</summary>
 public enum TechBranch
 {
@@ -37,8 +48,9 @@ public enum Tech
 /// <param name="Level">Its level in its branch, from 1; a level opens once enough of the one below is known (<see cref="GameRules.LevelUnlockShare"/>).</param>
 /// <param name="Requires">Advances it also needs, from its own branch or another.</param>
 /// <param name="Reveals">Resources its owner can see and mine from then on.</param>
+/// <param name="Era">The age it belongs to; it costs more until the nation adopts that age's institution.</param>
 public sealed record TechInfo(string Name, TechBranch Branch, int Level, string Description, Modifiers Effects,
-    Tech[]? Requires = null, ResourceType[]? Reveals = null)
+    Tech[]? Requires = null, ResourceType[]? Reveals = null, Era Era = Era.Ancient)
 {
     public Tech[] Requires { get; } = Requires ?? [];
     public ResourceType[] Reveals { get; } = Reveals ?? [];
@@ -98,5 +110,16 @@ public static class Techs
         TechBranch.Society => "Sociedad",
         TechBranch.Military => "Militar",
         _ => branch.ToString(),
+    };
+
+    public static string Name(this Era era) => era switch
+    {
+        Era.Ancient => "Antigüedad",
+        Era.Classical => "Clásica",
+        Era.Medieval => "Medieval",
+        Era.Renaissance => "Renacimiento",
+        Era.Industrial => "Industrial",
+        Era.Modern => "Moderna",
+        _ => era.ToString(),
     };
 }

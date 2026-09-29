@@ -79,6 +79,7 @@ internal sealed partial class AiPlayer
             HoldFestivals();
             SetResearchPriorities();
             ChooseResearch();
+            AdoptInstitutions();
             Recruit();
             BuildArmy();
             OrganiseArmy();
@@ -142,6 +143,14 @@ internal sealed partial class AiPlayer
         bool atWar = _session.EnemiesOf(_player.Id).Any();
         int[] priorities = atWar ? [1, 1, 3] : _player.IsStarving ? [3, 1, 1] : [2, 1, 1];
         foreach (var branch in Techs.Branches) _session.SetResearchPriority(_player.Id, branch, priorities[(int)branch]);
+    }
+
+    /// <summary>Buys an institution that has reached it when the gold is there after keeping enough to recruit.</summary>
+    private void AdoptInstitutions()
+    {
+        foreach (var institution in Institutions.All.Where(i => _session.CanAdopt(_player, i).Ok))
+            if (_player.Stockpile[ResourceType.Gold] - _session.AdoptionCost(_player, institution) >= GoldKeptForRecruiting)
+                _session.Adopt(_player.Id, institution);
     }
 
     /// <summary>Every branch without research picks the first advance of its order of preference that it can research.</summary>
