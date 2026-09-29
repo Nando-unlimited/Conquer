@@ -1,8 +1,11 @@
 using Conquer.Client;
 using Conquer.Game.World;
 
-// Spanish number formatting (1.234,5) everywhere in the interface.
-var spanish = System.Globalization.CultureInfo.GetCultureInfo("es-ES");
+// Spanish number formatting (1.234,5) everywhere in the interface. Built from the invariant culture
+// instead of "es-ES" so the game needs no ICU library (InvariantGlobalization in the csproj).
+var spanish = (System.Globalization.CultureInfo)System.Globalization.CultureInfo.InvariantCulture.Clone();
+spanish.NumberFormat.NumberDecimalSeparator = spanish.NumberFormat.PercentDecimalSeparator = ",";
+spanish.NumberFormat.NumberGroupSeparator = spanish.NumberFormat.PercentGroupSeparator = ".";
 System.Globalization.CultureInfo.DefaultThreadCurrentCulture = spanish;
 System.Globalization.CultureInfo.CurrentCulture = spanish;
 

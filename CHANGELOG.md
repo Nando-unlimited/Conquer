@@ -2,6 +2,12 @@
 
 Todos los cambios del juego, del más reciente al más antiguo. Cada versión es un commit cuyo título es su número.
 
+## [1.10.1] - 2026-09-29
+
+### Cambiado
+- El juego ya no necesita la librería ICU del sistema, así que arranca también en Linux mínimos. Los números se siguen viendo en español (1.234,5 y 25 %).
+- Cada cambio se compila y se prueba automáticamente en Windows, Linux y macOS, y se publican versiones listas para jugar en cada sistema.
+
 ## [1.10.0] - 2026-09-28
 
 ### Añadido

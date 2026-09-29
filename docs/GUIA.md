@@ -430,7 +430,7 @@ Mapa de la Tierra real, generado por `tools/Conquer.EarthData`. Se incluye dentr
 ## 3. `src/Conquer.Client` — ventana, gráficos e interfaz
 
 ### `Program.cs`
-Punto de entrada. Pone el formato de números en español y lee los argumentos.
+Punto de entrada. Pone el formato de números en español (a mano, sin depender de ICU) y lee los argumentos.
 
 | Elemento | Qué es |
 | --- | --- |
@@ -632,4 +632,5 @@ Uso: ver el README.
 | `README.md` | Cómo ejecutar, controles, estructura y licencias de los datos. |
 | `docs/GUIA.md` | Esta guía. |
 | `nuget.config` | Usa solo nuget.org como fuente de paquetes. |
+| `.github/workflows/build.yml` | En cada push a `dev` o `main` y en cada pull request, pasa las pruebas en Linux, Windows y macOS y publica el juego autocontenido (un solo ejecutable) para `win-x64`, `linux-x64`, `osx-x64` y `osx-arm64`; se descarga desde la pestaña Actions de GitHub. |
 | `.gitignore`, `.gitattributes` | Ficheros que git ignora y ficheros binarios. |

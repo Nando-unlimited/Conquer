@@ -16,6 +16,15 @@ dotnet run --project src/Conquer.Client -c Release -- --new random --seed 1234 -
 dotnet run --project src/Conquer.Client -c Release -- --new earth
 ```
 
+Versiones listas para jugar en Windows, Linux y macOS (no necesitan .NET instalado): pestaña **Actions** de GitHub →
+última ejecución de *Build* → *Artifacts*. Para generarlas a mano:
+
+```
+dotnet publish src/Conquer.Client -c Release -r win-x64 --self-contained -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true
+```
+
+(`linux-x64`, `osx-x64` u `osx-arm64` para los otros sistemas.)
+
 ## Controles
 
 | Acción | Control |
