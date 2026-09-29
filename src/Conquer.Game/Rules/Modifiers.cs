@@ -20,6 +20,14 @@ public sealed record Modifiers
     public double Mood { get; init; }
     /// <summary>Share of hunger deaths avoided.</summary>
     public double FamineSurvival { get; init; }
+    /// <summary>Damage dealt by those defending the province (walls and castles).</summary>
+    public double Defense { get; init; }
+    /// <summary>Marching speed across the province (roads and railways).</summary>
+    public double MoveSpeed { get; init; }
+    /// <summary>How fast buildings and cities go up: 0.25 finishes them in 1/1.25 of the days.</summary>
+    public double BuildSpeed { get; init; }
+    /// <summary>Share of the mood lost to distance from the capital that is avoided.</summary>
+    public double DistanceMood { get; init; }
 
     public static readonly Modifiers None = new();
 
@@ -34,5 +42,9 @@ public sealed record Modifiers
         Fertility = a.Fertility + b.Fertility,
         Mood = a.Mood + b.Mood,
         FamineSurvival = a.FamineSurvival + b.FamineSurvival,
+        Defense = a.Defense + b.Defense,
+        MoveSpeed = a.MoveSpeed + b.MoveSpeed,
+        BuildSpeed = a.BuildSpeed + b.BuildSpeed,
+        DistanceMood = a.DistanceMood + b.DistanceMood,
     };
 }

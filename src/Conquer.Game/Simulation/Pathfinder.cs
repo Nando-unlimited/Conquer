@@ -1,3 +1,4 @@
+using Conquer.Game.Buildings;
 using Conquer.Game.Rules;
 using Conquer.Game.World;
 
@@ -7,7 +8,7 @@ namespace Conquer.Game.Simulation;
 /// Travel over land through the province graph. Seas and lakes are closed (only naval units may
 /// sail them); polar ice can be crossed although it cannot be claimed. A step between neighbours
 /// takes the distance between their centres divided by the walking speed, scaled by how easy both
-/// terrains are to cross.
+/// terrains are to cross and how fast their roads are.
 /// </summary>
 public sealed class Pathfinder
 {
@@ -22,9 +23,16 @@ public sealed class Pathfinder
     {
         var a = _map.Provinces[from];
         var b = _map.Provinces[to];
-        double speed = GameRules.CitizenSpeedKmh * (a.Info.MoveSpeed + b.Info.MoveSpeed) / 2;
+        double speed = GameRules.CitizenSpeedKmh * (Speed(a) + Speed(b)) / 2;
         return _map.DistanceKm(a, b) / speed;
     }
+
+    /// <summary>How fast a province is crossed: its terrain, sped up by its roads and railways.</summary>
+    private static double Speed(Province p) => p.Info.MoveSpeed * (1 + p.BuildingBonuses.MoveSpeed);
+
+    /// <summary>The fastest a province can be crossed: the best terrain with every road-like building on it.</summary>
+    private static readonly double FastestSpeed = Enum.GetValues<Biome>().Max(b => b.Info().MoveSpeed)
+        * (1 + Enum.GetValues<BuildingType>().Sum(b => b.Info().Effects.MoveSpeed));
 
     /// <summary>
     /// Fastest route (A*), excluding the start province, or null when unreachable. <paramref name="canEnter"/>
@@ -104,7 +112,7 @@ public sealed class Pathfinder
         return (hours, source);
     }
 
-    // The fastest terrain multiplier is 1, so straight-line distance at walking speed never overestimates.
+    // Straight-line distance at the fastest possible pace never overestimates.
     private double Heuristic(int from, int to) =>
-        _map.DistanceKm(_map.Provinces[from], _map.Provinces[to]) / GameRules.CitizenSpeedKmh;
+        _map.DistanceKm(_map.Provinces[from], _map.Provinces[to]) / (GameRules.CitizenSpeedKmh * FastestSpeed);
 }

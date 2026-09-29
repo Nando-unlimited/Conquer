@@ -26,10 +26,12 @@ internal sealed partial class AiPlayer
     private const double WoodKeptForRecruiting = 50;
     /// <summary>Buildings only go where at least this many people live.</summary>
     private const double MinWorkersForBuilding = 200;
+    private const double BigCityPopulation = 2000;
     private static readonly BuildingType[] BuildOrder =
     [
         BuildingType.Farm, BuildingType.Granary, BuildingType.Temple, BuildingType.Library, BuildingType.Market,
         BuildingType.Mine, BuildingType.Sawmill, BuildingType.Aqueduct, BuildingType.HerbalistHut, BuildingType.Amphitheatre,
+        BuildingType.Road, BuildingType.Walls,
     ];
     /// <summary>Within each branch, the first of these it can research: food, then the advances that pay for themselves.</summary>
     private static readonly Tech[] ResearchOrder =
@@ -37,7 +39,7 @@ internal sealed partial class AiPlayer
         Tech.Agriculture, Tech.Writing, Tech.Archery, Tech.Carpentry, Tech.Mythology, Tech.HorsebackRiding, Tech.Irrigation,
         Tech.Mining, Tech.Pottery, Tech.Medicine, Tech.BronzeWorking, Tech.TheWheel, Tech.Currency, Tech.CodeOfLaws, Tech.IronWorking,
         Tech.Mathematics, Tech.MilitaryTactics, Tech.Trade, Tech.Philosophy, Tech.Construction, Tech.Engineering, Tech.SiegeEngines,
-        Tech.DramaAndPoetry, Tech.HeavyCavalry,
+        Tech.Administration, Tech.DramaAndPoetry, Tech.Fortifications, Tech.HeavyCavalry,
     ];
     private readonly GameSession _session;
     private readonly Player _player;
@@ -136,6 +138,9 @@ internal sealed partial class AiPlayer
         BuildingType.Sawmill => p.Info.WoodYield >= 1,
         BuildingType.Temple or BuildingType.Amphitheatre => p.Mood < FestivalMood + 15,
         BuildingType.Aqueduct => p.Population > 0.6 * _session.CapacityOf(p),
+        // Roads where the armies gather, walls around the big cities.
+        BuildingType.Road => p.CityId.HasValue,
+        BuildingType.Walls => p.Population >= BigCityPopulation,
         _ => true,
     };
 

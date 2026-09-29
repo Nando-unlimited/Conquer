@@ -2,6 +2,17 @@
 
 Todos los cambios del juego, del más reciente al más antiguo. Cada versión es un commit cuyo título es su número.
 
+## [1.18.0] - 2026-09-29
+
+### Añadido
+- **Murallas**: quien defiende una provincia amurallada hace un 50 % más de daño. Se construyen en ciudades y piden el nuevo avance **Fortificaciones** (Militar, nivel 5).
+- **Calzadas**: una provincia con calzada se cruza un 50 % más deprisa, y las rutas las aprovechan. Se construyen en cualquier provincia habitada y piden Ingeniería.
+- **Administración** (Sociedad, nivel 5): la lejanía de la capital resta la mitad de humor.
+
+### Cambiado
+- **Construcción** acelera las obras un 25 %, incluidas las ciudades. Sigue permitiendo el anfiteatro.
+- Los rivales construyen calzadas en sus ciudades y murallas en las de más de 2.000 habitantes.
+
 ## [1.17.0] - 2026-09-29
 
 ### Añadido

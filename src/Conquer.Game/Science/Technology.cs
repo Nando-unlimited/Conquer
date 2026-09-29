@@ -52,6 +52,8 @@ public enum Tech
     MilitaryTactics,
     SiegeEngines,
     HeavyCavalry,
+    Fortifications,
+    Administration,
 }
 
 /// <param name="Level">Its level in its branch, from 1; a level opens once enough of the one below is known (<see cref="GameRules.LevelUnlockShare"/>).</param>
@@ -86,8 +88,8 @@ public static class Techs
         [Tech.Irrigation] = new("Irrigación", TechBranch.Economy, 2, "La tierra alimenta un 25 % más de gente.", new() { Capacity = 0.25 }, [Tech.Agriculture]),
         [Tech.Currency] = new("Moneda", TechBranch.Economy, 3, "+30 % de oro de los impuestos.", new() { Taxes = 0.3 }, [Tech.Writing, Tech.Mining]),
         [Tech.Trade] = new("Comercio", TechBranch.Economy, 4, "+15 % de oro de los impuestos.", new() { Taxes = 0.15 }, [Tech.Currency], Era: Era.Classical),
-        [Tech.Construction] = new("Construcción", TechBranch.Economy, 4, "Anfiteatros para las ciudades.", Modifiers.None, Era: Era.Classical),
-        [Tech.Engineering] = new("Ingeniería", TechBranch.Economy, 5, "Calzadas y canales: la tierra alimenta un 15 % más de gente.", new() { Capacity = 0.15 },
+        [Tech.Construction] = new("Construcción", TechBranch.Economy, 4, "Las obras se terminan un 25 % antes.", new() { BuildSpeed = 0.25 }, Era: Era.Classical),
+        [Tech.Engineering] = new("Ingeniería", TechBranch.Economy, 5, "Canales: la tierra alimenta un 15 % más de gente.", new() { Capacity = 0.15 },
             [Tech.Construction, Tech.Mathematics], Era: Era.Classical),
 
         [Tech.Writing] = new("Escritura", TechBranch.Society, 1, "+30 % de ciencia.", new() { Science = 0.3 }),
@@ -98,6 +100,8 @@ public static class Techs
         [Tech.Philosophy] = new("Filosofía", TechBranch.Society, 4, "+20 % de ciencia y +3 de humor.", new() { Science = 0.2, Mood = 3 }, [Tech.Mythology], Era: Era.Classical),
         [Tech.Mathematics] = new("Matemáticas", TechBranch.Society, 4, "+15 % de ciencia.", new() { Science = 0.15 }, [Tech.Writing], Era: Era.Classical),
         [Tech.DramaAndPoetry] = new("Drama y poesía", TechBranch.Society, 5, "+5 de humor en todas tus provincias.", new() { Mood = 5 }, [Tech.Philosophy], Era: Era.Classical),
+        [Tech.Administration] = new("Administración", TechBranch.Society, 5, "Gobernadores: la lejanía de la capital resta la mitad de humor.", new() { DistanceMood = 0.5 },
+            [Tech.CodeOfLaws], Era: Era.Classical),
 
         [Tech.Archery] = new("Tiro con arco", TechBranch.Military, 1, "Arqueros a pie y, con la rueda, en carro.", Modifiers.None),
         [Tech.HorsebackRiding] = new("Doma del caballo", TechBranch.Military, 1, "Guerreros a caballo, más rápidos.", Modifiers.None),
@@ -108,6 +112,7 @@ public static class Techs
         [Tech.SiegeEngines] = new("Maquinaria de asedio", TechBranch.Military, 4, "Catapultas que rompen las defensas.", Modifiers.None, [Tech.Mathematics], Era: Era.Classical),
         [Tech.HeavyCavalry] = new("Caballería pesada", TechBranch.Military, 5, "Jinetes con armadura.", Modifiers.None,
             [Tech.HorsebackRiding, Tech.MilitaryTactics], Era: Era.Classical),
+        [Tech.Fortifications] = new("Fortificaciones", TechBranch.Military, 5, "Murallas que protegen las ciudades.", Modifiers.None, [Tech.Construction], Era: Era.Classical),
     };
 
     public static TechInfo Info(this Tech tech) => Table[tech];

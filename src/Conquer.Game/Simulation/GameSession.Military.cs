@@ -550,6 +550,10 @@ public sealed partial class GameSession
     /// Damage a regiment deals in an hour: each battalion's attack or defence, scaled by its men and
     /// organisation, the chain of command, supply, terrain and a little luck.
     /// </summary>
+    /// <summary>How much harder those defending a province hit: its terrain, and its walls or castle.</summary>
+    public static double DefenseMultiplier(Province province) =>
+        MilitaryRules.DefenseMultiplier(province) * (1 + province.BuildingBonuses.Defense);
+
     private double Fire(Unit unit, Province province, bool attacking)
     {
         double fire = 0;
@@ -561,7 +565,7 @@ public sealed partial class GameSession
         }
         fire *= 1 + CommandBonus(unit);
         if (!IsInSupply(unit)) fire *= MilitaryRules.OutOfSupplyEfficiency;
-        if (!attacking) fire *= MilitaryRules.DefenseMultiplier(province);
+        if (!attacking) fire *= DefenseMultiplier(province);
         return fire * (1 + (_random.NextDouble() * 2 - 1) * MilitaryRules.CombatRandomness);
     }
 

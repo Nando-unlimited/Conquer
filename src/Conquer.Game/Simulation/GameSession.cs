@@ -145,7 +145,8 @@ public sealed partial class GameSession
             else
             {
                 double km = Map.DistanceKm(Map.Provinces[capital.ProvinceId], p);
-                factors.Add(("Lejos de la capital", -Math.Min(GameRules.MaxDistanceMoodPenalty, km / GameRules.KmPerMoodPoint)));
+                // Administration spares part of it.
+                factors.Add(("Lejos de la capital", -Math.Min(GameRules.MaxDistanceMoodPenalty, km / GameRules.KmPerMoodPoint) * (1 - owner.Bonuses.DistanceMood)));
             }
         }
         if (CityIn(p) is { } city && city.HasFestival(Date.Hours)) factors.Add(("Fiestas", GameRules.FestivalMood));
@@ -460,7 +461,10 @@ public sealed partial class GameSession
         return CommandResult.Success();
     }
 
-    /// <summary>Pays for a building and starts its construction; it takes <see cref="BuildingInfo.Days"/> days.</summary>
+    /// <summary>Days a work takes the player: its normal days, fewer with advances that speed building up.</summary>
+    public static int BuildDays(Player player, int days) => (int)Math.Ceiling(days / (1 + player.Bonuses.BuildSpeed));
+
+    /// <summary>Pays for a building and starts its construction; it takes <see cref="BuildingInfo.Days"/> days (see <see cref="BuildDays"/>).</summary>
     public CommandResult Build(int playerId, int provinceId, BuildingType type)
     {
         var p = Map.Provinces[provinceId];
@@ -468,8 +472,8 @@ public sealed partial class GameSession
         if (!check.Ok) return check;
         Players[playerId].Stockpile.TrySpend(type.Info().Cost);
         p.Constructing = type;
-        p.ConstructionDaysLeft = type.Info().Days;
-        return CommandResult.Success($"{type.Info().Name} en obras: {type.Info().Days} días.");
+        p.ConstructionDaysLeft = BuildDays(Players[playerId], type.Info().Days);
+        return CommandResult.Success($"{type.Info().Name} en obras: {p.ConstructionDaysLeft} días.");
     }
 
     /// <summary>Why nothing new can start here: a building or a city already under construction.</summary>
@@ -513,8 +517,8 @@ public sealed partial class GameSession
         if (!nameCheck.Ok) return nameCheck;
         Players[playerId].Stockpile.TrySpend(GameRules.CityCost);
         p.PlannedCityName = name.Trim();
-        p.ConstructionDaysLeft = GameRules.CityBuildingDays;
-        return CommandResult.Success($"La ciudad de {p.PlannedCityName} en obras: {GameRules.CityBuildingDays} días.");
+        p.ConstructionDaysLeft = BuildDays(Players[playerId], GameRules.CityBuildingDays);
+        return CommandResult.Success($"La ciudad de {p.PlannedCityName} en obras: {p.ConstructionDaysLeft} días.");
     }
 
     /// <summary>A city name must have letters, fit on the map and not belong to another city, built or planned.</summary>

@@ -6,7 +6,7 @@ namespace Conquer.Game.Buildings;
 
 /// <summary>
 /// The buildings a province can have, one of each. The order is the order they are listed in. Farms,
-/// granaries, sawmills and mines work the land and go anywhere; the rest need a city.
+/// granaries, sawmills, mines and roads go anywhere; the rest need a city.
 /// </summary>
 public enum BuildingType
 {
@@ -20,6 +20,8 @@ public enum BuildingType
     Aqueduct,
     HerbalistHut,
     Amphitheatre,
+    Walls,
+    Road,
 }
 
 /// <param name="Days">Days of work to build it.</param>
@@ -57,6 +59,10 @@ public static class Buildings
             new ResourceCost((ResourceType.Wood, 40), (ResourceType.Gold, 30)), 30, Tech.Medicine, true, false, new() { Fertility = 0.2 }),
         [BuildingType.Amphitheatre] = new("Anfiteatro", "+10 de humor en la provincia: juegos y espectáculos.",
             new ResourceCost((ResourceType.Wood, 120), (ResourceType.Gold, 60)), 60, Tech.Construction, true, false, new() { Mood = 10 }),
+        [BuildingType.Walls] = new("Muralla", "Quien defiende la provincia hace un 50 % más de daño.",
+            new ResourceCost((ResourceType.Wood, 150), (ResourceType.Gold, 50)), 90, Tech.Fortifications, true, false, new() { Defense = 0.5 }),
+        [BuildingType.Road] = new("Calzada", "La provincia se cruza un 50 % más deprisa.",
+            new ResourceCost((ResourceType.Wood, 80), (ResourceType.Gold, 30)), 40, Tech.Engineering, false, false, new() { MoveSpeed = 0.5 }),
     };
 
     public static BuildingInfo Info(this BuildingType type) => Table[type];
