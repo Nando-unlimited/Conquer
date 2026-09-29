@@ -430,7 +430,7 @@ Mapa de la Tierra real, generado por `tools/Conquer.EarthData`. Se incluye dentr
 ## 3. `src/Conquer.Client` — ventana, gráficos e interfaz
 
 ### `Program.cs`
-Punto de entrada. Pone el formato de números en español (a mano, sin depender de ICU) y lee los argumentos.
+Punto de entrada. Comprueba OpenGL 3.3 (`GlSupport.Ensure`), pone el formato de números en español (a mano, sin depender de ICU) y lee los argumentos.
 
 | Elemento | Qué es |
 | --- | --- |
@@ -578,6 +578,9 @@ Dibuja el mapa entero con un único shader.
 
 ### `Graphics/Screenshot.cs`
 `Save(gl, ancho, alto, ruta)`: guarda lo que hay en pantalla como PNG (lo usa `--screenshot`).
+
+### `Graphics/GlSupport.cs`
+`Ensure()`: antes de abrir la ventana, prueba a crear una oculta con OpenGL 3.3 (sin él, crear la ventana del juego lo cierra de golpe). Si falla en Linux, activa `LIBGL_ALWAYS_SOFTWARE=1` (el renderizado por software de Mesa) y vuelve a probar; devuelve si se puede jugar.
 
 ### `UI/Ui.cs`
 Interfaz propia de "modo inmediato": los botones se declaran en cada fotograma y devuelven si se han pulsado.

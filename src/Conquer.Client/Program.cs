@@ -9,8 +9,15 @@ spanish.NumberFormat.NumberGroupSeparator = spanish.NumberFormat.PercentGroupSep
 System.Globalization.CultureInfo.DefaultThreadCurrentCulture = spanish;
 System.Globalization.CultureInfo.CurrentCulture = spanish;
 
+if (!Conquer.Client.Graphics.GlSupport.Ensure())
+{
+    Console.Error.WriteLine("Conquer necesita una tarjeta gráfica con OpenGL 3.3 o superior.");
+    return 1;
+}
+
 var options = StartOptions.Parse(args);
 new ConquerApp(options).Run();
+return 0;
 
 namespace Conquer.Client
 {

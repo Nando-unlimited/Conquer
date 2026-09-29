@@ -2,6 +2,11 @@
 
 Todos los cambios del juego, del más reciente al más antiguo. Cada versión es un commit cuyo título es su número.
 
+## [1.10.2] - 2026-09-29
+
+### Arreglado
+- El juego ya no se cierra de golpe en ordenadores con tarjetas gráficas antiguas (sin OpenGL 3.3). En Linux pasa solo al renderizado por software, más lento pero jugable; en Windows y macOS explica qué falta.
+
 ## [1.10.1] - 2026-09-29
 
 ### Cambiado
