@@ -2,6 +2,14 @@
 
 Todos los cambios del juego, del más reciente al más antiguo. Cada versión es un commit cuyo título es su número.
 
+## [1.26.0] - 2026-09-29
+
+### Añadido
+- **Ayuda durante la partida**: se abre con **F1**, con el botón **«?»** de la barra superior o desde el menú de pausa. Tiene 11 temas: controles, primeros pasos, población y humor, economía y recursos, ciudades, ciencia, ejército, flotas y mar, diplomacia, mapa y partida. Mientras está abierta, el tiempo se para.
+
+### Corregido
+- En las tarjetas de ciencia, el descuento por vecinos se veía como «?10 %» en lugar de «-10 %».
+
 ## [1.25.0] - 2026-09-29
 
 ### Añadido

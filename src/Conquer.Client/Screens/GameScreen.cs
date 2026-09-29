@@ -25,6 +25,7 @@ public sealed partial class GameScreen : IScreen
     private readonly MapRenderer _renderer;
     private readonly Camera _camera;
     private readonly ChangelogView _changelog = new();
+    private readonly HelpView _help = new();
     private readonly NationView _nation;
     private readonly List<(int UnitId, Rect Bounds)> _unitHitBoxes = [];
     private readonly List<(string Text, double Time, bool Ok)> _messages = [];
@@ -146,17 +147,18 @@ public sealed partial class GameScreen : IScreen
         if (_naming.HasValue) DrawCityNaming();
         if (_menuOpen) DrawPauseMenu();
         _changelog.Frame(Ui, new Rect(_app.ScreenSize.X / 2 - 380, 70, 760, _app.ScreenSize.Y - 140));
+        _help.Frame(Ui, new Rect(Math.Max(8, _app.ScreenSize.X / 2 - 520), 70, Math.Min(1040, _app.ScreenSize.X - 16), _app.ScreenSize.Y - 140));
 
         bool modal = _menuOpen || _naming.HasValue;
-        if (!modal && !_changelog.Visible && !_nation.Visible) HandleMapMouse();
-        if (!Ui.MouseOverUi && !modal && !_nation.Visible && _hoverProvince >= 0 && !_dragging) HoverTooltip();
+        if (!modal && !_changelog.Visible && !_help.Visible && !_nation.Visible) HandleMapMouse();
+        if (!Ui.MouseOverUi && !modal && !_help.Visible && !_nation.Visible && _hoverProvince >= 0 && !_dragging) HoverTooltip();
     }
 
     // ------------------------------------------------------------------ time and input
 
     private void AdvanceTime(double dt)
     {
-        if (_menuOpen || _changelog.Visible || _naming.HasValue || _speed == 0) return;
+        if (_menuOpen || _changelog.Visible || _help.Visible || _naming.HasValue || _speed == 0) return;
         _hourAccumulator += dt * HoursPerSecond[_speed];
         int steps = Math.Min((int)_hourAccumulator, 400);
         _hourAccumulator -= steps;
@@ -185,7 +187,8 @@ public sealed partial class GameScreen : IScreen
             switch (key)
             {
                 case Key.Escape:
-                    if (_changelog.Visible) _changelog.Visible = false;
+                    if (_help.Visible) _help.Visible = false;
+                    else if (_changelog.Visible) _changelog.Visible = false;
                     else if (_nation.Visible) _nation.Visible = false;
                     else if (_choosingMigrationTarget) _choosingMigrationTarget = false;
                     else if (_selectedUnitId.HasValue || _selectedProvince >= 0) { _selectedUnitId = null; _selectedProvince = -1; }
@@ -196,6 +199,7 @@ public sealed partial class GameScreen : IScreen
                 case Key.Tab: _renderer.Mode = (MapMode)(((int)_renderer.Mode + 1) % Enum.GetValues<MapMode>().Length); _mapDirty = true; break;
                 case Key.Home: CenterOnHome(); break;
                 case Key.N when !_menuOpen: _nation.Visible = !_nation.Visible; break;
+                case Key.F1 when !_menuOpen: _help.Visible = !_help.Visible; break;
                 case Key.KeypadAdd or Key.Equal: _camera.ZoomAt(_camera.Screen / 2, 1.25f); break;
                 case Key.KeypadSubtract or Key.Minus: _camera.ZoomAt(_camera.Screen / 2, 0.8f); break;
             }
@@ -439,7 +443,7 @@ public sealed partial class GameScreen : IScreen
             }
             if (Ui.Hover(rect)) Ui.Tooltip($"{r.Name()}: {amount:N1}\nCambio en el último día: {net:+0.##;-0.##;0}");
             x += 90;
-            if (x > s.X - 290) break;
+            if (x > s.X - 330) break;
         }
 
         // A branch with nothing chosen hands its science to the others, or leaves it waiting when none is researching.
@@ -448,6 +452,7 @@ public sealed partial class GameScreen : IScreen
         string nationTip = idleScience ? "Gestionar el país (N)\nHay ramas de la ciencia sin investigación." : "Gestionar el país (N)";
         if (Ui.Button(new Rect(s.X - 190, 12, 92, 32), idleScience ? "Nación !" : "Nación", active: _nation.Visible, tooltip: nationTip))
             _nation.Visible = !_nation.Visible;
+        if (Ui.Button(new Rect(s.X - 230, 12, 34, 32), "?", active: _help.Visible, tooltip: "Ayuda (F1)")) _help.Visible = !_help.Visible;
         if (Ui.Button(new Rect(s.X - 90, 12, 78, 32), "Menú")) _menuOpen = true;
     }
 
@@ -763,7 +768,7 @@ public sealed partial class GameScreen : IScreen
 
         string help = _choosingMigrationTarget
             ? "Clic izquierdo: elegir provincia de destino  ·  Esc: cancelar"
-            : "Clic: seleccionar  ·  Arrastrar: mover mapa  ·  Clic dcho: mover unidad  ·  Rueda: zoom  ·  Espacio: pausa  ·  1-5: velocidad  ·  Inicio: tu capital";
+            : "Clic: seleccionar  ·  Arrastrar: mover mapa  ·  Clic dcho: mover unidad  ·  Rueda: zoom  ·  Espacio: pausa  ·  1-5: velocidad  ·  Inicio: tu capital  ·  F1: ayuda";
         float hw = Ui.Font.Measure(help, FontSize.Small) + 20;
         Ui.Panel(new Rect(bar.Right + 6, s.Y - 44, hw, 30));
         Ui.Text(bar.Right + 16, s.Y - 38, help, _choosingMigrationTarget ? Theme.Accent : Theme.TextDim, FontSize.Small);
@@ -866,15 +871,16 @@ public sealed partial class GameScreen : IScreen
         var s = _app.ScreenSize;
         Batch.Rect(0, 0, s.X, s.Y, Rgba.Black.WithAlpha(0.45f));
         Ui.Block(new Rect(0, 0, s.X, s.Y));
-        var panel = new Rect(s.X / 2 - 160, s.Y / 2 - 175, 320, 340);
+        var panel = new Rect(s.X / 2 - 160, s.Y / 2 - 200, 320, 390);
         Ui.Panel(panel);
         Ui.TextCentered(new Rect(panel.X, panel.Y + 10, panel.W, 36), "Pausa", Theme.Accent, FontSize.Large, bold: true);
         float x = panel.X + 30, y = panel.Y + 60, w = panel.W - 60;
         if (Ui.Button(new Rect(x, y, w, 40), "Continuar")) _menuOpen = false;
         if (Ui.Button(new Rect(x, y + 50, w, 40), "Guardar partida", tooltip: $"Se guarda en {SaveFiles.Folder}")) SaveCurrentGame();
-        if (Ui.Button(new Rect(x, y + 100, w, 40), "Historial de versiones")) { _changelog.Visible = true; _menuOpen = false; }
-        if (Ui.Button(new Rect(x, y + 150, w, 40), "Menú principal")) _app.Show(new MainMenuScreen(_app));
-        if (Ui.Button(new Rect(x, y + 200, w, 40), "Salir del juego")) _app.Quit();
+        if (Ui.Button(new Rect(x, y + 100, w, 40), "Ayuda")) { _help.Visible = true; _menuOpen = false; }
+        if (Ui.Button(new Rect(x, y + 150, w, 40), "Historial de versiones")) { _changelog.Visible = true; _menuOpen = false; }
+        if (Ui.Button(new Rect(x, y + 200, w, 40), "Menú principal")) _app.Show(new MainMenuScreen(_app));
+        if (Ui.Button(new Rect(x, y + 250, w, 40), "Salir del juego")) _app.Quit();
         Ui.TextCentered(new Rect(panel.X, panel.Bottom - 30, panel.W, 24), $"Conquer {ConquerApp.Version}", Theme.TextDim, FontSize.Small);
     }
 

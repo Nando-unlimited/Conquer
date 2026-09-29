@@ -556,7 +556,7 @@ La pantalla de juego. Clase parcial: el ejército en pantalla está en `GameScre
 | `ApplyTestOptions(...)`, `ShowSampleArmy(...)` | Aplican `--days`, `--zoom`, `--mode`, `--nation` y `--panel` (con `regiment`, entrena y selecciona un regimiento de muestra bajo una vexilación; con `found`, abre el diálogo para nombrar la ciudad de los colonos). |
 | `Frame(dt)` | Fotograma: teclas, tiempo, refresco del mapa, dibujo del mapa, marcadores, paneles e interacción. |
 | `AdvanceTime(dt)` | Convierte tiempo real en horas de juego según la velocidad (pausa, 1 h/s … 7 días/s). |
-| `SetSpeed`, `HandleKeys` | Velocidad y teclado (Espacio, 1-5, Tab, Inicio, N, +/-, WASD, Esc). |
+| `SetSpeed`, `HandleKeys` | Velocidad y teclado (Espacio, 1-5, Tab, Inicio, N, F1, +/-, WASD, Esc). Mientras la ayuda (`HelpView`) está abierta el tiempo se para y el mapa no responde. |
 | `HandleMapMouse()` | Rueda para el zoom, arrastrar para mover el mapa, clics. |
 | `LeftClick()` | Selecciona unidad o provincia, o elige el destino de una migración forzada. |
 | `RightClick()` | Da orden de mover la unidad seleccionada (o de atacar, si el destino es enemigo). |
@@ -569,16 +569,16 @@ La pantalla de juego. Clase parcial: el ejército en pantalla está en `GameScre
 | `DrawCities()` | Marcadores de ciudad y sus nombres. |
 | `DrawMigrations()` | Puntos que representan a los migrantes en camino. |
 | `DrawPath()` | Ruta de la unidad seleccionada. |
-| `DrawTopBar()`, `Compact()` | Barra superior: nación, población y humor medio, fecha, velocidades, recursos conocidos y botones Nación (con «!» si alguna rama no investiga nada teniendo avances disponibles) y Menú (con números abreviados: 12,3k, 2,9M). |
+| `DrawTopBar()`, `Compact()` | Barra superior: nación, población y humor medio, fecha, velocidades, recursos conocidos y botones «?» (ayuda), Nación (con «!» si alguna rama no investiga nada teniendo avances disponibles) y Menú (con números abreviados: 12,3k, 2,9M). |
 | `DrawSidePanel()`, `UnitPanel()`, `ProvincePanel()` | Panel derecho: datos y botones de la unidad o provincia seleccionada; el de provincia tiene pestañas General, Edificios y Ejército (humor y fertilidad, yacimientos con lo que les queda, fundar, fiestas, reclamar, asentarse, reclutar, migración forzada). |
 | `MoodTooltip(provincia)` | Tooltip del humor con sus causas y su efecto en la producción. |
 | `OpenCityNaming(...)`, `DrawCityNaming()`, `ConfirmCityName()` | Diálogo para nombrar una ciudad al fundarla con colonos o al construirla: propone un nombre, se puede escribir otro o pedir otro al azar, avisa si no vale y la funda o empieza la obra (Intro confirma, Esc cancela). Mientras está abierto el tiempo se para y las teclas van a la caja de texto. |
 | `BuildingsPanel(...)` | Pestaña Edificios: la obra en curso (edificio o ciudad) con su barra, el botón «Ciudad» en provincias sin ciudad, los edificios terminados y, en tus provincias, un botón por cada edificio que puedes levantar; los que solo necesitan ciudad o yacimiento dicen qué les falta, y los de avances sin descubrir no aparecen (`IsBuildingKnown`). |
 | `Line()`, `Paragraph()` | Ayudas para escribir filas y párrafos en el panel. |
-| `DrawBottomBar()`, `ModeBarWidth` | Modos de mapa (un botón de 120 píxeles por modo) y ayuda de controles (la ayuda se oculta con la pantalla de la nación abierta). |
+| `DrawBottomBar()`, `ModeBarWidth` | Modos de mapa (un botón de 120 píxeles por modo) y ayuda de controles (termina con «F1: ayuda») (la ayuda se oculta con la pantalla de la nación abierta). |
 | `DrawResourceFilter(barra)` | En el modo recursos, fila de botones para ver todos los yacimientos o solo uno de los recursos que conoces; hace de leyenda con el color de cada recurso. |
 | `DrawMessages()`, `HoverTooltip()` | Mensajes (más arriba si está abierto el filtro de recursos; con la pantalla de la nación abierta, solo el último, en la franja junto a los modos de mapa, con `DrawLatestMessageInStrip`) y tooltip de la provincia bajo el ratón (con sus yacimientos en el modo recursos y sus instituciones en el modo instituciones). |
-| `DrawPauseMenu()`, `SaveCurrentGame()` | Menú de pausa (Esc): continuar, guardar la partida (`SaveFiles.Save`), historial de versiones, volver a la pantalla inicial o salir. |
+| `DrawPauseMenu()`, `SaveCurrentGame()` | Menú de pausa (Esc): continuar, guardar la partida (`SaveFiles.Save`), ayuda, historial de versiones, volver a la pantalla inicial o salir. |
 
 ### `Screens/GameScreen.Army.cs`
 El ejército en pantalla.
@@ -694,6 +694,9 @@ Interfaz propia de "modo inmediato": los botones se declaran en cada fotograma y
 ### `UI/ChangelogView.cs`
 `ChangelogView`: muestra `CHANGELOG.md` (incluido en el ejecutable) en un panel con desplazamiento. `Layout` convierte el Markdown en líneas con formato.
 
+### `Screens/HelpView.cs`
+`HelpView`: la ayuda durante la partida (F1, el botón «?» de la barra superior o el menú de pausa). Temas a la izquierda y el texto del elegido a la derecha, con desplazamiento: controles, primeros pasos, población y humor, economía y recursos, ciudades, ciencia, ejército, flotas y mar, diplomacia, mapa y partida. **Aquí se escribe la ayuda.** Las cifras salen de `GameRules`, así que siguen los cambios de equilibrio; en el texto, «## » empieza un título y «- » una viñeta, y solo caben caracteres Latin-1 (nada de «…» ni «−»). `Layout` ajusta el tema al ancho; `AllText` da todo el texto para los tests.
+
 ### `Assets/`
 Fuentes Noto Sans (normal y negrita) y su licencia `OFL.txt`.
 
@@ -727,7 +730,7 @@ Uso: ver el README.
 | `InstitutionTests.cs` | Los avances de la era Clásica cuestan más sin Urbanismo y sus niveles siguen a los de la Antigüedad; Construcción permite el anfiteatro. El Urbanismo nace en la primera ciudad grande; se extiende solo a provincias asentadas; una nación lo adopta cuando lo tiene la mitad de su población y gana su bonus; se puede adoptar antes pagando oro; los avances de una era cuestan más hasta adoptar su institución; las instituciones se guardan con la partida. |
 | `DifficultyTests.cs` | En Muy difícil hay menos yacimientos, los mismos de la primera tirada y con la mitad de bolsa; el humano empieza con los recursos de su dificultad y los rivales con los normales; los rivales producen más ciencia en dificultades altas; la dificultad se guarda con la partida. `VeryHardWorldFixture` genera el mismo mundo en Muy difícil. |
 | `SaveGameTests.cs` | Cargar una partida y volver a guardarla da exactamente el mismo fichero; la partida cargada sigue jugándose; los mismos ajustes generan el mismo mapa; las partidas anteriores a la 1.13.0 reciben llenos los yacimientos nuevos; se rechazan las partidas de otro mapa y las dañadas. |
-| `InterfaceTests.cs` | Los nombres se ordenan alfabéticamente en español (sin tildes, ñ tras n). |
+| `InterfaceTests.cs` | Los nombres se ordenan alfabéticamente en español (sin tildes, ñ tras n); el texto de la ayuda solo usa caracteres que la fuente sabe dibujar (Latin-1). |
 | `ReleaseTests.cs` | La versión del `.csproj` coincide con la primera entrada del `CHANGELOG.md`. |
 
 ---

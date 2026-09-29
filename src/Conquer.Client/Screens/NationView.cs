@@ -414,7 +414,7 @@ public sealed partial class NationView
         ui.Text(x, y, info.Name, known ? Theme.Good : current ? Theme.Accent : can.Ok ? Theme.Text : Theme.TextDisabled, bold: true);
         double cost = _session.ResearchCost(_player, tech, neighbours), done = _player.ResearchProgress[(int)tech];
         string state = known ? "Descubierto" : (done > 0 ? $"{done:0} / {cost:0}" : $"{cost:0} puntos") +
-                       (cost < info.Cost ? $" (−{1 - cost / info.Cost:P0})" : cost > info.Cost ? $" (+{cost / info.Cost - 1:P0})" : "");
+                       (cost < info.Cost ? $" (-{1 - cost / info.Cost:P0})" : cost > info.Cost ? $" (+{cost / info.Cost - 1:P0})" : "");
         float right = c.Right - 10;
         // Choosing it replaces what the branch was researching; the points already in either one stay.
         if (!known && !current)

@@ -11,4 +11,12 @@ public class InterfaceTests
         var sorted = names.OrderBy(NationView.SpanishSortKey, StringComparer.Ordinal).ToArray();
         Assert.Equal(["avena", "Ávila", "Écija", "Nápoles", "Nzé", "ñandú", "oca", "Zaragoza"], sorted);
     }
+
+    [Fact]
+    public void TheHelpUsesOnlyCharactersTheFontCanDraw()
+    {
+        // The font covers Latin-1: no typographic ellipsis, minus sign or curly quotes.
+        Assert.All(HelpView.AllText, line => Assert.DoesNotContain(line, c => c > 255));
+        Assert.NotEmpty(HelpView.AllText);
+    }
 }
