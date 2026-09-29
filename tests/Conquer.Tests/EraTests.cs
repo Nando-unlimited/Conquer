@@ -41,6 +41,7 @@ public class EraTests(WorldFixture world)
     [InlineData(Era.Medieval)]
     [InlineData(Era.Renaissance)]
     [InlineData(Era.Industrial)]
+    [InlineData(Era.Modern)]
     public void EachAgeCostsMoreUntilItsInstitutionIsAdopted(Era era)
     {
         var (s, _) = WithCapital();
@@ -57,6 +58,7 @@ public class EraTests(WorldFixture world)
     [InlineData(Era.Medieval)]
     [InlineData(Era.Renaissance)]
     [InlineData(Era.Industrial)]
+    [InlineData(Era.Modern)]
     public void AnAgeOpensOnceTheOneBeforeIsKnown(Era era)
     {
         var (s, _) = WithCapital();
@@ -93,6 +95,7 @@ public class EraTests(WorldFixture world)
     [InlineData(BuildingType.Factory, Tech.Industrialization)]
     [InlineData(BuildingType.Hospital, Tech.Sanitation)]
     [InlineData(BuildingType.Railway, Tech.Railroad)]
+    [InlineData(BuildingType.PowerPlant, Tech.Electricity)]
     public void BuildingsNeedTheirAdvance(BuildingType type, Tech tech)
     {
         var (s, a) = WithCapital();
@@ -119,6 +122,9 @@ public class EraTests(WorldFixture world)
     [InlineData(BattalionType.Riflemen, Tech.Rifling)]
     [InlineData(BattalionType.FieldArtillery, Tech.Steel)]
     [InlineData(BattalionType.MachineGunners, Tech.MachineGuns)]
+    [InlineData(BattalionType.MotorisedInfantry, Tech.Combustion)]
+    [InlineData(BattalionType.HeavyArtillery, Tech.HeavyArtillery)]
+    [InlineData(BattalionType.Tanks, Tech.Armour)]
     public void BattalionsNeedTheirAdvance(BattalionType type, Tech tech)
     {
         var (s, a) = WithCapital();
@@ -179,5 +185,33 @@ public class EraTests(WorldFixture world)
         a.AddBuilding(BuildingType.Railway);
         b.AddBuilding(BuildingType.Railway);
         Assert.Equal(hours / 2, s.Pathfinder.StepHours(a.Id, b.Id), 6);
+    }
+
+    [Theory]
+    [InlineData(ResourceType.Oil, Tech.OilRefining)]
+    [InlineData(ResourceType.Aluminium, Tech.Electricity)]
+    [InlineData(ResourceType.Silicon, Tech.Electronics)]
+    public void ModernAdvancesRevealTheLastResources(ResourceType resource, Tech tech)
+    {
+        var (s, _) = WithCapital();
+        Assert.False(s.Human.Knows(resource));
+        s.Human.Learn(tech);
+        Assert.True(s.Human.Knows(resource));
+    }
+
+    [Fact]
+    public void ElectrificationIsBornInTheCapitalOfTheFirstNationWithElectricity()
+    {
+        var (s, a) = WithCapital();
+        s.Human.Learn(Tech.Electricity);
+        for (int h = 0; h < 24; h++) s.Step();
+        Assert.Equal(a.Id, s.BirthplaceOf(Institution.Electrification));
+    }
+
+    [Fact]
+    public void EveryResourceIsRevealedByTheStartOrByAnAdvance()
+    {
+        var revealed = Resources.KnownFromStart.Concat(Techs.All.SelectMany(t => t.Info().Reveals));
+        Assert.Empty(Resources.All.Except(revealed));
     }
 }

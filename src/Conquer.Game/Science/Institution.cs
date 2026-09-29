@@ -12,6 +12,7 @@ public enum Institution
     Feudalism,
     Humanism,
     Industrialization,
+    Electrification,
 }
 
 /// <param name="Opens">The age whose advances cost more until the nation adopts it.</param>
@@ -42,6 +43,8 @@ public static class Institutions
             "Da +10 % de ciencia y +3 de humor.", new() { Science = 0.1, Mood = 3 }, 0xFF4FA3A5),
         [Institution.Industrialization] = new("Industrialización", Era.Industrial, "Nace en la primera provincia con fábrica y yacimiento de carbón.",
             "Da +15 % de madera y +15 % de yacimientos.", new() { Wood = 0.15, Deposits = 0.15 }, 0xFF6B6B6B, Feminine: true),
+        [Institution.Electrification] = new("Electrificación", Era.Modern, "Nace en la capital de la primera nación que descubre la electricidad.",
+            "Da +15 % de ciencia y +10 % de impuestos.", new() { Science = 0.15, Taxes = 0.1 }, 0xFFE8D84A, Feminine: true),
     };
 
     public static InstitutionInfo Info(this Institution institution) => Table[institution];

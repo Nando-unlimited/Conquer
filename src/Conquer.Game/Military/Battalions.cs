@@ -24,6 +24,9 @@ public enum BattalionType
     Riflemen,
     FieldArtillery,
     MachineGunners,
+    MotorisedInfantry,
+    HeavyArtillery,
+    Tanks,
 }
 
 /// <param name="Men">Citizens the battalion takes from its city, and its full strength.</param>
@@ -80,6 +83,12 @@ public static class Battalions
             new ResourceCost((ResourceType.Wood, 40), (ResourceType.Gold, 80), (ResourceType.Iron, 60), (ResourceType.Coal, 30)), 45, [Tech.Steel], 28, 5, 30, 0.7, false),
         [BattalionType.MachineGunners] = new("Ametralladoras", "Z", 100,
             new ResourceCost((ResourceType.Wood, 20), (ResourceType.Gold, 80), (ResourceType.Iron, 40), (ResourceType.Coal, 20)), 40, [Tech.MachineGuns], 14, 28, 55, 0.9, false),
+        [BattalionType.MotorisedInfantry] = new("Infantería motorizada", "I", 100,
+            new ResourceCost((ResourceType.Gold, 100), (ResourceType.Iron, 30), (ResourceType.Oil, 20), (ResourceType.Rubber, 10)), 40, [Tech.Combustion], 24, 20, 65, 2.2, false),
+        [BattalionType.HeavyArtillery] = new("Artillería pesada", "W", 100,
+            new ResourceCost((ResourceType.Gold, 120), (ResourceType.Iron, 80), (ResourceType.Coal, 30), (ResourceType.Oil, 10)), 50, [Tech.HeavyArtillery], 38, 6, 30, 0.6, false),
+        [BattalionType.Tanks] = new("Tanques", "X", 100,
+            new ResourceCost((ResourceType.Gold, 150), (ResourceType.Iron, 80), (ResourceType.Oil, 40), (ResourceType.Rubber, 20)), 50, [Tech.Armour], 45, 25, 60, 2, true),
     };
 
     public static BattalionInfo Info(this BattalionType type) => Table[type];

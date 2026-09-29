@@ -2,6 +2,23 @@
 
 Todos los cambios del juego, del más reciente al más antiguo. Cada versión es un commit cuyo título es su número.
 
+## [1.22.0] - 2026-09-29
+
+### Añadido
+- **La era Moderna**: niveles 12 y 13 de cada rama, que cuestan 8.500 y 12.000 puntos.
+  - **Economía**: Refinado del petróleo (descubre el **petróleo**) y Fertilizantes (+30 % de comida, +20 % de capacidad); después, Producción en cadena (+25 % de madera y de yacimientos).
+  - **Sociedad**: Electricidad (descubre el **aluminio**, +20 % de ciencia) y Antibióticos (+20 % de fertilidad; el hambre mata a la mitad); después, Electrónica (descubre el **silicio**, +25 % de ciencia).
+  - **Militar**: Motor de combustión (infantería motorizada) y Artillería pesada; después, Blindados (tanques).
+- **Ya se pueden descubrir todos los recursos del mapa.**
+- **La Electrificación**, institución de la era Moderna.
+  - **Dónde nace**: en la capital de la primera nación que descubre la Electricidad.
+  - **Qué da al adoptarla**: +15 % de ciencia y +10 % de impuestos.
+- **Nuevo edificio, la Central eléctrica**: +25 % de ciencia y de impuestos en una ciudad.
+- **Nuevos batallones**, que gastan petróleo y caucho:
+  - **Infantería motorizada**: más del doble de rápida.
+  - **Artillería pesada**.
+  - **Tanques**.
+
 ## [1.21.0] - 2026-09-29
 
 ### Añadido

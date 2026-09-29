@@ -28,6 +28,7 @@ public enum BuildingType
     Factory,
     Hospital,
     Railway,
+    PowerPlant,
 }
 
 /// <param name="Days">Days of work to build it.</param>
@@ -83,6 +84,9 @@ public static class Buildings
         [BuildingType.Railway] = new("Ferrocarril", "La provincia se cruza el doble de deprisa.",
             new ResourceCost((ResourceType.Wood, 100), (ResourceType.Gold, 80), (ResourceType.Iron, 60), (ResourceType.Coal, 20)), 60, Tech.Railroad, false, false,
             new() { MoveSpeed = 1 }),
+        [BuildingType.PowerPlant] = new("Central eléctrica", "+25 % de ciencia y de impuestos en la provincia.",
+            new ResourceCost((ResourceType.Wood, 100), (ResourceType.Gold, 250), (ResourceType.Iron, 80), (ResourceType.Coal, 80)), 120, Tech.Electricity, true, false,
+            new() { Science = 0.25, Taxes = 0.25 }),
     };
 
     public static BuildingInfo Info(this BuildingType type) => Table[type];

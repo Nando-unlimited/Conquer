@@ -32,7 +32,7 @@ internal sealed partial class AiPlayer
         BuildingType.Farm, BuildingType.Granary, BuildingType.Temple, BuildingType.Library, BuildingType.Market,
         BuildingType.Mine, BuildingType.Sawmill, BuildingType.Aqueduct, BuildingType.HerbalistHut, BuildingType.Amphitheatre,
         BuildingType.Road, BuildingType.Walls, BuildingType.University, BuildingType.Bank, BuildingType.Castle,
-        BuildingType.Factory, BuildingType.Hospital, BuildingType.Railway,
+        BuildingType.Factory, BuildingType.Hospital, BuildingType.Railway, BuildingType.PowerPlant,
     ];
     /// <summary>Within each branch, the first of these it can research: food, then the advances that pay for themselves.</summary>
     private static readonly Tech[] ResearchOrder =
@@ -46,6 +46,8 @@ internal sealed partial class AiPlayer
         Tech.ScientificMethod, Tech.MilitaryScience, Tech.Cartography,
         Tech.Rifling, Tech.SteamEngine, Tech.PublicEducation, Tech.Industrialization, Tech.Sanitation, Tech.Chemistry, Tech.Steel,
         Tech.Railroad, Tech.MachineGuns,
+        Tech.Electricity, Tech.Fertilizers, Tech.OilRefining, Tech.Combustion, Tech.Antibiotics, Tech.HeavyArtillery, Tech.Electronics,
+        Tech.Armour, Tech.AssemblyLine,
     ];
     private readonly GameSession _session;
     private readonly Player _player;
