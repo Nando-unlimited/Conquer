@@ -1,0 +1,58 @@
+using Conquer.Game.Simulation;
+
+namespace Conquer.Client;
+
+/// <summary>A saved game on disk: its name (the file name) and when it was saved.</summary>
+public sealed record SaveFile(string Path, string Name, DateTime SavedAt);
+
+/// <summary>
+/// Saved games live in the user's data folder: ~/.local/share/Conquer/Partidas on Linux,
+/// %LOCALAPPDATA%\Conquer\Partidas on Windows and ~/Library/Application Support/Conquer/Partidas on macOS.
+/// </summary>
+public static class SaveFiles
+{
+    public const string Extension = ".conquer";
+
+    public static string Folder { get; } = System.IO.Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData, Environment.SpecialFolderOption.Create),
+        "Conquer", "Partidas");
+
+    /// <summary>Saved games, newest first.</summary>
+    public static List<SaveFile> List()
+    {
+        if (!Directory.Exists(Folder)) return [];
+        return new DirectoryInfo(Folder).GetFiles("*" + Extension)
+            .Select(f => new SaveFile(f.FullName, System.IO.Path.GetFileNameWithoutExtension(f.Name), f.LastWriteTime))
+            .OrderByDescending(f => f.SavedAt)
+            .ToList();
+    }
+
+    /// <summary>Writes the game as "Nation - date" and returns that name; saving again at the same moment overwrites it.</summary>
+    public static string Save(GameSession session)
+    {
+        var date = session.Date;
+        string name = Clean($"{session.Human.Name} - {date.ToString().Replace(", ", " ").Replace(":00", "h")}");
+        Directory.CreateDirectory(Folder);
+        string path = System.IO.Path.Combine(Folder, name + Extension);
+        // Write to a temporary file first so a crash never leaves a half-written save behind.
+        string temporary = path + ".tmp";
+        using (var file = File.Create(temporary)) session.ToSave(ConquerApp.Version).Write(file);
+        File.Move(temporary, path, overwrite: true);
+        return name;
+    }
+
+    public static SaveGame Read(string path)
+    {
+        using var file = File.OpenRead(path);
+        return SaveGame.Read(file);
+    }
+
+    public static void Delete(SaveFile save) => File.Delete(save.Path);
+
+    /// <summary>Drops characters that Windows, macOS or Linux do not allow in file names.</summary>
+    private static string Clean(string name)
+    {
+        var invalid = System.IO.Path.GetInvalidFileNameChars().Concat(['<', '>', ':', '"', '/', '\\', '|', '?', '*']).ToHashSet();
+        return new string(name.Where(c => !invalid.Contains(c)).ToArray()).Trim().TrimEnd('.');
+    }
+}

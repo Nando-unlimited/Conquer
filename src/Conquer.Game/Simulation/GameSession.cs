@@ -36,6 +36,8 @@ public sealed partial class GameSession
     public const int HumanPlayerId = 0;
 
     private readonly Random _random;
+    private readonly int _seed;
+    private bool _computerRivals;
     private readonly List<AiPlayer> _ais = [];
     private readonly Dictionary<int, Unit> _unitsById = [];
     private readonly HashSet<string> _usedCityNames = [];
@@ -57,6 +59,7 @@ public sealed partial class GameSession
     {
         Map = map;
         Pathfinder = new Pathfinder(map);
+        _seed = seed;
         _random = new Random(seed);
     }
 
@@ -67,19 +70,8 @@ public sealed partial class GameSession
     /// </summary>
     public static GameSession Create(WorldMap map, int playerCount, int seed, bool computerRivals = true)
     {
-        foreach (var p in map.Provinces)
-        {
-            p.OwnerId = -1;
-            p.ControllerId = -1;
-            p.Population = 0;
-            p.CityId = null;
-            p.Mood = GameRules.StartingMood;
-            p.Fertility = 1;
-            p.ClearBuildings();
-            foreach (var r in Resources.Deposits)
-                p.Reserves[(int)r] = p.DepositSizes[(int)r] * GameRules.DepositSizeMultiplier;
-        }
-        var session = new GameSession(map, seed);
+        ResetProvinces(map);
+        var session = new GameSession(map, seed) { _computerRivals = computerRivals };
         var names = PlayerNames.Pick(playerCount, session._random);
         var starts = session.PickStartProvinces(playerCount);
 
@@ -98,6 +90,23 @@ public sealed partial class GameSession
         session.Notify(HumanPlayerId, "Tus colonos esperan órdenes. Busca una buena tierra y funda tu primera ciudad.");
         session.Notify(HumanPlayerId, "Cuando tengas una ciudad, elige qué investigar en la pantalla de la nación (N).");
         return session;
+    }
+
+    /// <summary>Leaves every province unowned, empty and with full deposits, as at the start of a game.</summary>
+    private static void ResetProvinces(WorldMap map)
+    {
+        foreach (var p in map.Provinces)
+        {
+            p.OwnerId = -1;
+            p.ControllerId = -1;
+            p.Population = 0;
+            p.CityId = null;
+            p.Mood = GameRules.StartingMood;
+            p.Fertility = 1;
+            p.ClearBuildings();
+            foreach (var r in Resources.Deposits)
+                p.Reserves[(int)r] = p.DepositSizes[(int)r] * GameRules.DepositSizeMultiplier;
+        }
     }
 
     public Unit? UnitById(int id) => _unitsById.GetValueOrDefault(id);

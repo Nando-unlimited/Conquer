@@ -264,7 +264,7 @@ public sealed partial class GameSession
 
     public CommandResult DuplicateTemplate(int playerId, int templateId)
     {
-        if (TemplateById(Players[playerId], templateId) is not { } source) return CommandResult.Fail("Plantilla no válida.");
+        if (TemplateById(Players[playerId], templateId) is not { } source) return CommandResult.Fail("Plantilla no vÃ¡lida.");
         var copy = AddTemplate(Players[playerId], source.Battalions);
         return CommandResult.Success($"{copy.Name} copiada de {source.Name}.");
     }
@@ -272,7 +272,7 @@ public sealed partial class GameSession
     public CommandResult DeleteTemplate(int playerId, int templateId)
     {
         var player = Players[playerId];
-        if (TemplateById(player, templateId) is not { } template) return CommandResult.Fail("Plantilla no válida.");
+        if (TemplateById(player, templateId) is not { } template) return CommandResult.Fail("Plantilla no vÃ¡lida.");
         if (player.Templates.Count == 1) return CommandResult.Fail("Hace falta al menos una plantilla.");
         player.Templates.Remove(template);
         return CommandResult.Success($"{template.Name} borrada.");
@@ -290,7 +290,7 @@ public sealed partial class GameSession
     public CommandResult AddToTemplate(int playerId, int templateId, BattalionType type)
     {
         var player = Players[playerId];
-        if (TemplateById(player, templateId) is not { } template) return CommandResult.Fail("Plantilla no válida.");
+        if (TemplateById(player, templateId) is not { } template) return CommandResult.Fail("Plantilla no vÃ¡lida.");
         var check = CanAddToTemplate(player, template, type);
         if (!check.Ok) return check;
         template.Battalions.Add(type);
@@ -299,9 +299,9 @@ public sealed partial class GameSession
 
     public CommandResult RemoveFromTemplate(int playerId, int templateId, int index)
     {
-        if (TemplateById(Players[playerId], templateId) is not { } template) return CommandResult.Fail("Plantilla no válida.");
-        if (template.Battalions.Count == 1) return CommandResult.Fail("Una plantilla necesita al menos un batallón.");
-        if (index < 0 || index >= template.Battalions.Count) return CommandResult.Fail("Tropa no válida.");
+        if (TemplateById(Players[playerId], templateId) is not { } template) return CommandResult.Fail("Plantilla no vÃ¡lida.");
+        if (template.Battalions.Count == 1) return CommandResult.Fail("Una plantilla necesita al menos un batallÃ³n.");
+        if (index < 0 || index >= template.Battalions.Count) return CommandResult.Fail("Tropa no vÃ¡lida.");
         template.Battalions.RemoveAt(index);
         return CommandResult.Success();
     }
@@ -312,14 +312,14 @@ public sealed partial class GameSession
     /// <summary>Pays for every battalion of a template at once; they train side by side and form one regiment.</summary>
     public CommandResult TrainTemplate(int playerId, int cityId, int templateId)
     {
-        if (CityById(cityId) is not { } city || city.OwnerId != playerId) return CommandResult.Fail("Ciudad no válida.");
-        if (TemplateById(Players[playerId], templateId) is not { } template) return CommandResult.Fail("Plantilla no válida.");
+        if (CityById(cityId) is not { } city || city.OwnerId != playerId) return CommandResult.Fail("Ciudad no vÃ¡lida.");
+        if (TemplateById(Players[playerId], templateId) is not { } template) return CommandResult.Fail("Plantilla no vÃ¡lida.");
         var check = CanTrainTemplate(city, template);
         if (!check.Ok) return check;
         Players[playerId].Stockpile.TrySpend(template.Cost);
         Map.Provinces[city.ProvinceId].Population -= template.Men;
         city.Training.Add(new TrainingOrder(template));
-        return CommandResult.Success($"Regimiento de la {template.Name} en instrucción: {template.TrainingDays} días.");
+        return CommandResult.Success($"Regimiento de la {template.Name} en instrucciÃ³n: {template.TrainingDays} dÃ­as.");
     }
 
     // ------------------------------------------------------------------ organisation

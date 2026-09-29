@@ -27,6 +27,16 @@ internal sealed partial class AiPlayer
     private readonly HashSet<int> _knownRegiments = [];
     private RegimentTemplate? _armyTemplate;
 
+    internal AiSave ToSave() => new(_player.Id, new Dictionary<int, int>(_targets), [.. _claimers], [.. _knownRegiments], _armyTemplate?.Id);
+
+    internal void Restore(AiSave save)
+    {
+        foreach (var (unit, target) in save.Targets) _targets[unit] = target;
+        _claimers.UnionWith(save.Claimers);
+        _knownRegiments.UnionWith(save.KnownRegiments);
+        _armyTemplate = _player.Templates.FirstOrDefault(t => t.Id == save.ArmyTemplateId);
+    }
+
     private IEnumerable<Unit> Army => _session.Units.Where(u => u.OwnerId == _player.Id && u.IsMilitary && !_claimers.Contains(u.Id));
 
     /// <summary>

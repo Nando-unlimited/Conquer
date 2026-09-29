@@ -46,7 +46,8 @@ public sealed partial class GameScreen : IScreen
     private WorldMap Map => _session.Map;
     private Player Human => _session.Human;
 
-    public GameScreen(ConquerApp app, GameSession session, MapRenderer.Prepared pixels)
+    /// <param name="loaded">A saved game being carried on: it opens on the player's capital and does not repeat old messages.</param>
+    public GameScreen(ConquerApp app, GameSession session, MapRenderer.Prepared pixels, bool loaded = false)
     {
         _app = app;
         _session = session;
@@ -56,6 +57,14 @@ public sealed partial class GameScreen : IScreen
         _nation = new NationView(session, session.Human, ViewProvince, ViewUnit, Show);
         _renderer.IsResourceKnown = session.Human.Knows;
 
+        if (loaded)
+        {
+            _seenNotifications = session.Notifications.Count;
+            _camera.LookAt(_camera.Center, zoom: 8);
+            CenterOnHome();
+            _messages.Add(("Partida cargada.", 0, true));
+            return;
+        }
         var settlers = session.Units.First(u => u.OwnerId == GameSession.HumanPlayerId);
         _selectedUnitId = settlers.Id;
         _camera.LookAt(Center(settlers.ProvinceId), zoom: 8);
@@ -816,15 +825,30 @@ public sealed partial class GameScreen : IScreen
         var s = _app.ScreenSize;
         Batch.Rect(0, 0, s.X, s.Y, Rgba.Black.WithAlpha(0.45f));
         Ui.Block(new Rect(0, 0, s.X, s.Y));
-        var panel = new Rect(s.X / 2 - 160, s.Y / 2 - 150, 320, 290);
+        var panel = new Rect(s.X / 2 - 160, s.Y / 2 - 175, 320, 340);
         Ui.Panel(panel);
         Ui.TextCentered(new Rect(panel.X, panel.Y + 10, panel.W, 36), "Pausa", Theme.Accent, FontSize.Large, bold: true);
         float x = panel.X + 30, y = panel.Y + 60, w = panel.W - 60;
         if (Ui.Button(new Rect(x, y, w, 40), "Continuar")) _menuOpen = false;
-        if (Ui.Button(new Rect(x, y + 50, w, 40), "Historial de versiones")) { _changelog.Visible = true; _menuOpen = false; }
-        if (Ui.Button(new Rect(x, y + 100, w, 40), "Menú principal")) _app.Show(new MainMenuScreen(_app));
-        if (Ui.Button(new Rect(x, y + 150, w, 40), "Salir del juego")) _app.Quit();
+        if (Ui.Button(new Rect(x, y + 50, w, 40), "Guardar partida", tooltip: $"Se guarda en {SaveFiles.Folder}")) SaveCurrentGame();
+        if (Ui.Button(new Rect(x, y + 100, w, 40), "Historial de versiones")) { _changelog.Visible = true; _menuOpen = false; }
+        if (Ui.Button(new Rect(x, y + 150, w, 40), "Menú principal")) _app.Show(new MainMenuScreen(_app));
+        if (Ui.Button(new Rect(x, y + 200, w, 40), "Salir del juego")) _app.Quit();
         Ui.TextCentered(new Rect(panel.X, panel.Bottom - 30, panel.W, 24), $"Conquer {ConquerApp.Version}", Theme.TextDim, FontSize.Small);
+    }
+
+    private void SaveCurrentGame()
+    {
+        try
+        {
+            string name = SaveFiles.Save(_session);
+            Show(CommandResult.Success($"Partida guardada: {name}."));
+            _menuOpen = false;
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+        {
+            Show(CommandResult.Fail($"No se pudo guardar la partida: {e.Message}"));
+        }
     }
 
     public void Dispose() => _renderer.Dispose();

@@ -30,13 +30,14 @@ namespace Conquer.Client
     /// <c>--zoom Z</c> and <c>--mode terrain|political|population|mood|fertility</c> set the view;
     /// <c>--nation summary|cities|provinces|science</c> opens the nation screen on that tab;
     /// <c>--panel buildings|army</c> shows that tab of the selected province, and <c>--panel regiment</c> a sample regiment;
+    /// <c>--load file.conquer</c> carries on a saved game; <c>--menu new|load</c> opens that menu screen;
     /// <c>--screenshot file.png</c> saves the first frames to a PNG and exits.
     /// </summary>
-    public sealed record StartOptions(QuickStart? QuickStart, int Days = 0, float? Zoom = null, string? Mode = null, string? Screenshot = null, string? Nation = null, string? Panel = null)
+    public sealed record StartOptions(QuickStart? QuickStart, int Days = 0, float? Zoom = null, string? Mode = null, string? Screenshot = null, string? Nation = null, string? Panel = null, string? Load = null, string? Menu = null)
     {
         public static StartOptions Parse(string[] args)
         {
-            string? kind = null, mode = null, screenshot = null, nation = null, panel = null;
+            string? kind = null, mode = null, screenshot = null, nation = null, panel = null, load = null, menu = null;
             int seed = Environment.TickCount & 0xFFFF, players = 4, days = 0;
             float? zoom = null;
             for (int i = 0; i < args.Length - 1; i++)
@@ -53,6 +54,8 @@ namespace Conquer.Client
                     case "--screenshot": screenshot = value; break;
                     case "--nation": nation = value; break;
                     case "--panel": panel = value; break;
+                    case "--load": load = value; break;
+                    case "--menu": menu = value; break;
                 }
             }
             QuickStart? quick = null;
@@ -61,7 +64,7 @@ namespace Conquer.Client
                 var map = kind.Equals("earth", StringComparison.OrdinalIgnoreCase) ? MapKind.Earth : MapKind.Random;
                 quick = new QuickStart(new WorldSettings(map, seed), players);
             }
-            return new StartOptions(quick, days, zoom, mode, screenshot, nation, panel);
+            return new StartOptions(quick, days, zoom, mode, screenshot, nation, panel, load, menu);
         }
     }
 }

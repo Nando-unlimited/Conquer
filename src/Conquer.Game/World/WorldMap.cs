@@ -21,6 +21,8 @@ public sealed class WorldMap
     public int Height { get; }
     public MapKind Kind { get; }
     public int Seed { get; }
+    /// <summary>What the generator was asked for; a saved game makes the same map again from it.</summary>
+    public WorldSettings? Settings { get; init; }
     public short[] Elevation { get; }
     public Biome[] Biomes { get; }
     public int[] ProvinceIds { get; }

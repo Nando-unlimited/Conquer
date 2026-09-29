@@ -24,9 +24,10 @@ texturas. Todo lo demás (mapa, interfaz, simulación) es código nuestro.
 ### Flujo de una partida
 
 1. `Program.cs` lee los argumentos y crea `ConquerApp`.
-2. `ConquerApp` abre la ventana y muestra `MainMenuScreen`.
-3. Al pulsar "Comenzar", `LoadingScreen` genera en segundo plano el mundo (`WorldGenerator.Generate`),
+2. `ConquerApp` abre la ventana y muestra la pantalla inicial (`MainMenuScreen`).
+3. Al pulsar "Comenzar" en `NewGameScreen`, `LoadingScreen` genera en segundo plano el mundo (`WorldGenerator.Generate`),
    prepara los píxeles del mapa (`MapRenderer.Prepare`) y crea la partida (`GameSession.Create`).
+   Al cargar una partida guardada, genera el mismo mundo a partir de sus ajustes y la recoloca en él (`GameSession.Load`).
 4. `GameScreen` dibuja el mapa y la interfaz en cada fotograma y hace avanzar el tiempo llamando a
    `GameSession.Step()` (una hora de juego por llamada).
 5. Cada `Step()` mueve unidades y migrantes y resuelve una hora de cada batalla; a medianoche calcula la economía, la migración, la ciencia, las obras y el ejército del día;
@@ -264,6 +265,18 @@ El ejército dentro de la partida.
 | `Fire(...)`, `Damage(...)`, `Broken(...)` | Fuego de un regimiento (ataque o defensa, hombres, organización, mando, suministro, terreno y azar) y su reparto como daño. |
 | `EndBattle(...)`, `Retreat(...)`, `Destroy(...)` | Final de la batalla y avisos; retirada a una provincia vecina sin enemigos (o destrucción si está rodeada). |
 
+### `Simulation/GameSession.Save.cs`
+Guardar y cargar partidas.
+
+| Función | Qué hace |
+| --- | --- |
+| `ToSave(versión)` | Convierte la partida en un `SaveGame`: jugadores, provincias que han cambiado, ciudades, unidades, migraciones, batallas, guerras, avisos, los planes de la IA y los contadores internos. |
+| `Load(mapa, partida)` | Continúa una partida guardada sobre un mapa recién generado con sus ajustes. Si el mapa no es el mismo, lanza `InvalidDataException`. El azar de después se siembra con la semilla y la fecha. |
+| `Fingerprint(mapa)` | Huella del mapa (bioma, tamaño, posición, vecinos y ríos de cada provincia) para comprobar que el generador sigue haciendo el mismo mundo. |
+
+### `Simulation/SaveGame.cs`
+`SaveGame`: la partida guardada como datos, escrita en JSON comprimido con gzip. El mapa no se guarda: se vuelve a generar a partir de `World`. `Write(flujo)` la escribe; `Read(flujo)` la lee y lanza `InvalidDataException` si está dañada o su formato (`Format`) es de otra versión. Los registros `PlayerSave`, `ProvinceSave`, `CitySave`, `UnitSave`, etc. son sus partes.
+
 ### `Simulation/GameSession.Diplomacy.cs`
 Guerra y paz.
 
@@ -344,7 +357,7 @@ Edificios: los terminados (`Buildings`) y la suma de sus efectos (`BuildingBonus
 | --- | --- |
 | `MapKind` | `Random` o `Earth`. |
 | `RiverSegment` | Un tramo corto de río entre dos puntos del mapa, con el agua que lleva. |
-| `WorldMap` | El mapa: tamaño, altitud, bioma e id de provincia por píxel, la lista de provincias y los ríos (`Rivers`). |
+| `WorldMap` | El mapa: tamaño, altitud, bioma e id de provincia por píxel, la lista de provincias, los ríos (`Rivers`) y los ajustes con que se generó (`Settings`). |
 | `Latitude(y)`, `Longitude(x)`, `WrapX(x)` | Conversión de píxeles a grados y vuelta al mundo en X. |
 | `ProvinceAt(x, y)` | Provincia en un píxel. |
 | `PixelAreaKm2(fila)` | Área real de un píxel (menor cerca de los polos). |
@@ -434,7 +447,7 @@ Punto de entrada. Comprueba OpenGL 3.3 (`GlSupport.Ensure`), pone el formato de 
 
 | Elemento | Qué es |
 | --- | --- |
-| `StartOptions.Parse(args)` | Opciones de línea de comandos para pruebas: `--new random|earth`, `--seed`, `--players`, `--days` (funda la capital y avanza N días), `--zoom`, `--mode terrain|political|population|mood|fertility|resources`, `--nation summary|cities|provinces|science|army|templates|diplomacy` (abre la pantalla de la nación), `--panel buildings|army|regiment` (una pestaña de la provincia seleccionada, o un regimiento de muestra) y `--screenshot fichero.png` (guarda una captura del juego y se cierra). |
+| `StartOptions.Parse(args)` | Opciones de línea de comandos para pruebas: `--new random|earth`, `--seed`, `--players`, `--days` (funda la capital y avanza N días), `--zoom`, `--mode terrain|political|population|mood|fertility|resources`, `--nation summary|cities|provinces|science|army|templates|diplomacy` (abre la pantalla de la nación), `--panel buildings|army|regiment` (una pestaña de la provincia seleccionada, o un regimiento de muestra), `--load fichero.conquer` (carga una partida guardada), `--menu new|load` (abre esa pantalla del menú) y `--screenshot fichero.png` (guarda una captura del juego y se cierra). |
 | `QuickStart` | Partida que empieza directamente, sin menús. |
 
 ### `ConquerApp.cs`
@@ -452,15 +465,20 @@ Punto de entrada. Comprueba OpenGL 3.3 (`GlSupport.Ensure`), pone el formato de 
 ### `Screens/MenuScreens.cs`
 | Elemento | Qué es |
 | --- | --- |
-| `MainMenuScreen` | Menú principal: tipo de mapa, semilla, número de jugadores, "Comenzar", historial de versiones y salir. |
-| `LoadingScreen` | Genera el mundo en segundo plano y muestra el progreso; al terminar abre `GameScreen`. |
+| `MainMenuScreen` | Pantalla inicial: "Continuar" (carga la última partida guardada), "Nueva partida", "Cargar partida", historial de versiones y salir. |
+| `NewGameScreen` | Nueva partida: tipo de mapa, semilla, número de jugadores, "Comenzar" y "Volver". |
+| `LoadGameScreen` | Lista de partidas guardadas, de la más reciente a la más antigua, para cargar o borrar (pide confirmación). |
+| `LoadingScreen` | Genera el mundo en segundo plano y muestra el progreso, para una partida nueva o una guardada; al terminar abre `GameScreen`. |
+
+### `SaveFiles.cs`
+Partidas guardadas en disco, en la carpeta de datos del usuario: `~/.local/share/Conquer/Partidas` en Linux, `%LOCALAPPDATA%\Conquer\Partidas` en Windows y `~/Library/Application Support/Conquer/Partidas` en macOS. Cada una es un fichero `.conquer` que se llama como la nación y la fecha de juego ("Kartesia - 5 feb 3999 a.C. 00h"). `List()` las devuelve de la más reciente a la más antigua; `Save(partida)` escribe primero un fichero temporal y luego lo renombra, para no dejar nunca una partida a medio escribir; `Read(ruta)` y `Delete(partida)`.
 
 ### `Screens/GameScreen.cs`
 La pantalla de juego. Clase parcial: el ejército en pantalla está en `GameScreen.Army.cs`.
 
 | Función | Qué hace |
 | --- | --- |
-| `GameScreen(...)` | Crea el renderizador y la cámara y centra la vista en tus colonos. |
+| `GameScreen(...)` | Crea el renderizador y la cámara y centra la vista en tus colonos o, en una partida cargada, en tu capital (sin repetir los avisos antiguos). |
 | `ApplyTestOptions(...)`, `ShowSampleArmy(...)` | Aplican `--days`, `--zoom`, `--mode`, `--nation` y `--panel` (con `regiment`, entrena y selecciona un regimiento de muestra bajo una vexilación). |
 | `Frame(dt)` | Fotograma: teclas, tiempo, refresco del mapa, dibujo del mapa, marcadores, paneles e interacción. |
 | `AdvanceTime(dt)` | Convierte tiempo real en horas de juego según la velocidad (pausa, 1 h/s … 7 días/s). |
@@ -485,7 +503,7 @@ La pantalla de juego. Clase parcial: el ejército en pantalla está en `GameScre
 | `DrawBottomBar()` | Modos de mapa y ayuda de controles (la ayuda se oculta con la pantalla de la nación abierta). |
 | `DrawResourceFilter(barra)` | En el modo recursos, fila de botones para ver todos los yacimientos o solo uno de los recursos que conoces; hace de leyenda con el color de cada recurso. |
 | `DrawMessages()`, `HoverTooltip()` | Mensajes (más arriba si está abierto el filtro de recursos; con la pantalla de la nación abierta, solo el último, en la franja junto a los modos de mapa, con `DrawLatestMessageInStrip`) y tooltip de la provincia bajo el ratón (con sus yacimientos en el modo recursos). |
-| `DrawPauseMenu()` | Menú de pausa (Esc). |
+| `DrawPauseMenu()`, `SaveCurrentGame()` | Menú de pausa (Esc): continuar, guardar la partida (`SaveFiles.Save`), historial de versiones, volver a la pantalla inicial o salir. |
 
 ### `Screens/GameScreen.Army.cs`
 El ejército en pantalla.
@@ -625,6 +643,7 @@ Uso: ver el README.
 | `WorldGenerationTests.cs` | Ambos mapas salen con unas 25.000 provincias y todos los píxeles asignados. |
 | `GameplayTests.cs` | Inicio sin territorio y con los recursos correctos; fundar la capital; océanos y polos no reclamables; las unidades terrestres no entran al mar pero sí cruzan hielo; nada cruza el mar; provincias mayores en desiertos, polos y océanos; solo las unidades militares reclaman; velocidad de 10 km/h; migración diaria; migración forzada con su coste; consumo de comida; la capital gana humor y fertilidad; el hambre los hunde; los migrantes forzados llegan descontentos; las provincias descontentas no pagan impuestos; la fertilidad acelera el crecimiento; las reservas de comida alegran; las fiestas cuestan oro y duran un mes; las estadísticas de la nación suman bien; cada yacimiento es una bolsa finita que empieza llena; las bolsas se agotan y dejan de producir; las ciudades producen ciencia que descubre avances; los avances piden sus requisitos; la ciencia sin investigación se guarda; los avances mejoran la economía; los edificios cuestan y tardan, tienen sus requisitos y mejoran su provincia; al principio solo se conocen los recursos antiguos y los avances revelan los demás; los recursos desconocidos no se explotan; la IA se expande e investiga. `WorldFixture` genera un único mundo para todos. |
 | `MilitaryTests.cs` | Instrucción de batallones (hombres, recursos y días); batallones que piden su avance (o sus dos avances); unir (hasta 6), separar y velocidad del batallón más lento; no se entra en tierras ajenas sin guerra; ocupar tierra enemiga sin defensa; un ataque fuerte gana y uno débil se rompe; defensores rodeados destruidos; la paz devuelve lo ocupado; la IA solo acepta la paz pasado un tiempo; desgaste sin suministro; recuperación y refuerzos desde la capital; bonificación de mando en cadena y alcance; nombres romanos y modernos de las formaciones; una vexilación manda 4 regimientos como mucho; cada nación empieza con una plantilla de dos guerreros; las plantillas se editan dentro de sus límites; una plantilla entrena un regimiento entero a la vez. |
+| `SaveGameTests.cs` | Cargar una partida y volver a guardarla da exactamente el mismo fichero; la partida cargada sigue jugándose; los mismos ajustes generan el mismo mapa; se rechazan las partidas de otro mapa y las dañadas. |
 | `InterfaceTests.cs` | Los nombres se ordenan alfabéticamente en español (sin tildes, ñ tras n). |
 | `ReleaseTests.cs` | La versión del `.csproj` coincide con la primera entrada del `CHANGELOG.md`. |
 

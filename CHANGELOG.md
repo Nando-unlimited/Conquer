@@ -2,6 +2,17 @@
 
 Todos los cambios del juego, del más reciente al más antiguo. Cada versión es un commit cuyo título es su número.
 
+## [1.11.0] - 2026-09-29
+
+### Añadido
+- **Guardar y cargar partidas.** En el menú (Esc) está **Guardar partida**; cada partida se guarda con el nombre de tu nación y la fecha de juego («Kartesia - 5 feb 3999 a.C. 00h»).
+- **Pantalla inicial** nueva: **Continuar** (la última partida guardada), **Nueva partida**, **Cargar partida**, historial de versiones y salir.
+- En **Cargar partida** ves tus partidas de la más reciente a la más antigua, y puedes cargarlas o borrarlas (pide confirmación).
+- Las partidas ocupan pocos KB: el mapa no se guarda, se vuelve a generar igual al cargar. Si una versión futura del juego genera el mapa de otra forma, avisa de que esa partida no se puede cargar.
+
+### Arreglado
+- Algunos mensajes del ejército («Plantilla no válida», «en instrucción: 15 días»…) salían con un carácter roto en lugar de la letra con tilde.
+
 ## [1.10.3] - 2026-09-29
 
 ### Arreglado

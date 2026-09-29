@@ -62,6 +62,18 @@ public sealed class TrainingOrder
         DaysLeft = TotalDays = CommandLevels.Info(headquartersLevel).TrainingDays;
     }
 
+    /// <summary>An order as it was saved, part-way through its training.</summary>
+    internal TrainingOrder(BattalionType? battalion, string? templateName, IReadOnlyList<BattalionType> templateBattalions,
+        int headquartersLevel, int daysLeft, int totalDays)
+    {
+        Battalion = battalion;
+        TemplateName = templateName;
+        TemplateBattalions = [.. templateBattalions];
+        HeadquartersLevel = headquartersLevel;
+        DaysLeft = daysLeft;
+        TotalDays = totalDays;
+    }
+
     /// <summary>"Cohorte de arqueros", "Legión (Plantilla II)", "Cuartel general de vexilación"… in the era's names.</summary>
     public string Name(ArmyEra era) =>
         Battalion is BattalionType b ? Formations.BattalionName(b.Info(), era)

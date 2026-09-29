@@ -25,6 +25,12 @@ dotnet publish src/Conquer.Client -c Release -r win-x64 --self-contained -p:Publ
 
 (`linux-x64`, `osx-x64` u `osx-arm64` para los otros sistemas.)
 
+## Partidas guardadas
+
+Desde el menú (Esc) → **Guardar partida**. La pantalla inicial permite continuar la última o cargar cualquier otra.
+Se guardan en `~/.local/share/Conquer/Partidas` (Linux), `%LOCALAPPDATA%\Conquer\Partidas` (Windows) o
+`~/Library/Application Support/Conquer/Partidas` (macOS).
+
 ## Controles
 
 | Acción | Control |
@@ -36,7 +42,7 @@ dotnet publish src/Conquer.Client -c Release -r win-x64 --self-contained -p:Publ
 | Pausa / velocidades | Espacio / 1-5 |
 | Cambiar modo de mapa | Tab |
 | Ir a tu capital | Inicio |
-| Menú | Esc |
+| Menú (guardar la partida, salir) | Esc |
 
 ## Estructura
 

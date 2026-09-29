@@ -122,9 +122,14 @@ public sealed class ConquerApp
             keyboard.KeyUp += (_, key, _) => _input.KeysDown.Remove(key);
         }
 
-        _screen = Options.QuickStart is { } settings
-            ? new LoadingScreen(this, settings.World, settings.Players)
-            : new MainMenuScreen(this);
+        _screen = Options switch
+        {
+            { QuickStart: { } settings } => new LoadingScreen(this, settings.World, settings.Players),
+            { Load: { } path } => new LoadingScreen(this, new SaveFile(Path.GetFullPath(path), Path.GetFileNameWithoutExtension(path), File.GetLastWriteTime(path))),
+            { Menu: "new" } => new NewGameScreen(this),
+            { Menu: "load" } => new LoadGameScreen(this),
+            _ => new MainMenuScreen(this),
+        };
     }
 
     private void OnRender(double dt)
@@ -155,7 +160,7 @@ public sealed class ConquerApp
     private void CaptureIfRequested()
     {
         if (Options.Screenshot is not { } path) return;
-        bool ready = Options.QuickStart == null ? _screen is MainMenuScreen : _screen is GameScreen;
+        bool ready = Options.QuickStart != null || Options.Load != null ? _screen is GameScreen : _screen is not LoadingScreen;
         _framesOnScreen = ready ? _framesOnScreen + 1 : 0;
         if (_framesOnScreen < 5) return;
         Screenshot.Save(Gl, _window.FramebufferSize.X, _window.FramebufferSize.Y, path);
