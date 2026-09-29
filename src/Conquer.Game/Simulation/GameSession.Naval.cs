@@ -1,3 +1,4 @@
+using Conquer.Game.Buildings;
 using Conquer.Game.Entities;
 using Conquer.Game.Military;
 using Conquer.Game.Rules;
@@ -28,9 +29,9 @@ public sealed partial class GameSession
     /// <summary>Men aboard a fleet, out of its <see cref="Unit.Capacity"/>.</summary>
     public int CargoMen(Unit fleet) => CargoOf(fleet).Sum(u => u.Citizens);
 
-    /// <summary>A coastal city of the player's that the enemy does not hold: where its ships are built and anchor.</summary>
+    /// <summary>A city of the player's with a port building, not held by the enemy: where its ships are built, anchor and are repaired.</summary>
     public bool IsPort(Province p, int playerId) =>
-        !p.IsWater && p.CityId.HasValue && p.OwnerId == playerId && !p.IsOccupied && p.Neighbors.Any(n => Map.Provinces[n].IsWater);
+        p.Buildings.Contains(BuildingType.Port) && p.CityId.HasValue && p.OwnerId == playerId && !p.IsOccupied;
 
     /// <summary>Where a fleet may go: the sea its nation can navigate, and its own ports.</summary>
     private bool CanFleetEnter(Unit fleet, Province p) => p.IsWater ? CanSail(fleet.Owner, p) : IsPort(p, fleet.OwnerId);

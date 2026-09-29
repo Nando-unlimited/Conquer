@@ -1,3 +1,4 @@
+using Conquer.Game.Buildings;
 using Conquer.Game.Economy;
 using Conquer.Game.Entities;
 using Conquer.Game.Military;
@@ -31,6 +32,7 @@ public class NavalTests(WorldFixture world)
         port.Population = 3000;
         s.Human.Learn(Tech.Navigation);
         foreach (var r in Resources.All) s.Human.Stockpile[r] = 5000;
+        port.AddBuilding(BuildingType.Port);
         return (s, port, sea, landing);
     }
 
@@ -60,7 +62,7 @@ public class NavalTests(WorldFixture world)
         s.FoundCity(0, s.AddUnit(0, UnitType.Settlers, inland.Id, 300).Id);
         inland.Population = 3000;
 
-        Assert.Equal("Los barcos solo se construyen en ciudades con costa.", s.CanTrain(s.CityIn(inland)!, BattalionType.Trireme).Message);
+        Assert.Equal("Los barcos solo se construyen en ciudades con puerto.", s.CanTrain(s.CityIn(inland)!, BattalionType.Trireme).Message);
         Assert.True(s.Train(0, s.CityIn(port)!.Id, BattalionType.Trireme).Ok);
         RunUntil(s, () => s.Units.Any(u => u.IsFleet));
 
@@ -173,5 +175,69 @@ public class NavalTests(WorldFixture world)
             .SelectMany(p => p.Neighbors.Select(n => (p, _map.Provinces[n]))).First(t => t.Item2.IsWater);
 
         Assert.Equal(_map.DistanceKm(sea, next) / (GameRules.CitizenSpeedKmh * GameRules.SailingSpeed), s.Pathfinder.StepHours(sea.Id, next.Id), 6);
+    }
+
+    [Fact]
+    public void APortNeedsTheCoastAndNavigation()
+    {
+        var (s, port, _, _) = WithPort();
+        var inland = _map.Provinces.First(p => p.IsClaimable && !p.IsOwned && p.Neighbors.All(n => !_map.Provinces[n].IsWater)
+                                               && _map.DistanceKm(p, port) > 400);
+        s.FoundCity(0, s.AddUnit(0, UnitType.Settlers, inland.Id, 300).Id);
+
+        Assert.Equal("Solo en provincias con costa.", s.IsBuildingAvailable(inland, BuildingType.Port).Message);
+        s.Human.Techs.Remove(Tech.Navigation);
+        Assert.False(s.IsBuildingAvailable(port, BuildingType.Port).Ok);
+    }
+
+    [Fact]
+    public void WithoutAPortBuildingACityBuildsNoShipsAndShelters()
+    {
+        var (s, port, _, _) = WithPort();
+        var fleet = s.AddFleet(0, port.Id, BattalionType.Trireme);
+        port.ClearBuildings();
+
+        Assert.False(s.IsPort(port, 0));
+        Assert.False(s.CanTrain(s.CityIn(port)!, BattalionType.Trireme).Ok);
+        Assert.False(s.CanUnitEnter(fleet, port.Id));
+    }
+
+    [Fact]
+    public void AdvancedShipsNeedADryDock()
+    {
+        var (s, port, _, _) = WithPort();
+        var city = s.CityIn(port)!;
+        s.Human.Learn(Tech.NavalEngineering);
+
+        Assert.StartsWith("Requiere dique seco", s.CanTrain(city, BattalionType.Destroyer).Message);
+        Assert.True(s.IsBuildingAvailable(port, BuildingType.DryDock).Ok);
+        port.AddBuilding(BuildingType.DryDock);
+        Assert.True(s.CanTrain(city, BattalionType.Destroyer).Ok);
+        Assert.False(s.CanTrain(city, BattalionType.AircraftCarrier).Ok); // also needs aviation
+    }
+
+    [Fact]
+    public void ADryDockNeedsAPortFirst()
+    {
+        var (s, port, _, _) = WithPort();
+        s.Human.Learn(Tech.NavalEngineering);
+        port.ClearBuildings();
+        Assert.Equal("Requiere puerto.", s.IsBuildingAvailable(port, BuildingType.DryDock).Message);
+    }
+
+    [Fact]
+    public void ADryDockRepairsFleetsTwiceAsFast()
+    {
+        double Repaired(bool dock)
+        {
+            var (s, port, _, _) = WithPort();
+            if (dock) port.AddBuilding(BuildingType.DryDock);
+            var fleet = s.AddFleet(0, port.Id, BattalionType.Trireme);
+            fleet.Battalions[0].Organisation = 0;
+            for (int h = 0; h < 24; h++) s.Step();
+            return fleet.Battalions[0].Organisation;
+        }
+
+        Assert.Equal(Repaired(dock: false) * MilitaryRules.DryDockRepair, Repaired(dock: true), 6);
     }
 }

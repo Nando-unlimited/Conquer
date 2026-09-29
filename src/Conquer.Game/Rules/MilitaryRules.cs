@@ -8,6 +8,8 @@ public static class MilitaryRules
     public const int MaxBattalionsPerRegiment = 6;
     /// <summary>Ships in one fleet at most.</summary>
     public const int MaxShipsPerFleet = 10;
+    /// <summary>A fleet in a port with a dry dock recovers organisation and crews this many times faster.</summary>
+    public const double DryDockRepair = 2;
     /// <summary>HQs travel on horseback, faster than infantry.</summary>
     public const double HeadquartersSpeed = 1.5;
 

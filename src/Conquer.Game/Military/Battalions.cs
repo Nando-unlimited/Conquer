@@ -1,3 +1,4 @@
+using Conquer.Game.Buildings;
 using Conquer.Game.Economy;
 using Conquer.Game.Science;
 
@@ -33,6 +34,8 @@ public enum BattalionType
     Galleon,
     SteamTransport,
     Ironclad,
+    Destroyer,
+    AircraftCarrier,
 }
 
 /// <param name="Men">Citizens the battalion takes from its city, and its full strength.</param>
@@ -46,9 +49,11 @@ public enum BattalionType
 /// <param name="Flies">Aircraft: a regiment of them alone may cross the sea.</param>
 /// <param name="Naval">A ship: trained in ports, it forms fleets that sail the sea. Its men are the crew, its attack its guns.</param>
 /// <param name="Capacity">Men a ship can carry: troops, staff or settlers.</param>
+/// <param name="Shipyard">A building the city needs to build this ship, beyond its port.</param>
 public sealed record BattalionInfo(
     string Name, string Symbol, int Men, ResourceCost Cost, int TrainingDays, Tech[] Requires,
-    double Attack, double Defense, double MaxOrganisation, double Speed, bool Mounted, bool Flies = false, bool Naval = false, int Capacity = 0);
+    double Attack, double Defense, double MaxOrganisation, double Speed, bool Mounted, bool Flies = false, bool Naval = false, int Capacity = 0,
+    BuildingType? Shipyard = null);
 
 public static class Battalions
 {
@@ -113,6 +118,12 @@ public static class Battalions
             Naval: true, Capacity: 1500),
         [BattalionType.Ironclad] = new("Acorazado", "a", 400,
             new ResourceCost((ResourceType.Gold, 200), (ResourceType.Iron, 150), (ResourceType.Coal, 60)), 90, [Tech.Steel], 50, 40, 60, 2, false, Naval: true),
+        [BattalionType.Destroyer] = new("Destructor", "d", 300,
+            new ResourceCost((ResourceType.Gold, 250), (ResourceType.Iron, 150), (ResourceType.Oil, 60)), 90, [Tech.NavalEngineering], 70, 45, 65, 3, false,
+            Naval: true, Shipyard: BuildingType.DryDock),
+        [BattalionType.AircraftCarrier] = new("Portaaviones", "p", 800,
+            new ResourceCost((ResourceType.Gold, 500), (ResourceType.Iron, 300), (ResourceType.Oil, 120), (ResourceType.Aluminium, 80)), 150,
+            [Tech.NavalEngineering, Tech.Aviation], 120, 50, 70, 2.5, false, Naval: true, Shipyard: BuildingType.DryDock),
     };
 
     public static BattalionInfo Info(this BattalionType type) => Table[type];

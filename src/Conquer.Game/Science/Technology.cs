@@ -92,6 +92,7 @@ public enum Tech
     Armour,
     Navigation,
     Aviation,
+    NavalEngineering,
 }
 
 /// <param name="Level">Its level in its branch, from 1; a level opens once enough of the one below is known (<see cref="GameRules.LevelUnlockShare"/>).</param>
@@ -148,6 +149,8 @@ public static class Techs
             new() { Food = 0.3, Capacity = 0.2 }, [Tech.CropRotation, Tech.Chemistry], Era: Era.Modern),
         [Tech.AssemblyLine] = new("Producción en cadena", TechBranch.Economy, 13, "+25 % de madera y de yacimientos.", new() { Wood = 0.25, Deposits = 0.25 },
             [Tech.Industrialization], Era: Era.Modern),
+        [Tech.NavalEngineering] = new("Ingeniería naval", TechBranch.Economy, 13, "Diques secos para construir destructores y portaaviones.", Modifiers.None,
+            [Tech.Steel, Tech.OilRefining], Era: Era.Modern),
 
         [Tech.Writing] = new("Escritura", TechBranch.Society, 1, "+30 % de ciencia.", new() { Science = 0.3 }),
         [Tech.Mythology] = new("Mitología", TechBranch.Society, 1, "+5 de humor en todas tus provincias.", new() { Mood = 5 }),

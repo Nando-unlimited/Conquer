@@ -444,6 +444,9 @@ public sealed partial class GameSession
         if (info.RequiresTech is Tech tech && !Players[p.OwnerId].Techs.Contains(tech))
             return CommandResult.Fail($"Requiere {tech.Info().Name.ToLowerInvariant()}.");
         if (info.CityOnly && !p.CityId.HasValue) return CommandResult.Fail("Solo en provincias con ciudad.");
+        if (info.NeedsCoast && !p.Neighbors.Any(n => Map.Provinces[n].IsWater)) return CommandResult.Fail("Solo en provincias con costa.");
+        if (info.RequiresBuilding is BuildingType first && !p.Buildings.Contains(first))
+            return CommandResult.Fail($"Requiere {first.Info().Name.ToLowerInvariant()}.");
         if (info.NeedsDeposit && !Resources.Deposits.Any(r => p.HasDeposit(r) && Players[p.OwnerId].Knows(r)))
             return CommandResult.Fail("Requiere un yacimiento conocido y sin agotar.");
         return CommandResult.Success();

@@ -1,3 +1,4 @@
+using Conquer.Game.Buildings;
 using Conquer.Game.Entities;
 using Conquer.Game.Military;
 using Conquer.Game.Rules;
@@ -202,7 +203,10 @@ public sealed partial class GameSession
 
     public CommandResult CanTrain(City city, BattalionType type)
     {
-        if (type.Info().Naval && !IsPort(Map.Provinces[city.ProvinceId], city.OwnerId)) return CommandResult.Fail("Los barcos solo se construyen en ciudades con costa.");
+        var p = Map.Provinces[city.ProvinceId];
+        if (type.Info().Naval && !IsPort(p, city.OwnerId)) return CommandResult.Fail("Los barcos solo se construyen en ciudades con puerto.");
+        if (type.Info().Shipyard is BuildingType yard && !p.Buildings.Contains(yard))
+            return CommandResult.Fail($"Requiere {yard.Info().Name.ToLowerInvariant()} en la ciudad.");
         return CanRaiseTroops(city, type.Info().Men, type.Info().Cost, type.Info().Requires);
     }
 
@@ -506,13 +510,15 @@ public sealed partial class GameSession
                 continue;
             }
             if (InBattle(unit)) continue;
-            double recovery = MilitaryRules.OrganisationRecovery * (1 + CommandBonus(unit)) * (unit.IsMoving ? 0.5 : 1);
+            // A dry dock repairs a fleet faster: organisation and crews both.
+            double repair = unit.IsFleet && Map.Provinces[unit.ProvinceId].Buildings.Contains(BuildingType.DryDock) ? MilitaryRules.DryDockRepair : 1;
+            double recovery = MilitaryRules.OrganisationRecovery * (1 + CommandBonus(unit)) * (unit.IsMoving ? 0.5 : 1) * repair;
             foreach (var b in unit.Battalions)
             {
                 b.Organisation = Math.Min(b.Info.MaxOrganisation, b.Organisation + b.Info.MaxOrganisation * recovery);
                 double missing = b.Info.Men - b.Strength;
                 if (missing <= 0 || capital == null) continue;
-                double men = Math.Min(missing, Math.Min(b.Info.Men * MilitaryRules.ReinforcementRate, capital.Population - GameRules.MinCityPopulation));
+                double men = Math.Min(missing, Math.Min(b.Info.Men * MilitaryRules.ReinforcementRate * repair, capital.Population - GameRules.MinCityPopulation));
                 if (men <= 0) continue;
                 b.Strength += men;
                 capital.Population -= men;

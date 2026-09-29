@@ -2,6 +2,19 @@
 
 Todos los cambios del juego, del más reciente al más antiguo. Cada versión es un commit cuyo título es su número.
 
+## [1.25.0] - 2026-09-29
+
+### Añadido
+- **Puerto**: edificio para ciudades con costa, que se desbloquea con Navegación a vela. Sin él, la ciudad no construye barcos y las flotas no atracan ni se reparan allí. Además da +15 % de impuestos por el comercio marítimo.
+- **Ingeniería naval**: nuevo avance de la era Moderna (Economía, nivel 13). Desbloquea el **dique seco** y dos barcos avanzados:
+  - **Destructor**: rápido y fuerte.
+  - **Portaaviones**: el barco de guerra más fuerte; también pide Aviación.
+- **Dique seco**: se construye en una ciudad que ya tenga puerto. Solo allí se construyen el destructor y el portaaviones, y las flotas se reparan el doble de rápido.
+
+### Cambiado
+- **Puertos**: ahora son las ciudades con el edificio Puerto, no cualquier ciudad con costa. En las partidas guardadas, las flotas que estén en una ciudad sin puerto pueden salir al mar, pero no volver hasta que se construya uno.
+- Los rivales construyen puertos y diques secos e investigan Ingeniería naval.
+
 ## [1.24.0] - 2026-09-29
 
 ### Añadido

@@ -29,6 +29,8 @@ public enum BuildingType
     Hospital,
     Railway,
     PowerPlant,
+    Port,
+    DryDock,
 }
 
 /// <param name="Days">Days of work to build it.</param>
@@ -36,9 +38,11 @@ public enum BuildingType
 /// <param name="CityOnly">Only a province with a city can build it.</param>
 /// <param name="NeedsDeposit">Only a province with a deposit that is not exhausted can build it.</param>
 /// <param name="Effects">What it improves in its own province.</param>
+/// <param name="NeedsCoast">Only a province next to the sea or a lake can build it.</param>
+/// <param name="RequiresBuilding">Another building the province must have first.</param>
 public sealed record BuildingInfo(
     string Name, string Description, ResourceCost Cost, int Days,
-    Tech? RequiresTech, bool CityOnly, bool NeedsDeposit, Modifiers Effects);
+    Tech? RequiresTech, bool CityOnly, bool NeedsDeposit, Modifiers Effects, bool NeedsCoast = false, BuildingType? RequiresBuilding = null);
 
 public static class Buildings
 {
@@ -87,6 +91,11 @@ public static class Buildings
         [BuildingType.PowerPlant] = new("Central eléctrica", "+25 % de ciencia y de impuestos en la provincia.",
             new ResourceCost((ResourceType.Wood, 100), (ResourceType.Gold, 250), (ResourceType.Iron, 80), (ResourceType.Coal, 80)), 120, Tech.Electricity, true, false,
             new() { Science = 0.25, Taxes = 0.25 }),
+        [BuildingType.Port] = new("Puerto", "Construye y repara barcos. +15 % de impuestos por el comercio marítimo.",
+            new ResourceCost((ResourceType.Wood, 120), (ResourceType.Gold, 60)), 60, Tech.Navigation, true, false, new() { Taxes = 0.15 }, NeedsCoast: true),
+        [BuildingType.DryDock] = new("Dique seco", "Construye los barcos más avanzados y repara las flotas el doble de rápido.",
+            new ResourceCost((ResourceType.Gold, 300), (ResourceType.Iron, 150), (ResourceType.Coal, 50)), 120, Tech.NavalEngineering, true, false, Modifiers.None,
+            NeedsCoast: true, RequiresBuilding: BuildingType.Port),
     };
 
     public static BuildingInfo Info(this BuildingType type) => Table[type];
