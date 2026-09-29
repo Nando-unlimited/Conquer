@@ -29,13 +29,15 @@ internal sealed partial class AiPlayer
     private static readonly BuildingType[] BuildOrder =
     [
         BuildingType.Farm, BuildingType.Granary, BuildingType.Temple, BuildingType.Library, BuildingType.Market,
-        BuildingType.Mine, BuildingType.Sawmill, BuildingType.Aqueduct, BuildingType.HerbalistHut,
+        BuildingType.Mine, BuildingType.Sawmill, BuildingType.Aqueduct, BuildingType.HerbalistHut, BuildingType.Amphitheatre,
     ];
     /// <summary>Within each branch, the first of these it can research: food, then the advances that pay for themselves.</summary>
     private static readonly Tech[] ResearchOrder =
     [
         Tech.Agriculture, Tech.Writing, Tech.Archery, Tech.Carpentry, Tech.Mythology, Tech.HorsebackRiding, Tech.Irrigation,
         Tech.Mining, Tech.Pottery, Tech.Medicine, Tech.BronzeWorking, Tech.TheWheel, Tech.Currency, Tech.CodeOfLaws, Tech.IronWorking,
+        Tech.Mathematics, Tech.MilitaryTactics, Tech.Trade, Tech.Philosophy, Tech.Construction, Tech.Engineering, Tech.SiegeEngines,
+        Tech.DramaAndPoetry, Tech.HeavyCavalry,
     ];
     private readonly GameSession _session;
     private readonly Player _player;
@@ -132,7 +134,7 @@ internal sealed partial class AiPlayer
     private bool WorthBuilding(Province p, BuildingType type) => p.Population >= MinWorkersForBuilding && type switch
     {
         BuildingType.Sawmill => p.Info.WoodYield >= 1,
-        BuildingType.Temple => p.Mood < FestivalMood + 15,
+        BuildingType.Temple or BuildingType.Amphitheatre => p.Mood < FestivalMood + 15,
         BuildingType.Aqueduct => p.Population > 0.6 * _session.CapacityOf(p),
         _ => true,
     };

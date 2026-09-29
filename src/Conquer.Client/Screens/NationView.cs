@@ -41,6 +41,8 @@ public sealed partial class NationView
     private readonly float[] _scroll = new float[TabNames.Length];
     private readonly int[] _sortColumn = new int[TabNames.Length];
     private readonly bool[] _sortAscending = new bool[TabNames.Length];
+    /// <summary>The age the science tab shows; null for the first one with advances left to discover.</summary>
+    private Era? _scienceEra;
 
     public bool Visible { get; set; }
     public NationTab Tab { get; set; }
@@ -287,14 +289,27 @@ public sealed partial class NationView
     {
         float y = r.Y;
         double perDay = _session.SciencePerDay(_player);
-        ui.Text(r.X, y, $"Ciencia: {perDay:0.##} puntos al día", Theme.Text, FontSize.Normal, bold: true);
-        if (ui.Hover(new Rect(r.X, y, 300, 24)))
+        string points = $"Ciencia: {perDay:0.##} puntos al día" + (_player.SpareScience >= 1 ? $" · {_player.SpareScience:0} guardados" : "");
+        ui.Text(r.X, y, points, _player.SpareScience >= 1 ? Theme.Accent : Theme.Text, FontSize.Normal, bold: true);
+        if (ui.Hover(new Rect(r.X, y, ui.Font.Measure(points, FontSize.Normal, true), 24)))
             ui.Tooltip($"Cada ciudad aporta {GameRules.ScienceBasePerCity:0.#} puntos más {GameRules.SciencePerCityCitizen * 1000:0.#} por cada mil habitantes, " +
                        $"multiplicado por su humor." + (_player.Bonuses.Science > 0 ? $"\nAvances: +{_player.Bonuses.Science:P0}." : "") +
                        "\nSe reparte entre las ramas según su prioridad. Si una rama no investiga nada, su parte va a las demás." +
-                       $"\nCada vecino que ya conoce un avance te lo abarata un {GameRules.NeighbourResearchDiscount:P0} (hasta {GameRules.MaxNeighbourDiscounts}).");
-        if (_player.SpareScience >= 1)
-            ui.Text(r.X + 320, y + 2, $"{_player.SpareScience:0} puntos guardados: elige qué investigar.", Theme.Accent, FontSize.Small);
+                       $"\nCada vecino que ya conoce un avance te lo abarata un {GameRules.NeighbourResearchDiscount:P0} (hasta {GameRules.MaxNeighbourDiscounts})." +
+                       (_player.SpareScience >= 1 ? "\nLos puntos guardados entran en el próximo avance que elijas." : ""));
+
+        // One age at a time: a button for each, the one shown highlighted.
+        var eras = Techs.All.Select(t => t.Info().Era).Distinct().Order().ToList();
+        var shown = _scienceEra ?? eras.FirstOrDefault(e => Techs.All.Any(t => t.Info().Era == e && !_player.Techs.Contains(t)), eras[^1]);
+        float ex = r.X + 420;
+        foreach (var era in eras)
+        {
+            double multiplier = GameSession.EraCostMultiplier(_player, era);
+            string? tip = multiplier > 1 ? $"Sus avances te cuestan un {multiplier - 1:P0} más hasta que adoptes su institución." : null;
+            if (ui.Button(new Rect(ex, y - 4, 130, 28), era.Name(), active: era == shown, tooltip: tip, size: FontSize.Small)) _scienceEra = era;
+            ex += 136;
+        }
+
         float ix = r.Right;
         foreach (var institution in Institutions.All.Reverse()) ix = InstitutionStatus(ui, ix, y - 4, institution) - 24;
         y += 34;
@@ -303,7 +318,7 @@ public sealed partial class NationView
         float colW = (r.W - Gap * 2) / 3;
         var neighbours = _session.NeighbourNations(_player);
         foreach (var branch in Techs.Branches)
-            Branch(ui, new Rect(r.X + (int)branch * (colW + Gap), y, colW, r.Bottom - y), branch, perDay, neighbours);
+            Branch(ui, new Rect(r.X + (int)branch * (colW + Gap), y, colW, r.Bottom - y), branch, shown, perDay, neighbours);
     }
 
     /// <summary>An institution, right-aligned at <paramref name="right"/>: adopted, how far it has spread and the button to adopt it, or not yet born.</summary>
@@ -331,7 +346,7 @@ public sealed partial class NationView
         return right - w;
     }
 
-    private void Branch(Ui ui, Rect r, TechBranch branch, double perDay, IReadOnlySet<int> neighbours)
+    private void Branch(Ui ui, Rect r, TechBranch branch, Era era, double perDay, IReadOnlySet<int> neighbours)
     {
         float x = r.X, y = r.Y;
         ui.Text(x, y, branch.Name(), Theme.Accent, FontSize.Large, bold: true);
@@ -367,7 +382,7 @@ public sealed partial class NationView
         }
 
         const float CardH = 96, CardGap = 8;
-        for (int level = 1; level <= Techs.Levels(branch); level++)
+        foreach (int level in Techs.InBranch(branch).Where(t => t.Info().Era == era).Select(t => t.Info().Level).Distinct())
         {
             bool open = GameSession.IsLevelOpen(_player, branch, level);
             string title = $"Nivel {level}";
@@ -398,7 +413,7 @@ public sealed partial class NationView
         ui.Text(x, y, info.Name, known ? Theme.Good : current ? Theme.Accent : can.Ok ? Theme.Text : Theme.TextDisabled, bold: true);
         double cost = _session.ResearchCost(_player, tech, neighbours), done = _player.ResearchProgress[(int)tech];
         string state = known ? "Descubierto" : (done > 0 ? $"{done:0} / {cost:0}" : $"{cost:0} puntos") +
-                       (cost < info.Cost ? $" (−{1 - cost / info.Cost:P0})" : "");
+                       (cost < info.Cost ? $" (−{1 - cost / info.Cost:P0})" : cost > info.Cost ? $" (+{cost / info.Cost - 1:P0})" : "");
         float right = c.Right - 10;
         // Choosing it replaces what the branch was researching; the points already in either one stay.
         if (!known && !current)

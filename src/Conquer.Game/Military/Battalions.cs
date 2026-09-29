@@ -13,6 +13,9 @@ public enum BattalionType
     Chariots,
     ChariotArchers,
     IronInfantry,
+    Legionaries,
+    Catapults,
+    Cataphracts,
 }
 
 /// <param name="Men">Citizens the battalion takes from its city, and its full strength.</param>
@@ -47,6 +50,12 @@ public static class Battalions
             new ResourceCost((ResourceType.Wood, 50), (ResourceType.Gold, 40), (ResourceType.Copper, 10)), 35, [Tech.TheWheel, Tech.Archery], 6, 2, 30, 1.5, true),
         [BattalionType.IronInfantry] = new("Infantería de hierro", "H", 100,
             new ResourceCost((ResourceType.Wood, 20), (ResourceType.Gold, 30), (ResourceType.Iron, 20)), 30, [Tech.IronWorking], 5, 7, 40, 1, false),
+        [BattalionType.Legionaries] = new("Legionarios", "M", 100,
+            new ResourceCost((ResourceType.Wood, 20), (ResourceType.Gold, 40), (ResourceType.Iron, 25)), 35, [Tech.MilitaryTactics], 7, 9, 50, 1, false),
+        [BattalionType.Catapults] = new("Catapultas", "T", 100,
+            new ResourceCost((ResourceType.Wood, 90), (ResourceType.Gold, 40), (ResourceType.Copper, 10)), 40, [Tech.SiegeEngines], 12, 1, 20, 0.7, false),
+        [BattalionType.Cataphracts] = new("Catafractos", "F", 100,
+            new ResourceCost((ResourceType.Wood, 20), (ResourceType.Gold, 60), (ResourceType.Iron, 30)), 40, [Tech.HeavyCavalry], 10, 5, 45, 1.6, true),
     };
 
     public static BattalionInfo Info(this BattalionType type) => Table[type];

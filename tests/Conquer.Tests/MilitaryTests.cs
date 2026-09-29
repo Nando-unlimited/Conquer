@@ -94,6 +94,27 @@ public class MilitaryTests(WorldFixture world)
     }
 
     [Fact]
+    public void ClassicalBattalionsNeedTheirAdvances()
+    {
+        var (s, a, _) = TwoNations();
+        var city = s.CityIn(a)!;
+        a.Population = 2000;
+        foreach (var r in new[] { ResourceType.Wood, ResourceType.Gold, ResourceType.Copper, ResourceType.Iron }) s.Human.Stockpile[r] = 1000;
+
+        Assert.False(s.Train(0, city.Id, BattalionType.Legionaries).Ok);
+        s.Human.Learn(Tech.MilitaryTactics);
+        Assert.True(s.Train(0, city.Id, BattalionType.Legionaries).Ok);
+
+        Assert.False(s.Train(0, city.Id, BattalionType.Catapults).Ok);
+        s.Human.Learn(Tech.SiegeEngines);
+        Assert.True(s.Train(0, city.Id, BattalionType.Catapults).Ok);
+
+        Assert.False(s.Train(0, city.Id, BattalionType.Cataphracts).Ok);
+        s.Human.Learn(Tech.HeavyCavalry);
+        Assert.True(s.Train(0, city.Id, BattalionType.Cataphracts).Ok);
+    }
+
+    [Fact]
     public void DivisionsMergeSplitAndMarchAtTheSlowestPace()
     {
         var (s, a, _) = TwoNations();

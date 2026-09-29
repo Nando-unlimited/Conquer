@@ -11,7 +11,7 @@
     <InvariantGlobalization>true</InvariantGlobalization>
     <RootNamespace>Conquer.Client</RootNamespace>
     <!-- Game version: bump on every change and add a matching entry at the top of CHANGELOG.md. -->
-    <Version>1.16.0</Version>
+    <Version>1.17.0</Version>
   </PropertyGroup>
 
   <ItemGroup>

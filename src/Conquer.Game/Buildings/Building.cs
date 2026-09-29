@@ -19,6 +19,7 @@ public enum BuildingType
     Market,
     Aqueduct,
     HerbalistHut,
+    Amphitheatre,
 }
 
 /// <param name="Days">Days of work to build it.</param>
@@ -54,6 +55,8 @@ public static class Buildings
             new ResourceCost((ResourceType.Wood, 100), (ResourceType.Gold, 40)), 60, Tech.Irrigation, true, false, new() { Capacity = 0.25 }),
         [BuildingType.HerbalistHut] = new("Herbolario", "+20 % de fertilidad en la provincia.",
             new ResourceCost((ResourceType.Wood, 40), (ResourceType.Gold, 30)), 30, Tech.Medicine, true, false, new() { Fertility = 0.2 }),
+        [BuildingType.Amphitheatre] = new("Anfiteatro", "+10 de humor en la provincia: juegos y espectáculos.",
+            new ResourceCost((ResourceType.Wood, 120), (ResourceType.Gold, 60)), 60, Tech.Construction, true, false, new() { Mood = 10 }),
     };
 
     public static BuildingInfo Info(this BuildingType type) => Table[type];

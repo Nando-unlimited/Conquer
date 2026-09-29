@@ -2,6 +2,23 @@
 
 Todos los cambios del juego, del más reciente al más antiguo. Cada versión es un commit cuyo título es su número.
 
+## [1.17.0] - 2026-09-29
+
+### Añadido
+- **La era Clásica**: dos niveles más en cada rama de la ciencia, que cuestan 500 y 750 puntos. Mientras no adoptes el Urbanismo, te cuestan un 50 % más.
+  - **Economía**: Comercio (+15 % de impuestos) y Construcción (anfiteatros); después, Ingeniería (la tierra alimenta un 15 % más de gente).
+  - **Sociedad**: Filosofía (+20 % de ciencia y +3 de humor) y Matemáticas (+15 % de ciencia); después, Drama y poesía (+5 de humor).
+  - **Militar**: Tácticas militares (legionarios) y Maquinaria de asedio (catapultas); después, Caballería pesada (catafractos).
+- **Nuevo edificio, el Anfiteatro**: +10 de humor en una ciudad.
+- **Nuevos batallones**:
+  - **Legionarios**: infantería pesada, necesita hierro.
+  - **Catapultas**: mucho ataque, casi nada de defensa y lentas.
+  - **Catafractos**: caballería con armadura, necesita hierro.
+- La pestaña Ciencia muestra una era cada vez, con un botón por era. Por defecto aparece la primera en la que te quedan avances por descubrir.
+
+### Cambiado
+- Los rivales investigan y usan los avances, edificios y batallones nuevos.
+
 ## [1.16.0] - 2026-09-29
 
 ### Añadido

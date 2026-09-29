@@ -124,6 +124,45 @@ public class InstitutionTests(WorldFixture world)
     }
 
     [Fact]
+    public void ClassicalAdvancesCostMoreUntilUrbanismIsAdopted()
+    {
+        var s = GameSession.Create(_map, 1, seed: 7, computerRivals: false);
+        foreach (var tech in Techs.All.Where(t => t.Info().Era == Era.Ancient)) s.Human.Learn(tech);
+        double cost = Tech.Trade.Info().Cost;
+
+        Assert.Equal(Era.Classical, Tech.Trade.Info().Era);
+        Assert.Equal(cost * (1 + GameRules.InstitutionPenalty), s.ResearchCost(s.Human, Tech.Trade), 6);
+        s.Human.Adopt(Institution.Urbanism);
+        Assert.Equal(cost, s.ResearchCost(s.Human, Tech.Trade), 6);
+    }
+
+    [Fact]
+    public void ClassicalLevelsFollowTheAncientOnes()
+    {
+        var s = GameSession.Create(_map, 1, seed: 7, computerRivals: false);
+        Assert.False(s.Research(0, Tech.MilitaryTactics).Ok); // level 4 needs level 3
+        foreach (var tech in Techs.All.Where(t => t.Info().Era == Era.Ancient)) s.Human.Learn(tech);
+
+        Assert.True(s.Research(0, Tech.MilitaryTactics).Ok);
+        Assert.False(s.Research(0, Tech.SiegeEngines).Ok);  // needs mathematics
+        Assert.False(s.Research(0, Tech.HeavyCavalry).Ok);  // level 5 needs one of level 4
+        s.Human.Learn(Tech.MilitaryTactics);
+        Assert.True(s.Research(0, Tech.HeavyCavalry).Ok);
+    }
+
+    [Fact]
+    public void ConstructionBringsAmphitheatres()
+    {
+        var (a, _) = GrasslandPair();
+        var s = GameSession.Create(_map, 1, seed: 7, computerRivals: false);
+        s.FoundCity(0, s.AddUnit(0, UnitType.Settlers, a.Id, 300).Id);
+
+        Assert.False(s.IsBuildingAvailable(a, Conquer.Game.Buildings.BuildingType.Amphitheatre).Ok);
+        s.Human.Learn(Tech.Construction);
+        Assert.True(s.IsBuildingAvailable(a, Conquer.Game.Buildings.BuildingType.Amphitheatre).Ok);
+    }
+
+    [Fact]
     public void InstitutionsAreSaved()
     {
         var (a, _) = GrasslandPair();

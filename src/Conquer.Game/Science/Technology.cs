@@ -43,6 +43,15 @@ public enum Tech
     Currency,
     Pottery,
     CodeOfLaws,
+    Trade,
+    Construction,
+    Engineering,
+    Philosophy,
+    Mathematics,
+    DramaAndPoetry,
+    MilitaryTactics,
+    SiegeEngines,
+    HeavyCavalry,
 }
 
 /// <param name="Level">Its level in its branch, from 1; a level opens once enough of the one below is known (<see cref="GameRules.LevelUnlockShare"/>).</param>
@@ -64,7 +73,7 @@ public static class Techs
     public static readonly TechBranch[] Branches = Enum.GetValues<TechBranch>();
 
     /// <summary>What each level costs. <b>Balance research speed here.</b></summary>
-    private static readonly double[] LevelCosts = [70, 160, 300];
+    private static readonly double[] LevelCosts = [70, 160, 300, 500, 750];
 
     public static double LevelCost(int level) => LevelCosts[Math.Min(level, LevelCosts.Length) - 1];
 
@@ -76,18 +85,29 @@ public static class Techs
             new() { Deposits = 0.5 }, Reveals: [ResourceType.Coal]),
         [Tech.Irrigation] = new("Irrigación", TechBranch.Economy, 2, "La tierra alimenta un 25 % más de gente.", new() { Capacity = 0.25 }, [Tech.Agriculture]),
         [Tech.Currency] = new("Moneda", TechBranch.Economy, 3, "+30 % de oro de los impuestos.", new() { Taxes = 0.3 }, [Tech.Writing, Tech.Mining]),
+        [Tech.Trade] = new("Comercio", TechBranch.Economy, 4, "+15 % de oro de los impuestos.", new() { Taxes = 0.15 }, [Tech.Currency], Era: Era.Classical),
+        [Tech.Construction] = new("Construcción", TechBranch.Economy, 4, "Anfiteatros para las ciudades.", Modifiers.None, Era: Era.Classical),
+        [Tech.Engineering] = new("Ingeniería", TechBranch.Economy, 5, "Calzadas y canales: la tierra alimenta un 15 % más de gente.", new() { Capacity = 0.15 },
+            [Tech.Construction, Tech.Mathematics], Era: Era.Classical),
 
         [Tech.Writing] = new("Escritura", TechBranch.Society, 1, "+30 % de ciencia.", new() { Science = 0.3 }),
         [Tech.Mythology] = new("Mitología", TechBranch.Society, 1, "+5 de humor en todas tus provincias.", new() { Mood = 5 }),
         [Tech.Pottery] = new("Alfarería", TechBranch.Society, 2, "Vasijas para guardar el grano.", Modifiers.None),
         [Tech.Medicine] = new("Medicina", TechBranch.Society, 2, "+10 % de fertilidad y el hambre mata la mitad.", new() { Fertility = 0.1, FamineSurvival = 0.5 }, [Tech.Writing]),
         [Tech.CodeOfLaws] = new("Código de leyes", TechBranch.Society, 3, "+10 % de oro de los impuestos.", new() { Taxes = 0.1 }),
+        [Tech.Philosophy] = new("Filosofía", TechBranch.Society, 4, "+20 % de ciencia y +3 de humor.", new() { Science = 0.2, Mood = 3 }, [Tech.Mythology], Era: Era.Classical),
+        [Tech.Mathematics] = new("Matemáticas", TechBranch.Society, 4, "+15 % de ciencia.", new() { Science = 0.15 }, [Tech.Writing], Era: Era.Classical),
+        [Tech.DramaAndPoetry] = new("Drama y poesía", TechBranch.Society, 5, "+5 de humor en todas tus provincias.", new() { Mood = 5 }, [Tech.Philosophy], Era: Era.Classical),
 
         [Tech.Archery] = new("Tiro con arco", TechBranch.Military, 1, "Arqueros a pie y, con la rueda, en carro.", Modifiers.None),
         [Tech.HorsebackRiding] = new("Doma del caballo", TechBranch.Military, 1, "Guerreros a caballo, más rápidos.", Modifiers.None),
         [Tech.BronzeWorking] = new("Trabajo del bronce", TechBranch.Military, 2, "Armas y corazas de bronce.", Modifiers.None, [Tech.Mining]),
         [Tech.TheWheel] = new("La rueda", TechBranch.Military, 2, "Carros de guerra tirados por caballos.", Modifiers.None, [Tech.HorsebackRiding]),
         [Tech.IronWorking] = new("Trabajo del hierro", TechBranch.Military, 3, "Descubre el hierro.", Modifiers.None, [Tech.BronzeWorking], [ResourceType.Iron]),
+        [Tech.MilitaryTactics] = new("Tácticas militares", TechBranch.Military, 4, "Legiones de infantería pesada.", Modifiers.None, Era: Era.Classical),
+        [Tech.SiegeEngines] = new("Maquinaria de asedio", TechBranch.Military, 4, "Catapultas que rompen las defensas.", Modifiers.None, [Tech.Mathematics], Era: Era.Classical),
+        [Tech.HeavyCavalry] = new("Caballería pesada", TechBranch.Military, 5, "Jinetes con armadura.", Modifiers.None,
+            [Tech.HorsebackRiding, Tech.MilitaryTactics], Era: Era.Classical),
     };
 
     public static TechInfo Info(this Tech tech) => Table[tech];
