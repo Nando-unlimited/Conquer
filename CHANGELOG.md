@@ -2,6 +2,25 @@
 
 Todos los cambios del juego, del más reciente al más antiguo. Cada versión es un commit cuyo título es su número.
 
+## [1.21.0] - 2026-09-29
+
+### Añadido
+- **La era Industrial**: niveles 10 y 11 de cada rama, que cuestan 4.500 y 6.200 puntos.
+  - **Economía**: Máquina de vapor (+25 % de yacimientos) e Industrialización (fábricas); después, Ferrocarril.
+  - **Sociedad**: Química (descubre el **caucho**) y Salubridad (hospitales); después, Educación pública (+20 % de ciencia).
+  - **Militar**: Estriado (fusileros) y Acero (artillería de campaña); después, Ametralladoras.
+- **La Industrialización**, institución de la era Industrial.
+  - **Dónde nace**: en la primera provincia con fábrica y yacimiento de carbón.
+  - **Qué da al adoptarla**: +15 % de madera y de yacimientos.
+- **Nuevos edificios**:
+  - **Fábrica**: +50 % de madera y de yacimientos en la provincia.
+  - **Hospital**: +20 % de fertilidad y +10 % de capacidad.
+  - **Ferrocarril**: la provincia se cruza el doble de deprisa; se construye en cualquier provincia habitada y se suma a la calzada.
+- **Nuevos batallones**, que gastan hierro y carbón:
+  - **Fusileros**.
+  - **Artillería de campaña**: mucho ataque y lenta.
+  - **Ametralladoras**: mucha defensa.
+
 ## [1.20.0] - 2026-09-29
 
 ### Añadido

@@ -40,6 +40,7 @@ public class EraTests(WorldFixture world)
     [InlineData(Era.Classical)]
     [InlineData(Era.Medieval)]
     [InlineData(Era.Renaissance)]
+    [InlineData(Era.Industrial)]
     public void EachAgeCostsMoreUntilItsInstitutionIsAdopted(Era era)
     {
         var (s, _) = WithCapital();
@@ -55,6 +56,7 @@ public class EraTests(WorldFixture world)
     [InlineData(Era.Classical)]
     [InlineData(Era.Medieval)]
     [InlineData(Era.Renaissance)]
+    [InlineData(Era.Industrial)]
     public void AnAgeOpensOnceTheOneBeforeIsKnown(Era era)
     {
         var (s, _) = WithCapital();
@@ -88,6 +90,9 @@ public class EraTests(WorldFixture world)
     [InlineData(BuildingType.University, Tech.Education)]
     [InlineData(BuildingType.Bank, Tech.Banking)]
     [InlineData(BuildingType.Castle, Tech.Castles)]
+    [InlineData(BuildingType.Factory, Tech.Industrialization)]
+    [InlineData(BuildingType.Hospital, Tech.Sanitation)]
+    [InlineData(BuildingType.Railway, Tech.Railroad)]
     public void BuildingsNeedTheirAdvance(BuildingType type, Tech tech)
     {
         var (s, a) = WithCapital();
@@ -111,6 +116,9 @@ public class EraTests(WorldFixture world)
     [InlineData(BattalionType.Arquebusiers, Tech.Gunpowder)]
     [InlineData(BattalionType.Cannons, Tech.Metallurgy)]
     [InlineData(BattalionType.Musketeers, Tech.MilitaryScience)]
+    [InlineData(BattalionType.Riflemen, Tech.Rifling)]
+    [InlineData(BattalionType.FieldArtillery, Tech.Steel)]
+    [InlineData(BattalionType.MachineGunners, Tech.MachineGuns)]
     public void BattalionsNeedTheirAdvance(BattalionType type, Tech tech)
     {
         var (s, a) = WithCapital();
@@ -140,5 +148,36 @@ public class EraTests(WorldFixture world)
         Assert.Equal(ArmyEra.Classical, s.Human.ArmyEra);
         s.Human.Learn(Tech.MilitaryScience);
         Assert.Equal(ArmyEra.Modern, s.Human.ArmyEra);
+    }
+
+    [Fact]
+    public void IndustrializationIsBornWhereAFactoryWorksCoal()
+    {
+        var coal = _map.Provinces.First(p => p.IsClaimable && p.Deposits[(int)ResourceType.Coal] > 0 && p.Neighbors.Length > 3);
+        var s = GameSession.Create(_map, 1, seed: 7, computerRivals: false);
+        s.FoundCity(0, s.AddUnit(0, UnitType.Settlers, coal.Id, 300).Id);
+        for (int h = 0; h < 24; h++) s.Step();
+        Assert.False(s.IsBorn(Institution.Industrialization));
+
+        coal.AddBuilding(BuildingType.Factory);
+        for (int h = 0; h < 24; h++) s.Step();
+
+        Assert.Equal(coal.Id, s.BirthplaceOf(Institution.Industrialization));
+        Assert.Contains(s.Notifications, n => n.Text.StartsWith("Nace la Industrialización"));
+    }
+
+    [Fact]
+    public void ChemistryRevealsRubberAndRailwaysDoubleTheSpeed()
+    {
+        var (s, a) = WithCapital();
+        Assert.False(s.Human.Knows(ResourceType.Rubber));
+        s.Human.Learn(Tech.Chemistry);
+        Assert.True(s.Human.Knows(ResourceType.Rubber));
+
+        var b = _map.Provinces[a.Neighbors.First(n => !_map.Provinces[n].IsWater)];
+        double hours = s.Pathfinder.StepHours(a.Id, b.Id);
+        a.AddBuilding(BuildingType.Railway);
+        b.AddBuilding(BuildingType.Railway);
+        Assert.Equal(hours / 2, s.Pathfinder.StepHours(a.Id, b.Id), 6);
     }
 }

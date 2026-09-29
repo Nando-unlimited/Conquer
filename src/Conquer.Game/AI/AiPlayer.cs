@@ -32,6 +32,7 @@ internal sealed partial class AiPlayer
         BuildingType.Farm, BuildingType.Granary, BuildingType.Temple, BuildingType.Library, BuildingType.Market,
         BuildingType.Mine, BuildingType.Sawmill, BuildingType.Aqueduct, BuildingType.HerbalistHut, BuildingType.Amphitheatre,
         BuildingType.Road, BuildingType.Walls, BuildingType.University, BuildingType.Bank, BuildingType.Castle,
+        BuildingType.Factory, BuildingType.Hospital, BuildingType.Railway,
     ];
     /// <summary>Within each branch, the first of these it can research: food, then the advances that pay for themselves.</summary>
     private static readonly Tech[] ResearchOrder =
@@ -43,6 +44,8 @@ internal sealed partial class AiPlayer
         Tech.CropRotation, Tech.Education, Tech.Machinery, Tech.Guilds, Tech.Theology, Tech.Stirrup, Tech.Banking, Tech.Astronomy,
         Tech.Castles, Tech.PrintingPress, Tech.Gunpowder, Tech.Economics, Tech.Anatomy, Tech.DeepMining, Tech.Metallurgy,
         Tech.ScientificMethod, Tech.MilitaryScience, Tech.Cartography,
+        Tech.Rifling, Tech.SteamEngine, Tech.PublicEducation, Tech.Industrialization, Tech.Sanitation, Tech.Chemistry, Tech.Steel,
+        Tech.Railroad, Tech.MachineGuns,
     ];
     private readonly GameSession _session;
     private readonly Player _player;
@@ -142,7 +145,7 @@ internal sealed partial class AiPlayer
         BuildingType.Temple or BuildingType.Amphitheatre => p.Mood < FestivalMood + 15,
         BuildingType.Aqueduct => p.Population > 0.6 * _session.CapacityOf(p),
         // Roads where the armies gather, walls around the big cities.
-        BuildingType.Road => p.CityId.HasValue,
+        BuildingType.Road or BuildingType.Railway => p.CityId.HasValue,
         BuildingType.Walls or BuildingType.Castle => p.Population >= BigCityPopulation,
         _ => true,
     };

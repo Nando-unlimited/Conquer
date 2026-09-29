@@ -35,6 +35,8 @@ public sealed partial class GameSession
             .Select(p => p.CapitalCityId is int id ? CityById(id) : null).OfType<City>().Select(c => Map.Provinces[c.ProvinceId]).FirstOrDefault(),
         Institution.Humanism => Cities.Select(c => Map.Provinces[c.ProvinceId]).Where(p => p.Buildings.Contains(BuildingType.University))
             .MaxBy(p => p.Population),
+        Institution.Industrialization => Map.Provinces.Where(p => p.Buildings.Contains(BuildingType.Factory) && p.HasDeposit(Economy.ResourceType.Coal))
+            .MaxBy(p => p.Population),
         _ => null,
     };
 

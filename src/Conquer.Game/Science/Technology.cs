@@ -72,6 +72,15 @@ public enum Tech
     Gunpowder,
     Metallurgy,
     MilitaryScience,
+    SteamEngine,
+    Industrialization,
+    Railroad,
+    Chemistry,
+    Sanitation,
+    PublicEducation,
+    Rifling,
+    Steel,
+    MachineGuns,
 }
 
 /// <param name="Level">Its level in its branch, from 1; a level opens once enough of the one below is known (<see cref="GameRules.LevelUnlockShare"/>).</param>
@@ -93,7 +102,7 @@ public static class Techs
     public static readonly TechBranch[] Branches = Enum.GetValues<TechBranch>();
 
     /// <summary>What each level costs. <b>Balance research speed here.</b></summary>
-    private static readonly double[] LevelCosts = [70, 160, 300, 500, 750, 1100, 1600, 2300, 3200];
+    private static readonly double[] LevelCosts = [70, 160, 300, 500, 750, 1100, 1600, 2300, 3200, 4500, 6200];
 
     public static double LevelCost(int level) => LevelCosts[Math.Min(level, LevelCosts.Length) - 1];
 
@@ -117,6 +126,10 @@ public static class Techs
         [Tech.DeepMining] = new("Minería profunda", TechBranch.Economy, 8, "Galerías y bombas: +30 % de yacimientos.", new() { Deposits = 0.3 }, [Tech.Guilds], Era: Era.Renaissance),
         [Tech.Cartography] = new("Cartografía", TechBranch.Economy, 9, "Rutas de comercio: +10 % de oro de los impuestos.", new() { Taxes = 0.1 },
             [Tech.Astronomy], Era: Era.Renaissance),
+        [Tech.SteamEngine] = new("Máquina de vapor", TechBranch.Economy, 10, "Bombas y máquinas: +25 % de yacimientos.", new() { Deposits = 0.25 },
+            [Tech.DeepMining], Era: Era.Industrial),
+        [Tech.Industrialization] = new("Industrialización", TechBranch.Economy, 10, "Fábricas para las ciudades.", Modifiers.None, [Tech.Economics], Era: Era.Industrial),
+        [Tech.Railroad] = new("Ferrocarril", TechBranch.Economy, 11, "Vías de tren que cruzan las provincias.", Modifiers.None, [Tech.SteamEngine], Era: Era.Industrial),
 
         [Tech.Writing] = new("Escritura", TechBranch.Society, 1, "+30 % de ciencia.", new() { Science = 0.3 }),
         [Tech.Mythology] = new("Mitología", TechBranch.Society, 1, "+5 de humor en todas tus provincias.", new() { Mood = 5 }),
@@ -135,6 +148,9 @@ public static class Techs
         [Tech.Anatomy] = new("Anatomía", TechBranch.Society, 8, "+15 % de fertilidad.", new() { Fertility = 0.15 }, [Tech.Medicine], Era: Era.Renaissance),
         [Tech.ScientificMethod] = new("Método científico", TechBranch.Society, 9, "+20 % de ciencia.", new() { Science = 0.2 },
             [Tech.PrintingPress, Tech.Astronomy], Era: Era.Renaissance),
+        [Tech.Chemistry] = new("Química", TechBranch.Society, 10, "Descubre el caucho.", Modifiers.None, [Tech.ScientificMethod], [ResourceType.Rubber], Era.Industrial),
+        [Tech.Sanitation] = new("Salubridad", TechBranch.Society, 10, "Hospitales para las ciudades.", Modifiers.None, [Tech.Anatomy], Era: Era.Industrial),
+        [Tech.PublicEducation] = new("Educación pública", TechBranch.Society, 11, "+20 % de ciencia.", new() { Science = 0.2 }, [Tech.ScientificMethod], Era: Era.Industrial),
 
         [Tech.Archery] = new("Tiro con arco", TechBranch.Military, 1, "Arqueros a pie y, con la rueda, en carro.", Modifiers.None),
         [Tech.HorsebackRiding] = new("Doma del caballo", TechBranch.Military, 1, "Guerreros a caballo, más rápidos.", Modifiers.None),
@@ -154,6 +170,9 @@ public static class Techs
         [Tech.Metallurgy] = new("Metalurgia", TechBranch.Military, 8, "Cañones de hierro fundido.", Modifiers.None, [Tech.Gunpowder, Tech.Guilds], Era: Era.Renaissance),
         [Tech.MilitaryScience] = new("Ciencia militar", TechBranch.Military, 9, "Mosqueteros y ejércitos modernos: regimientos, brigadas y divisiones.",
             Modifiers.None, [Tech.Gunpowder, Tech.PrintingPress], Era: Era.Renaissance),
+        [Tech.Rifling] = new("Estriado", TechBranch.Military, 10, "Fusiles de ánima rayada, más certeros.", Modifiers.None, [Tech.MilitaryScience], Era: Era.Industrial),
+        [Tech.Steel] = new("Acero", TechBranch.Military, 10, "Artillería de campaña de acero.", Modifiers.None, [Tech.Metallurgy, Tech.SteamEngine], Era: Era.Industrial),
+        [Tech.MachineGuns] = new("Ametralladoras", TechBranch.Military, 11, "Fuego continuo que detiene los asaltos.", Modifiers.None, [Tech.Rifling], Era: Era.Industrial),
     };
 
     public static TechInfo Info(this Tech tech) => Table[tech];
