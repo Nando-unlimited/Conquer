@@ -1,5 +1,6 @@
 using Conquer.Client.Graphics;
 using Conquer.Client.UI;
+using Conquer.Game.Rules;
 using Conquer.Game.Simulation;
 using Conquer.Game.World;
 
@@ -43,13 +44,14 @@ public sealed class MainMenuScreen : IScreen
     public void Dispose() { }
 }
 
-/// <summary>The new-game options: map, seed and number of players.</summary>
+/// <summary>The new-game options: map, seed, number of players and difficulty.</summary>
 public sealed class NewGameScreen : IScreen
 {
     private readonly ConquerApp _app;
     private MapKind _kind = MapKind.Random;
     private int _seed = Random.Shared.Next(1, 100000);
     private int _players = 4;
+    private Difficulty _difficulty = Difficulty.Normal;
 
     public NewGameScreen(ConquerApp app) => _app = app;
 
@@ -61,7 +63,7 @@ public sealed class NewGameScreen : IScreen
 
         ui.TextCentered(new Rect(0, s.Y * 0.1f, s.X, 80), "CONQUER", Theme.Accent, FontSize.Title, bold: true);
 
-        var panel = new Rect(cx - 230, s.Y * 0.1f + 110, 460, 320);
+        var panel = new Rect(cx - 230, s.Y * 0.1f + 110, 460, 400);
         ui.Panel(panel);
         float x = panel.X + 24, y = panel.Y + 20, w = panel.W - 48;
         ui.Text(x, y, "Nueva partida", Theme.Text, FontSize.Large, bold: true);
@@ -84,8 +86,18 @@ public sealed class NewGameScreen : IScreen
         if (ui.Button(new Rect(x + 120, y, 36, 32), "-", _players > 1)) _players--;
         ui.TextCentered(new Rect(x + 160, y, 110, 32), _players.ToString());
         if (ui.Button(new Rect(x + 274, y, 36, 32), "+", _players < 8)) _players++;
+        y += 46;
+
+        var difficulty = _difficulty.Info();
+        ui.Text(x, y + 6, "Dificultad", Theme.TextDim);
+        if (ui.Button(new Rect(x + 120, y, 36, 32), "-", _difficulty > Difficulty.VeryEasy)) _difficulty--;
+        ui.TextCentered(new Rect(x + 160, y, 110, 32), difficulty.Name);
+        if (ui.Button(new Rect(x + 274, y, 36, 32), "+", _difficulty < Difficulty.VeryHard)) _difficulty++;
         y += 40;
-        foreach (var line in ui.Font.Wrap("Tú y cada rival empezáis con 300 colonos, 600 de comida, 50 de oro y 100 de madera. Nadie posee tierra todavía.", w, FontSize.Small))
+        double start = difficulty.StartingResources;
+        string text = $"{difficulty.Description} Empiezas con 300 colonos, {GameRules.StartingFood * start:0} de comida, " +
+                      $"{GameRules.StartingGold * start:0} de oro y {GameRules.StartingWood * start:0} de madera. Nadie posee tierra todavía.";
+        foreach (var line in ui.Font.Wrap(text, w, FontSize.Small))
         {
             ui.Text(x, y, line, Theme.TextDim, FontSize.Small);
             y += ui.Font.LineHeight(FontSize.Small);
@@ -93,7 +105,7 @@ public sealed class NewGameScreen : IScreen
 
         // The Earth map is fixed, but the seed still drives start positions, resources and rivals.
         if (ui.Button(new Rect(x, panel.Bottom - 64, w, 44), "Comenzar", size: FontSize.Large))
-            _app.Show(new LoadingScreen(_app, new WorldSettings(_kind, _seed), _players));
+            _app.Show(new LoadingScreen(_app, new WorldSettings(_kind, _seed, Difficulty: _difficulty), _players));
 
         if (ui.Button(new Rect(cx - 230, panel.Bottom + 20, 460, 40), "Volver") || ui.Input.KeysPressed.Contains(Silk.NET.Input.Key.Escape))
             _app.Show(new MainMenuScreen(_app));

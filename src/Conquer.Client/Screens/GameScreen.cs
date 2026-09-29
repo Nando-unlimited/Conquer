@@ -442,8 +442,9 @@ public sealed partial class GameScreen : IScreen
             if (x > s.X - 290) break;
         }
 
-        bool idleScience = Human.Researching is null && Human.CapitalCityId.HasValue;
-        string nationTip = idleScience ? "Gestionar el país (N)\nNo estás investigando nada." : "Gestionar el país (N)";
+        // Science that no branch can take is going to waste: every branch is finished or waiting.
+        bool idleScience = Human.SpareScience >= 1;
+        string nationTip = idleScience ? "Gestionar el país (N)\nNinguna rama de la ciencia puede avanzar." : "Gestionar el país (N)";
         if (Ui.Button(new Rect(s.X - 190, 12, 92, 32), idleScience ? "Nación !" : "Nación", active: _nation.Visible, tooltip: nationTip))
             _nation.Visible = !_nation.Visible;
         if (Ui.Button(new Rect(s.X - 90, 12, 78, 32), "Menú")) _menuOpen = true;

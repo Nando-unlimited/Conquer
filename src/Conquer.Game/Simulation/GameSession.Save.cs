@@ -17,13 +17,14 @@ public sealed partial class GameSession
         SavedAtUtc = DateTime.UtcNow,
         World = Map.Settings ?? new WorldSettings(Map.Kind, Map.Seed),
         MapFingerprint = Fingerprint(Map),
+        ExtraDeposits = true,
         Hours = Date.Hours,
         ComputerRivals = _computerRivals,
         Players = Players.Select(p => new PlayerSave(
             p.Id, p.Name, p.Color, p.IsHuman, [.. Resources.All.Select(r => p.Stockpile[r])], p.CapitalCityId,
-            [.. p.LastDayNet], p.IsStarving, p.FoodReserveDays, [.. p.Techs.Order()], p.Researching,
+            [.. p.LastDayNet], p.IsStarving, p.FoodReserveDays, [.. p.Techs.Order()],
             [.. p.ResearchProgress], p.SpareScience, p.LastDayScience,
-            [.. p.Templates.Select(t => new TemplateSave(t.Id, t.Number, [.. t.Battalions]))])).ToList(),
+            [.. p.Templates.Select(t => new TemplateSave(t.Id, t.Number, [.. t.Battalions]))], [.. p.ResearchPriorities])).ToList(),
         // Provinces nobody has touched keep their generated state, so only the rest are stored.
         Provinces = Map.Provinces.Where(Changed).Select(p => new ProvinceSave(
             p.Id, p.OwnerId, p.ControllerId, p.Population, p.CityId, p.Mood, p.Fertility, [.. p.Reserves],
@@ -78,6 +79,10 @@ public sealed partial class GameSession
             p.Mood = ps.Mood;
             p.Fertility = ps.Fertility;
             ps.Reserves.CopyTo(p.Reserves, 0);
+            // A deposit the old generator did not place has nothing saved; it starts full, like the rest did.
+            if (!save.ExtraDeposits)
+                foreach (var r in Resources.Deposits)
+                    if (p.Reserves[(int)r] == 0) p.Reserves[(int)r] = p.DepositSizes[(int)r] * GameRules.DepositSizeMultiplier;
             foreach (var b in ps.Buildings) p.AddBuilding(b);
             p.Constructing = ps.Constructing;
             p.ConstructionDaysLeft = ps.ConstructionDaysLeft;
@@ -92,7 +97,8 @@ public sealed partial class GameSession
             player.IsStarving = s.IsStarving;
             player.FoodReserveDays = s.FoodReserveDays;
             foreach (var tech in s.Techs) player.Learn(tech);
-            player.Researching = s.Researching;
+            // Saves from before the branches have no priorities and leave the default ones.
+            s.ResearchPriorities?.CopyTo(player.ResearchPriorities, 0);
             s.ResearchProgress.CopyTo(player.ResearchProgress, 0);
             player.SpareScience = s.SpareScience;
             player.LastDayScience = s.LastDayScience;

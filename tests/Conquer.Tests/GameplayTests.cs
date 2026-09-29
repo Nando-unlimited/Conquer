@@ -385,6 +385,17 @@ public class GameplayTests(WorldFixture world)
     }
 
     [Fact]
+    public void ManyProvincesHoldDepositsAndSomeSeveral()
+    {
+        var land = _map.Provinces.Where(p => p.IsClaimable).ToList();
+        int DepositsIn(Province p) => Resources.Deposits.Count(r => p.Deposits[(int)r] > 0);
+
+        // On normal difficulty about three in ten have a deposit, and about one in twenty two or more.
+        Assert.InRange(land.Count(p => DepositsIn(p) > 0), land.Count * 25 / 100, land.Count * 40 / 100);
+        Assert.InRange(land.Count(p => DepositsIn(p) > 1), land.Count * 3 / 100, land.Count * 8 / 100);
+    }
+
+    [Fact]
     public void DepositsRunDryAndStopProducing()
     {
         var s = NewSession();
@@ -412,41 +423,90 @@ public class GameplayTests(WorldFixture world)
         s.FoundCity(0, s.AddUnit(0, UnitType.Settlers, a.Id, 300).Id);
         Assert.True(s.SciencePerDay(s.Human) > GameRules.ScienceBasePerCity);
 
-        Assert.True(s.Research(0, Tech.Agriculture).Ok);
+        // All the science goes to the economy, whose first level is agriculture.
+        s.SetResearchPriority(0, TechBranch.Society, 0);
+        s.SetResearchPriority(0, TechBranch.Military, 0);
+        Assert.Equal(Tech.Agriculture, s.Human.NextIn(TechBranch.Economy));
         for (int day = 0; day < 365 && !s.Human.Techs.Contains(Tech.Agriculture); day++) RunHours(s, 24);
 
         Assert.Contains(Tech.Agriculture, s.Human.Techs);
-        Assert.Null(s.Human.Researching);
+        Assert.Equal(Tech.Carpentry, s.Human.NextIn(TechBranch.Economy));
         Assert.Equal(0.2, s.Human.Bonuses.Food);
         Assert.Contains(s.Notifications, n => n.Text.StartsWith("Descubrimiento: Agricultura"));
-        Assert.False(s.Research(0, Tech.Agriculture).Ok); // already known
+        Assert.Equal(0, s.Human.ResearchProgress[(int)Tech.Writing]);
     }
 
     [Fact]
-    public void AdvancesNeedTheirPrerequisites()
-    {
-        var s = NewSession();
-        Assert.False(s.Research(0, Tech.Irrigation).Ok);
-        Assert.False(s.Research(0, Tech.Currency).Ok);
-        s.Human.Learn(Tech.Agriculture);
-        s.Human.Learn(Tech.Writing);
-        Assert.True(s.Research(0, Tech.Irrigation).Ok);
-        Assert.False(s.Research(0, Tech.Currency).Ok); // still needs mining
-    }
-
-    [Fact]
-    public void ScienceIsSavedWhileNothingIsResearched()
+    public void ScienceIsSharedByPriority()
     {
         var s = NewSession();
         var (a, _) = GrasslandPair();
         s.FoundCity(0, s.AddUnit(0, UnitType.Settlers, a.Id, 300).Id);
-        RunHours(s, 24 * 5);
-        double saved = s.Human.SpareScience;
+        s.SetResearchPriority(0, TechBranch.Economy, 3);
+        s.SetResearchPriority(0, TechBranch.Military, 0);
+        Assert.False(s.SetResearchPriority(0, TechBranch.Military, GameRules.MaxResearchPriority + 1).Ok);
 
-        Assert.True(saved > 0);
-        s.Research(0, Tech.Mining);
-        Assert.Equal(saved, s.Human.ResearchProgress[(int)Tech.Mining]);
+        RunHours(s, 24 * 3);
+
+        Assert.Equal(0.75, s.Human.ScienceShare(TechBranch.Economy));
+        Assert.Equal(s.Human.ResearchProgress[(int)Tech.Writing] * 3, s.Human.ResearchProgress[(int)Tech.Agriculture], 6);
+        Assert.Equal(0, s.Human.ResearchProgress[(int)Tech.Archery]);
+    }
+
+    [Fact]
+    public void AdvancesWaitForOtherBranchesAndLendTheirScience()
+    {
+        var s = NewSession();
+        var (a, _) = GrasslandPair();
+        s.FoundCity(0, s.AddUnit(0, UnitType.Settlers, a.Id, 300).Id);
+        s.Human.Learn(Tech.Archery);
+        s.Human.Learn(Tech.HorsebackRiding);
+        // Bronze working has all its points but needs mining, three levels up the economy.
+        s.Human.ResearchProgress[(int)Tech.BronzeWorking] = Tech.BronzeWorking.Info().Cost - 0.01;
+        double writing = s.Human.ResearchProgress[(int)Tech.Writing];
+
+        RunHours(s, 24 * 2);
+
+        Assert.DoesNotContain(Tech.BronzeWorking, s.Human.Techs);
+        Assert.Equal(Tech.BronzeWorking.Info().Cost, s.Human.ResearchProgress[(int)Tech.BronzeWorking], 6);
+        Assert.Contains(s.Notifications, n => n.Text.StartsWith("Trabajo del bronce está listo, pero espera a minería"));
+        // The military's share went to the other two branches.
+        Assert.Equal(s.Human.ResearchProgress[(int)Tech.Agriculture], s.Human.ResearchProgress[(int)Tech.Writing] - writing, 6);
         Assert.Equal(0, s.Human.SpareScience);
+
+        s.Human.Learn(Tech.Mining);
+        RunHours(s, 24);
+        Assert.Contains(Tech.BronzeWorking, s.Human.Techs);
+    }
+
+    [Fact]
+    public void ScienceNoBranchCanTakeIsKept()
+    {
+        var s = NewSession();
+        var (a, _) = GrasslandPair();
+        s.FoundCity(0, s.AddUnit(0, UnitType.Settlers, a.Id, 300).Id);
+        foreach (var tech in Techs.All) s.Human.Learn(tech);
+
+        RunHours(s, 24 * 5);
+
+        Assert.All(Techs.Branches, b => Assert.Null(s.Human.NextIn(b)));
+        Assert.True(s.Human.SpareScience > 0);
+    }
+
+    [Fact]
+    public void NeighboursWhoKnowAnAdvanceMakeItCheaper()
+    {
+        var s = GameSession.Create(_map, 2, seed: 7, computerRivals: false);
+        var (a, b) = GrasslandPair();
+        s.FoundCity(0, s.AddUnit(0, UnitType.Settlers, a.Id, 300).Id);
+        Assert.Equal(60, s.ResearchCost(s.Human, Tech.Agriculture));
+
+        s.Claim(1, s.AddRegiment(1, b.Id, BattalionType.Warriors).Id);
+        s.Players[1].Learn(Tech.Agriculture);
+
+        Assert.Contains(1, s.NeighbourNations(s.Human));
+        Assert.Equal(60 * (1 - GameRules.NeighbourResearchDiscount), s.ResearchCost(s.Human, Tech.Agriculture), 6);
+        Assert.Equal(100, s.ResearchCost(s.Human, Tech.Carpentry)); // the neighbour does not know it
     }
 
     [Fact]
@@ -574,7 +634,7 @@ public class GameplayTests(WorldFixture world)
         {
             Assert.NotNull(ai.CapitalCityId);
             Assert.True(ai.Provinces.Count > 1, $"{ai.Name} owns {ai.Provinces.Count} provinces");
-            Assert.True(ai.Techs.Count > 0 || ai.Researching.HasValue, $"{ai.Name} is not researching");
+            Assert.True(ai.Techs.Count > 0 || ai.ResearchProgress.Any(p => p > 0), $"{ai.Name} is not researching");
         }
     }
 }

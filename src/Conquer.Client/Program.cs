@@ -1,4 +1,5 @@
 using Conquer.Client;
+using Conquer.Game.Rules;
 using Conquer.Game.World;
 
 // Spanish number formatting (1.234,5) everywhere in the interface. Built from the invariant culture
@@ -25,7 +26,7 @@ namespace Conquer.Client
 
     /// <summary>
     /// Command line, mainly for testing:
-    /// <c>--new random|earth [--seed N] [--players N]</c> skips the menus and starts a game;
+    /// <c>--new random|earth [--seed N] [--players N] [--difficulty veryeasy|easy|normal|hard|veryhard]</c> skips the menus and starts a game;
     /// <c>--days N</c> founds the player's capital and fast-forwards N days;
     /// <c>--zoom Z</c> and <c>--mode terrain|political|population|mood|fertility</c> set the view;
     /// <c>--nation summary|cities|provinces|science</c> opens the nation screen on that tab;
@@ -39,6 +40,7 @@ namespace Conquer.Client
         {
             string? kind = null, mode = null, screenshot = null, nation = null, panel = null, load = null, menu = null;
             int seed = Environment.TickCount & 0xFFFF, players = 4, days = 0;
+            var difficulty = Difficulty.Normal;
             float? zoom = null;
             for (int i = 0; i < args.Length - 1; i++)
             {
@@ -48,6 +50,7 @@ namespace Conquer.Client
                     case "--new": kind = value; break;
                     case "--seed": seed = int.Parse(value); break;
                     case "--players": players = int.Parse(value); break;
+                    case "--difficulty": difficulty = Enum.Parse<Difficulty>(value, ignoreCase: true); break;
                     case "--days": days = int.Parse(value); break;
                     case "--zoom": zoom = float.Parse(value, System.Globalization.CultureInfo.InvariantCulture); break;
                     case "--mode": mode = value; break;
@@ -62,7 +65,7 @@ namespace Conquer.Client
             if (kind != null)
             {
                 var map = kind.Equals("earth", StringComparison.OrdinalIgnoreCase) ? MapKind.Earth : MapKind.Random;
-                quick = new QuickStart(new WorldSettings(map, seed), players);
+                quick = new QuickStart(new WorldSettings(map, seed, Difficulty: difficulty), players);
             }
             return new StartOptions(quick, days, zoom, mode, screenshot, nation, panel, load, menu);
         }

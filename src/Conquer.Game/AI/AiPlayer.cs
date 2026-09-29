@@ -31,12 +31,6 @@ internal sealed partial class AiPlayer
         BuildingType.Farm, BuildingType.Granary, BuildingType.Temple, BuildingType.Library, BuildingType.Market,
         BuildingType.Mine, BuildingType.Sawmill, BuildingType.Aqueduct, BuildingType.HerbalistHut,
     ];
-    /// <summary>Food first, then the advances that pay for themselves.</summary>
-    private static readonly Tech[] ResearchOrder =
-        [
-            Tech.Agriculture, Tech.Writing, Tech.Archery, Tech.Mining, Tech.BronzeWorking, Tech.HorsebackRiding, Tech.IronWorking,
-            Tech.Irrigation, Tech.Carpentry, Tech.TheWheel, Tech.Mythology, Tech.Currency, Tech.Medicine,
-        ];
     private readonly GameSession _session;
     private readonly Player _player;
     private readonly Random _random;
@@ -77,7 +71,7 @@ internal sealed partial class AiPlayer
         if (dailyDecisions)
         {
             HoldFestivals();
-            ChooseResearch();
+            SetResearchPriorities();
             Recruit();
             BuildArmy();
             OrganiseArmy();
@@ -135,12 +129,12 @@ internal sealed partial class AiPlayer
         _ => true,
     };
 
-    /// <summary>Picks the next advance in its order of preference once the current one is done.</summary>
-    private void ChooseResearch()
+    /// <summary>Leans its science toward the economy in peace (more while starving) and toward the military at war.</summary>
+    private void SetResearchPriorities()
     {
-        if (_player.Researching.HasValue || _player.CapitalCityId is null) return;
-        foreach (var tech in ResearchOrder)
-            if (_session.Research(_player.Id, tech).Ok) return;
+        bool atWar = _session.EnemiesOf(_player.Id).Any();
+        int[] priorities = atWar ? [1, 1, 3] : _player.IsStarving ? [3, 1, 1] : [2, 1, 1];
+        foreach (var branch in Techs.Branches) _session.SetResearchPriority(_player.Id, branch, priorities[(int)branch]);
     }
 
     /// <summary>Restless cities get a festival when there is gold to spare after keeping enough to recruit.</summary>

@@ -1,3 +1,5 @@
+using Conquer.Game.Economy;
+using Conquer.Game.Rules;
 using Conquer.Game.Science;
 using Conquer.Game.Simulation;
 using Conquer.Game.World;
@@ -14,7 +16,7 @@ public class SaveGameTests(WorldFixture world)
     {
         var s = GameSession.Create(_map, 4, seed: 7);
         s.FoundCity(s.Human.Id, s.Units.First(u => u.OwnerId == s.Human.Id).Id);
-        s.Research(s.Human.Id, Tech.Agriculture);
+        s.SetResearchPriority(s.Human.Id, TechBranch.Economy, 3);
         s.DeclareWar(s.Human.Id, 1);
         for (int h = 0; h < 24 * 180; h++) s.Step();
         return s;
@@ -56,6 +58,23 @@ public class SaveGameTests(WorldFixture world)
 
         Assert.True(loaded.Stats(loaded.Human).Total > people * 0.5);
         Assert.Contains(loaded.Cities, c => c.OwnerId != loaded.Human.Id);
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void OlderSavesGetFullExtraDeposits(bool extraDeposits)
+    {
+        var s = GameSession.Create(_map, 2, seed: 7);
+        var p = _map.Provinces.First(p => p.IsClaimable && p.HasDeposit(ResourceType.Iron));
+        p.Reserves[(int)ResourceType.Iron] = 0;
+        var save = s.ToSave("test") with { ExtraDeposits = extraDeposits };
+
+        GameSession.Load(_map, save);
+
+        // A current save keeps the pocket exhausted; an older one never had it, so it starts full.
+        Assert.Equal(extraDeposits ? 0 : p.DepositSizes[(int)ResourceType.Iron] * GameRules.DepositSizeMultiplier,
+            p.Reserves[(int)ResourceType.Iron]);
     }
 
     [Fact]

@@ -25,16 +25,26 @@ public sealed class Player
     public HashSet<Tech> Techs { get; } = [];
     /// <summary>The effects of every discovered advance, added up.</summary>
     public Modifiers Bonuses { get; private set; } = Modifiers.None;
-    /// <summary>What the nation is researching; null while idle.</summary>
-    public Tech? Researching { get; set; }
-    /// <summary>Science points put into each advance; kept when research switches to another one.</summary>
+    /// <summary>Science points put into each advance.</summary>
     public double[] ResearchProgress { get; } = new double[Science.Techs.All.Length];
+    /// <summary>How much of its science each branch gets (0 to <see cref="GameRules.MaxResearchPriority"/>), by <see cref="TechBranch"/>.</summary>
+    public int[] ResearchPriorities { get; } = [.. Science.Techs.Branches.Select(_ => GameRules.DefaultResearchPriority)];
+
+    /// <summary>The share of the nation's science a branch gets; all alike when every priority is zero.</summary>
+    public double ScienceShare(TechBranch branch)
+    {
+        int total = ResearchPriorities.Sum();
+        return total > 0 ? (double)ResearchPriorities[(int)branch] / total : 1.0 / ResearchPriorities.Length;
+    }
+
+    /// <summary>The advance its branch is working on: the lowest level not yet known, or null once the branch is done.</summary>
+    public Tech? NextIn(TechBranch branch) => Science.Techs.InBranch(branch).Cast<Tech?>().FirstOrDefault(t => !Techs.Contains(t!.Value));
     /// <summary>Resources the nation can see and mine: those known from the start plus those its advances reveal.</summary>
     public HashSet<ResourceType> KnownResources { get; } = [.. Resources.KnownFromStart];
 
     public bool Knows(ResourceType resource) => KnownResources.Contains(resource);
 
-    /// <summary>Science earned while nothing was being researched; it goes into the next advance chosen.</summary>
+    /// <summary>Science no branch could take (every one finished or waiting); it goes back into research the next day.</summary>
     public double SpareScience { get; set; }
     public double LastDayScience { get; set; }
 

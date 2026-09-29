@@ -28,6 +28,11 @@ public sealed record SaveGame
 
     public required WorldSettings World { get; init; }
     public required long MapFingerprint { get; init; }
+    /// <summary>
+    /// Written after the generator began placing extra deposits (1.13.0). Older saves hold no reserves for
+    /// those, so loading one fills them up.
+    /// </summary>
+    public bool ExtraDeposits { get; init; }
     public required long Hours { get; init; }
     public required bool ComputerRivals { get; init; }
 
@@ -81,8 +86,9 @@ public sealed record SaveGame
 
 public sealed record PlayerSave(
     int Id, string Name, uint Color, bool IsHuman, double[] Stockpile, int? CapitalCityId,
-    double[] LastDayNet, bool IsStarving, double FoodReserveDays, List<Tech> Techs, Tech? Researching,
-    double[] ResearchProgress, double SpareScience, double LastDayScience, List<TemplateSave> Templates);
+    double[] LastDayNet, bool IsStarving, double FoodReserveDays, List<Tech> Techs,
+    double[] ResearchProgress, double SpareScience, double LastDayScience, List<TemplateSave> Templates,
+    int[]? ResearchPriorities = null);
 
 public sealed record TemplateSave(int Id, int Number, List<BattalionType> Battalions);
 

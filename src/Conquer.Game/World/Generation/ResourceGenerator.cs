@@ -1,21 +1,26 @@
 using Conquer.Game.Economy;
+using Conquer.Game.Rules;
 
 namespace Conquer.Game.World.Generation;
 
 /// <summary>
 /// Scatters deposits over habitable provinces. Each resource favours certain terrain and is
 /// clustered by regional noise, so some regions are rich in it and others lack it entirely.
-/// Every deposit is a finite pocket: it has a daily output and a total size.
+/// Every deposit is a finite pocket: it has a daily output and a total size. A province can hold several.
+/// The difficulty sets how many deposits get a second roll and how big the pockets are.
 /// </summary>
 internal static class ResourceGenerator
 {
     private const double MinDepositYears = 10, MaxDepositYears = 50;
 
-    public static void Place(IReadOnlyList<Province> provinces, int seed)
+    public static void Place(IReadOnlyList<Province> provinces, int seed, DifficultyInfo difficulty)
     {
         var random = new Random(seed + 30);
         // Pocket sizes draw from their own generator so a seed places the same deposits as before they had a size.
         var sizes = new Random(seed + 29);
+        // So do the second rolls, which keeps the first ones placing the same deposits as before they existed.
+        var extra = new Random(seed + 28);
+        var extraSizes = new Random(seed + 27);
         var regional = Resources.Deposits.ToDictionary(r => r, r => new Noise(seed + 31 + (int)r));
 
         foreach (var p in provinces)
@@ -29,16 +34,20 @@ internal static class ResourceGenerator
                 double chance = Chance(resource, p.Biome, Math.Abs(p.Latitude));
                 if (chance <= 0) continue;
                 double cluster = Math.Clamp(regional[resource].Fractal(sx * 3, sy * 3, sz * 3, 3) * 1.8 + 0.6, 0, 2);
-                if (random.NextDouble() < chance * cluster)
-                {
-                    float output = (float)Math.Round(Richness(resource) * (0.5 + random.NextDouble()), 1);
-                    p.Deposits[(int)resource] = output;
-                    // A pocket lasts 10 to 50 years at full output; small and large ones alike.
-                    double years = MinDepositYears + (MaxDepositYears - MinDepositYears) * sizes.NextDouble();
-                    p.DepositSizes[(int)resource] = (float)(Math.Round(output * 365 * years / 10) * 10);
-                }
+                if (random.NextDouble() < chance * cluster) AddDeposit(p, resource, random, sizes, difficulty.DepositSize);
+                // A resource that misses its first roll may get a second one, as likely as the difficulty says.
+                else if (extra.NextDouble() < chance * cluster * difficulty.ExtraDepositChance) AddDeposit(p, resource, extra, extraSizes, difficulty.DepositSize);
             }
         }
+    }
+
+    private static void AddDeposit(Province p, ResourceType resource, Random random, Random sizes, double sizeMultiplier)
+    {
+        float output = (float)Math.Round(Richness(resource) * (0.5 + random.NextDouble()), 1);
+        p.Deposits[(int)resource] = output;
+        // A pocket lasts 10 to 50 years at full output, small and large ones alike, times the difficulty's multiplier.
+        double years = (MinDepositYears + (MaxDepositYears - MinDepositYears) * sizes.NextDouble()) * sizeMultiplier;
+        p.DepositSizes[(int)resource] = (float)(Math.Round(output * 365 * years / 10) * 10);
     }
 
     private static double Chance(ResourceType resource, Biome biome, double absLat)

@@ -1,8 +1,10 @@
+using Conquer.Game.Rules;
 using Conquer.Game.World.Generation;
 
 namespace Conquer.Game.World;
 
-public sealed record WorldSettings(MapKind Kind, int Seed, int ProvinceCount = 25000);
+/// <summary>What a map is generated from. The difficulty changes how many deposits it has and how big they are.</summary>
+public sealed record WorldSettings(MapKind Kind, int Seed, int ProvinceCount = 25000, Difficulty Difficulty = Difficulty.Normal);
 
 public static class WorldGenerator
 {
@@ -24,7 +26,7 @@ public static class WorldGenerator
         var (ids, provinces) = ProvinceGenerator.Generate(terrain.Elevation, biomes, Width, Height, settings.Seed, settings.ProvinceCount);
 
         progress?.Invoke("Repartiendo recursos...");
-        ResourceGenerator.Place(provinces, settings.Seed);
+        ResourceGenerator.Place(provinces, settings.Seed, settings.Difficulty.Info());
 
         progress?.Invoke("Trazando ríos...");
         var rivers = RiverGenerator.Trace(terrain.Elevation, biomes, Width, Height, settings.Seed);

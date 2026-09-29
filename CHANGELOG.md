@@ -2,6 +2,33 @@
 
 Todos los cambios del juego, del más reciente al más antiguo. Cada versión es un commit cuyo título es su número.
 
+## [1.14.0] - 2026-09-29
+
+### Añadido
+- **La ciencia avanza en tres ramas a la vez, como en Europa Universalis: Economía, Sociedad y Militar.** Cada rama sube nivel a nivel y ya no hay que elegir qué investigar. En la pestaña Ciencia das a cada rama una **prioridad** de 0 a 10, y la ciencia se reparte en proporción.
+- Si el avance de una rama está completo pero espera a otra (Trabajo del bronce necesita Minería; Moneda, Escritura), o la rama está terminada, su ciencia pasa a las demás.
+- **Los vecinos enseñan**: cada nación con la que tienes frontera y que ya conoce un avance te lo abarata un 10 %, hasta un 30 %.
+- Dos avances nuevos en Sociedad: **Alfarería**, que permite el granero, y **Código de leyes**, con +10 % de impuestos.
+
+### Cambiado
+- Los avances cuestan según su nivel, igual en las tres ramas: 60, 100, 150, 220 y 300 puntos.
+- El granero necesita Alfarería.
+- Los rivales dan más prioridad a la economía en paz y a lo militar en guerra.
+- Las partidas guardadas con versiones anteriores se pueden cargar: conservan sus avances y lo investigado, con las tres ramas a la misma prioridad.
+
+## [1.13.0] - 2026-09-29
+
+### Añadido
+- **Niveles de dificultad**: Muy fácil, Fácil, Normal, Difícil y Muy difícil, que se eligen en la pantalla de nueva partida. Cambian:
+  - **Cuántos yacimientos hay**: de unas 5 de cada 10 provincias en Muy fácil a menos de 2 de cada 10 en Muy difícil.
+  - **Cuánto dura cada yacimiento**: de 1,5 veces lo normal en Muy fácil a la mitad en Muy difícil.
+  - **Los recursos con los que empiezas**: del doble a la mitad.
+  - **Lo que producen e investigan los rivales**: de un 25 % menos a un 50 % más.
+
+### Cambiado
+- **Una provincia puede tener varios yacimientos a la vez**, y es más fácil encontrarlas: en Normal, 3 de cada 10 provincias tienen alguno (antes, menos de 2 de cada 10). Los yacimientos de siempre siguen en el mismo sitio; los nuevos se suman a ellos.
+- Las partidas guardadas con versiones anteriores se pueden cargar, en dificultad Normal; los yacimientos nuevos empiezan llenos.
+
 ## [1.12.0] - 2026-09-29
 
 ### Añadido

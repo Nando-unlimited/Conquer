@@ -118,9 +118,10 @@ public sealed partial class NationView
 
         Heading(ui, x, ref y, "Ciencia");
         Row(ui, x, ref y, colW, "Puntos por día", $"{_player.LastDayScience:0.##}");
-        Row(ui, x, ref y, colW, "Investigando", _player.Researching is Tech current
-            ? $"{current.Info().Name} ({_player.ResearchProgress[(int)current] / current.Info().Cost:P0})"
-            : "Nada", _player.Researching is null ? Theme.Accent : Theme.Text);
+        foreach (var branch in Techs.Branches)
+            Row(ui, x, ref y, colW, $"{branch.Name()} ({_player.ScienceShare(branch):P0})", _player.NextIn(branch) is Tech next
+                ? $"{next.Info().Name} ({_player.ResearchProgress[(int)next] / _session.ResearchCost(_player, next):P0})"
+                : "Completa");
 
         x = r.X + colW + 30;
         y = r.Y;
@@ -275,6 +276,7 @@ public sealed partial class NationView
 
     // ------------------------------------------------------------------ science
 
+    /// <summary>The three branches side by side: each with its priority, what it is researching and its advances, level by level.</summary>
     private void Science(Ui ui, Rect r)
     {
         float y = r.Y;
@@ -282,79 +284,98 @@ public sealed partial class NationView
         ui.Text(r.X, y, $"Ciencia: {perDay:0.##} puntos al día", Theme.Text, FontSize.Normal, bold: true);
         if (ui.Hover(new Rect(r.X, y, 300, 24)))
             ui.Tooltip($"Cada ciudad aporta {GameRules.ScienceBasePerCity:0.#} puntos más {GameRules.SciencePerCityCitizen * 1000:0.#} por cada mil habitantes, " +
-                       $"multiplicado por su humor." + (_player.Bonuses.Science > 0 ? $"\nAvances: +{_player.Bonuses.Science:P0}." : ""));
-        y += 30;
+                       $"multiplicado por su humor." + (_player.Bonuses.Science > 0 ? $"\nAvances: +{_player.Bonuses.Science:P0}." : "") +
+                       "\nSe reparte entre las ramas según su prioridad. Si una rama no puede avanzar, su parte va a las demás." +
+                       $"\nCada vecino que ya conoce un avance te lo abarata un {GameRules.NeighbourResearchDiscount:P0} (hasta {GameRules.MaxNeighbourDiscounts}).");
+        if (_player.SpareScience >= 1)
+            ui.Text(r.X + 320, y + 2, $"{_player.SpareScience:0} puntos guardados: ninguna rama puede avanzar.", Theme.Accent, FontSize.Small);
+        y += 34;
 
-        if (_player.Researching is Tech current)
+        const float Gap = 16;
+        float colW = (r.W - Gap * 2) / 3;
+        var neighbours = _session.NeighbourNations(_player);
+        foreach (var branch in Techs.Branches)
+            Branch(ui, new Rect(r.X + (int)branch * (colW + Gap), y, colW, r.Bottom - y), branch, perDay, neighbours);
+    }
+
+    private void Branch(Ui ui, Rect r, TechBranch branch, double perDay, IReadOnlySet<int> neighbours)
+    {
+        float x = r.X, y = r.Y;
+        ui.Text(x, y, branch.Name(), Theme.Accent, FontSize.Large, bold: true);
+
+        // Priority: - n + and the share of science it brings.
+        int priority = _player.ResearchPriorities[(int)branch];
+        float px = r.Right - 170;
+        if (ui.Button(new Rect(px, y, 30, 28), "-", priority > 0, tooltip: "Menos prioridad"))
+            _show(_session.SetResearchPriority(_player.Id, branch, priority - 1));
+        ui.TextCentered(new Rect(px + 30, y, 34, 28), priority.ToString());
+        if (ui.Button(new Rect(px + 64, y, 30, 28), "+", priority < GameRules.MaxResearchPriority, tooltip: "Más prioridad"))
+            _show(_session.SetResearchPriority(_player.Id, branch, priority + 1));
+        ui.Text(px + 102, y + 5, $"{_player.ScienceShare(branch):P0}", Theme.TextDim);
+        y += 40;
+
+        if (_player.NextIn(branch) is Tech next)
         {
-            var info = current.Info();
-            double done = _player.ResearchProgress[(int)current];
-            string eta = perDay > 0 ? $" · unos {GameSession.FormatHours(Math.Ceiling((info.Cost - done) / perDay) * 24)}" : "";
-            ui.Text(r.X, y, $"Investigando {info.Name}: {done:0} / {info.Cost:0}{eta}", Theme.Accent);
-            y += 26;
-            ProgressBar(ui, new Rect(r.X, y, Math.Min(520, r.W), 12), done / info.Cost, Theme.Accent);
-            y += 24;
+            double cost = _session.ResearchCost(_player, next, neighbours), done = _player.ResearchProgress[(int)next];
+            var missing = GameSession.MissingRequirements(_player, next);
+            double rate = perDay * _player.ScienceShare(branch);
+            string state = done >= cost && missing.Count > 0 ? $"Espera a {GameSession.RequirementList(_player, next)}"
+                : rate > 0 ? $"unos {GameSession.FormatHours(Math.Ceiling((cost - done) / rate) * 24)}" : "sin ciencia";
+            ui.Text(x, y, $"{next.Info().Name}: {done:0} / {cost:0} · {state}", missing.Count > 0 && done >= cost ? Theme.Bad : Theme.Text, FontSize.Small);
+            y += 20;
+            ProgressBar(ui, new Rect(x, y, r.W, 8), done / cost, Theme.Accent);
+            y += 18;
         }
         else
         {
-            ui.Text(r.X, y, "No estás investigando nada: elige un avance." +
-                (_player.SpareScience >= 1 ? $" Tienes {_player.SpareScience:0} puntos guardados para él." : ""), Theme.Accent);
-            y += 36;
+            ui.Text(x, y, "Rama completa: su ciencia va a las demás.", Theme.Good, FontSize.Small);
+            y += 38;
         }
 
-        const float CardH = 172, Gap = 12;
-        const int PerRow = 5;
-        float cardW = (r.W - Gap * (PerRow - 1)) / PerRow;
-        int perRow = PerRow;
-        for (int i = 0; i < Techs.All.Length; i++)
+        const float CardH = 104, CardGap = 8;
+        foreach (var tech in Techs.InBranch(branch))
         {
-            var card = new Rect(r.X + i % perRow * (cardW + Gap), y + i / perRow * (CardH + Gap), cardW, CardH);
-            TechCard(ui, card, Techs.All[i]);
+            TechCard(ui, new Rect(x, y, r.W, CardH), tech, neighbours);
+            y += CardH + CardGap;
         }
     }
 
-    /// <summary>One advance: its state, cost, effect, requirements, the buildings it unlocks and the button to research it.</summary>
-    private void TechCard(Ui ui, Rect c, Tech tech)
+    /// <summary>One advance: its level and state, cost, effect, the advances of other branches it needs and what it unlocks.</summary>
+    private void TechCard(Ui ui, Rect c, Tech tech, IReadOnlySet<int> neighbours)
     {
         var info = tech.Info();
-        bool known = _player.Techs.Contains(tech), current = _player.Researching == tech;
-        var can = _session.CanResearch(_player, tech);
-        var border = known ? Theme.Good : current ? Theme.Accent : can.Ok ? Theme.PanelBorder : Theme.ButtonDisabled;
+        bool known = _player.Techs.Contains(tech), current = _player.NextIn(info.Branch) == tech;
+        var border = known ? Theme.Good : current ? Theme.Accent : Theme.PanelBorder;
         ui.Batch.Rect(c.X, c.Y, c.W, c.H, Theme.Button.WithAlpha(known ? 0.25f : 0.55f));
         ui.Batch.Outline(c.X, c.Y, c.W, c.H, border);
 
-        float x = c.X + 10, y = c.Y + 8;
-        ui.Text(x, y, info.Name, known ? Theme.Good : current ? Theme.Accent : can.Ok ? Theme.Text : Theme.TextDisabled, bold: true);
-        double done = _player.ResearchProgress[(int)tech];
-        string cost = known ? "Descubierto" : done > 0 ? $"{done:0} / {info.Cost:0}" : $"{info.Cost:0} puntos";
-        y += 22;
-        ui.Text(x, y, cost, Theme.TextDim, FontSize.Small);
-        y += 20;
+        float x = c.X + 10, y = c.Y + 6;
+        ui.Text(x, y, info.Name, known ? Theme.Good : current ? Theme.Accent : Theme.Text, bold: true);
+        double cost = _session.ResearchCost(_player, tech, neighbours), done = _player.ResearchProgress[(int)tech];
+        string state = known ? "Descubierto" : $"Nivel {info.Level} · " + (done > 0 ? $"{done:0} / {cost:0}" : $"{cost:0} puntos") +
+                       (cost < info.Cost ? $" (−{1 - cost / info.Cost:P0} por vecinos)" : "");
+        ui.Text(c.Right - 10 - ui.Font.Measure(state, FontSize.Small), y + 3, state, Theme.TextDim, FontSize.Small);
+        y += 24;
         foreach (var line in ui.Font.Wrap(info.Description, c.W - 20, FontSize.Small).Take(2))
         {
-            ui.Text(x, y, line, known || can.Ok ? Theme.Text : Theme.TextDim, FontSize.Small);
+            ui.Text(x, y, line, known ? Theme.TextDim : Theme.Text, FontSize.Small);
             y += ui.Font.LineHeight(FontSize.Small);
         }
-        if (info.Requires.Length > 0)
-            ui.Text(x, c.Y + 84, "Requiere: " + string.Join(", ", info.Requires.Select(t => t.Info().Name)),
-                info.Requires.All(_player.Techs.Contains) ? Theme.TextDim : Theme.Bad, FontSize.Small);
         // Buildings and battalions stay hidden until their advance is known, so the card says what it brings.
         var unlocks = Buildings.All.Where(b => b.Info().RequiresTech == tech).Select(b => b.Info().Name)
             .Concat(Battalions.All.Where(b => b.Info().Requires.Contains(tech)).Select(b => b.Info().Name)).ToList();
-        float uy = c.Y + 102;
-        if (unlocks.Count > 0)
-            foreach (var line in ui.Font.Wrap("Permite: " + string.Join(", ", unlocks), c.W - 20, FontSize.Small).Take(2))
-            {
-                ui.Text(x, uy, line, known || can.Ok ? Theme.Accent : Theme.TextDim, FontSize.Small);
-                uy += ui.Font.LineHeight(FontSize.Small);
-            }
-
-        if (known) return;
-        if (!current && done > 0) ProgressBar(ui, new Rect(x, c.Bottom - 40, c.W - 20, 4), done / info.Cost, Theme.TextDim);
-        var button = new Rect(x, c.Bottom - 32, c.W - 20, 26);
-        if (current) ProgressBar(ui, new Rect(x, c.Bottom - 20, c.W - 20, 8), done / info.Cost, Theme.Accent);
-        else if (ui.Button(button, "Investigar", can.Ok, tooltip: can.Ok ? null : can.Message, size: FontSize.Small))
-            _show(_session.Research(_player.Id, tech));
+        var notes = new List<(string Text, Rgba Color)>();
+        if (info.Requires.Length > 0)
+            notes.Add(("Requiere: " + string.Join(", ", info.Requires.Select(t => t.Info().Name)),
+                info.Requires.All(_player.Techs.Contains) ? Theme.TextDim : Theme.Bad));
+        if (unlocks.Count > 0) notes.Add(("Permite: " + string.Join(", ", unlocks), known ? Theme.TextDim : Theme.Accent));
+        float ny = c.Bottom - 8 - notes.Count * ui.Font.LineHeight(FontSize.Small);
+        foreach (var (text, color) in notes)
+        {
+            ui.Text(x, ny, ui.Font.Wrap(text, c.W - 20, FontSize.Small).First(), color, FontSize.Small);
+            ny += ui.Font.LineHeight(FontSize.Small);
+        }
+        if (!known && done > 0) ProgressBar(ui, new Rect(c.X + 1, c.Bottom - 4, (c.W - 2), 3), done / cost, current ? Theme.Accent : Theme.TextDim);
     }
 
     private static void ProgressBar(Ui ui, Rect r, double share, Rgba color)

@@ -54,6 +54,11 @@ public sealed partial class GameSession
     public GameDate Date { get; private set; }
 
     public Player Human => Players[HumanPlayerId];
+    /// <summary>Chosen with the map, so it travels in its settings.</summary>
+    public Difficulty Difficulty => Map.Settings?.Difficulty ?? Difficulty.Normal;
+
+    /// <summary>What a player's land and cities yield: computer rivals get the difficulty's multiplier.</summary>
+    private double OutputMultiplier(Player player) => !player.IsHuman && _computerRivals ? Difficulty.Info().ComputerOutput : 1;
 
     private GameSession(WorldMap map, int seed)
     {
@@ -78,9 +83,11 @@ public sealed partial class GameSession
         for (int i = 0; i < playerCount; i++)
         {
             var player = new Player(i, names[i], PlayerNames.Colors[i % PlayerNames.Colors.Length], i == HumanPlayerId);
-            player.Stockpile[ResourceType.Food] = GameRules.StartingFood;
-            player.Stockpile[ResourceType.Gold] = GameRules.StartingGold;
-            player.Stockpile[ResourceType.Wood] = GameRules.StartingWood;
+            // The difficulty sets how much the human starts with; rivals always start with the standard stockpile.
+            double start = player.IsHuman ? session.Difficulty.Info().StartingResources : 1;
+            player.Stockpile[ResourceType.Food] = GameRules.StartingFood * start;
+            player.Stockpile[ResourceType.Gold] = GameRules.StartingGold * start;
+            player.Stockpile[ResourceType.Wood] = GameRules.StartingWood * start;
             session.Players.Add(player);
             session.AddUnit(i, UnitType.Settlers, starts[i], GameRules.StartingCitizens);
             session.AddTemplate(player, [BattalionType.Warriors, BattalionType.Warriors]);
@@ -88,7 +95,7 @@ public sealed partial class GameSession
         }
 
         session.Notify(HumanPlayerId, "Tus colonos esperan órdenes. Busca una buena tierra y funda tu primera ciudad.");
-        session.Notify(HumanPlayerId, "Cuando tengas una ciudad, elige qué investigar en la pantalla de la nación (N).");
+        session.Notify(HumanPlayerId, "Tus ciudades investigarán en tres ramas: Economía, Sociedad y Militar. Reparte su ciencia en la pantalla de la nación (N).");
         return session;
     }
 
@@ -255,6 +262,9 @@ public sealed partial class GameSession
             foreach (var r in Resources.Deposits)
                 if (p.HasDeposit(r) && player.Knows(r)) net[(int)r] += Extract(p, r, p.Deposits[(int)r] * workforce * output * (1 + bonus.Deposits));
         }
+        // Applied after extracting, so a rival's extra output does not empty its deposits faster.
+        double multiplier = OutputMultiplier(player);
+        for (int i = 0; i < net.Length; i++) net[i] *= multiplier;
 
         double eaters = population
                         + Units.Where(u => u.OwnerId == player.Id).Sum(u => u.Citizens)
@@ -301,7 +311,7 @@ public sealed partial class GameSession
 
     // ------------------------------------------------------------------ science
 
-    /// <summary>Science points a player's cities produce per day, scaled by their mood and advances.</summary>
+    /// <summary>Science points a player's cities produce per day, scaled by their mood and advances (and the difficulty for rivals).</summary>
     public double SciencePerDay(Player player)
     {
         double points = 0;
@@ -311,48 +321,95 @@ public sealed partial class GameSession
             points += (GameRules.ScienceBasePerCity + p.Population * GameRules.SciencePerCityCitizen) * GameRules.MoodProductivity(p.Mood)
                       * (1 + player.Bonuses.Science + p.BuildingBonuses.Science);
         }
-        return points;
+        return points * OutputMultiplier(player);
     }
 
-    /// <summary>The day's science goes into the current research (or is saved) and completes it when enough is in.</summary>
+    /// <summary>
+    /// The day's science (plus what was left over) is shared among the branches by their priorities. A branch takes
+    /// no more than its advance still needs; what it cannot take, because its advance is complete but waits for another
+    /// branch or the branch is finished, goes to the others, and what nobody can take is kept for the next day.
+    /// </summary>
     private void DailyScience(Player player)
     {
         double points = SciencePerDay(player);
         player.LastDayScience = points;
-        if (player.Researching is not Tech tech)
-        {
-            player.SpareScience += points;
-            return;
-        }
-        player.ResearchProgress[(int)tech] += points;
-        double surplus = player.ResearchProgress[(int)tech] - tech.Info().Cost;
-        if (surplus < 0) return;
-
-        player.Learn(tech);
-        player.ResearchProgress[(int)tech] = tech.Info().Cost;
-        player.SpareScience += surplus;
-        player.Researching = null;
-        if (player.IsHuman)
-            Notify(player.Id, $"Descubrimiento: {tech.Info().Name}. {tech.Info().Description} Elige otra investigación (N).");
-    }
-
-    public CommandResult CanResearch(Player player, Tech tech)
-    {
-        if (player.Techs.Contains(tech)) return CommandResult.Fail("Ya lo conoces.");
-        var missing = tech.Info().Requires.Where(t => !player.Techs.Contains(t)).ToList();
-        if (missing.Count > 0) return CommandResult.Fail("Requiere " + string.Join(" y ", missing.Select(t => t.Info().Name.ToLowerInvariant())) + ".");
-        return CommandResult.Success();
-    }
-
-    /// <summary>Points the nation's science at an advance. Saved science goes into it at once.</summary>
-    public CommandResult Research(int playerId, Tech tech)
-    {
-        var player = Players[playerId];
-        var check = CanResearch(player, tech);
-        if (!check.Ok) return check;
-        player.Researching = tech;
-        player.ResearchProgress[(int)tech] += player.SpareScience;
+        double pool = points + player.SpareScience;
         player.SpareScience = 0;
+        var neighbours = NeighbourNations(player);
+
+        // Each round hands out what the last one could not place; one branch fills up per round at least.
+        for (int round = 0; round <= Techs.Branches.Length && pool > 0; round++)
+        {
+            LearnCompleted(player, neighbours);
+            var open = Techs.Branches.Select(player.NextIn).OfType<Tech>()
+                .Where(t => player.ResearchProgress[(int)t] < ResearchCost(player, t, neighbours)).ToList();
+            if (open.Count == 0) break;
+            double shares = open.Sum(t => player.ScienceShare(t.Info().Branch));
+            double left = 0;
+            foreach (var tech in open)
+            {
+                double offered = pool * (shares > 0 ? player.ScienceShare(tech.Info().Branch) / shares : 1.0 / open.Count);
+                double cost = ResearchCost(player, tech, neighbours);
+                double taken = Math.Min(offered, cost - player.ResearchProgress[(int)tech]);
+                player.ResearchProgress[(int)tech] += taken;
+                left += offered - taken;
+                if (player.ResearchProgress[(int)tech] >= cost && MissingRequirements(player, tech).Count > 0 && player.IsHuman)
+                    Notify(player.Id, $"{tech.Info().Name} está listo, pero espera a {RequirementList(player, tech)}. Mientras, su ciencia va a las demás ramas.");
+            }
+            pool = left;
+        }
+        LearnCompleted(player, neighbours);
+        player.SpareScience += pool;
+    }
+
+    /// <summary>Learns every advance with all its points in and its requirements known; one may unlock another's wait.</summary>
+    private void LearnCompleted(Player player, IReadOnlySet<int> neighbours)
+    {
+        bool learned;
+        do
+        {
+            learned = false;
+            foreach (var branch in Techs.Branches)
+            {
+                if (player.NextIn(branch) is not Tech tech || player.ResearchProgress[(int)tech] < ResearchCost(player, tech, neighbours)
+                    || MissingRequirements(player, tech).Count > 0) continue;
+                player.Learn(tech);
+                learned = true;
+                if (player.IsHuman) Notify(player.Id, $"Descubrimiento: {tech.Info().Name}. {tech.Info().Description}");
+            }
+        } while (learned);
+    }
+
+    /// <summary>Advances of other branches it needs that the player does not know yet.</summary>
+    public static List<Tech> MissingRequirements(Player player, Tech tech) => tech.Info().Requires.Where(t => !player.Techs.Contains(t)).ToList();
+
+    public static string RequirementList(Player player, Tech tech) =>
+        string.Join(" y ", MissingRequirements(player, tech).Select(t => t.Info().Name.ToLowerInvariant()));
+
+    /// <summary>Nations owning a province next to one of the player's.</summary>
+    public HashSet<int> NeighbourNations(Player player)
+    {
+        var nations = new HashSet<int>();
+        foreach (int id in player.Provinces)
+            foreach (int n in Map.Provinces[id].Neighbors)
+                if (Map.Provinces[n].OwnerId is int owner and >= 0 && owner != player.Id) nations.Add(owner);
+        return nations;
+    }
+
+    /// <summary>What an advance costs the player: cheaper for each bordering nation that already knows it.</summary>
+    public double ResearchCost(Player player, Tech tech, IReadOnlySet<int>? neighbours = null)
+    {
+        neighbours ??= NeighbourNations(player);
+        int knowers = Math.Min(GameRules.MaxNeighbourDiscounts, neighbours.Count(id => Players[id].Techs.Contains(tech)));
+        return tech.Info().Cost * (1 - GameRules.NeighbourResearchDiscount * knowers);
+    }
+
+    /// <summary>How much of the nation's science a branch gets, relative to the other two.</summary>
+    public CommandResult SetResearchPriority(int playerId, TechBranch branch, int priority)
+    {
+        if (priority < 0 || priority > GameRules.MaxResearchPriority)
+            return CommandResult.Fail($"La prioridad va de 0 a {GameRules.MaxResearchPriority}.");
+        Players[playerId].ResearchPriorities[(int)branch] = priority;
         return CommandResult.Success();
     }
 

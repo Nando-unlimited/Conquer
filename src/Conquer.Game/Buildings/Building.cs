@@ -39,7 +39,7 @@ public static class Buildings
         [BuildingType.Farm] = new("Granja", "+25 % de comida en la provincia.",
             new ResourceCost((ResourceType.Wood, 40), (ResourceType.Gold, 10)), 20, null, false, false, new() { Food = 0.25 }),
         [BuildingType.Granary] = new("Granero", "El hambre mata a la mitad de gente en la provincia.",
-            new ResourceCost((ResourceType.Wood, 50), (ResourceType.Gold, 15)), 25, null, false, false, new() { FamineSurvival = 0.5 }),
+            new ResourceCost((ResourceType.Wood, 50), (ResourceType.Gold, 15)), 25, Tech.Pottery, false, false, new() { FamineSurvival = 0.5 }),
         [BuildingType.Sawmill] = new("Aserradero", "+50 % de madera en la provincia.",
             new ResourceCost((ResourceType.Wood, 30), (ResourceType.Gold, 10)), 15, null, false, false, new() { Wood = 0.5 }),
         [BuildingType.Mine] = new("Mina", "+50 % de producción de los yacimientos de la provincia.",
