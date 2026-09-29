@@ -95,7 +95,7 @@ public sealed partial class GameSession
         }
 
         session.Notify(HumanPlayerId, "Tus colonos esperan órdenes. Busca una buena tierra y funda tu primera ciudad.");
-        session.Notify(HumanPlayerId, "Tus ciudades investigarán en tres ramas: Economía, Sociedad y Militar. Reparte su ciencia en la pantalla de la nación (N).");
+        session.Notify(HumanPlayerId, "Tus ciudades investigarán en tres ramas: Economía, Sociedad y Militar. Elige qué investigar en cada una en la pantalla de la nación (N).");
         return session;
     }
 
@@ -325,9 +325,9 @@ public sealed partial class GameSession
     }
 
     /// <summary>
-    /// The day's science (plus what was left over) is shared among the branches by their priorities. A branch takes
-    /// no more than its advance still needs; what it cannot take, because its advance is complete but waits for another
-    /// branch or the branch is finished, goes to the others, and what nobody can take is kept for the next day.
+    /// The day's science (plus what was left over) is shared among the branches researching something, by their
+    /// priorities. A branch takes no more than its advance still needs; the rest goes to the others, and what nobody
+    /// can take (nothing chosen) is kept for the next day. A finished advance is learned and its branch waits for a new choice.
     /// </summary>
     private void DailyScience(Player player)
     {
@@ -338,49 +338,63 @@ public sealed partial class GameSession
         var neighbours = NeighbourNations(player);
 
         // Each round hands out what the last one could not place; one branch fills up per round at least.
-        for (int round = 0; round <= Techs.Branches.Length && pool > 0; round++)
+        for (int round = 0; round < Techs.Branches.Length && pool > 0; round++)
         {
-            LearnCompleted(player, neighbours);
-            var open = Techs.Branches.Select(player.NextIn).OfType<Tech>()
-                .Where(t => player.ResearchProgress[(int)t] < ResearchCost(player, t, neighbours)).ToList();
+            var open = player.Researching.OfType<Tech>().Where(t => player.ResearchProgress[(int)t] < ResearchCost(player, t, neighbours)).ToList();
             if (open.Count == 0) break;
             double shares = open.Sum(t => player.ScienceShare(t.Info().Branch));
             double left = 0;
             foreach (var tech in open)
             {
                 double offered = pool * (shares > 0 ? player.ScienceShare(tech.Info().Branch) / shares : 1.0 / open.Count);
-                double cost = ResearchCost(player, tech, neighbours);
-                double taken = Math.Min(offered, cost - player.ResearchProgress[(int)tech]);
+                double taken = Math.Min(offered, ResearchCost(player, tech, neighbours) - player.ResearchProgress[(int)tech]);
                 player.ResearchProgress[(int)tech] += taken;
                 left += offered - taken;
-                if (player.ResearchProgress[(int)tech] >= cost && MissingRequirements(player, tech).Count > 0 && player.IsHuman)
-                    Notify(player.Id, $"{tech.Info().Name} está listo, pero espera a {RequirementList(player, tech)}. Mientras, su ciencia va a las demás ramas.");
             }
             pool = left;
         }
-        LearnCompleted(player, neighbours);
         player.SpareScience += pool;
-    }
 
-    /// <summary>Learns every advance with all its points in and its requirements known; one may unlock another's wait.</summary>
-    private void LearnCompleted(Player player, IReadOnlySet<int> neighbours)
-    {
-        bool learned;
-        do
+        foreach (var branch in Techs.Branches)
         {
-            learned = false;
-            foreach (var branch in Techs.Branches)
-            {
-                if (player.NextIn(branch) is not Tech tech || player.ResearchProgress[(int)tech] < ResearchCost(player, tech, neighbours)
-                    || MissingRequirements(player, tech).Count > 0) continue;
-                player.Learn(tech);
-                learned = true;
-                if (player.IsHuman) Notify(player.Id, $"Descubrimiento: {tech.Info().Name}. {tech.Info().Description}");
-            }
-        } while (learned);
+            if (player.Researching[(int)branch] is not Tech tech || player.ResearchProgress[(int)tech] < ResearchCost(player, tech, neighbours)) continue;
+            player.Learn(tech);
+            player.Researching[(int)branch] = null;
+            if (player.IsHuman)
+                Notify(player.Id, $"Descubrimiento: {tech.Info().Name}. {tech.Info().Description} Elige el siguiente avance de {branch.Name()} (N).");
+        }
     }
 
-    /// <summary>Advances of other branches it needs that the player does not know yet.</summary>
+    /// <summary>Whether a level of a branch is open: the first always, the rest once enough of the level below is known.</summary>
+    public static bool IsLevelOpen(Player player, TechBranch branch, int level) =>
+        level <= 1 || Techs.InLevel(branch, level - 1).Count(player.Techs.Contains) >= Techs.NeededToOpenNext(branch, level - 1);
+
+    public static CommandResult CanResearch(Player player, Tech tech)
+    {
+        var info = tech.Info();
+        if (player.Techs.Contains(tech)) return CommandResult.Fail("Ya lo conoces.");
+        if (!IsLevelOpen(player, info.Branch, info.Level))
+        {
+            int needed = Techs.NeededToOpenNext(info.Branch, info.Level - 1);
+            return CommandResult.Fail($"Requiere {needed} {(needed == 1 ? "avance" : "avances")} del nivel {info.Level - 1} de {info.Branch.Name()}.");
+        }
+        if (MissingRequirements(player, tech).Count > 0) return CommandResult.Fail($"Requiere {RequirementList(player, tech)}.");
+        return CommandResult.Success();
+    }
+
+    /// <summary>Points its branch's science at an advance, instead of the one it was researching. Saved science goes into it at once.</summary>
+    public CommandResult Research(int playerId, Tech tech)
+    {
+        var player = Players[playerId];
+        var check = CanResearch(player, tech);
+        if (!check.Ok) return check;
+        player.Researching[(int)tech.Info().Branch] = tech;
+        player.ResearchProgress[(int)tech] += player.SpareScience;
+        player.SpareScience = 0;
+        return CommandResult.Success();
+    }
+
+    /// <summary>Advances it needs that the player does not know yet.</summary>
     public static List<Tech> MissingRequirements(Player player, Tech tech) => tech.Info().Requires.Where(t => !player.Techs.Contains(t)).ToList();
 
     public static string RequirementList(Player player, Tech tech) =>

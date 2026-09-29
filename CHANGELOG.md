@@ -2,6 +2,16 @@
 
 Todos los cambios del juego, del más reciente al más antiguo. Cada versión es un commit cuyo título es su número.
 
+## [1.15.0] - 2026-09-29
+
+### Cambiado
+- **Tú eliges qué investigar en cada rama, como en Civilization.** Cada rama tiene tres niveles: en los dos primeros hay dos avances para escoger y en el tercero, uno. Un nivel se abre en cuanto conoces uno de los avances del anterior.
+- Las tres ramas investigan a la vez y la prioridad sigue repartiendo la ciencia entre ellas. Una rama sin nada elegido cede su parte a las demás; si ninguna investiga nada, la ciencia se guarda para el próximo avance que elijas.
+- Algunos avances piden otros de su misma rama: Irrigación pide Agricultura, La rueda pide Doma del caballo y Trabajo del hierro pide Trabajo del bronce.
+- Costes por nivel: 70, 160 y 300 puntos.
+- El botón **Nación** muestra «!» cuando alguna rama no investiga nada y podría hacerlo.
+- Las partidas guardadas con versiones anteriores se pueden cargar; al cargarlas, cada rama espera a que elijas qué investigar.
+
 ## [1.14.0] - 2026-09-29
 
 ### Añadido

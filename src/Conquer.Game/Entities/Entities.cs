@@ -37,14 +37,14 @@ public sealed class Player
         return total > 0 ? (double)ResearchPriorities[(int)branch] / total : 1.0 / ResearchPriorities.Length;
     }
 
-    /// <summary>The advance its branch is working on: the lowest level not yet known, or null once the branch is done.</summary>
-    public Tech? NextIn(TechBranch branch) => Science.Techs.InBranch(branch).Cast<Tech?>().FirstOrDefault(t => !Techs.Contains(t!.Value));
+    /// <summary>The advance each branch is researching, by <see cref="TechBranch"/>; null while none is chosen.</summary>
+    public Tech?[] Researching { get; } = new Tech?[Science.Techs.Branches.Length];
     /// <summary>Resources the nation can see and mine: those known from the start plus those its advances reveal.</summary>
     public HashSet<ResourceType> KnownResources { get; } = [.. Resources.KnownFromStart];
 
     public bool Knows(ResourceType resource) => KnownResources.Contains(resource);
 
-    /// <summary>Science no branch could take (every one finished or waiting); it goes back into research the next day.</summary>
+    /// <summary>Science no branch could take (nothing chosen to research); it goes into research again the next day.</summary>
     public double SpareScience { get; set; }
     public double LastDayScience { get; set; }
 

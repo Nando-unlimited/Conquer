@@ -16,6 +16,7 @@ public class SaveGameTests(WorldFixture world)
     {
         var s = GameSession.Create(_map, 4, seed: 7);
         s.FoundCity(s.Human.Id, s.Units.First(u => u.OwnerId == s.Human.Id).Id);
+        s.Research(s.Human.Id, Tech.Agriculture);
         s.SetResearchPriority(s.Human.Id, TechBranch.Economy, 3);
         s.DeclareWar(s.Human.Id, 1);
         for (int h = 0; h < 24 * 180; h++) s.Step();

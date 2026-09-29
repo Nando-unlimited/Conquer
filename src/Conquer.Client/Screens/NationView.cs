@@ -119,9 +119,9 @@ public sealed partial class NationView
         Heading(ui, x, ref y, "Ciencia");
         Row(ui, x, ref y, colW, "Puntos por día", $"{_player.LastDayScience:0.##}");
         foreach (var branch in Techs.Branches)
-            Row(ui, x, ref y, colW, $"{branch.Name()} ({_player.ScienceShare(branch):P0})", _player.NextIn(branch) is Tech next
-                ? $"{next.Info().Name} ({_player.ResearchProgress[(int)next] / _session.ResearchCost(_player, next):P0})"
-                : "Completa");
+            Row(ui, x, ref y, colW, $"{branch.Name()} ({_player.ScienceShare(branch):P0})", _player.Researching[(int)branch] is Tech current
+                ? $"{current.Info().Name} ({_player.ResearchProgress[(int)current] / _session.ResearchCost(_player, current):P0})"
+                : "Nada", _player.Researching[(int)branch] is null ? Theme.Accent : Theme.Text);
 
         x = r.X + colW + 30;
         y = r.Y;
@@ -285,10 +285,10 @@ public sealed partial class NationView
         if (ui.Hover(new Rect(r.X, y, 300, 24)))
             ui.Tooltip($"Cada ciudad aporta {GameRules.ScienceBasePerCity:0.#} puntos más {GameRules.SciencePerCityCitizen * 1000:0.#} por cada mil habitantes, " +
                        $"multiplicado por su humor." + (_player.Bonuses.Science > 0 ? $"\nAvances: +{_player.Bonuses.Science:P0}." : "") +
-                       "\nSe reparte entre las ramas según su prioridad. Si una rama no puede avanzar, su parte va a las demás." +
+                       "\nSe reparte entre las ramas según su prioridad. Si una rama no investiga nada, su parte va a las demás." +
                        $"\nCada vecino que ya conoce un avance te lo abarata un {GameRules.NeighbourResearchDiscount:P0} (hasta {GameRules.MaxNeighbourDiscounts}).");
         if (_player.SpareScience >= 1)
-            ui.Text(r.X + 320, y + 2, $"{_player.SpareScience:0} puntos guardados: ninguna rama puede avanzar.", Theme.Accent, FontSize.Small);
+            ui.Text(r.X + 320, y + 2, $"{_player.SpareScience:0} puntos guardados: elige qué investigar.", Theme.Accent, FontSize.Small);
         y += 34;
 
         const float Gap = 16;
@@ -314,51 +314,71 @@ public sealed partial class NationView
         ui.Text(px + 102, y + 5, $"{_player.ScienceShare(branch):P0}", Theme.TextDim);
         y += 40;
 
-        if (_player.NextIn(branch) is Tech next)
+        if (_player.Researching[(int)branch] is Tech current)
         {
-            double cost = _session.ResearchCost(_player, next, neighbours), done = _player.ResearchProgress[(int)next];
-            var missing = GameSession.MissingRequirements(_player, next);
+            double cost = _session.ResearchCost(_player, current, neighbours), done = _player.ResearchProgress[(int)current];
             double rate = perDay * _player.ScienceShare(branch);
-            string state = done >= cost && missing.Count > 0 ? $"Espera a {GameSession.RequirementList(_player, next)}"
-                : rate > 0 ? $"unos {GameSession.FormatHours(Math.Ceiling((cost - done) / rate) * 24)}" : "sin ciencia";
-            ui.Text(x, y, $"{next.Info().Name}: {done:0} / {cost:0} · {state}", missing.Count > 0 && done >= cost ? Theme.Bad : Theme.Text, FontSize.Small);
+            string eta = rate > 0 ? $"unos {GameSession.FormatHours(Math.Ceiling((cost - done) / rate) * 24)}" : "sin ciencia";
+            ui.Text(x, y, $"Investigando {current.Info().Name}: {done:0} / {cost:0} · {eta}", Theme.Text, FontSize.Small);
             y += 20;
             ProgressBar(ui, new Rect(x, y, r.W, 8), done / cost, Theme.Accent);
             y += 18;
         }
         else
         {
-            ui.Text(x, y, "Rama completa: su ciencia va a las demás.", Theme.Good, FontSize.Small);
+            bool done = Techs.InBranch(branch).All(_player.Techs.Contains);
+            bool any = Techs.InBranch(branch).Any(t => GameSession.CanResearch(_player, t).Ok);
+            ui.Text(x, y, done ? "Rama completa: su ciencia va a las demás." : any ? "Elige qué investigar: mientras, su ciencia va a las demás."
+                : "Nada disponible: faltan avances de otras ramas.", done ? Theme.Good : any ? Theme.Accent : Theme.TextDim, FontSize.Small);
             y += 38;
         }
 
-        const float CardH = 104, CardGap = 8;
-        foreach (var tech in Techs.InBranch(branch))
+        const float CardH = 96, CardGap = 8;
+        for (int level = 1; level <= Techs.Levels(branch); level++)
         {
-            TechCard(ui, new Rect(x, y, r.W, CardH), tech, neighbours);
-            y += CardH + CardGap;
+            bool open = GameSession.IsLevelOpen(_player, branch, level);
+            string title = $"Nivel {level}";
+            if (!open) title += $" · se abre con {Techs.NeededToOpenNext(branch, level - 1)} avance del nivel {level - 1}";
+            else if (level < Techs.Levels(branch) && Techs.InLevel(branch, level).Count() > 1)
+                title += $" · {Techs.NeededToOpenNext(branch, level)} de {Techs.InLevel(branch, level).Count()} abren el siguiente";
+            ui.Text(x, y, title, open ? Theme.TextDim : Theme.TextDisabled, FontSize.Small);
+            y += 18;
+            foreach (var tech in Techs.InLevel(branch, level))
+            {
+                TechCard(ui, new Rect(x, y, r.W, CardH), tech, neighbours);
+                y += CardH + CardGap;
+            }
         }
     }
 
-    /// <summary>One advance: its level and state, cost, effect, the advances of other branches it needs and what it unlocks.</summary>
+    /// <summary>One advance: its state, cost, effect, the advances it needs, what it unlocks and the button to research it.</summary>
     private void TechCard(Ui ui, Rect c, Tech tech, IReadOnlySet<int> neighbours)
     {
         var info = tech.Info();
-        bool known = _player.Techs.Contains(tech), current = _player.NextIn(info.Branch) == tech;
-        var border = known ? Theme.Good : current ? Theme.Accent : Theme.PanelBorder;
+        bool known = _player.Techs.Contains(tech), current = _player.Researching[(int)info.Branch] == tech;
+        var can = GameSession.CanResearch(_player, tech);
+        var border = known ? Theme.Good : current ? Theme.Accent : can.Ok ? Theme.PanelBorder : Theme.ButtonDisabled;
         ui.Batch.Rect(c.X, c.Y, c.W, c.H, Theme.Button.WithAlpha(known ? 0.25f : 0.55f));
         ui.Batch.Outline(c.X, c.Y, c.W, c.H, border);
 
         float x = c.X + 10, y = c.Y + 6;
-        ui.Text(x, y, info.Name, known ? Theme.Good : current ? Theme.Accent : Theme.Text, bold: true);
+        ui.Text(x, y, info.Name, known ? Theme.Good : current ? Theme.Accent : can.Ok ? Theme.Text : Theme.TextDisabled, bold: true);
         double cost = _session.ResearchCost(_player, tech, neighbours), done = _player.ResearchProgress[(int)tech];
-        string state = known ? "Descubierto" : $"Nivel {info.Level} · " + (done > 0 ? $"{done:0} / {cost:0}" : $"{cost:0} puntos") +
-                       (cost < info.Cost ? $" (−{1 - cost / info.Cost:P0} por vecinos)" : "");
-        ui.Text(c.Right - 10 - ui.Font.Measure(state, FontSize.Small), y + 3, state, Theme.TextDim, FontSize.Small);
+        string state = known ? "Descubierto" : (done > 0 ? $"{done:0} / {cost:0}" : $"{cost:0} puntos") +
+                       (cost < info.Cost ? $" (−{1 - cost / info.Cost:P0})" : "");
+        float right = c.Right - 10;
+        // Choosing it replaces what the branch was researching; the points already in either one stay.
+        if (!known && !current)
+        {
+            if (ui.Button(new Rect(right - 84, y - 2, 84, 24), "Investigar", can.Ok, tooltip: can.Ok ? null : can.Message, size: FontSize.Small))
+                _show(_session.Research(_player.Id, tech));
+            right -= 92;
+        }
+        ui.Text(right - ui.Font.Measure(state, FontSize.Small), y + 3, state, Theme.TextDim, FontSize.Small);
         y += 24;
         foreach (var line in ui.Font.Wrap(info.Description, c.W - 20, FontSize.Small).Take(2))
         {
-            ui.Text(x, y, line, known ? Theme.TextDim : Theme.Text, FontSize.Small);
+            ui.Text(x, y, line, known || can.Ok ? Theme.Text : Theme.TextDim, FontSize.Small);
             y += ui.Font.LineHeight(FontSize.Small);
         }
         // Buildings and battalions stay hidden until their advance is known, so the card says what it brings.

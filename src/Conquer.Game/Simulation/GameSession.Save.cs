@@ -24,7 +24,8 @@ public sealed partial class GameSession
             p.Id, p.Name, p.Color, p.IsHuman, [.. Resources.All.Select(r => p.Stockpile[r])], p.CapitalCityId,
             [.. p.LastDayNet], p.IsStarving, p.FoodReserveDays, [.. p.Techs.Order()],
             [.. p.ResearchProgress], p.SpareScience, p.LastDayScience,
-            [.. p.Templates.Select(t => new TemplateSave(t.Id, t.Number, [.. t.Battalions]))], [.. p.ResearchPriorities])).ToList(),
+            [.. p.Templates.Select(t => new TemplateSave(t.Id, t.Number, [.. t.Battalions]))], [.. p.ResearchPriorities],
+            [.. p.Researching.OfType<Tech>()])).ToList(),
         // Provinces nobody has touched keep their generated state, so only the rest are stored.
         Provinces = Map.Provinces.Where(Changed).Select(p => new ProvinceSave(
             p.Id, p.OwnerId, p.ControllerId, p.Population, p.CityId, p.Mood, p.Fertility, [.. p.Reserves],
@@ -99,6 +100,7 @@ public sealed partial class GameSession
             foreach (var tech in s.Techs) player.Learn(tech);
             // Saves from before the branches have no priorities and leave the default ones.
             s.ResearchPriorities?.CopyTo(player.ResearchPriorities, 0);
+            foreach (var tech in s.CurrentResearch ?? []) player.Researching[(int)tech.Info().Branch] = tech;
             s.ResearchProgress.CopyTo(player.ResearchProgress, 0);
             player.SpareScience = s.SpareScience;
             player.LastDayScience = s.LastDayScience;

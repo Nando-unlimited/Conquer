@@ -423,74 +423,62 @@ public class GameplayTests(WorldFixture world)
         s.FoundCity(0, s.AddUnit(0, UnitType.Settlers, a.Id, 300).Id);
         Assert.True(s.SciencePerDay(s.Human) > GameRules.ScienceBasePerCity);
 
-        // All the science goes to the economy, whose first level is agriculture.
-        s.SetResearchPriority(0, TechBranch.Society, 0);
-        s.SetResearchPriority(0, TechBranch.Military, 0);
-        Assert.Equal(Tech.Agriculture, s.Human.NextIn(TechBranch.Economy));
+        Assert.True(s.Research(0, Tech.Agriculture).Ok);
         for (int day = 0; day < 365 && !s.Human.Techs.Contains(Tech.Agriculture); day++) RunHours(s, 24);
 
         Assert.Contains(Tech.Agriculture, s.Human.Techs);
-        Assert.Equal(Tech.Carpentry, s.Human.NextIn(TechBranch.Economy));
+        Assert.Null(s.Human.Researching[(int)TechBranch.Economy]);
         Assert.Equal(0.2, s.Human.Bonuses.Food);
         Assert.Contains(s.Notifications, n => n.Text.StartsWith("Descubrimiento: Agricultura"));
-        Assert.Equal(0, s.Human.ResearchProgress[(int)Tech.Writing]);
+        Assert.False(s.Research(0, Tech.Agriculture).Ok); // already known
     }
 
     [Fact]
-    public void ScienceIsSharedByPriority()
+    public void LevelsOpenWithOneAdvanceOfTheLevelBelow()
+    {
+        var s = NewSession();
+        Assert.False(s.Research(0, Tech.Mining).Ok); // level 2 is closed
+        s.Human.Learn(Tech.Carpentry);
+        Assert.True(s.Research(0, Tech.Mining).Ok);
+        Assert.False(s.Research(0, Tech.Irrigation).Ok); // its level is open, but it needs agriculture
+        Assert.False(s.Research(0, Tech.Currency).Ok);   // level 3 needs mining or irrigation
+
+        // Choosing another advance of the branch replaces the one it was researching.
+        Assert.True(s.Research(0, Tech.Agriculture).Ok);
+        Assert.Equal(Tech.Agriculture, s.Human.Researching[(int)TechBranch.Economy]);
+    }
+
+    [Fact]
+    public void ScienceIsSharedByPriorityAmongTheBranchesResearching()
     {
         var s = NewSession();
         var (a, _) = GrasslandPair();
         s.FoundCity(0, s.AddUnit(0, UnitType.Settlers, a.Id, 300).Id);
+        s.Research(0, Tech.Agriculture);
+        s.Research(0, Tech.Writing);
         s.SetResearchPriority(0, TechBranch.Economy, 3);
-        s.SetResearchPriority(0, TechBranch.Military, 0);
         Assert.False(s.SetResearchPriority(0, TechBranch.Military, GameRules.MaxResearchPriority + 1).Ok);
 
         RunHours(s, 24 * 3);
 
-        Assert.Equal(0.75, s.Human.ScienceShare(TechBranch.Economy));
+        // Nothing chosen in the military: its share goes to the other two, three to one.
         Assert.Equal(s.Human.ResearchProgress[(int)Tech.Writing] * 3, s.Human.ResearchProgress[(int)Tech.Agriculture], 6);
-        Assert.Equal(0, s.Human.ResearchProgress[(int)Tech.Archery]);
-    }
-
-    [Fact]
-    public void AdvancesWaitForOtherBranchesAndLendTheirScience()
-    {
-        var s = NewSession();
-        var (a, _) = GrasslandPair();
-        s.FoundCity(0, s.AddUnit(0, UnitType.Settlers, a.Id, 300).Id);
-        s.Human.Learn(Tech.Archery);
-        s.Human.Learn(Tech.HorsebackRiding);
-        // Bronze working has all its points but needs mining, three levels up the economy.
-        s.Human.ResearchProgress[(int)Tech.BronzeWorking] = Tech.BronzeWorking.Info().Cost - 0.01;
-        double writing = s.Human.ResearchProgress[(int)Tech.Writing];
-
-        RunHours(s, 24 * 2);
-
-        Assert.DoesNotContain(Tech.BronzeWorking, s.Human.Techs);
-        Assert.Equal(Tech.BronzeWorking.Info().Cost, s.Human.ResearchProgress[(int)Tech.BronzeWorking], 6);
-        Assert.Contains(s.Notifications, n => n.Text.StartsWith("Trabajo del bronce está listo, pero espera a minería"));
-        // The military's share went to the other two branches.
-        Assert.Equal(s.Human.ResearchProgress[(int)Tech.Agriculture], s.Human.ResearchProgress[(int)Tech.Writing] - writing, 6);
         Assert.Equal(0, s.Human.SpareScience);
-
-        s.Human.Learn(Tech.Mining);
-        RunHours(s, 24);
-        Assert.Contains(Tech.BronzeWorking, s.Human.Techs);
     }
 
     [Fact]
-    public void ScienceNoBranchCanTakeIsKept()
+    public void ScienceIsSavedWhileNothingIsResearched()
     {
         var s = NewSession();
         var (a, _) = GrasslandPair();
         s.FoundCity(0, s.AddUnit(0, UnitType.Settlers, a.Id, 300).Id);
-        foreach (var tech in Techs.All) s.Human.Learn(tech);
-
         RunHours(s, 24 * 5);
+        double saved = s.Human.SpareScience;
 
-        Assert.All(Techs.Branches, b => Assert.Null(s.Human.NextIn(b)));
-        Assert.True(s.Human.SpareScience > 0);
+        Assert.True(saved > 0);
+        s.Research(0, Tech.Carpentry);
+        Assert.Equal(saved, s.Human.ResearchProgress[(int)Tech.Carpentry]);
+        Assert.Equal(0, s.Human.SpareScience);
     }
 
     [Fact]
@@ -499,14 +487,15 @@ public class GameplayTests(WorldFixture world)
         var s = GameSession.Create(_map, 2, seed: 7, computerRivals: false);
         var (a, b) = GrasslandPair();
         s.FoundCity(0, s.AddUnit(0, UnitType.Settlers, a.Id, 300).Id);
-        Assert.Equal(60, s.ResearchCost(s.Human, Tech.Agriculture));
+        double cost = Tech.Agriculture.Info().Cost;
+        Assert.Equal(cost, s.ResearchCost(s.Human, Tech.Agriculture));
 
         s.Claim(1, s.AddRegiment(1, b.Id, BattalionType.Warriors).Id);
         s.Players[1].Learn(Tech.Agriculture);
 
         Assert.Contains(1, s.NeighbourNations(s.Human));
-        Assert.Equal(60 * (1 - GameRules.NeighbourResearchDiscount), s.ResearchCost(s.Human, Tech.Agriculture), 6);
-        Assert.Equal(100, s.ResearchCost(s.Human, Tech.Carpentry)); // the neighbour does not know it
+        Assert.Equal(cost * (1 - GameRules.NeighbourResearchDiscount), s.ResearchCost(s.Human, Tech.Agriculture), 6);
+        Assert.Equal(Tech.Carpentry.Info().Cost, s.ResearchCost(s.Human, Tech.Carpentry)); // the neighbour does not know it
     }
 
     [Fact]

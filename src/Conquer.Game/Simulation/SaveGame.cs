@@ -88,7 +88,7 @@ public sealed record PlayerSave(
     int Id, string Name, uint Color, bool IsHuman, double[] Stockpile, int? CapitalCityId,
     double[] LastDayNet, bool IsStarving, double FoodReserveDays, List<Tech> Techs,
     double[] ResearchProgress, double SpareScience, double LastDayScience, List<TemplateSave> Templates,
-    int[]? ResearchPriorities = null);
+    int[]? ResearchPriorities = null, List<Tech>? CurrentResearch = null);
 
 public sealed record TemplateSave(int Id, int Number, List<BattalionType> Battalions);
 

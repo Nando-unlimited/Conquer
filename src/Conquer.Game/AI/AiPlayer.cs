@@ -31,6 +31,12 @@ internal sealed partial class AiPlayer
         BuildingType.Farm, BuildingType.Granary, BuildingType.Temple, BuildingType.Library, BuildingType.Market,
         BuildingType.Mine, BuildingType.Sawmill, BuildingType.Aqueduct, BuildingType.HerbalistHut,
     ];
+    /// <summary>Within each branch, the first of these it can research: food, then the advances that pay for themselves.</summary>
+    private static readonly Tech[] ResearchOrder =
+    [
+        Tech.Agriculture, Tech.Writing, Tech.Archery, Tech.Carpentry, Tech.Mythology, Tech.HorsebackRiding, Tech.Irrigation,
+        Tech.Mining, Tech.Pottery, Tech.Medicine, Tech.BronzeWorking, Tech.TheWheel, Tech.Currency, Tech.CodeOfLaws, Tech.IronWorking,
+    ];
     private readonly GameSession _session;
     private readonly Player _player;
     private readonly Random _random;
@@ -72,6 +78,7 @@ internal sealed partial class AiPlayer
         {
             HoldFestivals();
             SetResearchPriorities();
+            ChooseResearch();
             Recruit();
             BuildArmy();
             OrganiseArmy();
@@ -135,6 +142,15 @@ internal sealed partial class AiPlayer
         bool atWar = _session.EnemiesOf(_player.Id).Any();
         int[] priorities = atWar ? [1, 1, 3] : _player.IsStarving ? [3, 1, 1] : [2, 1, 1];
         foreach (var branch in Techs.Branches) _session.SetResearchPriority(_player.Id, branch, priorities[(int)branch]);
+    }
+
+    /// <summary>Every branch without research picks the first advance of its order of preference that it can research.</summary>
+    private void ChooseResearch()
+    {
+        if (_player.CapitalCityId is null) return;
+        foreach (var branch in Techs.Branches.Where(b => _player.Researching[(int)b] is null))
+            foreach (var tech in ResearchOrder.Where(t => t.Info().Branch == branch))
+                if (_session.Research(_player.Id, tech).Ok) break;
     }
 
     /// <summary>Restless cities get a festival when there is gold to spare after keeping enough to recruit.</summary>

@@ -442,9 +442,10 @@ public sealed partial class GameScreen : IScreen
             if (x > s.X - 290) break;
         }
 
-        // Science that no branch can take is going to waste: every branch is finished or waiting.
-        bool idleScience = Human.SpareScience >= 1;
-        string nationTip = idleScience ? "Gestionar el país (N)\nNinguna rama de la ciencia puede avanzar." : "Gestionar el país (N)";
+        // A branch with nothing chosen hands its science to the others, or leaves it waiting when none is researching.
+        bool idleScience = Human.CapitalCityId.HasValue && Techs.Branches.Any(b =>
+            Human.Researching[(int)b] is null && Techs.InBranch(b).Any(t => GameSession.CanResearch(Human, t).Ok));
+        string nationTip = idleScience ? "Gestionar el país (N)\nHay ramas de la ciencia sin investigación." : "Gestionar el país (N)";
         if (Ui.Button(new Rect(s.X - 190, 12, 92, 32), idleScience ? "Nación !" : "Nación", active: _nation.Visible, tooltip: nationTip))
             _nation.Visible = !_nation.Visible;
         if (Ui.Button(new Rect(s.X - 90, 12, 78, 32), "Menú")) _menuOpen = true;

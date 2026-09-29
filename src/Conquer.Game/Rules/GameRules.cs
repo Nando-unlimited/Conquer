@@ -56,6 +56,8 @@ public static class GameRules
     /// <summary>Each branch's priority goes from 0 to this; its share of science is its priority over the sum of all three.</summary>
     public const int MaxResearchPriority = 10;
     public const int DefaultResearchPriority = 1;
+    /// <summary>A branch's next level opens once this share of the advances of the level below is known.</summary>
+    public const double LevelUnlockShare = 0.5;
     /// <summary>An advance costs this much less for each bordering nation that already knows it...</summary>
     public const double NeighbourResearchDiscount = 0.1;
     /// <summary>...counting this many at most.</summary>
