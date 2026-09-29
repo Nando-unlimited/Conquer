@@ -575,7 +575,7 @@ La pantalla de juego. Clase parcial: el ejército en pantalla está en `GameScre
 | `OpenCityNaming(...)`, `DrawCityNaming()`, `ConfirmCityName()` | Diálogo para nombrar una ciudad al fundarla con colonos o al construirla: propone un nombre, se puede escribir otro o pedir otro al azar, avisa si no vale y la funda o empieza la obra (Intro confirma, Esc cancela). Mientras está abierto el tiempo se para y las teclas van a la caja de texto. |
 | `BuildingsPanel(...)` | Pestaña Edificios: la obra en curso (edificio o ciudad) con su barra, el botón «Ciudad» en provincias sin ciudad, los edificios terminados y, en tus provincias, un botón por cada edificio que puedes levantar; los que solo necesitan ciudad o yacimiento dicen qué les falta, y los de avances sin descubrir no aparecen (`IsBuildingKnown`). |
 | `Line()`, `ResourceLine()`, `Paragraph()` | Ayudas para escribir filas (también con el icono de un recurso) y párrafos en el panel. |
-| `DrawBottomBar()`, `ModeBarWidth` | Modos de mapa (un botón de 120 píxeles por modo) y ayuda de controles (termina con «F1: ayuda») (la ayuda se oculta con la pantalla de la nación abierta). |
+| `DrawBottomBar()`, `ModeBarWidth` | Modos de mapa (un botón de 120 píxeles por modo) y ayuda de controles (si no cabe, quita atajos del medio y deja siempre «F1: ayuda» al final) (la ayuda se oculta con la pantalla de la nación abierta). |
 | `DrawResourceFilter(barra)` | En el modo recursos, fila de botones para ver todos los yacimientos o solo uno de los recursos que conoces; hace de leyenda con el color de cada recurso. |
 | `DrawMessages()`, `HoverTooltip()` | Mensajes en tiras redondeadas con una marca dorada (roja si algo falló) (más arriba si está abierto el filtro de recursos; con la pantalla de la nación abierta, solo el último, en la franja junto a los modos de mapa, con `DrawLatestMessageInStrip`) y tooltip de la provincia bajo el ratón (con sus yacimientos en el modo recursos y sus instituciones en el modo instituciones). |
 | `DrawPauseMenu()`, `SaveCurrentGame()` | Menú de pausa (Esc): continuar, guardar la partida (`SaveFiles.Save`), ayuda, historial de versiones, volver a la pantalla inicial o salir. |
@@ -629,7 +629,7 @@ Dibuja el mapa entero con un único shader.
 | `MapMode` | Terreno, político, población, humor, fertilidad, recursos e instituciones. |
 | `ResourceFilter` | En el modo recursos, el único recurso que se muestra (o `null` para todos). |
 | `IsResourceKnown` | Qué recursos conoce quien mira; los demás no se dibujan. |
-| Shader de fragmentos | Para cada píxel de pantalla calcula el punto del mapa, busca la provincia en la textura de ids y la colorea según su dueño o su población. Con zoom alto mezcla las 4 celdas vecinas (`smoothRegions`, `strongest`) para trazar fronteras suaves; con zoom lejano compara con el píxel vecino. Oscurece la tierra junto a las fronteras nacionales (más gruesas), resalta la provincia seleccionada y la que está bajo el ratón, y aplica una viñeta suave hacia los bordes de la pantalla. |
+| Shader de fragmentos | Para cada píxel de pantalla calcula el punto del mapa, busca la provincia en la textura de ids y la colorea según su dueño o su población. Con zoom alto mezcla las 3×3 celdas vecinas con pesos B-spline cuadráticos (`smoothRegions`, `strongest`) para trazar fronteras y costa como curvas suaves, sin escalones; el color del terreno sale solo de las celdas del mismo lado de la costa (`isWater`, en el canal verde de la textura de dueños) y la franja clara del agua sigue la distancia a la costa. Con zoom lejano compara con el píxel vecino. Oscurece la tierra junto a las fronteras nacionales (más gruesas), resalta la provincia seleccionada y la que está bajo el ratón, y aplica una viñeta suave hacia los bordes de la pantalla. |
 | `Prepare(mapa)` | Prepara (fuera del hilo principal) los píxeles de ids y colores del terreno. |
 | `ProvinceAt(mapa, punto, zoom)` | Provincia que se ve en un punto, con la misma regla que el shader (para los clics). |
 | `SmoothZoom` | Zoom a partir del cual las fronteras se suavizan. |
@@ -642,7 +642,7 @@ Dibuja el mapa entero con un único shader.
 | `Draw(cámara, ...)` | Pasa los parámetros al shader y dibuja. |
 
 ### `Graphics/TerrainColors.cs`
-`Build(mapa)`: color de cada píxel según el bioma; en tierra, relieve iluminado desde el noroeste (medido sobre dos píxeles) y alturas algo más pálidas; en el mar, más oscuro cuanto más hondo y una franja más clara pegada a la costa.
+`Build(mapa)`: color de cada píxel según el bioma; en tierra, relieve iluminado desde el noroeste (medido sobre dos píxeles) y alturas algo más pálidas; en el mar, más oscuro cuanto más hondo. La franja clara de la costa la dibuja el shader del mapa.
 
 ### `Graphics/Camera.cs`
 | Función | Qué hace |
@@ -669,7 +669,7 @@ Dibuja el mapa entero con un único shader.
 ### `Graphics/Font.cs`
 | Función | Qué hace |
 | --- | --- |
-| `Font(gl)` | Genera una textura con las letras de Noto Sans (normal y negrita) en 4 tamaños; incluye acentos y ñ. |
+| `Font(gl)` | Genera una textura con las letras en 4 tamaños: Fira Sans (normal y negrita), clara y con cifras regulares, para la interfaz y Cinzel, capitales romanas, para el tamaño de título (el nombre del juego y las naciones en el mapa); incluye acentos y ñ (Latin-1). |
 | `Draw(...)` | Escribe texto. |
 | `Measure(...)`, `LineHeight(...)` | Ancho de un texto y alto de línea. |
 | `Wrap(...)` | Parte un texto en líneas que caben en un ancho. |
@@ -706,7 +706,7 @@ Interfaz propia de "modo inmediato": los botones se declaran en cada fotograma y
 `HelpView`: la ayuda durante la partida (F1, el botón «?» de la barra superior o el menú de pausa). Temas a la izquierda y el texto del elegido a la derecha, con desplazamiento: controles, primeros pasos, población y humor, economía y recursos, ciudades, ciencia, ejército, flotas y mar, diplomacia, mapa y partida. **Aquí se escribe la ayuda.** Las cifras salen de `GameRules`, así que siguen los cambios de equilibrio; en el texto, «## » empieza un título y «- » una viñeta, y solo caben caracteres Latin-1 (nada de «…» ni «−»). `Layout` ajusta el tema al ancho; `AllText` da todo el texto para los tests.
 
 ### `Assets/`
-Fuentes Noto Sans (normal y negrita) y su licencia `OFL.txt`.
+Fuentes Fira Sans (normal y negrita) y Cinzel (variable; se usa su peso por defecto), de Google Fonts, con sus licencias `OFL-FiraSans.txt` y `OFL-Cinzel.txt`.
 
 ---
 

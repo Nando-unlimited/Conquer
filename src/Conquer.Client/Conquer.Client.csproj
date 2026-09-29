@@ -11,7 +11,7 @@
     <InvariantGlobalization>true</InvariantGlobalization>
     <RootNamespace>Conquer.Client</RootNamespace>
     <!-- Game version: bump on every change and add a matching entry at the top of CHANGELOG.md. -->
-    <Version>1.27.0</Version>
+    <Version>1.28.0</Version>
   </PropertyGroup>
 
   <ItemGroup>
@@ -27,8 +27,9 @@
   </ItemGroup>
 
   <ItemGroup>
-    <EmbeddedResource Include="Assets\NotoSans-Regular.ttf" LogicalName="Conquer.Client.Assets.NotoSans-Regular.ttf" />
-    <EmbeddedResource Include="Assets\NotoSans-Bold.ttf" LogicalName="Conquer.Client.Assets.NotoSans-Bold.ttf" />
+    <EmbeddedResource Include="Assets\FiraSans-Regular.ttf" LogicalName="Conquer.Client.Assets.FiraSans-Regular.ttf" />
+    <EmbeddedResource Include="Assets\FiraSans-Bold.ttf" LogicalName="Conquer.Client.Assets.FiraSans-Bold.ttf" />
+    <EmbeddedResource Include="Assets\Cinzel.ttf" LogicalName="Conquer.Client.Assets.Cinzel.ttf" />
     <EmbeddedResource Include="..\..\CHANGELOG.md" LogicalName="CHANGELOG.md" />
     <InternalsVisibleTo Include="Conquer.Tests" />
   </ItemGroup>

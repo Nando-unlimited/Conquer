@@ -65,7 +65,7 @@ commit es el número de versión. Un test comprueba que el csproj y el changelog
 
 - Relieve y batimetría: NASA Visible Earth, GEBCO (dominio público).
 - Costas, lagos y glaciares: Natural Earth 1:50m (dominio público).
-- Fuente Noto Sans: SIL Open Font License 1.1 (`src/Conquer.Client/Assets/OFL.txt`).
+- Fuentes Fira Sans y Cinzel: SIL Open Font License 1.1 (`src/Conquer.Client/Assets/OFL-FiraSans.txt` y `OFL-Cinzel.txt`).
 
 Para regenerar el mapa de la Tierra, descarga `gebco_08_rev_elev_21600x10800.png`, `gebco_08_rev_bath_21600x10800.png`
 (NASA Visible Earth) y `ne_50m_land`, `ne_50m_lakes`, `ne_50m_glaciated_areas` en GeoJSON (Natural Earth) a una

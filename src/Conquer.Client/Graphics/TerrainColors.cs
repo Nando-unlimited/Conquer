@@ -4,7 +4,7 @@ namespace Conquer.Client.Graphics;
 
 /// <summary>
 /// Biome colours as RGBA bytes, with relief on land (lit from the north-west, heights a little paler) and,
-/// at sea, deeper water darker and a lighter band of shallows along the coast.
+/// at sea, deeper water darker. The shallows along the coast are drawn by the map shader, along the smooth coastline.
 /// </summary>
 public static class TerrainColors
 {
@@ -13,7 +13,6 @@ public static class TerrainColors
         int w = map.Width, h = map.Height;
         var data = new byte[w * h * 4];
         var elevation = map.Elevation;
-        bool IsSea(int x, int y) => y >= 0 && y < h && map.Biomes[y * w + (x % w + w) % w].Info().IsWater;
 
         Parallel.For(0, h, y =>
         {
@@ -27,11 +26,9 @@ public static class TerrainColors
 
                 if (biome.Info().IsWater && biome != Biome.Lake)
                 {
-                    // Deeper water is darker; water touching land catches the light.
+                    // Deeper water is darker (the lighter shallows along the coast are drawn by the map shader).
                     float depth = Math.Clamp(-e / 6000f, 0, 1);
                     float f = 1.15f - depth * 0.45f;
-                    bool shore = !IsSea(x - 1, y) || !IsSea(x + 1, y) || !IsSea(x, y - 1) || !IsSea(x, y + 1);
-                    if (shore) f *= 1.22f;
                     r *= f; g *= f; b *= f;
                 }
                 else if (!biome.Info().IsWater)

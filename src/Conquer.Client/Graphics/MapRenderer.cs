@@ -66,24 +66,27 @@ public sealed class MapRenderer : IDisposable
             return 1.0 - clamp(distancePx - halfWidth + 0.5, 0.0, 1.0);
         }
 
-        // Zoomed in: blend the 2x2 surrounding map pixels so each region (province or owner) becomes
-        // a smooth field. The region shown is the strongest; its border runs where the top two tie.
-        // The distance to that border is the margin between them over its gradient, which is exact
-        // for the bilinear weights (screen-space derivatives break down right on the border).
-        void strongest(int keys[4], float w[4], vec2 dw[4], out int index, out float distancePx) {
-            float share[4];
-            vec2 grad[4];
+        bool isWater(int id) { return texelFetch(uProvOwner, slot(id), 0).g > 0.5; }
+
+        // Zoomed in: blend the 3x3 surrounding map pixels with quadratic B-spline weights, so each region
+        // (province, owner, land or sea) becomes a smooth field and its edges smooth curves rather than
+        // the pixel staircase. The region shown is the strongest; its border runs where the top two tie.
+        // The distance to that border is the margin between them over its gradient, from the weights'
+        // exact derivatives (screen-space derivatives break down right on the border).
+        void strongest(int keys[9], float w[9], vec2 dw[9], out int index, out float distancePx) {
+            float share[9];
+            vec2 grad[9];
             index = 0;
-            for (int i = 0; i < 4; i++) {
+            for (int i = 0; i < 9; i++) {
                 share[i] = 0.0;
                 grad[i] = vec2(0.0);
-                for (int j = 0; j < 4; j++) {
+                for (int j = 0; j < 9; j++) {
                     if (keys[j] == keys[i]) { share[i] += w[j]; grad[i] += dw[j]; }
                 }
                 if (share[i] > share[index]) index = i;
             }
             int runner = -1;
-            for (int i = 0; i < 4; i++)
+            for (int i = 0; i < 9; i++)
                 if (keys[i] != keys[index] && (runner < 0 || share[i] > share[runner])) runner = i;
             if (runner < 0) { distancePx = 1e6; return; }
             float margin = share[index] - share[runner];
@@ -91,19 +94,51 @@ public sealed class MapRenderer : IDisposable
             distancePx = margin / slope * uZoom;
         }
 
-        void smoothRegions(vec2 m, out int id, out float provinceDistance, out float ownerDistance) {
+        // Also gives the terrain colour blended only from pixels on the same side of the coast as the
+        // point, so land and sea meet along the smooth coastline, and the distance to that coast.
+        void smoothRegions(vec2 m, out int id, out float provinceDistance, out float ownerDistance,
+                           out vec3 terrain, out bool sea, out float coastDistance) {
             vec2 p = m - 0.5;
-            vec2 f = fract(p);
-            vec2 b = floor(p) + 0.5;
-            int ids[4] = int[4](idAt(b), idAt(b + vec2(1.0, 0.0)), idAt(b + vec2(0.0, 1.0)), idAt(b + vec2(1.0, 1.0)));
-            int owners[4] = int[4](ownerOf(ids[0]), ownerOf(ids[1]), ownerOf(ids[2]), ownerOf(ids[3]));
-            float w[4] = float[4]((1.0 - f.x) * (1.0 - f.y), f.x * (1.0 - f.y), (1.0 - f.x) * f.y, f.x * f.y);
-            vec2 dw[4] = vec2[4](vec2(f.y - 1.0, f.x - 1.0), vec2(1.0 - f.y, -f.x), vec2(-f.y, 1.0 - f.x), vec2(f.y, f.x));
+            vec2 c = floor(p + 0.5);
+            vec2 d = p - c;
+            vec3 wx = vec3(0.5 * (0.5 - d.x) * (0.5 - d.x), 0.75 - d.x * d.x, 0.5 * (0.5 + d.x) * (0.5 + d.x));
+            vec3 wy = vec3(0.5 * (0.5 - d.y) * (0.5 - d.y), 0.75 - d.y * d.y, 0.5 * (0.5 + d.y) * (0.5 + d.y));
+            vec3 gx = vec3(d.x - 0.5, -2.0 * d.x, 0.5 + d.x);
+            vec3 gy = vec3(d.y - 0.5, -2.0 * d.y, 0.5 + d.y);
 
-            int top, topOwner;
+            int ids[9], owners[9], wet[9];
+            float w[9];
+            vec2 dw[9];
+            vec3 colours[9];
+            for (int j = 0; j < 3; j++) {
+                for (int i = 0; i < 3; i++) {
+                    int k = j * 3 + i;
+                    vec2 t = c + vec2(float(i - 1), float(j - 1)) + 0.5;
+                    ids[k] = idAt(t);
+                    owners[k] = ownerOf(ids[k]);
+                    wet[k] = isWater(ids[k]) ? 1 : 0;
+                    w[k] = wx[i] * wy[j];
+                    dw[k] = vec2(gx[i] * wy[j], wx[i] * gy[j]);
+                    ivec2 texel = ivec2(int(mod(floor(t.x), uMapSize.x)), clamp(int(floor(t.y)), 0, int(uMapSize.y) - 1));
+                    colours[k] = texelFetch(uTerrain, texel, 0).rgb;
+                }
+            }
+
+            int top, topOwner, topWet;
             strongest(ids, w, dw, top, provinceDistance);
             strongest(owners, w, dw, topOwner, ownerDistance);
+            strongest(wet, w, dw, topWet, coastDistance);
             id = ids[top];
+            sea = wet[topWet] == 1;
+
+            vec3 sum = vec3(0.0);
+            float total = 0.0;
+            for (int k = 0; k < 9; k++) {
+                if (wet[k] != wet[topWet]) continue;
+                sum += colours[k] * w[k];
+                total += w[k];
+            }
+            terrain = sum / max(total, 1e-4);
         }
 
         void main() {
@@ -117,11 +152,14 @@ public sealed class MapRenderer : IDisposable
             // Land near a national border is shaded, so each country reads as a shape.
             float edgeShade = 0.0;
             if (uZoom >= uSmoothZoom) {
-                float provinceDistance, ownerDistance;
-                smoothRegions(m, id, provinceDistance, ownerDistance);
+                float provinceDistance, ownerDistance, coastDistance;
+                bool sea;
+                smoothRegions(m, id, provinceDistance, ownerDistance, col, sea, coastDistance);
                 provinceLine = lineCoverage(provinceDistance, 0.6);
                 countryLine = lineCoverage(ownerDistance, 2.0);
                 if (ownerOf(id) > 0) edgeShade = 1.0 - smoothstep(0.0, 8.0, ownerDistance);
+                // Shallows along the coast, about a map pixel wide, follow the smooth coastline.
+                if (sea) col *= 1.0 + 0.22 * (1.0 - smoothstep(0.0, 1.2 * uZoom, coastDistance));
             } else {
                 // Zoomed out a map pixel is smaller than a screen pixel: compare with the next screen pixel.
                 id = idAt(m);
@@ -131,6 +169,8 @@ public sealed class MapRenderer : IDisposable
                 int own = ownerOf(id);
                 provinceLine = (id != idR || id != idD) ? 1.0 : 0.0;
                 countryLine = (own != ownerOf(idR) || own != ownerOf(idD)) ? 1.0 : 0.0;
+                bool wet = isWater(id);
+                if (wet && (!isWater(idR) || !isWater(idD))) col *= 1.22;
             }
 
             vec4 pc = texelFetch(uProvColor, slot(id), 0);
@@ -244,6 +284,7 @@ public sealed class MapRenderer : IDisposable
         {
             int o = p.Id * 4;
             _ownerData[o] = (byte)(p.OwnerId + 1);
+            _ownerData[o + 1] = p.IsWater ? (byte)255 : (byte)0; // for the coastline
             _ownerData[o + 3] = 255;
 
             // Colour by who holds the province, so occupied land shows the occupier inside the owner's borders.

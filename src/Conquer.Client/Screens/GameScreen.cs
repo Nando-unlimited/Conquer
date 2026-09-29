@@ -810,9 +810,17 @@ public sealed partial class GameScreen : IScreen
         // With the nation screen open this strip shows the latest message instead (see DrawMessages).
         if (_nation.Visible) return;
 
-        string help = _choosingMigrationTarget
-            ? "Clic izquierdo: elegir provincia de destino  ·  Esc: cancelar"
-            : "Clic: seleccionar  ·  Arrastrar: mover mapa  ·  Clic dcho: mover unidad  ·  Rueda: zoom  ·  Espacio: pausa  ·  1-5: velocidad  ·  Inicio: tu capital  ·  F1: ayuda";
+        List<string> hints = _choosingMigrationTarget
+            ? ["Clic izquierdo: elegir provincia de destino", "Esc: cancelar"]
+            : ["Clic: seleccionar", "Arrastrar: mover mapa", "Clic dcho: mover unidad", "Rueda: zoom", "Espacio: pausa", "1-5: velocidad", "Inicio: tu capital", "F1: ayuda"];
+        // On a narrow screen the hints before the last give way, so "F1: ayuda" always shows.
+        float room = s.X - bar.Right - 32;
+        string help = string.Join("  ·  ", hints);
+        while (hints.Count > 2 && Ui.Font.Measure(help, FontSize.Small) > room)
+        {
+            hints.RemoveAt(hints.Count - 2);
+            help = string.Join("  ·  ", hints);
+        }
         float hw = Ui.Font.Measure(help, FontSize.Small) + 20;
         Ui.Panel(new Rect(bar.Right + 6, s.Y - 44, hw, 30));
         Ui.Text(bar.Right + 16, s.Y - 38, help, _choosingMigrationTarget ? Theme.Accent : Theme.TextDim, FontSize.Small);

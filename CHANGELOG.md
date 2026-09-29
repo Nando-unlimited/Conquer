@@ -2,6 +2,15 @@
 
 Todos los cambios del juego, del más reciente al más antiguo. Cada versión es un commit cuyo título es su número.
 
+## [1.28.0] - 2026-09-29
+
+### Cambiado
+- **Tipografía nueva**, en lugar de Noto Sans:
+  - **Cinzel**, capitales romanas, para el título del juego y los nombres de las naciones en el mapa.
+  - **Fira Sans** para el resto de la interfaz: clara, con cifras regulares que se alinean bien en tablas y barras.
+- **Bordes suaves al acercar el mapa**: las fronteras de provincias y naciones y la costa se dibujan como curvas, sin escalones de píxeles. La franja de agua clara de la costa sigue esa curva.
+- La línea de controles de la barra inferior se ajusta al ancho de la pantalla: si no cabe, quita atajos y deja siempre «F1: ayuda».
+
 ## [1.27.0] - 2026-09-29
 
 ### Cambiado
