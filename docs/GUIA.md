@@ -533,13 +533,13 @@ Punto de entrada. Comprueba OpenGL 3.3 (`GlSupport.Ensure`), pone el formato de 
 | `Run()`, `Quit()`, `Show(pantalla)` | Arranca, cierra, cambia de pantalla al acabar el fotograma. |
 | `OnLoad()` | Inicia OpenGL, la fuente, la interfaz y los eventos de ratón y teclado; muestra el menú o la partida rápida. |
 | `OnRender(dt)` | Cada fotograma: limpia, dibuja la pantalla actual, la interfaz y el tooltip. |
-| `CaptureIfRequested()` | Con `--screenshot`, guarda la imagen tras unos fotogramas y cierra. |
+| `CaptureIfRequested()` | Con `--screenshot`, guarda la imagen tras unos fotogramas y cierra; en los menús espera a que esté su fondo. |
 | `ReadVersion()` | Lee la versión del ejecutable (la del `.csproj`). |
 
 ### `Screens/MenuScreens.cs`
 | Elemento | Qué es |
 | --- | --- |
-| `MainMenuScreen` | Pantalla inicial: "Continuar" (carga la última partida guardada), "Nueva partida", "Cargar partida", historial de versiones y salir. |
+| `MainMenuScreen` | Pantalla inicial sobre el fondo del mapa (`MenuBackground`), con el título con sombra y los botones en un panel: "Continuar" (carga la última partida guardada), "Nueva partida", "Cargar partida", historial de versiones y salir. |
 | `NewGameScreen` | Nueva partida: tipo de mapa, semilla, número de jugadores, dificultad (con su descripción y los recursos con los que empiezas), "Comenzar" y "Volver". |
 | `LoadGameScreen` | Lista de partidas guardadas, de la más reciente a la más antigua, para cargar o borrar (pide confirmación). |
 | `LoadingScreen` | Genera el mundo en segundo plano y muestra el progreso, para una partida nueva o una guardada; al terminar abre `GameScreen`. |
@@ -569,15 +569,15 @@ La pantalla de juego. Clase parcial: el ejército en pantalla está en `GameScre
 | `DrawCities()` | Marcadores de ciudad y sus nombres. |
 | `DrawMigrations()` | Puntos que representan a los migrantes en camino. |
 | `DrawPath()` | Ruta de la unidad seleccionada. |
-| `DrawTopBar()`, `Compact()` | Barra superior: nación, población y humor medio, fecha, velocidades, recursos conocidos y botones «?» (ayuda), Nación (con «!» si alguna rama no investiga nada teniendo avances disponibles) y Menú (con números abreviados: 12,3k, 2,9M). |
+| `DrawTopBar()`, `Compact()` | Barra superior: nación, población y humor medio, fecha, velocidades, recursos conocidos (icono, cantidad y cambio del día; el nombre, en el tooltip) y botones «?» (ayuda), Nación (con «!» si alguna rama no investiga nada teniendo avances disponibles) y Menú (con números abreviados: 12,3k, 2,9M). |
 | `DrawSidePanel()`, `UnitPanel()`, `ProvincePanel()` | Panel derecho: datos y botones de la unidad o provincia seleccionada; el de provincia tiene pestañas General, Edificios y Ejército (humor y fertilidad, yacimientos con lo que les queda, fundar, fiestas, reclamar, asentarse, reclutar, migración forzada). |
 | `MoodTooltip(provincia)` | Tooltip del humor con sus causas y su efecto en la producción. |
 | `OpenCityNaming(...)`, `DrawCityNaming()`, `ConfirmCityName()` | Diálogo para nombrar una ciudad al fundarla con colonos o al construirla: propone un nombre, se puede escribir otro o pedir otro al azar, avisa si no vale y la funda o empieza la obra (Intro confirma, Esc cancela). Mientras está abierto el tiempo se para y las teclas van a la caja de texto. |
 | `BuildingsPanel(...)` | Pestaña Edificios: la obra en curso (edificio o ciudad) con su barra, el botón «Ciudad» en provincias sin ciudad, los edificios terminados y, en tus provincias, un botón por cada edificio que puedes levantar; los que solo necesitan ciudad o yacimiento dicen qué les falta, y los de avances sin descubrir no aparecen (`IsBuildingKnown`). |
-| `Line()`, `Paragraph()` | Ayudas para escribir filas y párrafos en el panel. |
+| `Line()`, `ResourceLine()`, `Paragraph()` | Ayudas para escribir filas (también con el icono de un recurso) y párrafos en el panel. |
 | `DrawBottomBar()`, `ModeBarWidth` | Modos de mapa (un botón de 120 píxeles por modo) y ayuda de controles (termina con «F1: ayuda») (la ayuda se oculta con la pantalla de la nación abierta). |
 | `DrawResourceFilter(barra)` | En el modo recursos, fila de botones para ver todos los yacimientos o solo uno de los recursos que conoces; hace de leyenda con el color de cada recurso. |
-| `DrawMessages()`, `HoverTooltip()` | Mensajes (más arriba si está abierto el filtro de recursos; con la pantalla de la nación abierta, solo el último, en la franja junto a los modos de mapa, con `DrawLatestMessageInStrip`) y tooltip de la provincia bajo el ratón (con sus yacimientos en el modo recursos y sus instituciones en el modo instituciones). |
+| `DrawMessages()`, `HoverTooltip()` | Mensajes en tiras redondeadas con una marca dorada (roja si algo falló) (más arriba si está abierto el filtro de recursos; con la pantalla de la nación abierta, solo el último, en la franja junto a los modos de mapa, con `DrawLatestMessageInStrip`) y tooltip de la provincia bajo el ratón (con sus yacimientos en el modo recursos y sus instituciones en el modo instituciones). |
 | `DrawPauseMenu()`, `SaveCurrentGame()` | Menú de pausa (Esc): continuar, guardar la partida (`SaveFiles.Save`), ayuda, historial de versiones, volver a la pantalla inicial o salir. |
 
 ### `Screens/GameScreen.Army.cs`
@@ -586,6 +586,7 @@ El ejército en pantalla.
 | Función | Qué hace |
 | --- | --- |
 | `ProvinceTab` | Pestañas del panel de provincia: General, Edificios y Ejército (esta solo en tus ciudades). |
+| `DrawNationNames()` | El nombre de cada nación sobre su tierra: en su centro (media circular de las longitudes), del tamaño que ocupa en pantalla, oculto si se ve muy pequeña y desvanecido al acercarse mucho. |
 | `DrawUnits()`, `Bar(...)` | Fichas estilo OTAN: aspa para infantería, barra para montados, marcas de nivel en los cuarteles y «C» para colonos; las flotas llevan un casco bajo la letra de su barco y un punto por cada unidad a bordo, y las unidades embarcadas no se dibujan. Barras de hombres (verde) y organización (ámbar). Dibuja la ruta, la línea a su cuartel (verde si está a su alcance) y una flecha roja al atacar. |
 | `DrawBattles()`, `DrawBattleMark(...)`, `BattleSummary(...)`, `NavalBattleSummary(...)` | Espadas cruzadas sobre cada batalla, en tierra o en el mar; al pasar el ratón, los dos bandos, su organización y el terreno. |
 | `UnitPanel(...)`, `UnitState(...)`, `EmbarkButtons(...)` | Panel de la unidad: tipo, nación, ubicación, estado («A bordo de…», «Combatiendo en el mar») y botones (fundar, reclamar, embarcar en una flota cercana con sitio, licenciar, detener). Una unidad embarcada explica cómo desembarcar. |
@@ -628,7 +629,7 @@ Dibuja el mapa entero con un único shader.
 | `MapMode` | Terreno, político, población, humor, fertilidad, recursos e instituciones. |
 | `ResourceFilter` | En el modo recursos, el único recurso que se muestra (o `null` para todos). |
 | `IsResourceKnown` | Qué recursos conoce quien mira; los demás no se dibujan. |
-| Shader de fragmentos | Para cada píxel de pantalla calcula el punto del mapa, busca la provincia en la textura de ids y la colorea según su dueño o su población. Con zoom alto mezcla las 4 celdas vecinas (`smoothRegions`, `strongest`) para trazar fronteras suaves; con zoom lejano compara con el píxel vecino. Resalta la provincia seleccionada y la que está bajo el ratón. |
+| Shader de fragmentos | Para cada píxel de pantalla calcula el punto del mapa, busca la provincia en la textura de ids y la colorea según su dueño o su población. Con zoom alto mezcla las 4 celdas vecinas (`smoothRegions`, `strongest`) para trazar fronteras suaves; con zoom lejano compara con el píxel vecino. Oscurece la tierra junto a las fronteras nacionales (más gruesas), resalta la provincia seleccionada y la que está bajo el ratón, y aplica una viñeta suave hacia los bordes de la pantalla. |
 | `Prepare(mapa)` | Prepara (fuera del hilo principal) los píxeles de ids y colores del terreno. |
 | `ProvinceAt(mapa, punto, zoom)` | Provincia que se ve en un punto, con la misma regla que el shader (para los clics). |
 | `SmoothZoom` | Zoom a partir del cual las fronteras se suavizan. |
@@ -641,7 +642,7 @@ Dibuja el mapa entero con un único shader.
 | `Draw(cámara, ...)` | Pasa los parámetros al shader y dibuja. |
 
 ### `Graphics/TerrainColors.cs`
-`Build(mapa)`: color de cada píxel según el bioma, sombreado del relieve en tierra y profundidad en el mar.
+`Build(mapa)`: color de cada píxel según el bioma; en tierra, relieve iluminado desde el noroeste (medido sobre dos píxeles) y alturas algo más pálidas; en el mar, más oscuro cuanto más hondo y una franja más clara pegada a la costa.
 
 ### `Graphics/Camera.cs`
 | Función | Qué hace |
@@ -657,6 +658,13 @@ Dibuja el mapa entero con un único shader.
 | `Batch2D` | Acumula rectángulos, líneas y letras y los envía juntos a la GPU. |
 | `Begin`, `Flush` | Empezar un fotograma / dibujar lo acumulado. |
 | `Quad`, `Rect`, `Outline`, `Line` | Figuras básicas en píxeles de pantalla. |
+| `Triangle`, `Gradient`, `Circle`, `RoundedRect`, `RoundedOutline`, `Shadow`, `Mix` | Triángulos con color por esquina, rectángulos en degradado vertical, círculos y anillos, rectángulos con esquinas redondeadas (con degradado opcional) y su borde, sombras suaves por capas y mezcla de dos colores. |
+
+### `Graphics/Icons.cs`
+`Icons.Resource(lote, recurso, centro, tamaño)`: iconos de los recursos dibujados con figuras, sin imágenes: una espiga (comida), un tronco (madera), trozos de carbón, lingotes (hierro, cobre, aluminio), monedas (oro, plata), un cristal (silicio), una gota (petróleo) y un neumático (caucho), con el color de cada recurso en el mapa.
+
+### `Graphics/MenuBackground.cs`
+`MenuBackground`: el fondo de los menús: la Tierra real a media resolución, coloreada por altitud (azules por profundidad, llanuras verdes, colinas pardas, cumbres pálidas y hielo) y con relieve, que se desplaza despacio hacia el oeste bajo un velo oscuro. Se construye una vez en segundo plano y lo comparten todas las pantallas de menú; `IsReady` dice si ya se ve.
 
 ### `Graphics/Font.cs`
 | Función | Qué hace |
@@ -685,8 +693,8 @@ Interfaz propia de "modo inmediato": los botones se declaran en cada fotograma y
 | --- | --- |
 | `Rect` | Rectángulo con `Contains` e `Inset`. |
 | `InputState` | Estado del ratón y del teclado en el fotograma. |
-| `Theme` | Colores de la interfaz. `Theme.Mood(humor, normal)` colorea un humor: rojo si hay descontento, verde si está contento. |
-| `Ui.Panel`, `Text`, `TextCentered`, `Button`, `Hover`, `Tooltip` | Piezas de la interfaz. |
+| `Theme` | Colores de la interfaz, con los degradados de paneles y botones (`PanelTop`/`PanelBottom`, `ButtonTop`/`ButtonBottom`, `HoverTop`…, `ActiveTop`…), el brillo superior (`Highlight`) y los radios de las esquinas (`PanelRadius`, `ButtonRadius`). `Theme.Mood(humor, normal)` colorea un humor: rojo si hay descontento, verde si está contento. |
+| `Ui.Panel`, `Text`, `TextCentered`, `Button`, `Hover`, `Tooltip` | Piezas de la interfaz. Un panel lleva sombra, cuerpo en degradado, brillo arriba y borde redondeado (`radius`: 0 para la barra superior; `opaque` para las pantallas de la nación y la ayuda). Un botón tiene relieve, se ilumina bajo el ratón con borde dorado, es dorado si está activo, se hunde al pulsarlo y su texto lleva sombra. Los tooltips tienen sombra y una línea dorada arriba. |
 | `TextField(área, texto, máximo)` | Caja de texto de una línea: añade lo tecleado en el fotograma (`InputState.Chars`) y borra con Retroceso. Solo admite caracteres que la fuente sabe dibujar. |
 | `Ui.MouseOverUi`, `Block` | Si el ratón está sobre la interfaz (para no hacer clic en el mapa a través de un panel). |
 | `BeginFrame`, `EndFrame` | Empezar el fotograma / dibujar el tooltip al final. |

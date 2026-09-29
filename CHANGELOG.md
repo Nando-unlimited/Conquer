@@ -2,6 +2,22 @@
 
 Todos los cambios del juego, del más reciente al más antiguo. Cada versión es un commit cuyo título es su número.
 
+## [1.27.0] - 2026-09-29
+
+### Cambiado
+- **Interfaz renovada**:
+  - **Paneles**: sombra, degradado, brillo arriba y esquinas redondeadas.
+  - **Botones**: relieve, brillo al pasar el ratón, dorado cuando están activos, se hunden al pulsarlos y su texto lleva sombra.
+  - **Tooltips, mensajes y tarjetas de ciencia**: redondeados, a juego con lo demás.
+- **Iconos de recursos** dibujados en la barra superior, el panel de provincia y el filtro de recursos del mapa: espiga, tronco, lingotes, monedas, cristal, gota y neumático.
+- **Mapa**:
+  - **Relieve**: más marcado, y las montañas más claras.
+  - **Costas**: una franja de agua clara las resalta.
+  - **Fronteras nacionales**: más gruesas y con un sombreado hacia dentro.
+  - **Viñeta**: bordes de la pantalla suavemente oscurecidos.
+- **Nombres de las naciones** sobre su territorio, del tamaño que ocupan en pantalla.
+- **Menú principal**: se ve sobre un mapa de la Tierra con relieve que se desplaza despacio, con el título con sombra y los botones en un panel. El mismo fondo aparece en las pantallas de nueva partida, cargar partida y carga.
+
 ## [1.26.0] - 2026-09-29
 
 ### Añadido

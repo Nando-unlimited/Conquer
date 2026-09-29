@@ -138,6 +138,112 @@ public sealed unsafe class Batch2D : IDisposable
         _vertices[_count++] = new Vertex { Position = a - n, Uv = uv, Color = c };
     }
 
+    public void Triangle(Vector2 a, Vector2 b, Vector2 c, Rgba color) => Triangle(a, b, c, color, color, color);
+
+    /// <summary>A triangle with a colour per corner, blended across it.</summary>
+    public void Triangle(Vector2 a, Vector2 b, Vector2 c, Rgba ca, Rgba cb, Rgba cc)
+    {
+        if (_texture != WhiteTexture || _count + 3 > _vertices.Length) Flush();
+        _texture = WhiteTexture;
+        var uv = new Vector2(0.5f);
+        _vertices[_count++] = new Vertex { Position = a, Uv = uv, Color = ca.Packed };
+        _vertices[_count++] = new Vertex { Position = b, Uv = uv, Color = cb.Packed };
+        _vertices[_count++] = new Vertex { Position = c, Uv = uv, Color = cc.Packed };
+    }
+
+    /// <summary>A rectangle shading from <paramref name="top"/> to <paramref name="bottom"/>.</summary>
+    public void Gradient(float x, float y, float w, float h, Rgba top, Rgba bottom)
+    {
+        Triangle(new(x, y), new(x + w, y), new(x + w, y + h), top, top, bottom);
+        Triangle(new(x, y), new(x + w, y + h), new(x, y + h), top, bottom, bottom);
+    }
+
+    /// <summary>A filled circle (or, with <paramref name="inner"/> above zero, a ring).</summary>
+    public void Circle(Vector2 centre, float radius, Rgba color, float inner = 0, int segments = 20)
+    {
+        for (int i = 0; i < segments; i++)
+        {
+            float a0 = MathF.Tau * i / segments, a1 = MathF.Tau * (i + 1) / segments;
+            var d0 = new Vector2(MathF.Cos(a0), MathF.Sin(a0));
+            var d1 = new Vector2(MathF.Cos(a1), MathF.Sin(a1));
+            if (inner <= 0) Triangle(centre, centre + d0 * radius, centre + d1 * radius, color);
+            else
+            {
+                Triangle(centre + d0 * inner, centre + d0 * radius, centre + d1 * radius, color);
+                Triangle(centre + d0 * inner, centre + d1 * radius, centre + d1 * inner, color);
+            }
+        }
+    }
+
+    /// <summary>A rectangle with rounded corners; with <paramref name="bottom"/>, shading down to it.</summary>
+    public void RoundedRect(float x, float y, float w, float h, float radius, Rgba color, Rgba? bottom = null)
+    {
+        radius = MathF.Min(radius, MathF.Min(w, h) / 2);
+        var low = bottom ?? color;
+        if (radius < 0.5f)
+        {
+            Gradient(x, y, w, h, color, low);
+            return;
+        }
+        Rgba At(float py) => Mix(color, low, h <= 0 ? 0 : (py - y) / h);
+        // Middle band, then the top and bottom bands between the corners.
+        Gradient(x, y + radius, w, h - 2 * radius, At(y + radius), At(y + h - radius));
+        Gradient(x + radius, y, w - 2 * radius, radius, color, At(y + radius));
+        Gradient(x + radius, y + h - radius, w - 2 * radius, radius, At(y + h - radius), low);
+        const int Steps = 5;
+        foreach (var (cx, cy, start) in new[] { (x + radius, y + radius, MathF.PI), (x + w - radius, y + radius, MathF.PI * 1.5f),
+                     (x + w - radius, y + h - radius, 0f), (x + radius, y + h - radius, MathF.PI / 2) })
+        {
+            var c = new Vector2(cx, cy);
+            for (int i = 0; i < Steps; i++)
+            {
+                float a0 = start + MathF.PI / 2 * i / Steps, a1 = start + MathF.PI / 2 * (i + 1) / Steps;
+                var p0 = c + new Vector2(MathF.Cos(a0), MathF.Sin(a0)) * radius;
+                var p1 = c + new Vector2(MathF.Cos(a1), MathF.Sin(a1)) * radius;
+                Triangle(c, p0, p1, At(cy), At(p0.Y), At(p1.Y));
+            }
+        }
+    }
+
+    /// <summary>The border of a rounded rectangle.</summary>
+    public void RoundedOutline(float x, float y, float w, float h, float radius, Rgba color, float thickness = 1)
+    {
+        radius = MathF.Min(radius, MathF.Min(w, h) / 2);
+        Rect(x + radius, y, w - 2 * radius, thickness, color);
+        Rect(x + radius, y + h - thickness, w - 2 * radius, thickness, color);
+        Rect(x, y + radius, thickness, h - 2 * radius, color);
+        Rect(x + w - thickness, y + radius, thickness, h - 2 * radius, color);
+        if (radius < 0.5f) return;
+        const int Steps = 5;
+        float r = radius - thickness / 2;
+        foreach (var (cx, cy, start) in new[] { (x + radius, y + radius, MathF.PI), (x + w - radius, y + radius, MathF.PI * 1.5f),
+                     (x + w - radius, y + h - radius, 0f), (x + radius, y + h - radius, MathF.PI / 2) })
+            for (int i = 0; i < Steps; i++)
+            {
+                float a0 = start + MathF.PI / 2 * i / Steps, a1 = start + MathF.PI / 2 * (i + 1) / Steps;
+                Line(new Vector2(cx + MathF.Cos(a0) * r, cy + MathF.Sin(a0) * r), new Vector2(cx + MathF.Cos(a1) * r, cy + MathF.Sin(a1) * r), color, thickness);
+            }
+    }
+
+    /// <summary>A soft shadow under a rounded rectangle: layers growing outwards and fading.</summary>
+    public void Shadow(float x, float y, float w, float h, float radius, float spread = 10, float strength = 0.35f)
+    {
+        const int Layers = 5;
+        for (int i = Layers; i >= 1; i--)
+        {
+            float d = spread * i / Layers;
+            RoundedRect(x - d, y - d + 3, w + 2 * d, h + 2 * d, radius + d, Rgba.Black.WithAlpha(strength / Layers));
+        }
+    }
+
+    /// <summary>Blends two colours, alpha included: 0 gives <paramref name="a"/>, 1 gives <paramref name="b"/>.</summary>
+    public static Rgba Mix(Rgba a, Rgba b, float t)
+    {
+        t = Math.Clamp(t, 0, 1);
+        byte L(byte p, byte q) => (byte)(p + (q - p) * t);
+        return new(((uint)L(a.A, b.A) << 24) | ((uint)L(a.R, b.R) << 16) | ((uint)L(a.G, b.G) << 8) | L(a.B, b.B));
+    }
+
     public void Flush()
     {
         if (_count == 0 || _texture == null)

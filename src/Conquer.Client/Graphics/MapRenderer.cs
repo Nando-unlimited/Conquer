@@ -114,11 +114,14 @@ public sealed class MapRenderer : IDisposable
             vec3 col = texture(uTerrain, m / uMapSize).rgb;
             int id;
             float provinceLine, countryLine;
+            // Land near a national border is shaded, so each country reads as a shape.
+            float edgeShade = 0.0;
             if (uZoom >= uSmoothZoom) {
                 float provinceDistance, ownerDistance;
                 smoothRegions(m, id, provinceDistance, ownerDistance);
                 provinceLine = lineCoverage(provinceDistance, 0.6);
-                countryLine = lineCoverage(ownerDistance, 1.4);
+                countryLine = lineCoverage(ownerDistance, 2.0);
+                if (ownerOf(id) > 0) edgeShade = 1.0 - smoothstep(0.0, 8.0, ownerDistance);
             } else {
                 // Zoomed out a map pixel is smaller than a screen pixel: compare with the next screen pixel.
                 id = idAt(m);
@@ -133,10 +136,14 @@ public sealed class MapRenderer : IDisposable
             vec4 pc = texelFetch(uProvColor, slot(id), 0);
             col = mix(col, pc.rgb, pc.a);
             col = mix(col, vec3(0.08, 0.08, 0.08), provinceLine * uProvinceBorders);
-            col = mix(col, vec3(0.05, 0.03, 0.02), countryLine * 0.85);
+            col *= 1.0 - 0.22 * edgeShade;
+            col = mix(col, vec3(0.05, 0.03, 0.02), countryLine * 0.9);
 
             if (id == uSelected) col = mix(col, vec3(1.0, 1.0, 0.85), 0.35);
             else if (id == uHover) col = mix(col, vec3(1.0), 0.12);
+            // A soft vignette towards the screen edges.
+            vec2 v = frag / uScreen - 0.5;
+            col *= 1.0 - 0.35 * dot(v, v);
             FragColor = vec4(col, 1.0);
         }
         """;

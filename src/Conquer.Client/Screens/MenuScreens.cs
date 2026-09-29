@@ -19,12 +19,15 @@ public sealed class MainMenuScreen : IScreen
     {
         var ui = _app.Ui;
         var s = _app.ScreenSize;
+        MenuBackground.Draw(_app.Gl, ui.Batch, s, dt);
         float cx = s.X / 2;
 
+        ui.TextCentered(new Rect(3, s.Y * 0.12f + 3, s.X, 80), "CONQUER", Rgba.Black.WithAlpha(0.7f), FontSize.Title, bold: true);
         ui.TextCentered(new Rect(0, s.Y * 0.12f, s.X, 80), "CONQUER", Theme.Accent, FontSize.Title, bold: true);
         ui.TextCentered(new Rect(0, s.Y * 0.12f + 80, s.X, 30), $"Versión {ConquerApp.Version}", Theme.TextDim);
 
         float w = 320, x = cx - w / 2, y = s.Y * 0.12f + 150;
+        ui.Panel(new Rect(x - 24, y - 24, w + 48, 60 * 3 + 16 + 50 + 40 + 48));
         bool free = !_changelog.Visible;
         if (ui.Button(new Rect(x, y, w, 48), "Continuar", _latest != null, tooltip: _latest?.Name, size: FontSize.Large) && free)
             _app.Show(new LoadingScreen(_app, _latest!));
@@ -59,6 +62,7 @@ public sealed class NewGameScreen : IScreen
     {
         var ui = _app.Ui;
         var s = _app.ScreenSize;
+        MenuBackground.Draw(_app.Gl, ui.Batch, s, dt);
         float cx = s.X / 2;
 
         ui.TextCentered(new Rect(0, s.Y * 0.1f, s.X, 80), "CONQUER", Theme.Accent, FontSize.Title, bold: true);
@@ -134,6 +138,7 @@ public sealed class LoadGameScreen : IScreen
     {
         var ui = _app.Ui;
         var s = _app.ScreenSize;
+        MenuBackground.Draw(_app.Gl, ui.Batch, s, dt);
         float cx = s.X / 2;
 
         var panel = new Rect(cx - 340, 60, 680, s.Y - 120);
@@ -230,6 +235,7 @@ public sealed class LoadingScreen : IScreen
         _elapsed += dt;
         var ui = _app.Ui;
         var s = _app.ScreenSize;
+        MenuBackground.Draw(_app.Gl, ui.Batch, s, dt);
         ui.TextCentered(new Rect(0, s.Y / 2 - 80, s.X, 80), "CONQUER", Theme.Accent, FontSize.Title, bold: true);
 
         if (_task.IsFaulted)

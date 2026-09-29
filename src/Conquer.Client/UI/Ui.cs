@@ -49,6 +49,19 @@ public static class Theme
     public static readonly Rgba Good = new(0xFF7FCB6A);
     public static readonly Rgba Bad = new(0xFFE06A5A);
 
+    // Shading for panels and buttons: lighter at the top, as if lit from above.
+    public static readonly Rgba PanelTop = new(0xF41C2531);
+    public static readonly Rgba PanelBottom = new(0xF40D1218);
+    public static readonly Rgba Highlight = new(0x1CFFFFFF);
+    public static readonly Rgba ButtonTop = new(0xFF303C4D);
+    public static readonly Rgba ButtonBottom = new(0xFF1F2833);
+    public static readonly Rgba HoverTop = new(0xFF41516A);
+    public static readonly Rgba HoverBottom = new(0xFF2A3647);
+    public static readonly Rgba ActiveTop = new(0xFFB99442);
+    public static readonly Rgba ActiveBottom = new(0xFF765822);
+    public const float PanelRadius = 8;
+    public const float ButtonRadius = 4;
+
     /// <summary>Red in unrest, green when content, <paramref name="normal"/> in between.</summary>
     public static Rgba Mood(double mood, Rgba normal) =>
         mood < GameRules.UnrestMood ? Bad : GameRules.MoodLevel(mood) == 3 ? Good : normal;
@@ -85,11 +98,19 @@ public sealed class Ui
     /// <summary>Marks an area as interface without drawing anything.</summary>
     public void Block(Rect r) => _blockers.Add(r);
 
-    public void Panel(Rect r)
+    /// <summary>
+    /// A panel: a soft shadow, a dark body lit from above, a thin highlight along the top and a rounded
+    /// border. <paramref name="opaque"/> hides the map completely (for full-screen tables).
+    /// </summary>
+    public void Panel(Rect r, float radius = Theme.PanelRadius, bool opaque = false)
     {
         _blockers.Add(r);
-        Batch.Rect(r.X, r.Y, r.W, r.H, Theme.Panel);
-        Batch.Outline(r.X, r.Y, r.W, r.H, Theme.PanelBorder);
+        Batch.Shadow(r.X, r.Y, r.W, r.H, radius);
+        var top = opaque ? Theme.PanelTop.WithAlpha(1) : Theme.PanelTop;
+        var bottom = opaque ? Theme.PanelBottom.WithAlpha(1) : Theme.PanelBottom;
+        Batch.RoundedRect(r.X, r.Y, r.W, r.H, radius, top, bottom);
+        Batch.Rect(r.X + radius, r.Y + 1, r.W - 2 * radius, 1, Theme.Highlight);
+        Batch.RoundedOutline(r.X, r.Y, r.W, r.H, radius, Theme.PanelBorder);
     }
 
     public float Text(float x, float y, string text, Rgba? color = null, FontSize size = FontSize.Normal, bool bold = false) =>
@@ -109,10 +130,19 @@ public sealed class Ui
     {
         _blockers.Add(r);
         bool hover = Hover(r);
-        var fill = !enabled ? Theme.ButtonDisabled : active ? Theme.ButtonActive : hover ? Theme.ButtonHover : Theme.Button;
-        Batch.Rect(r.X, r.Y, r.W, r.H, fill);
-        Batch.Outline(r.X, r.Y, r.W, r.H, hover && enabled ? Theme.Accent : Theme.PanelBorder);
-        TextCentered(r, label, enabled ? Theme.Text : Theme.TextDisabled, size);
+        bool pressed = enabled && hover && Input.LeftDown && r.Contains(Input.LeftPressPosition);
+        // Raised when idle, brighter under the mouse, gold when active, sunk while held down.
+        var (top, bottom) = !enabled ? (Theme.ButtonDisabled, Theme.ButtonDisabled)
+            : active ? (Theme.ActiveTop, Theme.ActiveBottom)
+            : hover ? (Theme.HoverTop, Theme.HoverBottom)
+            : (Theme.ButtonTop, Theme.ButtonBottom);
+        if (pressed) (top, bottom) = (bottom, top);
+        Batch.RoundedRect(r.X, r.Y, r.W, r.H, Theme.ButtonRadius, top, bottom);
+        if (enabled && !pressed) Batch.Rect(r.X + Theme.ButtonRadius, r.Y + 1, r.W - 2 * Theme.ButtonRadius, 1, Theme.Highlight);
+        Batch.RoundedOutline(r.X, r.Y, r.W, r.H, Theme.ButtonRadius, hover && enabled ? Theme.Accent : active ? Theme.ActiveBottom : Theme.PanelBorder);
+        var textArea = pressed ? r with { Y = r.Y + 1 } : r;
+        if (enabled) TextCentered(textArea with { X = textArea.X + 1, Y = textArea.Y + 1 }, label, Rgba.Black.WithAlpha(0.45f), size);
+        TextCentered(textArea, label, enabled ? active ? Rgba.White : Theme.Text : Theme.TextDisabled, size);
         if (hover && tooltip != null) _tooltip = tooltip;
         return enabled && hover && Input.LeftReleased && r.Contains(Input.LeftPressPosition);
     }
@@ -128,8 +158,8 @@ public sealed class Ui
         if (Input.KeysPressed.Contains(Silk.NET.Input.Key.Backspace) && text.Length > 0) text = text[..^1];
 
         _blockers.Add(r);
-        Batch.Rect(r.X, r.Y, r.W, r.H, new Rgba(0xFF0E1218));
-        Batch.Outline(r.X, r.Y, r.W, r.H, Theme.Accent);
+        Batch.RoundedRect(r.X, r.Y, r.W, r.H, Theme.ButtonRadius, new Rgba(0xFF0A0E13), new Rgba(0xFF121821));
+        Batch.RoundedOutline(r.X, r.Y, r.W, r.H, Theme.ButtonRadius, Theme.Accent);
         float h = Font.LineHeight(FontSize.Normal);
         float end = Text(r.X + 10, r.Y + (r.H - h) / 2, text);
         Batch.Rect(r.X + 11 + end, r.Y + 7, 2, r.H - 14, Theme.Accent);
@@ -148,8 +178,10 @@ public sealed class Ui
         float h = lines.Count * lh + 10;
         float x = Math.Min(Input.Mouse.X + 16, screen.X - w - 4);
         float y = Math.Min(Input.Mouse.Y + 20, screen.Y - h - 4);
-        Batch.Rect(x, y, w, h, new Rgba(0xF20C1016));
-        Batch.Outline(x, y, w, h, Theme.Accent);
+        Batch.Shadow(x, y, w, h, Theme.ButtonRadius, 6, 0.4f);
+        Batch.RoundedRect(x, y, w, h, Theme.ButtonRadius, new Rgba(0xF6161D27), new Rgba(0xF60B0F14));
+        Batch.Rect(x + 2, y, w - 4, 2, Theme.Accent);
+        Batch.RoundedOutline(x, y, w, h, Theme.ButtonRadius, Theme.PanelBorder);
         for (int i = 0; i < lines.Count; i++) Text(x + 8, y + 5 + i * lh, lines[i], Theme.Text, FontSize.Small);
     }
 }

@@ -137,8 +137,7 @@ public sealed class HelpView
     public void Frame(Ui ui, Rect area)
     {
         if (!Visible) return;
-        ui.Batch.Rect(area.X, area.Y, area.W, area.H, Theme.Panel.WithAlpha(1));
-        ui.Panel(area);
+        ui.Panel(area, opaque: true);
         ui.Text(area.X + 20, area.Y + 14, "Ayuda", Theme.Accent, FontSize.Large, bold: true);
         if (ui.Button(new Rect(area.Right - 120, area.Y + 12, 100, 32), "Cerrar", tooltip: "Cerrar (F1 o Esc)")) Visible = false;
 

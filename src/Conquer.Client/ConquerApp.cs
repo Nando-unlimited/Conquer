@@ -161,7 +161,8 @@ public sealed class ConquerApp
     private void CaptureIfRequested()
     {
         if (Options.Screenshot is not { } path) return;
-        bool ready = Options.QuickStart != null || Options.Load != null ? _screen is GameScreen : _screen is not LoadingScreen;
+        // A menu waits for its backdrop, which is built in the background.
+        bool ready = Options.QuickStart != null || Options.Load != null ? _screen is GameScreen : _screen is not LoadingScreen && MenuBackground.IsReady;
         _framesOnScreen = ready ? _framesOnScreen + 1 : 0;
         if (_framesOnScreen < 5) return;
         Screenshot.Save(Gl, _window.FramebufferSize.X, _window.FramebufferSize.Y, path);

@@ -66,8 +66,7 @@ public sealed partial class NationView
     public void Frame(Ui ui, Rect area)
     {
         if (!Visible) return;
-        ui.Batch.Rect(area.X, area.Y, area.W, area.H, Theme.Panel.WithAlpha(1)); // opaque: the map would clutter the tables
-        ui.Panel(area);
+        ui.Panel(area, opaque: true); // opaque: the map would clutter the tables
         ui.Text(area.X + 20, area.Y + 14, _player.Name, Theme.Accent, FontSize.Large, bold: true);
         float tx = area.X + 40 + ui.Font.Measure(_player.Name, FontSize.Large, true);
         for (int i = 0; i < TabNames.Length; i++)
@@ -407,8 +406,8 @@ public sealed partial class NationView
         bool known = _player.Techs.Contains(tech), current = _player.Researching[(int)info.Branch] == tech;
         var can = GameSession.CanResearch(_player, tech);
         var border = known ? Theme.Good : current ? Theme.Accent : can.Ok ? Theme.PanelBorder : Theme.ButtonDisabled;
-        ui.Batch.Rect(c.X, c.Y, c.W, c.H, Theme.Button.WithAlpha(known ? 0.25f : 0.55f));
-        ui.Batch.Outline(c.X, c.Y, c.W, c.H, border);
+        ui.Batch.RoundedRect(c.X, c.Y, c.W, c.H, Theme.ButtonRadius, Theme.ButtonTop.WithAlpha(known ? 0.3f : 0.7f), Theme.ButtonBottom.WithAlpha(known ? 0.3f : 0.7f));
+        ui.Batch.RoundedOutline(c.X, c.Y, c.W, c.H, Theme.ButtonRadius, border);
 
         float x = c.X + 10, y = c.Y + 6;
         ui.Text(x, y, info.Name, known ? Theme.Good : current ? Theme.Accent : can.Ok ? Theme.Text : Theme.TextDisabled, bold: true);

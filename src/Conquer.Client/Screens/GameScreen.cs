@@ -136,6 +136,7 @@ public sealed partial class GameScreen : IScreen
         DrawRivers();
         DrawCities();
         DrawMigrations();
+        DrawNationNames();
         DrawUnits();
         DrawBattles();
 
@@ -337,6 +338,44 @@ public sealed partial class GameScreen : IScreen
         }
     }
 
+    /// <summary>
+    /// Each nation's name over its land: in its middle (a circular mean of longitudes, so a nation across
+    /// the date line is labelled over its land), sized to how big it looks, hidden while it is too small
+    /// and faded out when zoomed in so close that it covers the screen.
+    /// </summary>
+    private void DrawNationNames()
+    {
+        const float KmPerMapPixel = 40075f / 3600;
+        foreach (var player in _session.Players)
+        {
+            if (player.Provinces.Count < 3) continue;
+            double cos = 0, sin = 0, ySum = 0, area = 0;
+            foreach (int id in player.Provinces)
+            {
+                var p = Map.Provinces[id];
+                double angle = (p.CenterX + 0.5) / Map.Width * Math.Tau;
+                cos += Math.Cos(angle) * p.AreaKm2;
+                sin += Math.Sin(angle) * p.AreaKm2;
+                ySum += (p.CenterY + 0.5) * p.AreaKm2;
+                area += p.AreaKm2;
+            }
+            double mean = Math.Atan2(sin, cos);
+            var centre = new Vector2((float)((mean < 0 ? mean + Math.Tau : mean) / Math.Tau * Map.Width), (float)(ySum / area));
+            var s = _camera.MapToScreen(centre);
+            if (!OnScreen(s)) continue;
+
+            float extent = (float)Math.Sqrt(area) / KmPerMapPixel * _camera.Zoom;
+            if (extent < 45) continue;
+            var size = extent > 280 ? FontSize.Title : extent > 150 ? FontSize.Large : extent > 80 ? FontSize.Normal : FontSize.Small;
+            float alpha = Math.Clamp((1600 - extent) / 600, 0, 1) * 0.85f;
+            if (alpha <= 0) continue;
+            string name = player.Name.ToUpperInvariant();
+            var r = new Rect(s.X - 300, s.Y - 30, 600, 60);
+            Ui.TextCentered(r with { X = r.X + 2, Y = r.Y + 2 }, name, Rgba.Black.WithAlpha(alpha * 0.7f), size, bold: true);
+            Ui.TextCentered(r, name, Batch2D.Mix(new Rgba(player.Color), Rgba.White, 0.55f).WithAlpha(alpha), size, bold: true);
+        }
+    }
+
     private Vector2 Center(int provinceId)
     {
         var p = Map.Provinces[provinceId];
@@ -407,7 +446,7 @@ public sealed partial class GameScreen : IScreen
     private void DrawTopBar()
     {
         var s = _app.ScreenSize;
-        Ui.Panel(TopBarRect);
+        Ui.Panel(TopBarRect, radius: 0);
         float x = 12;
         Batch.Rect(x, 16, 24, 24, Rgba.Black);
         Batch.Rect(x + 2, 18, 20, 20, new Rgba(Human.Color));
@@ -433,14 +472,12 @@ public sealed partial class GameScreen : IScreen
         {
             double amount = Human.Stockpile[r];
             double net = Human.LastDayNet[(int)r];
+            // The icon, the amount in store and, under it, the last day's change.
             var rect = new Rect(x, 4, 88, 48);
-            Ui.Text(x, 6, r.Name(), Theme.TextDim, FontSize.Small);
-            Ui.Text(x, 24, Compact(amount), r == ResourceType.Food && Human.IsStarving ? Theme.Bad : Theme.Text, FontSize.Normal, bold: true);
+            Icons.Resource(Batch, r, new System.Numerics.Vector2(x + 11, 28), 20);
+            Ui.Text(x + 26, 9, Compact(amount), r == ResourceType.Food && Human.IsStarving ? Theme.Bad : Theme.Text, FontSize.Normal, bold: true);
             if (Math.Abs(net) >= 0.05)
-            {
-                float vw = Ui.Font.Measure(Compact(amount), FontSize.Normal, true);
-                Ui.Text(x + vw + 4, 28, (net > 0 ? "+" : "") + Compact(net, decimals: true), net > 0 ? Theme.Good : Theme.Bad, FontSize.Small);
-            }
+                Ui.Text(x + 26, 31, (net > 0 ? "+" : "") + Compact(net, decimals: true), net > 0 ? Theme.Good : Theme.Bad, FontSize.Small);
             if (Ui.Hover(rect)) Ui.Tooltip($"{r.Name()}: {amount:N1}\nCambio en el último día: {net:+0.##;-0.##;0}");
             x += 90;
             if (x > s.X - 330) break;
@@ -492,6 +529,13 @@ public sealed partial class GameScreen : IScreen
         Ui.Text(x, y, label, Theme.TextDim);
         Ui.Text(x + 130, y, value, valueColor ?? Theme.Text);
         y += 24;
+    }
+
+    /// <summary>A <see cref="Line"/> headed by the resource's icon.</summary>
+    private void ResourceLine(float x, ref float y, ResourceType resource, string value, Rgba? valueColor = null)
+    {
+        Icons.Resource(Batch, resource, new System.Numerics.Vector2(x + 8, y + 10), 15);
+        Line(x, ref y, "      " + resource.Name(), value, valueColor);
     }
 
     /// <summary>Current mood, where it is heading and why, and what it does to the province.</summary>
@@ -592,14 +636,14 @@ public sealed partial class GameScreen : IScreen
         Ui.Text(x, y, "Recursos", Theme.Text, FontSize.Normal, bold: true);
         y += 24;
         double fed = p.FoodYield * GameRules.FoodPerWorker;
-        Line(x, ref y, "Comida", $"{fed * 1000:0} por mil hab./día");
-        if (p.Info.WoodYield > 0) Line(x, ref y, "Madera", $"{p.Info.WoodYield:0.#} por mil hab./día");
+        ResourceLine(x, ref y, ResourceType.Food, $"{fed * 1000:0} por mil hab./día");
+        if (p.Info.WoodYield > 0) ResourceLine(x, ref y, ResourceType.Wood, $"{p.Info.WoodYield:0.#} por mil hab./día");
         foreach (var r in Resources.Deposits.Where(r => p.Deposits[(int)r] > 0 && Human.Knows(r)))
         {
             var row = new Rect(x, y, w, 24);
             double left = p.Reserves[(int)r];
-            if (left <= 0) Line(x, ref y, r.Name(), "Agotado", Theme.TextDim);
-            else Line(x, ref y, r.Name(), $"{p.Deposits[(int)r]:0.0}/día · quedan {Compact(left)}");
+            if (left <= 0) ResourceLine(x, ref y, r, "Agotado", Theme.TextDim);
+            else ResourceLine(x, ref y, r, $"{p.Deposits[(int)r]:0.0}/día · quedan {Compact(left)}");
             if (Ui.Hover(row))
                 Ui.Tooltip(left <= 0 ? "Esta bolsa se ha agotado y ya no produce."
                     : $"Bolsa de {r.Name().ToLowerInvariant()}: quedan {left:N0} de {p.DepositSizes[(int)r] * GameRules.DepositSizeMultiplier:N0}.\n" +
@@ -792,13 +836,13 @@ public sealed partial class GameScreen : IScreen
         {
             x += Bw + 4;
             var rect = new Rect(x, panel.Y + 6, Bw, 32);
-            if (Ui.Button(rect, "    " + r.Name(), active: _renderer.ResourceFilter == r,
+            if (Ui.Button(rect, "     " + r.Name(), active: _renderer.ResourceFilter == r,
                     tooltip: $"Solo {r.Name().ToLowerInvariant()}: más intenso cuanto más queda en la bolsa", size: FontSize.Small))
             {
                 _renderer.ResourceFilter = _renderer.ResourceFilter == r ? null : r;
                 _mapDirty = true;
             }
-            Batch.Rect(rect.X + 8, rect.Y + 11, 10, 10, MapRenderer.ResourceColor(r));
+            Icons.Resource(Batch, r, new System.Numerics.Vector2(rect.X + 14, rect.Y + 16), 16);
         }
     }
 
@@ -818,7 +862,9 @@ public sealed partial class GameScreen : IScreen
             float alpha = (float)Math.Clamp((Lifetime - (_realTime - time)) / 1.5, 0, 1);
             float w = Ui.Font.Measure(text, FontSize.Normal) + 24;
             var r = new Rect(s.X / 2 - w / 2, y - 30, w, 28);
-            Batch.Rect(r.X, r.Y, r.W, r.H, Theme.Panel.WithAlpha(0.9f * alpha));
+            // A rounded strip with an accent (red for failures) along its left edge.
+            Batch.RoundedRect(r.X, r.Y, r.W, r.H, Theme.ButtonRadius, Theme.PanelTop.WithAlpha(0.92f * alpha), Theme.PanelBottom.WithAlpha(0.92f * alpha));
+            Batch.Rect(r.X, r.Y + 4, 3, r.H - 8, (ok ? Theme.Accent : Theme.Bad).WithAlpha(alpha));
             Ui.TextCentered(r, text, (ok ? Theme.Text : Theme.Bad).WithAlpha(alpha));
             y -= 32;
         }
@@ -841,8 +887,8 @@ public sealed partial class GameScreen : IScreen
         }
         float alpha = (float)Math.Clamp((lifetime - (_realTime - time)) / 1.5, 0, 1);
         var r = new Rect(x, s.Y - 44, Ui.Font.Measure(text, FontSize.Small) + 20, 30);
-        Batch.Rect(r.X, r.Y, r.W, r.H, Theme.Panel.WithAlpha(0.9f * alpha));
-        Batch.Outline(r.X, r.Y, r.W, r.H, Theme.PanelBorder.WithAlpha(alpha));
+        Batch.RoundedRect(r.X, r.Y, r.W, r.H, Theme.ButtonRadius, Theme.PanelTop.WithAlpha(0.92f * alpha), Theme.PanelBottom.WithAlpha(0.92f * alpha));
+        Batch.RoundedOutline(r.X, r.Y, r.W, r.H, Theme.ButtonRadius, Theme.PanelBorder.WithAlpha(alpha));
         Ui.Text(r.X + 10, r.Y + 6, text, (ok ? Theme.Text : Theme.Bad).WithAlpha(alpha), FontSize.Small);
     }
 
