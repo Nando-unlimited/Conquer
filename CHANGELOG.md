@@ -2,6 +2,12 @@
 
 Todos los cambios del juego, del más reciente al más antiguo. Cada versión es un commit cuyo título es su número.
 
+## [1.29.0] - 2026-09-29
+
+### Cambiado
+- **Las provincias nacen sin nombre**: hasta que alguien las reclama se muestran por su terreno («Pradera», «Taiga»…). La primera nación que reclama una provincia, o funda una ciudad en ella, le pone nombre, y ese nombre se queda aunque luego cambie de manos. Al reclamar una, el aviso te dice cómo la has llamado.
+- En las partidas guardadas con versiones anteriores, las provincias con dueño reciben un nombre nuevo al cargarlas; las que no tienen dueño lo pierden.
+
 ## [1.28.0] - 2026-09-29
 
 ### Cambiado

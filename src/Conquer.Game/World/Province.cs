@@ -8,7 +8,10 @@ namespace Conquer.Game.World;
 public sealed class Province
 {
     public int Id { get; }
-    /// <summary>Its own name, which a city founded in it does not change; empty for oceans and poles.</summary>
+    /// <summary>
+    /// Its own name, given by the first nation to claim it and kept whoever holds it later; a city founded
+    /// in it does not change it. Empty until then, and always for oceans and poles.
+    /// </summary>
     public string Name { get; internal set; } = "";
     public Biome Biome { get; internal set; }
     /// <summary>A pixel inside the province used to place labels, units and cities.</summary>

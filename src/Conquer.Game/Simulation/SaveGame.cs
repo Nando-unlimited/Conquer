@@ -101,7 +101,7 @@ public sealed record TemplateSave(int Id, int Number, List<BattalionType> Battal
 public sealed record ProvinceSave(
     int Id, int OwnerId, int ControllerId, double Population, int? CityId, double Mood, double Fertility,
     double[] Reserves, List<BuildingType> Buildings, BuildingType? Constructing, int ConstructionDaysLeft, string? PlannedCityName = null,
-    List<Institution>? Institutions = null);
+    List<Institution>? Institutions = null, string? Name = null);
 
 public sealed record CitySave(int Id, string Name, int OwnerId, int ProvinceId, long FoundedHours, long FestivalUntilHours, List<TrainingSave> Training);
 

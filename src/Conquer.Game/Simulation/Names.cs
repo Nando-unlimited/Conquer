@@ -63,22 +63,20 @@ internal static class ProvinceNames
         "abia", "edo", "ica", "ueva", "orca", "ines", "ava", "igo", "uca", "oria", "osia", "anto", "ulia", "ejo", "ata", "ira",
     ];
 
-    /// <summary>Gives each habitable province a name, as distinct as the syllables allow; the same seed gives the same names.</summary>
-    public static void Assign(IReadOnlyList<World.Province> provinces, int seed)
+    /// <summary>
+    /// A new province name that reads well and is not in <paramref name="used"/> (which it joins). The
+    /// syllables give some 37,000; should they ever run out, a Roman numeral tells the repeats apart.
+    /// </summary>
+    public static string Next(HashSet<string> used, Random random)
     {
-        var random = new Random(seed ^ 0x4E414D45);
-        var used = new HashSet<string>();
-        foreach (var p in provinces)
+        string name = "";
+        for (int attempt = 0; attempt < 60; attempt++)
         {
-            if (!p.IsClaimable) continue;
-            string name = "";
-            for (int attempt = 0; attempt < 40; attempt++)
-            {
-                name = Starts[random.Next(Starts.Length)] + Middles[random.Next(Middles.Length)] + Ends[random.Next(Ends.Length)];
-                if (ReadsWell(name) && used.Add(name)) break;
-            }
-            p.Name = name;
+            name = Starts[random.Next(Starts.Length)] + Middles[random.Next(Middles.Length)] + Ends[random.Next(Ends.Length)];
+            if (ReadsWell(name) && used.Add(name)) return name;
         }
+        for (int n = 2; ; n++)
+            if (used.Add($"{name} {Military.Formations.Roman(n)}")) return $"{name} {Military.Formations.Roman(n)}";
     }
 
     /// <summary>No doubled vowel ("Penuulia") and no three vowels in a row ("Rimiueva").</summary>

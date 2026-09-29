@@ -41,6 +41,7 @@ public sealed partial class GameSession
     private readonly List<AiPlayer> _ais = [];
     private readonly Dictionary<int, Unit> _unitsById = [];
     private readonly HashSet<string> _usedCityNames = [];
+    private readonly HashSet<string> _usedProvinceNames = [];
     private readonly Dictionary<int, double> _emigrationCarry = [];
     private int _nextUnitId, _nextCityId, _nextMigrationId;
 
@@ -111,6 +112,7 @@ public sealed partial class GameSession
             p.Mood = GameRules.StartingMood;
             p.Fertility = 1;
             p.Institutions.Clear();
+            p.Name = "";
             p.ClearBuildings();
             foreach (var r in Resources.Deposits)
                 p.Reserves[(int)r] = p.DepositSizes[(int)r] * GameRules.DepositSizeMultiplier;
@@ -723,8 +725,9 @@ public sealed partial class GameSession
         if (UnitById(unitId) is not { } unit || unit.OwnerId != playerId) return CommandResult.Fail("Unidad no válida.");
         var check = CanClaim(unit);
         if (!check.Ok) return check;
-        SetOwner(Map.Provinces[unit.ProvinceId], playerId);
-        if (Players[playerId].IsHuman) Notify(playerId, "Provincia reclamada. Los colonos de tus ciudades empezarán a llegar.");
+        var claimed = Map.Provinces[unit.ProvinceId];
+        SetOwner(claimed, playerId);
+        if (Players[playerId].IsHuman) Notify(playerId, $"Reclamas la provincia y la llamas {claimed.Name}. Los colonos de tus ciudades empezarán a llegar.");
         return CommandResult.Success();
     }
 
@@ -821,7 +824,14 @@ public sealed partial class GameSession
         if (p.OwnerId != playerId) p.PlannedCityName = null;
         p.OwnerId = p.ControllerId = playerId;
         Players[playerId].Provinces.Add(p.Id);
+        NameProvince(p);
         OwnershipChanged?.Invoke(p.Id);
+    }
+
+    /// <summary>The first nation to claim a province names it; the name stays whoever holds it later.</summary>
+    private void NameProvince(Province p)
+    {
+        if (p.Name.Length == 0 && p.IsClaimable) p.Name = ProvinceNames.Next(_usedProvinceNames, _random);
     }
 
     /// <summary>Raised with the province id whenever a province changes hands (the client recolours the map).</summary>

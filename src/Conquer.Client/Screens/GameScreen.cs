@@ -586,6 +586,7 @@ public sealed partial class GameScreen : IScreen
         if (city != null) Line(x, ref y, "Provincia", p.DisplayName);
         if (p.PlannedCityName != null) Line(x, ref y, "Ciudad en obras", p.PlannedCityName, Theme.Accent);
         if (p.Name.Length > 0 || city != null) Line(x, ref y, "Terreno", p.Info.Name);
+        else if (p.IsClaimable) Line(x, ref y, "Nombre", "Sin reclamar", Theme.TextDim);
         Line(x, ref y, "Superficie", $"{p.AreaKm2:N0} km²");
         Line(x, ref y, "Altitud media", $"{p.MeanElevation:N0} m");
         if (p.RiverFlow > 0)

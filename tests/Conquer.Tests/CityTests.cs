@@ -124,11 +124,23 @@ public class CityTests(WorldFixture world)
     }
 
     [Fact]
-    public void EveryHabitableProvinceHasItsOwnName()
+    public void ProvincesAreNamedWhenFirstClaimedAndKeepTheirNames()
     {
-        var land = _map.Provinces.Where(p => p.IsClaimable).ToList();
-        Assert.All(land, p => Assert.NotEqual("", p.Name));
-        Assert.All(_map.Provinces.Where(p => p.IsWater), p => Assert.Equal(p.Info.Name, p.DisplayName));
-        Assert.Equal(land.Count, land.Select(p => p.Name).Distinct().Count());
+        var s = GameSession.Create(_map, 2, seed: 7, computerRivals: false);
+        Assert.All(_map.Provinces, p => Assert.Equal("", p.Name)); // nobody has claimed anything yet
+        Assert.All(_map.Provinces, p => Assert.Equal(p.Info.Name, p.DisplayName));
+
+        var sites = _map.Provinces.Where(p => p.IsClaimable && p.Neighbors.Length > 3).Take(40).ToList();
+        foreach (var p in sites) s.Claim(0, s.AddRegiment(0, p.Id, BattalionType.Warriors).Id);
+        var claimed = sites.Where(p => p.OwnerId == 0).ToList();
+        Assert.NotEmpty(claimed);
+        Assert.All(claimed, p => Assert.NotEqual("", p.Name));
+        Assert.Equal(claimed.Count, claimed.Select(p => p.Name).Distinct().Count());
+        Assert.Contains(s.Notifications, n => n.Text.StartsWith($"Reclamas la provincia y la llamas {claimed[^1].Name}"));
+
+        // The name is saved with the game (loading resets the map first).
+        string name = claimed[0].Name;
+        GameSession.Load(_map, s.ToSave("test"));
+        Assert.Equal(name, claimed[0].Name);
     }
 }

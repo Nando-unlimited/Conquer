@@ -29,7 +29,7 @@ public sealed partial class GameSession
         // Provinces nobody has touched keep their generated state, so only the rest are stored.
         Provinces = Map.Provinces.Where(Changed).Select(p => new ProvinceSave(
             p.Id, p.OwnerId, p.ControllerId, p.Population, p.CityId, p.Mood, p.Fertility, [.. p.Reserves],
-            [.. p.Buildings.Order()], p.Constructing, p.ConstructionDaysLeft, p.PlannedCityName, [.. p.Institutions.Order()])).ToList(),
+            [.. p.Buildings.Order()], p.Constructing, p.ConstructionDaysLeft, p.PlannedCityName, [.. p.Institutions.Order()], p.Name)).ToList(),
         Cities = Cities.Select(c => new CitySave(c.Id, c.Name, c.OwnerId, c.ProvinceId, c.FoundedHours, c.FestivalUntilHours,
             [.. c.Training.Select(o => new TrainingSave(o.Battalion, o.TemplateName, [.. o.TemplateBattalions], o.HeadquartersLevel, o.DaysLeft, o.TotalDays))])).ToList(),
         Units = Units.Select(u => new UnitSave(
@@ -55,7 +55,7 @@ public sealed partial class GameSession
     private static bool Changed(Province p) =>
         p.OwnerId != -1 || p.ControllerId != -1 || p.Population != 0 || p.CityId.HasValue
         || p.Mood != GameRules.StartingMood || p.Fertility != 1 || p.Buildings.Count > 0 || p.Constructing.HasValue || p.PlannedCityName != null
-        || p.Institutions.Count > 0
+        || p.Institutions.Count > 0 || p.Name.Length > 0
         || Resources.Deposits.Any(r => p.Reserves[(int)r] != p.DepositSizes[(int)r] * GameRules.DepositSizeMultiplier);
 
     /// <summary>
@@ -92,6 +92,8 @@ public sealed partial class GameSession
             p.ConstructionDaysLeft = ps.ConstructionDaysLeft;
             p.PlannedCityName = ps.PlannedCityName;
             p.Institutions.UnionWith(ps.Institutions ?? []);
+            p.Name = ps.Name ?? "";
+            if (p.Name.Length > 0) session._usedProvinceNames.Add(p.Name);
         }
 
         foreach (var s in save.Players)
@@ -162,6 +164,8 @@ public sealed partial class GameSession
             ai.Restore(a);
             session._ais.Add(ai);
         }
+        // Saves from before provinces were named on claiming: those with an owner get their name now.
+        foreach (var p in map.Provinces.Where(p => p.IsOwned && p.Name.Length == 0)) session.NameProvince(p);
         return session;
     }
 

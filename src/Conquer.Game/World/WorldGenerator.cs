@@ -37,9 +37,6 @@ public static class WorldGenerator
             if (!p.IsWater) p.RiverFlow = Math.Max(p.RiverFlow, r.Flow);
         }
 
-        progress?.Invoke("Poniendo nombres...");
-        Simulation.ProvinceNames.Assign(provinces, settings.Seed);
-
         return new WorldMap(Width, Height, settings.Kind, settings.Seed, terrain.Elevation, biomes, ids, provinces, rivers) { Settings = settings };
     }
 }
