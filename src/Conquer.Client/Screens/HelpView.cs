@@ -40,7 +40,7 @@ public sealed class HelpView
         ]),
         ("Población y humor",
         [
-            "Cada provincia tiene habitantes, humor (0 a 100) y fertilidad. La gente crece mientras haya comida y sitio; las ciudades crecen el doble de rápido.",
+            "Cada provincia tiene habitantes, humor (0 a 100) y fertilidad. Cada una tiene sus propios nacimientos según su fertilidad, sus habitantes y la tierra que tiene, mientras haya comida y sitio; las ciudades crecen el doble de rápido.",
             "## Humor",
             $"- Sube con la ciudad (+{GameRules.CityMood:0}), la capital (+{GameRules.CapitalMood:0}), las reservas de comida, las fiestas (+{GameRules.FestivalMood:0} durante {GameRules.FestivalDays} días), templos, anfiteatros y avances.",
             $"- Baja con la distancia a la capital (hasta -{GameRules.MaxDistanceMoodPenalty:0}), el hacinamiento, el hambre ({GameRules.StarvingMood:0}) y la ocupación enemiga.",

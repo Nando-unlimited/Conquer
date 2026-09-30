@@ -30,6 +30,11 @@ public static class GameRules
     public const double FoodPerWorker = 0.13;
     /// <summary>Daily growth of a fed province (about +55% a year), damped as it fills up.</summary>
     public const double GrowthRate = 0.0012;
+    /// <summary>
+    /// Daily births in every populated province per citizen its land can feed, on top of <see cref="GrowthRate"/>,
+    /// so the countryside grows by its own fertility and not only through migrants.
+    /// </summary>
+    public const double BaseBirthsPerCapacity = 0.00002;
     public const double StarvationRate = 0.01;
     /// <summary>A city feeds this many times the citizens of the surrounding land.</summary>
     public const double CityCapacityMultiplier = 2.5;

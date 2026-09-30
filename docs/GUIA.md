@@ -59,6 +59,7 @@ Todas las constantes de equilibrio (por día de juego salvo que se diga otra cos
 | `FoodPerCitizen` | Comida que come cada ciudadano al día (0,1). |
 | `FoodPerWorker` | Comida que produce cada trabajador en tierra de rendimiento 1 (0,13). |
 | `GrowthRate`, `CityGrowthMultiplier` | Crecimiento diario de la población; las ciudades crecen el doble. |
+| `BaseBirthsPerCapacity` | Nacimientos diarios de cada provincia habitada por habitante que puede alimentar, además de `GrowthRate`; también por su fertilidad. |
 | `StarvationRate` | Población que muere al día si no hay comida. Los avances (Medicina) y el granero de la provincia salvan cada uno su parte: con los dos, muere la cuarta parte. |
 | `CityCapacityMultiplier` | Una ciudad alimenta 2,5 veces más gente que la tierra sola. |
 | `TaxGoldPerCitizen` | Oro por habitante y día. |
@@ -255,7 +256,7 @@ El corazón del juego: una partida en marcha. Es una clase parcial: el ejército
 | `BonusesOf(provincia)` | Mejoras que se aplican a una provincia: las de los avances de su dueño más las de sus edificios. |
 | `MoodFactors(provincia)` | Lista de (causa, puntos) que forman el humor objetivo: base, ciudad, capital o distancia a ella (menos con Administración), fiestas, reservas de comida, hacinamiento, hambre, ocupación enemiga, avances que dan humor (Mitología) y edificios que dan humor (Templo). |
 | `TargetMood(provincia)` | Suma de esos factores, entre 0 y 100. |
-| `Stats(jugador)` | Totales de la nación (`NationStats`): población asentada, en unidades y migrando; provincias, ciudades y unidades; humor y fertilidad medios ponderados por habitantes, habitantes en cada nivel de humor y lo que queda en los yacimientos de sus provincias (`Reserves`). |
+| `Stats(jugador)` | Totales de la nación (`NationStats`): población asentada, en unidades y migrando; provincias, ciudades y unidades; humor y fertilidad medios ponderados por habitantes, habitantes en cada nivel de humor, lo que queda en los yacimientos de sus provincias (`Reserves`) y los nacimientos diarios (`DailyBirths`). |
 | `Step()` | Avanza una hora: mueve unidades, resuelve las batallas en tierra y en el mar, hace llegar migrantes; a medianoche economía, migración, ciencia, instituciones, obras y ejército; cada 6 h piensan las IA. |
 | `ArriveMigrations()` | Suma los migrantes que llegan a su destino (si el destino se perdió o está ocupado, van a la capital), mezclando su humor. |
 | `DailyEconomy(jugador)` | Las provincias ocupadas no producen ni comen para su dueño. Producción del día (comida, madera, oro, yacimientos) multiplicada por el humor, los avances y los edificios de cada provincia; los yacimientos sacan de su bolsa hasta agotarla (`Extract`), solo los de recursos que el jugador conoce; sin impuestos en provincias descontentas; consumo de comida, hambre, días de reserva de comida, humor y fertilidad, y crecimiento de la población (proporcional a la fertilidad). Resta el mantenimiento del ejército (`Upkeep`); si no llega, anota `ArmyUnpaid` y avisa al jugador. |
