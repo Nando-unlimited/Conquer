@@ -85,15 +85,16 @@ internal static class RiverGenerator
             if (downstream[c] >= 0 && !water[downstream[c]]) flow[downstream[c]] += flow[c];
         }
 
-        return Smooth(order, downstream, water, flow, w, width);
+        return Smooth(order, downstream, water, flow, w, width, height, biomes);
     }
 
     /// <summary>
     /// Links the river cells into stretches from a source or a confluence to the next confluence or the
-    /// sea, rounds each stretch off (Chaikin, keeping its ends so stretches still meet) and cuts it into
+    /// sea, rounds each stretch off (Chaikin, keeping its ends so stretches still meet), ends it where it
+    /// reaches the water and cuts it into
     /// short segments for drawing.
     /// </summary>
-    private static List<RiverSegment> Smooth(List<int> order, int[] downstream, bool[] water, float[] flow, int w, int width)
+    private static List<RiverSegment> Smooth(List<int> order, int[] downstream, bool[] water, float[] flow, int w, int width, int height, Biome[] biomes)
     {
         bool IsRiver(int c) => !water[c] && flow[c] >= GameRules.MinRiverFlow && downstream[c] >= 0;
         var inflows = new Dictionary<int, int>();
@@ -115,13 +116,14 @@ internal static class RiverGenerator
                 if (next < 0) break;
                 if (!IsRiver(next) || inflows.GetValueOrDefault(next) != 1)
                 {
-                    points.Add(((next % w + 0.5f) * Step, (next / w + 0.5f) * Step, IsRiver(next) ? flow[next] : flow[c]));
+                    // The same nudged point the stretch below starts from, so the two meet at the confluence.
+                    points.Add(((next % w + 0.5f + Jitter(next, 1)) * Step, (next / w + 0.5f + Jitter(next, 2)) * Step, IsRiver(next) ? flow[next] : flow[c]));
                     break;
                 }
                 c = next;
             }
             Unwrap(points, width);
-            var smooth = Chaikin(Chaikin(Chaikin(points)));
+            var smooth = TrimAtWater(Chaikin(Chaikin(Chaikin(points))), width, height, biomes);
             for (int i = 0; i + 1 < smooth.Count; i++)
                 rivers.Add(new RiverSegment(Wrap(smooth[i].X, width), smooth[i].Y, Wrap(smooth[i].X, width) + smooth[i + 1].X - smooth[i].X, smooth[i + 1].Y, smooth[i].Flow));
         }
@@ -162,6 +164,52 @@ internal static class RiverGenerator
             result.Add((0.25f * a.X + 0.75f * b.X, 0.25f * a.Y + 0.75f * b.Y, b.Flow));
         }
         result.Add(p[^1]);
+        return result;
+    }
+
+    /// <summary>
+    /// A stretch that flows into the sea or a lake ends at the centre of the first water cell, well out in the
+    /// water; this cuts it where it first touches water (found by halving the last step on land). Water here is
+    /// the coastline as the map draws it: the 3x3 pixels around a point blended with quadratic B-spline weights,
+    /// wet where water outweighs land, which rounds the pixel staircase off by up to a pixel.
+    /// </summary>
+    private static List<(float X, float Y, float Flow)> TrimAtWater(List<(float X, float Y, float Flow)> p, int width, int height, Biome[] biomes)
+    {
+        bool Wet(float x, float y)
+        {
+            float px = x - 0.5f, py = y - 0.5f;
+            float cx = MathF.Floor(px + 0.5f), cy = MathF.Floor(py + 0.5f);
+            float dx = px - cx, dy = py - cy;
+            Span<float> wx = [0.5f * (0.5f - dx) * (0.5f - dx), 0.75f - dx * dx, 0.5f * (0.5f + dx) * (0.5f + dx)];
+            Span<float> wy = [0.5f * (0.5f - dy) * (0.5f - dy), 0.75f - dy * dy, 0.5f * (0.5f + dy) * (0.5f + dy)];
+            float water = 0;
+            for (int j = 0; j < 3; j++)
+            for (int i = 0; i < 3; i++)
+            {
+                int tx = (int)Wrap(cx + i - 1, width) % width;
+                int ty = Math.Clamp((int)cy + j - 1, 0, height - 1);
+                if (biomes[ty * width + tx].Info().IsWater) water += wx[i] * wy[j];
+            }
+            return water > 0.5f;
+        }
+
+        if (p.Count < 2 || !Wet(p[^1].X, p[^1].Y)) return p;
+        int land = p.Count - 1;
+        while (land >= 0 && Wet(p[land].X, p[land].Y)) land--;
+        if (land < 0) return p;
+
+        var (a, b) = (p[land], p[land + 1]);
+        float lo = 0, hi = 1;
+        for (int i = 0; i < 12; i++)
+        {
+            float mid = (lo + hi) / 2;
+            if (Wet(a.X + (b.X - a.X) * mid, a.Y + (b.Y - a.Y) * mid)) hi = mid;
+            else lo = mid;
+        }
+        float length = MathF.Sqrt((b.X - a.X) * (b.X - a.X) + (b.Y - a.Y) * (b.Y - a.Y));
+        float t = Math.Min(1, hi + 0.05f / Math.Max(length, 1e-3f));
+        var result = p.GetRange(0, land + 1);
+        result.Add((a.X + (b.X - a.X) * t, a.Y + (b.Y - a.Y) * t, a.Flow));
         return result;
     }
 

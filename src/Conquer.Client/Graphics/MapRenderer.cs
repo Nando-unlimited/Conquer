@@ -403,7 +403,8 @@ public sealed class MapRenderer : IDisposable
         _shader.Set("uMapSize", _map.Width, _map.Height);
         _shader.Set("uSelected", selectedProvince);
         _shader.Set("uHover", hoverProvince);
-        _shader.Set("uProvinceBorders", Math.Clamp((camera.Zoom - 0.8f) / 2.5f, 0f, 0.45f));
+        // The terrain map keeps province lines faint, so the land itself stands out.
+        _shader.Set("uProvinceBorders", Math.Clamp((camera.Zoom - 0.8f) / 2.5f, 0f, Mode == MapMode.Terrain ? 0.15f : 0.45f));
         _ids.Bind(0);
         _shader.Set("uIds", 0);
         _terrain.Bind(1);

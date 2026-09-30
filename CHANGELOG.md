@@ -2,6 +2,14 @@
 
 Todos los cambios del juego, del más reciente al más antiguo. Cada versión es un commit cuyo título es su número.
 
+## [1.31.0] - 2026-09-30
+
+### Cambiado
+- **Mapa del terreno**: las fronteras entre provincias se ven más suaves, para que lo que destaque sea el terreno. Los demás mapas no cambian.
+- **Ríos**: se dibujan como un cauce continuo con bordes suaves, orilla más oscura y un reflejo claro en los anchos, y se ensanchan desde el nacimiento hasta la desembocadura y al acercar el zoom. En el mapa del terreno, los grandes ríos tienen a los lados una vega verde, la tierra fértil que riegan.
+- Los ríos terminan justo donde empieza el mar o el lago, en vez de adentrarse en el agua.
+- Los afluentes se unen al río en el mismo punto donde este sigue, sin dejar un hueco en la confluencia.
+
 ## [1.30.1] - 2026-09-30
 
 ### Corregido

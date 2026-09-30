@@ -23,6 +23,7 @@ public sealed partial class GameScreen : IScreen
     private readonly ConquerApp _app;
     private readonly GameSession _session;
     private readonly MapRenderer _renderer;
+    private readonly RiverLayer _rivers;
     private readonly Camera _camera;
     private readonly ChangelogView _changelog = new();
     private readonly HelpView _help = new();
@@ -56,6 +57,7 @@ public sealed partial class GameScreen : IScreen
         _app = app;
         _session = session;
         _renderer = new MapRenderer(app.Gl, session.Map, pixels);
+        _rivers = new RiverLayer(session.Map);
         _camera = new Camera(session.Map.Width, session.Map.Height) { Screen = app.ScreenSize };
         session.OwnershipChanged += _ => _mapDirty = true;
         _nation = new NationView(session, session.Human, ViewProvince, ViewUnit, Show);
@@ -317,26 +319,7 @@ public sealed partial class GameScreen : IScreen
 
     private static readonly Rgba RiverColor = new(0xFF3F7FC8);
 
-    /// <summary>
-    /// Rivers as blue lines, wider the more water they carry. Zoomed out only the great rivers show;
-    /// the smaller ones appear as you zoom in.
-    /// </summary>
-    private void DrawRivers()
-    {
-        float zoom = _camera.Zoom;
-        double minFlow = GameRules.MinRiverFlow * Math.Max(1, Math.Pow(6 / zoom, 1.5));
-        float scale = Math.Clamp(zoom / 4, 0.35f, 1.6f);
-        foreach (var r in Map.Rivers)
-        {
-            if (r.Flow < minFlow) continue;
-            var a = _camera.MapToScreen(new Vector2(r.X1, r.Y1));
-            var b = _camera.MapToScreen(new Vector2(r.X2, r.Y2));
-            if (!OnScreen(a, 20) && !OnScreen(b, 20)) continue;
-            if (Vector2.DistanceSquared(a, b) > 400 * zoom * zoom) continue; // the two ends landed on opposite sides of the date line
-            float width = (0.7f + 1.3f * MathF.Log10(r.Flow / GameRules.MinRiverFlow)) * scale;
-            Batch.Line(a, b, RiverColor.WithAlpha(0.9f), Math.Max(0.8f, width));
-        }
-    }
+    private void DrawRivers() => _rivers.Draw(Batch, _camera, _renderer.Mode == MapMode.Terrain);
 
     /// <summary>
     /// Each nation's name over its land: in its middle (a circular mean of longitudes, so a nation across
