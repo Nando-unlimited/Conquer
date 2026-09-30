@@ -64,7 +64,7 @@ public sealed partial class GameSession
     private GameSession(WorldMap map, int seed)
     {
         Map = map;
-        Pathfinder = new Pathfinder(map);
+        Pathfinder = new Pathfinder(map, Roads);
         _seed = seed;
         _random = new Random(seed);
     }
@@ -214,6 +214,7 @@ public sealed partial class GameSession
             foreach (var player in Players) DailyScience(player);
             DailyInstitutions();
             foreach (var player in Players) DailyConstruction(player);
+            DailyRoadWork();
             foreach (var player in Players) DailyMilitary(player);
         }
         if (Date.Hours % 6 == 0)
@@ -475,6 +476,11 @@ public sealed partial class GameSession
         if (!Players[playerId].Stockpile.Has(type.Info().Cost)) return CommandResult.Fail($"Cuesta {type.Info().Cost}.");
         return CommandResult.Success();
     }
+
+    /// <summary>Battalions of engineers the player has standing in a province (not marching, attacking or aboard): they lay roads and railways.</summary>
+    public int EngineersIn(int playerId, int provinceId) =>
+        Units.Where(u => u.OwnerId == playerId && u.ProvinceId == provinceId && u.IsMilitary && !u.IsMoving && !u.IsAboard && !u.AttackingProvinceId.HasValue)
+            .Sum(u => u.Battalions.Count(b => b.Type == BattalionType.Engineers));
 
     /// <summary>Days a work takes the player: its normal days, fewer with advances that speed building up.</summary>
     public static int BuildDays(Player player, int days) => (int)Math.Ceiling(days / (1 + player.Bonuses.BuildSpeed));
@@ -881,9 +887,10 @@ public sealed partial class GameSession
 
     public static string FormatHours(double hours)
     {
-        if (hours < 24) return $"{Math.Ceiling(hours):0} h";
-        int days = (int)(hours / 24);
-        int rest = (int)Math.Ceiling(hours - days * 24);
+        int total = (int)Math.Ceiling(hours);
+        if (total < 24) return $"{total} h";
+        int days = total / 24;
+        int rest = total % 24;
         return rest == 0 ? $"{days} d" : $"{days} d {rest} h";
     }
 

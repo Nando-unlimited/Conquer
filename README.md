@@ -36,6 +36,7 @@ Se guardan en `~/.local/share/Conquer/Partidas` (Linux), `%LOCALAPPDATA%\Conquer
 | Acción | Control |
 | --- | --- |
 | Seleccionar provincia o unidad | Clic izquierdo |
+| Ver una batalla en detalle | Clic en sus espadas rojas |
 | Mover el mapa | Arrastrar, WASD o flechas |
 | Zoom | Rueda del ratón, + / - |
 | Mover la unidad seleccionada | Clic derecho |

@@ -24,6 +24,7 @@ public sealed partial class GameScreen : IScreen
     private readonly GameSession _session;
     private readonly MapRenderer _renderer;
     private readonly RiverLayer _rivers;
+    private readonly RoadLayer _roads;
     private readonly Camera _camera;
     private readonly ChangelogView _changelog = new();
     private readonly HelpView _help = new();
@@ -58,6 +59,7 @@ public sealed partial class GameScreen : IScreen
         _session = session;
         _renderer = new MapRenderer(app.Gl, session.Map, pixels);
         _rivers = new RiverLayer(session.Map);
+        _roads = new RoadLayer(session.Map);
         _camera = new Camera(session.Map.Width, session.Map.Height) { Screen = app.ScreenSize };
         session.OwnershipChanged += _ => _mapDirty = true;
         _nation = new NationView(session, session.Human, ViewProvince, ViewUnit, Show);
@@ -97,6 +99,7 @@ public sealed partial class GameScreen : IScreen
         if (options.Panel is "regiment" or "march" or "edit" && Human.CapitalCityId is int capital) ShowSampleArmy(capital, march: options.Panel == "march");
         if (options.Panel == "edit" && _selectedUnitId is int sample && _session.UnitById(sample) is { HasOfficer: true }) ShowSampleOfficers(sample);
         if (options.Panel == "found" && _session.UnitById(settlers.Id) != null) OpenCityNaming(settlers.Id, settlers.ProvinceId);
+        if (options.Panel == "battle") ShowFirstBattle();
     }
 
     /// <summary>
@@ -144,6 +147,7 @@ public sealed partial class GameScreen : IScreen
 
         _renderer.Draw(_camera, _selectedProvince, _hoverProvince, _app.PixelScale);
         DrawRivers();
+        _roads.Draw(Batch, _camera, _session.Roads, _session.RoadProjects.Where(r => r.OwnerId == Human.Id), PlannedRoute);
         DrawCities();
         DrawMigrations();
         DrawNationNames();
@@ -157,11 +161,13 @@ public sealed partial class GameScreen : IScreen
         DrawMessages();
         if (_naming.HasValue) DrawCityNaming();
         if (_editingUnitId.HasValue) DrawUnitEditor();
+        if (BattleWindowOpen) DrawBattleWindow();
+        if (RoadWindowOpen) DrawRoadWindow();
         if (_menuOpen) DrawPauseMenu();
         _changelog.Frame(Ui, new Rect(_app.ScreenSize.X / 2 - 380, 70, 760, _app.ScreenSize.Y - 140));
         _help.Frame(Ui, new Rect(Math.Max(8, _app.ScreenSize.X / 2 - 520), 70, Math.Min(1040, _app.ScreenSize.X - 16), _app.ScreenSize.Y - 140));
 
-        bool modal = _menuOpen || _naming.HasValue || _editingUnitId.HasValue;
+        bool modal = _menuOpen || _naming.HasValue || _editingUnitId.HasValue || BattleWindowOpen || RoadWindowOpen;
         if (!modal && !_changelog.Visible && !_help.Visible && !_nation.Visible) HandleMapMouse();
         if (!Ui.MouseOverUi && !modal && !_help.Visible && !_nation.Visible && _hoverProvince >= 0 && !_dragging) HoverTooltip();
     }
@@ -170,7 +176,7 @@ public sealed partial class GameScreen : IScreen
 
     private void AdvanceTime(double dt)
     {
-        if (_menuOpen || _changelog.Visible || _help.Visible || _naming.HasValue || _editingUnitId.HasValue || _speed == 0) return;
+        if (_menuOpen || _changelog.Visible || _help.Visible || _naming.HasValue || _editingUnitId.HasValue || RoadWindowOpen || _speed == 0) return;
         _hourAccumulator += dt * HoursPerSecond[_speed];
         int steps = Math.Min((int)_hourAccumulator, 400);
         _hourAccumulator -= steps;
@@ -207,6 +213,8 @@ public sealed partial class GameScreen : IScreen
             {
                 case Key.Escape:
                     if (_help.Visible) _help.Visible = false;
+                    else if (BattleWindowOpen) CloseBattle();
+                    else if (RoadWindowOpen) CloseRoadWindow();
                     else if (_changelog.Visible) _changelog.Visible = false;
                     else if (_nation.Visible) _nation.Visible = false;
                     else if (_choosingMigrationTarget) _choosingMigrationTarget = false;
@@ -269,6 +277,13 @@ public sealed partial class GameScreen : IScreen
             _choosingMigrationTarget = false;
             if (_hoverProvince >= 0 && _selectedProvince >= 0)
                 Show(_session.ForceMigration(Human.Id, _selectedProvince, _hoverProvince, _migrationAmount));
+            return;
+        }
+
+        var battle = _battleHitBoxes.LastOrDefault(h => h.Bounds.Contains(Ui.Input.Mouse));
+        if (battle.Bounds.W > 0)
+        {
+            OpenBattle(battle.ProvinceId, battle.Battle);
             return;
         }
 

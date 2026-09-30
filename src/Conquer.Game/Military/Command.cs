@@ -91,6 +91,14 @@ public sealed class Battle
     /// <summary>Units attacking; they stay in their own provinces until they win.</summary>
     public List<int> Attackers { get; } = [];
     public long StartHours { get; }
+    /// <summary>Men each side has lost so far.</summary>
+    public double AttackerLosses { get; internal set; }
+    public double DefenderLosses { get; internal set; }
+    /// <summary>How each hour of the fight went, oldest first (not saved: a loaded battle starts a new record).</summary>
+    public List<BattleHour> History { get; } = [];
+    /// <summary>Set when it ends: whether the attackers took the province.</summary>
+    public bool? AttackersWon { get; internal set; }
+    public long? EndHours { get; internal set; }
 
     public Battle(int provinceId, int attackerId, int defenderId, long startHours)
     {
@@ -100,3 +108,10 @@ public sealed class Battle
         StartHours = startHours;
     }
 }
+
+/// <summary>
+/// One hour of a battle, after the fire landed: the men and average organisation (0-1) left on each side and the
+/// fire each side dealt.
+/// </summary>
+public readonly record struct BattleHour(
+    double AttackerMen, double DefenderMen, double AttackerOrganisation, double DefenderOrganisation, double AttackerFire, double DefenderFire);

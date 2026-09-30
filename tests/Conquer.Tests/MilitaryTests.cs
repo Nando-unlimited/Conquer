@@ -1,3 +1,4 @@
+using Conquer.Game.Buildings;
 using Conquer.Game.Economy;
 using Conquer.Game.Military;
 using Conquer.Game.Rules;
@@ -185,6 +186,192 @@ public class MilitaryTests(WorldFixture world)
         Assert.All(attackers, u => Assert.Equal(b.Id, u.ProvinceId));
         Assert.Equal(0, b.ControllerId);
         Assert.True(s.UnitById(defender.Id) is null || s.UnitById(defender.Id)!.ProvinceId != b.Id);
+    }
+
+    [Fact]
+    public void ScoutsAreCheapFastWeakAndClaimLand()
+    {
+        var (s, a, _) = TwoNations();
+        var city = s.CityIn(a)!;
+        a.Population = 1000;
+        s.Human.Stockpile[ResourceType.Wood] = s.Human.Stockpile[ResourceType.Gold] = 500;
+        var scouts = BattalionType.Scouts.Info();
+        var warriors = BattalionType.Warriors.Info();
+        Assert.Empty(scouts.Requires);
+        Assert.True(scouts.Cost.Items.Sum(i => i.Amount) < warriors.Cost.Items.Sum(i => i.Amount) / 2);
+        Assert.True(scouts.Speed > warriors.Speed);
+        Assert.True(scouts.Attack < warriors.Attack && scouts.Defense < warriors.Defense);
+        Assert.True(s.Train(0, city.Id, BattalionType.Scouts).Ok);
+
+        var free = _map.Provinces.First(p => p.IsClaimable && !p.IsOwned);
+        var unit = s.AddRegiment(0, free.Id, BattalionType.Scouts);
+        Assert.True(s.Claim(0, unit.Id).Ok);
+        Assert.Equal(0, free.OwnerId);
+    }
+
+    [Fact]
+    public void EngineersNeedEngineeringAndBluntTheDefendersTerrain()
+    {
+        var (s, a, b) = TwoNations();
+        var city = s.CityIn(a)!;
+        a.Population = 1000;
+        s.Human.Stockpile[ResourceType.Wood] = s.Human.Stockpile[ResourceType.Gold] = 500;
+        Assert.False(s.Train(0, city.Id, BattalionType.Engineers).Ok);
+        s.Human.Learn(Tech.Engineering);
+        Assert.True(s.Train(0, city.Id, BattalionType.Engineers).Ok);
+        Assert.Equal(BattalionRole.Engineers, BattalionType.Engineers.Role());
+
+        var hillsWithRiver = _map.Provinces.First(p => p.Biome == Biome.Hills && p.HasRiver);
+        Assert.Equal(1.25 * MilitaryRules.RiverDefense, MilitaryRules.DefenseMultiplier(hillsWithRiver), 6);
+        Assert.Equal(1 + 0.25 * MilitaryRules.EngineeredTerrainDefense, MilitaryRules.DefenseMultiplier(hillsWithRiver, engineers: true), 6);
+        var plain = _map.Provinces.First(p => p.Biome == Biome.Grassland && !p.HasRiver);
+        Assert.Equal(1, MilitaryRules.DefenseMultiplier(plain, engineers: true), 6);
+
+        var defenders = new List<Conquer.Game.Entities.Unit> { s.AddRegiment(1, hillsWithRiver.Id, BattalionType.Warriors) };
+        double normal = GameSession.ExpectedFire(s.Engage(defenders, hillsWithRiver, attacking: false));
+        double engineered = GameSession.ExpectedFire(s.Engage(defenders, hillsWithRiver, attacking: false, enemyEngineers: true));
+        Assert.Equal(normal * MilitaryRules.DefenseMultiplier(hillsWithRiver, true) / MilitaryRules.DefenseMultiplier(hillsWithRiver), engineered, 6);
+
+        var sappers = s.AddRegiment(0, a.Id, BattalionType.Warriors, BattalionType.Engineers);
+        Assert.True(GameSession.HasEngineers([sappers]));
+        var engaged = s.Engage([sappers], a, attacking: true);
+        Assert.Equal(MilitaryRules.SupportExposure, engaged.Single(e => e.Role == BattalionRole.Engineers).Exposure);
+    }
+
+    /// <summary>A province a few stretches from <paramref name="from"/> through land player 0 may build roads on.</summary>
+    private int FewStretchesAway(GameSession s, Province from)
+    {
+        bool Allowed(int id) => !_map.Provinces[id].IsWater && _map.Provinces[id].OwnerId != 1;
+        return _map.Provinces.Where(p => Allowed(p.Id) && _map.DistanceKm(from, p) < 800)
+            .Select(p => (p.Id, Path: s.Pathfinder.FindPath(from.Id, p.Id, Allowed)))
+            .First(t => t.Path is { } path && path.Path.Count is >= 3 and <= 5).Id;
+    }
+
+    [Fact]
+    public void EngineersLayRoadsFromACityOrHqToAnotherAlongTheMarchingRoute()
+    {
+        var (s, a, _) = TwoNations();
+        s.Human.Stockpile[ResourceType.Wood] = s.Human.Stockpile[ResourceType.Gold] = 1000;
+        int far = FewStretchesAway(s, a);
+        var hq = s.AddUnit(0, UnitType.Headquarters, far, 50, headquartersLevel: 1);
+        Assert.Equal(new[] { a.Id, far }.Order(), s.RoadHubs(0).Order());
+        Assert.True(s.IsRoadHub(0, hq.ProvinceId));
+
+        Assert.StartsWith("Requiere", s.CanBuildRoad(0, a.Id, far, RoadKind.Road).Message);
+        s.Human.Learn(Tech.Engineering);
+        Assert.Equal("Hacen falta ingenieros en la provincia.", s.CanBuildRoad(0, a.Id, far, RoadKind.Road).Message);
+
+        // Only from a city or HQ.
+        int between = s.PlanRoad(0, a.Id, far, RoadKind.Road)!.Route[1];
+        s.AddRegiment(0, between, BattalionType.Engineers);
+        Assert.StartsWith("Solo desde", s.CanBuildRoad(0, between, far, RoadKind.Road).Message);
+
+        s.AddRegiment(0, a.Id, BattalionType.Engineers, BattalionType.Engineers);
+        var plan = s.PlanRoad(0, a.Id, far, RoadKind.Road)!;
+        Assert.Equal(s.Pathfinder.FindPath(a.Id, far, id => !_map.Provinces[id].IsWater && _map.Provinces[id].OwnerId != 1)!.Value.Path, plan.Route.Skip(1));
+        Assert.Equal(plan.Route.Count - 1, plan.NewLinks);
+        Assert.True(s.BuildRoad(0, a.Id, far, RoadKind.Road).Ok);
+        Assert.Equal(1000 - 20 * plan.NewLinks, s.Human.Stockpile[ResourceType.Wood], 6);
+        Assert.Equal("Ya están unidas por carretera (o lo estarán con las obras en curso).", s.CanBuildRoad(0, a.Id, far, RoadKind.Road).Message);
+
+        // Three battalions along the route: three days of work a day, stretch after stretch from the start.
+        var work = Assert.Single(s.RoadProjects);
+        RunHours(s, 24);
+        Assert.Equal(work.DaysPerLink - 3, work.WorkLeft, 6);
+        RunUntil(s, () => s.RoadProjects.Count == 0, 24 * 60);
+        Assert.Empty(s.RoadProjects);
+        Assert.True(s.Connected(a.Id, far, RoadKind.Road));
+        Assert.False(s.Connected(a.Id, far, RoadKind.Railway));
+        Assert.Contains(s.Notifications, n => n.Text.StartsWith("Terminada la carretera"));
+
+        // Marching along it is faster.
+        double hours = s.Pathfinder.FindPath(a.Id, far)!.Value.Hours;
+        s.Roads.Clear();
+        Assert.True(s.Pathfinder.FindPath(a.Id, far)!.Value.Hours > hours * 1.4);
+    }
+
+    [Fact]
+    public void RoadWorkStopsWithoutEngineersAndCancellingGivesBackTheRest()
+    {
+        var (s, a, _) = TwoNations();
+        s.Human.Stockpile[ResourceType.Wood] = s.Human.Stockpile[ResourceType.Gold] = 1000;
+        s.Human.Learn(Tech.Engineering);
+        int far = FewStretchesAway(s, a);
+        s.AddUnit(0, UnitType.Headquarters, far, 50, headquartersLevel: 1);
+        var engineers = s.AddRegiment(0, a.Id, BattalionType.Engineers);
+        Assert.True(s.BuildRoad(0, a.Id, far, RoadKind.Road).Ok);
+        var work = s.RoadProjects[0];
+
+        s.Disband(0, engineers.Id);
+        RunHours(s, 24 * 3);
+        Assert.Equal(work.DaysPerLink, work.WorkLeft, 6);
+
+        double wood = s.Human.Stockpile[ResourceType.Wood];
+        int left = s.LinksLeft(work);
+        Assert.True(s.CancelRoad(0, work.Id).Ok);
+        Assert.Empty(s.RoadProjects);
+        Assert.Equal(wood + 20 * left, s.Human.Stockpile[ResourceType.Wood], 6);
+    }
+
+    [Fact]
+    public void SupplyTravelsAlongRoadsBeyondItsRange()
+    {
+        var (s, a, _) = TwoNations();
+        bool Allowed(int id) => !_map.Provinces[id].IsWater && _map.Provinces[id].OwnerId != 1;
+        var (hours, _) = s.Pathfinder.FromSources([a.Id], canEnter: Allowed);
+        int far = Enumerable.Range(0, hours.Length).First(id => hours[id] > MilitaryRules.SupplyRangeHours * 3 && hours[id] < MilitaryRules.SupplyRangeHours * 5);
+        RunHours(s, 24);
+        Assert.False(s.IsSupplied(0, far));
+
+        var route = s.Pathfinder.FindPath(a.Id, far, Allowed)!.Value.Path.Prepend(a.Id).ToList();
+        for (int i = 0; i + 1 < route.Count; i++) s.Roads.Lay(route[i], route[i + 1], RoadKind.Road);
+        RunHours(s, 24);
+        Assert.True(s.IsSupplied(0, far));
+    }
+
+    [Fact]
+    public void OldSavesTurnRoadBuildingsIntoRoadsBetweenNeighbours()
+    {
+        var (s, a, b) = TwoNations();
+        var save = s.ToSave("test");
+        save = save with
+        {
+            Roads = null,
+            Provinces = [.. save.Provinces.Select(p => p.Id == a.Id || p.Id == b.Id ? p with { Buildings = [.. p.Buildings, BuildingType.Road] } : p)],
+        };
+        var loaded = GameSession.Load(_map, save);
+        Assert.Equal(RoadKind.Road, loaded.Roads.Between(a.Id, b.Id));
+        Assert.Equal(1, loaded.Roads.Count);
+        Assert.DoesNotContain(BuildingType.Road, a.Buildings);
+    }
+
+    [Fact]
+    public void BattlesRecordLossesHourByHourAndHowTheyEnded()
+    {
+        var (s, a, b) = TwoNations();
+        var defender = s.AddRegiment(1, b.Id, BattalionType.Warriors, BattalionType.Warriors);
+        var attacker = s.AddRegiment(0, a.Id, BattalionType.IronInfantry, BattalionType.IronInfantry, BattalionType.IronInfantry);
+        s.DeclareWar(0, 1);
+        s.MoveUnit(0, attacker.Id, b.Id);
+        RunUntil(s, () => s.BattleIn(b.Id) != null, 24 * 5);
+        var battle = s.BattleIn(b.Id)!;
+        int recorded = battle.History.Count;
+        RunHours(s, 3);
+
+        Assert.Equal(recorded + 3, battle.History.Count);
+        Assert.True(battle.AttackerLosses > 0 && battle.DefenderLosses > 0);
+        Assert.Equal(attacker.Citizens, battle.History[^1].AttackerMen, 0.5);
+        Assert.Equal(defender.OrganisationShare, battle.History[^1].DefenderOrganisation, 6);
+        Assert.True(battle.History[^1].AttackerFire > 0);
+        Assert.Null(battle.AttackersWon);
+
+        var loaded = GameSession.Load(_map, s.ToSave("test")).BattleIn(b.Id)!;
+        Assert.Equal(battle.AttackerLosses, loaded.AttackerLosses);
+        Assert.Equal(battle.DefenderLosses, loaded.DefenderLosses);
+
+        RunUntil(s, () => s.BattleIn(b.Id) == null, 24 * 10);
+        Assert.True(battle.AttackersWon);
+        Assert.Equal(s.Date.Hours, battle.EndHours);
     }
 
     [Fact]

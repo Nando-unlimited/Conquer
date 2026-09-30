@@ -75,5 +75,8 @@ public sealed class Stockpile
 
 public readonly record struct ResourceCost(params (ResourceType Type, double Amount)[] Items)
 {
+    /// <summary>The same resources, <paramref name="times"/> over.</summary>
+    public ResourceCost Times(double times) => new([.. Items.Select(i => (i.Type, i.Amount * times))]);
+
     public override string ToString() => string.Join(", ", Items.Select(i => $"{i.Amount:0} {i.Type.Name()}"));
 }

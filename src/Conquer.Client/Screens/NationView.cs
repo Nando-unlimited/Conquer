@@ -431,7 +431,8 @@ public sealed partial class NationView
         }
         // Buildings and battalions stay hidden until their advance is known, so the card says what it brings.
         var unlocks = Buildings.All.Where(b => b.Info().RequiresTech == tech).Select(b => b.Info().Name)
-            .Concat(Battalions.All.Where(b => b.Info().Requires.Contains(tech)).Select(b => b.Info().Name)).ToList();
+            .Concat(Battalions.All.Where(b => b.Info().Requires.Contains(tech)).Select(b => b.Info().Name))
+            .Concat(RoadKinds.All.Where(r => r.Info().Requires == tech).Select(r => r.Info().Plural)).ToList();
         var notes = new List<(string Text, Rgba Color)>();
         if (info.Requires.Length > 0)
             notes.Add(("Requiere: " + string.Join(", ", info.Requires.Select(t => t.Info().Name)),

@@ -6,7 +6,8 @@ namespace Conquer.Game.Buildings;
 
 /// <summary>
 /// The buildings a province can have, one of each. The order is the order they are listed in. Farms,
-/// granaries, sawmills, mines, roads and railways go anywhere; the rest need a city.
+/// granaries, sawmills and mines go anywhere; the rest need a city. Roads and railways are not buildings but
+/// links between provinces (<see cref="Simulation.RoadNetwork"/>).
 /// </summary>
 public enum BuildingType
 {
@@ -21,12 +22,14 @@ public enum BuildingType
     HerbalistHut,
     Amphitheatre,
     Walls,
+    /// <summary>Only in saves from before 1.36.0, when roads were buildings: loaded as links between neighbours that both had one.</summary>
     Road,
     University,
     Bank,
     Castle,
     Factory,
     Hospital,
+    /// <summary>Only in older saves, like <see cref="Road"/>.</summary>
     Railway,
     PowerPlant,
     Port,
@@ -46,7 +49,7 @@ public sealed record BuildingInfo(
 
 public static class Buildings
 {
-    public static readonly BuildingType[] All = Enum.GetValues<BuildingType>();
+    public static readonly BuildingType[] All = [.. Enum.GetValues<BuildingType>().Where(t => t is not (BuildingType.Road or BuildingType.Railway))];
 
     private static readonly Dictionary<BuildingType, BuildingInfo> Table = new()
     {
@@ -72,8 +75,6 @@ public static class Buildings
             new ResourceCost((ResourceType.Wood, 120), (ResourceType.Gold, 60)), 60, Tech.Construction, true, false, new() { Mood = 10 }),
         [BuildingType.Walls] = new("Muralla", "Quien defiende la provincia hace un 50 % más de daño.",
             new ResourceCost((ResourceType.Wood, 150), (ResourceType.Gold, 50)), 90, Tech.Fortifications, true, false, new() { Defense = 0.5 }),
-        [BuildingType.Road] = new("Calzada", "La provincia se cruza un 50 % más deprisa.",
-            new ResourceCost((ResourceType.Wood, 80), (ResourceType.Gold, 30)), 40, Tech.Engineering, false, false, new() { MoveSpeed = 0.5 }),
         [BuildingType.University] = new("Universidad", "+50 % de ciencia de la ciudad.",
             new ResourceCost((ResourceType.Wood, 150), (ResourceType.Gold, 120)), 90, Tech.Education, true, false, new() { Science = 0.5 }),
         [BuildingType.Bank] = new("Banco", "+50 % de oro de los impuestos de la provincia.",
@@ -85,9 +86,6 @@ public static class Buildings
             new() { Wood = 0.5, Deposits = 0.5 }),
         [BuildingType.Hospital] = new("Hospital", "+20 % de fertilidad y la tierra alimenta un 10 % más de gente en la provincia.",
             new ResourceCost((ResourceType.Wood, 150), (ResourceType.Gold, 150)), 90, Tech.Sanitation, true, false, new() { Fertility = 0.2, Capacity = 0.1 }),
-        [BuildingType.Railway] = new("Ferrocarril", "La provincia se cruza el doble de deprisa.",
-            new ResourceCost((ResourceType.Wood, 100), (ResourceType.Gold, 80), (ResourceType.Iron, 60), (ResourceType.Coal, 20)), 60, Tech.Railroad, false, false,
-            new() { MoveSpeed = 1 }),
         [BuildingType.PowerPlant] = new("Central eléctrica", "+25 % de ciencia y de impuestos en la provincia.",
             new ResourceCost((ResourceType.Wood, 100), (ResourceType.Gold, 250), (ResourceType.Iron, 80), (ResourceType.Coal, 80)), 120, Tech.Electricity, true, false,
             new() { Science = 0.25, Taxes = 0.25 }),

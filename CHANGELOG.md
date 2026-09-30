@@ -2,6 +2,47 @@
 
 Todos los cambios del juego, del más reciente al más antiguo. Cada versión es un commit cuyo título es su número.
 
+## [1.36.0] - 2026-09-30
+
+### Cambiado
+- **Carreteras y ferrocarriles**: ya no son edificios de una provincia, sino líneas que unen ciudades y cuarteles generales.
+  - Los construyen los ingenieros, solo desde una provincia con una ciudad o un cuartel general tuyos. Con el botón «Construir carretera…» (o «Construir ferrocarril…») de su panel eliges qué otra ciudad o cuartel unir; el más cercano sale elegido.
+  - La ruta es la misma que seguiría un ejército, por tu tierra, la que ocupas o la libre, y aprovecha las carreteras que ya hay. Las ciudades por las que pasa quedan unidas también. La ventana muestra la ruta en el mapa, los tramos nuevos, el coste, el trabajo y las ciudades que une.
+  - Se paga por tramo entre dos provincias: la carretera, 20 de madera y 8 de oro; el ferrocarril, 25 de madera, 20 de oro, 15 de hierro y 5 de carbón. Cada tramo lleva 10 días de trabajo (15 el ferrocarril). Cada batallón de ingenieros en la ruta hace un día de trabajo al día, tramo a tramo desde el origen; sin ingenieros la obra se para. Se puede cancelar desde el panel de los ingenieros y se devuelve lo de los tramos sin hacer.
+  - Se ven en el mapa como en Hearts of Iron: la carretera como una franja clara, el ferrocarril como una línea oscura con traviesas y las obras como trazos dorados.
+  - Por ellas se marcha más deprisa: ×1,5 por carretera y ×2 por ferrocarril.
+- **Suministro**: llega a todo lo que tus carreteras y ferrocarriles unen a tus ciudades, y desde ahí hasta 10 días de marcha por tierra propia o libre (antes, 15 días desde las ciudades).
+- Los rivales unen sus ciudades con su capital, primero por carretera y después por ferrocarril.
+- Las partidas guardadas convierten sus calzadas y ferrocarriles en tramos entre provincias vecinas que tuvieran los dos el mismo; las obras de calzada o ferrocarril a medias se pierden.
+
+### Corregido
+- Las duraciones ya no salen como «6 d 24 h».
+
+## [1.35.0] - 2026-09-30
+
+### Añadido
+- **Exploradores**: un batallón que se entrena desde el principio. Son 50 hombres, muy baratos (10 de madera y 5 de oro), se instruyen en 7 días y marchan un 50 % más rápido, pero casi no atacan ni defienden. Reclaman tierra libre como cualquier unidad. Los rivales los usan ahora para expandirse.
+- **Ingenieros**: un batallón que llega con el avance Ingeniería.
+  - En combate van detrás del frente, como la artillería. Si el atacante lleva ingenieros, el río no frena el ataque y la ventaja del terreno del defensor (colinas, bosques, pantanos, montañas) se queda en la mitad. La ventana y el resumen de la batalla muestran la defensa con y sin ellos.
+  - Son los únicos que construyen **calzadas** y **ferrocarriles**, con los botones «Construir calzada» y «Construir ferrocarril» de su panel, en tu tierra o en tierra enemiga que ocupas, sin mínimo de habitantes. Cada batallón de ingenieros en la provincia hace un día de trabajo al día; si se van, la obra se para.
+  - Los rivales entrenan ingenieros y los llevan a sus ciudades para construir calzadas y ferrocarriles.
+
+### Cambiado
+- Las calzadas y los ferrocarriles necesitan ingenieros en la provincia. La pestaña Edificios muestra su obra con cuántos ingenieros trabajan, o si está parada.
+
+## [1.34.0] - 2026-09-30
+
+### Añadido
+- **Ventana de la batalla**: haz clic en las espadas rojas de una batalla para verla en detalle. Se actualiza en directo mientras corre el tiempo:
+  - El terreno, la defensa que da y cuántos batallones caben en el frente.
+  - Una barra con el fuego por hora de cada bando, para ver quién gana el intercambio.
+  - Cada bando con sus hombres, sus bajas desde que empezó, su organización (con la marca donde se rompen), su fuego, cuántos batallones combaten en el frente, detrás y en reserva, y sus armas combinadas.
+  - Cada unidad con su oficial, sus hombres, cuántos de sus batallones combaten y si está sin suministro; al pasar el ratón, su mando, su general y cada batallón con su puesto, su experiencia y su fuego.
+  - Una gráfica de la organización de cada bando hora a hora.
+  - Al terminar, dice quién ganó, cuánto duró y las bajas de cada bando. «Ir a la provincia» centra el mapa en la batalla.
+  - Las batallas en el mar muestran los barcos, tripulantes, organización y fuego de cada nación.
+- Las partidas guardadas conservan las bajas de las batallas en curso; su gráfica empieza de nuevo al cargar.
+
 ## [1.33.0] - 2026-09-30
 
 ### Añadido

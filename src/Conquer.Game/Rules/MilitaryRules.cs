@@ -64,8 +64,22 @@ public static class MilitaryRules
     /// <summary>Defenders of a province with a river fire this much harder: the attackers have to cross it.</summary>
     public const double RiverDefense = 1.25;
 
-    /// <summary>How much harder a province is to take: its terrain, and its river if it has one.</summary>
-    public static double DefenseMultiplier(Province province) => TerrainDefense(province.Biome) * (province.HasRiver ? RiverDefense : 1);
+    /// <summary>Days of work each battalion of engineers puts into a road or railway every day.</summary>
+    public const int EngineerWorkDays = 1;
+
+    /// <summary>Share of the terrain's defence bonus left to defenders facing engineers; they bridge rivers outright.</summary>
+    public const double EngineeredTerrainDefense = 0.5;
+
+    /// <summary>
+    /// How much harder a province is to take: its terrain, and its river if it has one. Attackers with
+    /// <paramref name="engineers"/> halve the terrain's bonus and cross the river as if it were not there.
+    /// </summary>
+    public static double DefenseMultiplier(Province province, bool engineers = false)
+    {
+        double terrain = TerrainDefense(province.Biome);
+        if (!engineers) return terrain * (province.HasRiver ? RiverDefense : 1);
+        return 1 + (terrain - 1) * EngineeredTerrainDefense;
+    }
 
     // Chain of command
     /// <summary>Combat and recovery bonus of a regiment whose own HQ is within range.</summary>
@@ -80,8 +94,8 @@ public static class MilitaryRules
     public const int MaxUnitNameLength = 30;
 
     // Supply and recovery, every day
-    /// <summary>Supply reaches this many hours of marching from a city through territory the nation controls.</summary>
-    public const double SupplyRangeHours = 24 * 15;
+    /// <summary>Supply reaches this many hours of marching through territory the nation controls from a city, or from its roads and railways joined to one.</summary>
+    public const double SupplyRangeHours = 24 * 10;
     public const double OutOfSupplyEfficiency = 0.75;
     /// <summary>Share of their full organisation regiments regain each day in supply and out of combat.</summary>
     public const double OrganisationRecovery = 0.2;

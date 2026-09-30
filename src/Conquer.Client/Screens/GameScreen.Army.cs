@@ -1,11 +1,13 @@
 using System.Numerics;
 using Conquer.Client.Graphics;
 using Conquer.Client.UI;
+using Conquer.Game.Buildings;
 using Conquer.Game.Entities;
 using Conquer.Game.Military;
 using Conquer.Game.Rules;
 using Conquer.Game.Science;
 using Conquer.Game.Simulation;
+using Conquer.Game.World;
 
 namespace Conquer.Client.Screens;
 
@@ -87,11 +89,13 @@ public sealed partial class GameScreen
     /// <summary>Crossed swords over every province being fought for, on land or at sea; hovering shows both sides.</summary>
     private void DrawBattles()
     {
-        foreach (var battle in _session.Battles) DrawBattleMark(battle.ProvinceId, BattleSummary(battle));
-        foreach (int sea in _session.NavalBattleProvinces()) DrawBattleMark(sea, NavalBattleSummary(sea));
+        _battleHitBoxes.Clear();
+        foreach (var battle in _session.Battles) DrawBattleMark(battle.ProvinceId, battle, () => BattleSummary(battle));
+        foreach (int sea in _session.NavalBattleProvinces()) DrawBattleMark(sea, null, () => NavalBattleSummary(sea));
     }
 
-    private void DrawBattleMark(int provinceId, string summary)
+    /// <summary>The crossed swords: hovering shows a summary, clicking opens the battle's window.</summary>
+    private void DrawBattleMark(int provinceId, Battle? battle, Func<string> summary)
     {
         var s = _camera.MapToScreen(Center(provinceId));
         if (!OnScreen(s)) return;
@@ -99,7 +103,9 @@ public sealed partial class GameScreen
         Batch.Rect(s.X - size - 2, s.Y - size - 2, 2 * size + 4, 2 * size + 4, Rgba.Black.WithAlpha(0.6f));
         Batch.Line(new(s.X - size, s.Y - size), new(s.X + size, s.Y + size), BattleColor, 3);
         Batch.Line(new(s.X - size, s.Y + size), new(s.X + size, s.Y - size), BattleColor, 3);
-        if (Ui.Hover(new Rect(s.X - size, s.Y - size, 2 * size, 2 * size))) Ui.Tooltip(summary);
+        var bounds = new Rect(s.X - 11, s.Y - 11, 22, 22);
+        _battleHitBoxes.Add((provinceId, battle, bounds));
+        if (Ui.Hover(bounds)) Ui.Tooltip(summary() + "\nClic para ver la batalla en detalle.");
     }
 
     private string NavalBattleSummary(int provinceId)
@@ -115,9 +121,10 @@ public sealed partial class GameScreen
         var attackers = battle.Attackers.Select(_session.UnitById).OfType<Unit>().ToList();
         var defenders = _session.EnemyRegimentsIn(battle.ProvinceId, battle.AttackerId).ToList();
         var p = Map.Provinces[battle.ProvinceId];
+        bool engineers = GameSession.HasEngineers(attackers);
         string Side(string role, int player, List<Unit> units, bool attacking)
         {
-            var engaged = _session.Engage(units, p, attacking);
+            var engaged = _session.Engage(units, p, attacking, engineers);
             int total = units.Sum(u => u.Battalions.Count);
             return $"{role}: {_session.Players[player].Name} · {units.Count} u. · {units.Sum(u => u.Citizens):N0} hombres · " +
                    $"organización {(units.Count == 0 ? 0 : units.Average(u => u.OrganisationShare)):P0}\n" +
@@ -125,8 +132,9 @@ public sealed partial class GameScreen
         }
         return $"Batalla por {_session.PlaceName(p)} ({GameSession.FormatHours(_session.Date.Hours - battle.StartHours)})\n" +
                Side("Atacante", battle.AttackerId, attackers, true) + "\n" + Side("Defensor", battle.DefenderId, defenders, false) +
-               $"\nFrente: {MilitaryRules.FrontWidth(p.Biome)} batallones en primera línea, más artillería y aviación detrás" +
-               $"\nDefensa por el terreno{(p.HasRiver ? " y el río" : "")}: ×{MilitaryRules.DefenseMultiplier(p):0.##}";
+               $"\nFrente: {MilitaryRules.FrontWidth(p.Biome)} batallones en primera línea, más artillería, aviación e ingenieros detrás" +
+               $"\nDefensa por el terreno{(p.HasRiver ? " y el río" : "")}: ×{MilitaryRules.DefenseMultiplier(p, engineers):0.##}" +
+               (engineers && MilitaryRules.DefenseMultiplier(p, true) < MilitaryRules.DefenseMultiplier(p) ? $" (×{MilitaryRules.DefenseMultiplier(p):0.##} sin los ingenieros del atacante)" : "");
     }
 
     private void Bar(Rect r, double share, Rgba color)
@@ -187,6 +195,7 @@ public sealed partial class GameScreen
             if (Ui.Button(new Rect(x, y, w, 32), "Reclamar provincia", can.Ok, tooltip: can.Ok ? "Esta provincia libre pasará a ser tuya." : can.Message))
                 Show(_session.Claim(Human.Id, unit.Id));
             y += 38;
+            EngineerButtons(unit, here, x, ref y, w);
         }
         bool canSettle = here.OwnerId == Human.Id && !here.IsOccupied;
         if (Ui.Button(new Rect(x, y, half, 32), unit.CanFoundCity ? "Asentarse" : "Licenciar", canSettle,
@@ -204,6 +213,39 @@ public sealed partial class GameScreen
             : unit.IsMilitary
             ? "Clic derecho para mover. Mover a una provincia enemiga con tropas la ataca; sin tropas, la ocupa. Solo se entra en tierras de naciones con las que estás en guerra. Para cruzar el mar, clic derecho sobre una flota tuya con transportes."
             : "Clic derecho para mover. No puede entrar en tierras de otras naciones. Para cruzar el mar, clic derecho sobre una flota tuya con transportes.", Theme.TextDim);
+    }
+
+    /// <summary>
+    /// For a unit with engineers: a button for each kind of road its advances allow, which opens the window to choose
+    /// where it goes (only from a city or HQ of the player's), and the works under way along whose route it stands.
+    /// </summary>
+    private void EngineerButtons(Unit unit, Province here, float x, ref float y, float w)
+    {
+        if (!unit.Battalions.Any(b => b.Type == BattalionType.Engineers)) return;
+        bool hub = _session.IsRoadHub(Human.Id, here.Id);
+        foreach (var kind in RoadKinds.All.Where(k => Human.Techs.Contains(k.Info().Requires)))
+        {
+            var info = kind.Info();
+            bool can = hub && !unit.IsMoving;
+            string tip = !hub ? "Solo desde una provincia con una ciudad o un cuartel general tuyos."
+                : unit.IsMoving ? "La unidad está en marcha."
+                : $"Elige la ciudad o el cuartel general que quieres unir con {(info.Feminine ? "una" : "un")} {info.Name.ToLowerInvariant()}.";
+            if (Ui.Button(new Rect(x, y, w, 32), $"Construir {info.Name.ToLowerInvariant()}...", can, tooltip: tip, size: FontSize.Small))
+                OpenRoadWindow(here.Id, kind);
+            y += 38;
+        }
+        foreach (var work in _session.RoadProjects.Where(r => r.OwnerId == Human.Id && r.Route.Contains(here.Id)).ToList())
+        {
+            var info = work.Kind.Info();
+            Ui.Text(x, y, $"{info.Name} a {HubName(work.To)}", Theme.Accent, FontSize.Small, bold: true);
+            y += 18;
+            int engineers = _session.EngineersOn(work);
+            Ui.Text(x, y, $"Quedan {_session.LinksLeft(work)} tramos · {Formations.BattalionCount(engineers)} de ingenieros en la ruta", Theme.TextDim, FontSize.Small);
+            y += 20;
+            if (Ui.Button(new Rect(x, y, w, 26), "Cancelar obra", size: FontSize.Small, tooltip: "Se devuelve lo que costaban los tramos sin hacer."))
+                Show(_session.CancelRoad(Human.Id, work.Id));
+            y += 32;
+        }
     }
 
     /// <summary>Buttons to board one of the player's fleets with room, in this province or the sea next to it.</summary>

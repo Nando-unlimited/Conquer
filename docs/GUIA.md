@@ -115,10 +115,11 @@ Cifras del ejército. El combate se mide por hora; el resto, por día.
 | `UpkeepGoldShare`, `UpkeepResourceShare` | Mantenimiento diario: un 2 % del oro y un 1 % de los demás recursos (salvo la madera) de lo que costó cada batallón, barco y cuartel general. |
 | `UnpaidOrganisationLoss`, `UnpaidDesertion` | Sin pagar, cada día se pierde un 10 % de organización y deserta un 2 % de los hombres, sin recuperación ni refuerzos. |
 | `MountedRoughTerrainAttack`, `TerrainDefense(bioma)`, `IsRough(bioma)` | La caballería ataca a la mitad en terreno difícil; el defensor dispara ×1,25 en colinas, ×1,5 en montañas y ×1,2 en bosques y pantanos. |
-| `RiverDefense`, `DefenseMultiplier(provincia)` | Con un gran río el defensor dispara ×1,25 más (el atacante tiene que cruzarlo); se multiplica por el del terreno. |
+| `RiverDefense`, `DefenseMultiplier(provincia, ingenieros)` | Con un gran río el defensor dispara ×1,25 más (el atacante tiene que cruzarlo); se multiplica por el del terreno. Si el atacante lleva ingenieros, el río no cuenta y el bonus del terreno se queda en la mitad (`EngineeredTerrainDefense`). |
+| `EngineerWorkDays` | Días de trabajo que cada batallón de ingenieros hace al día en una carretera o un ferrocarril. |
 | `CommandBonus`, `HigherCommandBonus` | +10 % en combate y recuperación con el cuartel propio a su alcance, y +5 % por cada nivel superior enlazado. |
 | `OfficerCost`, `MaxUnitNameLength` | Reclutar un oficial para la reserva cuesta 40 de oro; el nombre que el jugador da a una unidad tiene como mucho 30 letras. |
-| `SupplyRangeHours` | El suministro llega hasta 15 días de marcha desde una ciudad, por tierra propia o libre. |
+| `SupplyRangeHours` | El suministro llega hasta 10 días de marcha por tierra propia o libre desde una ciudad o desde las carreteras y ferrocarriles unidos a ella. |
 | `OutOfSupplyEfficiency`, `OutOfSupplyOrganisationLoss`, `OutOfSupplyAttrition` | Sin suministro se lucha al 75 % y se pierde cada día un 5 % de organización y un 1 % de hombres. |
 | `OrganisationRecovery`, `ReinforcementRate` | Con suministro y fuera de combate se recupera un 20 % de organización al día y un 5 % de hombres, que salen de la capital. |
 | `OccupiedMood` | −30 de humor en una provincia ocupada por el enemigo. |
@@ -128,10 +129,10 @@ Los batallones que se entrenan en las ciudades, la tropa especializada de la que
 
 | Elemento | Qué es |
 | --- | --- |
-| `BattalionType` | Guerreros, Arqueros, Lanceros de bronce, Jinetes, Carros de guerra, Carros de arqueros e Infantería de hierro; y de la era Clásica, Legionarios (Tácticas militares), Catapultas (Maquinaria de asedio: mucho ataque, casi nada de defensa, lentas) Catafractos (Caballería pesada); de la Medieval, Caballeros (Estribo) y Ballesteros (Maquinaria); y del Renacimiento, Arcabuceros (Pólvora), Cañones (Metalurgia) y Mosqueteros (Ciencia militar), que gastan hierro y carbón; y de la Industrial, Fusileros (Estriado), Artillería de campaña (Acero) y Ametralladoras (mucha defensa); y de la Moderna, Infantería motorizada (Motor de combustión), Artillería pesada y Tanques (Blindados), que gastan petróleo y caucho, y Bombarderos (Aviación), que vuelan y gastan aluminio. Barcos: Trirreme y Barco de transporte (600 hombres) con Navegación a vela, Galeón (lleva 200) con Cartografía, Vapor de transporte (1.500) con Máquina de vapor, Acorazado con Acero, y Destructor y Portaaviones (este también pide Aviación) con Ingeniería naval, que solo se construyen en ciudades con dique seco (`Shipyard`). |
+| `BattalionType` | Exploradores (desde el principio: 50 hombres, muy baratos y rápidos, casi sin ataque ni defensa; reclaman tierra como cualquier unidad), Guerreros, Arqueros, Lanceros de bronce, Jinetes, Carros de guerra, Carros de arqueros e Infantería de hierro; y de la era Clásica, Legionarios (Tácticas militares), Catapultas (Maquinaria de asedio: mucho ataque, casi nada de defensa, lentas), Ingenieros (Ingeniería: van detrás del frente, rebajan la defensa del terreno y el río cuando atacan y son los únicos que construyen calzadas y ferrocarriles), Catafractos (Caballería pesada); de la Medieval, Caballeros (Estribo) y Ballesteros (Maquinaria); y del Renacimiento, Arcabuceros (Pólvora), Cañones (Metalurgia) y Mosqueteros (Ciencia militar), que gastan hierro y carbón; y de la Industrial, Fusileros (Estriado), Artillería de campaña (Acero) y Ametralladoras (mucha defensa); y de la Moderna, Infantería motorizada (Motor de combustión), Artillería pesada y Tanques (Blindados), que gastan petróleo y caucho, y Bombarderos (Aviación), que vuelan y gastan aluminio. Barcos: Trirreme y Barco de transporte (600 hombres) con Navegación a vela, Galeón (lleva 200) con Cartografía, Vapor de transporte (1.500) con Máquina de vapor, Acorazado con Acero, y Destructor y Portaaviones (este también pide Aviación) con Ingeniería naval, que solo se construyen en ciudades con dique seco (`Shipyard`). |
 | `BattalionInfo` | Nombre, símbolo, hombres, coste, días de instrucción, avances que requiere (todos: los carros de arqueros piden La rueda y Tiro con arco), ataque, defensa, organización máxima, velocidad, si es montado, si vuela (`Flies`: los bombarderos), si es un barco (`Naval`: sus hombres son la tripulación y su ataque, sus cañones) y cuántos hombres lleva (`Capacity`). |
 | `Battalions.All`, `Battalions.Info(tipo)` | Todos los batallones y la ficha de cada uno. |
-| `BattalionRole`, `Role(tipo)`, `Name(papel)` | El papel de cada batallón en combate: infantería, caballería, artillería (catapultas y cañones), blindados, aviación o naval. |
+| `BattalionRole`, `Role(tipo)`, `Name(papel)` | El papel de cada batallón en combate: infantería, caballería, artillería (catapultas y cañones), blindados, aviación, naval o ingenieros. |
 | `Battalion` | Un batallón de una unidad: sus hombres (`Strength`), su organización, ambos como parte de su máximo, y su experiencia (`Experience`, 0 a 1; `ExperienceName`: Novato, Regular, Veterano o Élite). |
 
 ### `Military/Formations.cs`
@@ -165,7 +166,8 @@ La cadena de mando, la instrucción y las batallas.
 | --- | --- |
 | `CommandLevelInfo`, `CommandLevels` | Los tres niveles de cuartel general: cuerpo, ejército y grupo de ejércitos, con su alcance (600 a 2.500 km), 5 subordinados, personal, coste y días. El nivel 0 (`Combat`) es la unidad de combate. Los nombres salen de `Formations`. |
 | `TrainingOrder` | Lo que entrena una ciudad: un batallón, una unidad entera de una plantilla (`TemplateName`, `TemplateBattalions`) o un cuartel general, con los días que le quedan; `Name` lo nombra («Batallón de arqueros», «Brigada (Plantilla II)»). |
-| `Battle` | Una batalla por una provincia: quién ataca, quién defiende, las unidades atacantes (que esperan en sus provincias) y cuándo empezó. |
+| `Battle` | Una batalla por una provincia: quién ataca, quién defiende, las unidades atacantes (que esperan en sus provincias), cuándo empezó, las bajas de cada bando y, al terminar, quién ganó y cuándo (`AttackersWon`, `EndHours`). `History` guarda cada hora (sin guardarse en la partida). |
+| `BattleHour` | Una hora de batalla: hombres y organización media que le quedan a cada bando y el fuego de cada uno. |
 
 ### `Rules/Difficulty.cs`
 Los niveles de dificultad. **Aquí se equilibran.**
@@ -177,15 +179,15 @@ Los niveles de dificultad. **Aquí se equilibran.**
 | `Difficulties.All`, `Info(nivel)` | Todos los niveles y la ficha de cada uno. |
 
 ### `Rules/Modifiers.cs`
-`Modifiers`: mejoras sobre las reglas normales. Los avances las aplican a toda la nación y los edificios a su provincia; todas se suman con `+`. Campos: parte extra de comida, madera, yacimientos, impuestos, ciencia, capacidad de la tierra y fertilidad; puntos de humor; parte de las muertes por hambre que se evita; daño extra de quien defiende la provincia (`Defense`), velocidad al cruzarla (`MoveSpeed`), rapidez de las obras (`BuildSpeed`: 0,25 las acaba en 1/1,25 de los días) y parte del humor perdido por la distancia a la capital que se evita (`DistanceMood`). `Modifiers.None` es «sin mejoras».
+`Modifiers`: mejoras sobre las reglas normales. Los avances las aplican a toda la nación y los edificios a su provincia; todas se suman con `+`. Campos: parte extra de comida, madera, yacimientos, impuestos, ciencia, capacidad de la tierra y fertilidad; puntos de humor; parte de las muertes por hambre que se evita; daño extra de quien defiende la provincia (`Defense`), rapidez de las obras (`BuildSpeed`: 0,25 las acaba en 1/1,25 de los días) y parte del humor perdido por la distancia a la capital que se evita (`DistanceMood`). `Modifiers.None` es «sin mejoras».
 
 ### `Buildings/Building.cs`
 Los edificios que se construyen en las provincias. **Aquí se añaden y equilibran los edificios.**
 
 | Elemento | Qué es |
 | --- | --- |
-| `BuildingType` | Granja, Granero, Aserradero, Mina, Templo, Biblioteca, Mercado, Acueducto, Herbolario, Anfiteatro (+10 de humor; pide Construcción), Muralla (+50 % de daño al defender; pide Fortificaciones) Calzada (la provincia se cruza un 50 % más deprisa; pide Ingeniería), Universidad (+50 % de ciencia; Educación), Banco (+50 % de impuestos; Banca) Castillo (defensores al doble de daño; Castillos), Fábrica (+50 % de madera y yacimientos; Industrialización), Hospital (+20 % de fertilidad, +10 % de capacidad; Salubridad) Ferrocarril (la provincia se cruza el doble de deprisa; Ferrocarril) Central eléctrica (+25 % de ciencia e impuestos; Electricidad), Puerto (en ciudades con costa: construye y repara barcos, +15 % de impuestos; Navegación a vela) y Dique seco (pide puerto: construye los barcos más avanzados y repara el doble de rápido; Ingeniería naval). Granja, granero, aserradero, mina, calzada y ferrocarril se construyen en cualquier provincia; el resto solo donde hay ciudad. Salvo la granja y el aserradero, cada uno pide un avance (el granero, Alfarería). |
-| `BuildingInfo` | Nombre, descripción, coste, días de obra, avance que requiere, si solo va en ciudades, si necesita un yacimiento sin agotar, sus efectos (`Modifiers`) en la provincia, si necesita costa (`NeedsCoast`) y otro edificio antes (`RequiresBuilding`: el dique seco, el puerto). |
+| `BuildingType` | Granja, Granero, Aserradero, Mina, Templo, Biblioteca, Mercado, Acueducto, Herbolario, Anfiteatro (+10 de humor; pide Construcción), Muralla (+50 % de daño al defender; pide Fortificaciones), Universidad (+50 % de ciencia; Educación), Banco (+50 % de impuestos; Banca) Castillo (defensores al doble de daño; Castillos), Fábrica (+50 % de madera y yacimientos; Industrialización), Hospital (+20 % de fertilidad, +10 % de capacidad; Salubridad), Central eléctrica (+25 % de ciencia e impuestos; Electricidad), Puerto (en ciudades con costa: construye y repara barcos, +15 % de impuestos; Navegación a vela) y Dique seco (pide puerto: construye los barcos más avanzados y repara el doble de rápido; Ingeniería naval). Granja, granero, aserradero y mina se construyen en cualquier provincia; el resto solo donde hay ciudad. `Road` y `Railway` solo quedan para leer partidas anteriores a la 1.36.0 (no están en `Buildings.All`): las carreteras son ahora tramos entre provincias (`RoadNetwork`). Salvo la granja y el aserradero, cada uno pide un avance (el granero, Alfarería). |
+| `BuildingInfo` | Nombre, descripción, coste, días de obra, avance que requiere, si solo va en ciudades, si necesita un yacimiento sin agotar, sus efectos (`Modifiers`) en la provincia, si necesita costa (`NeedsCoast`), otro edificio antes (`RequiresBuilding`: el dique seco, el puerto). |
 | `Buildings.All`, `Buildings.Info(tipo)` | Todos los edificios y la ficha de cada uno. |
 
 ### `Science/Technology.cs`
@@ -219,7 +221,7 @@ Las instituciones, como en Europa Universalis: ideas que abren cada era. **Aquí
 | `Stockpile` | Almacén nacional de recursos de un jugador (`stockpile[recurso]`). |
 | `Stockpile.Has(cost)` | ¿Hay suficiente para pagar un coste? |
 | `Stockpile.TrySpend(cost)` | Paga el coste si puede; devuelve si lo ha pagado. |
-| `ResourceCost` | Lista de (recurso, cantidad); `ToString()` lo escribe como "150 Comida, 50 Madera". |
+| `ResourceCost` | Lista de (recurso, cantidad); `ToString()` lo escribe como "150 Comida, 50 Madera"; `Times(n)` lo multiplica. |
 
 ### `Entities/Entities.cs`
 Los objetos de una partida.
@@ -268,9 +270,10 @@ El corazón del juego: una partida en marcha. Es una clase parcial: el ejército
 | `MissingRequirements(jugador, avance)`, `RequirementList(...)` | Avances que le faltan / su lista en texto. |
 | `NeighbourNations(jugador)`, `ResearchCost(jugador, avance)` | Naciones con provincias junto a las suyas / lo que le cuesta un avance: un 10 % menos por cada vecina que ya lo conoce, hasta 3 (`NeighbourResearchDiscount`, `MaxNeighbourDiscounts`). |
 | `SetResearchPriority(jugador, rama, prioridad)` | Cambia la prioridad de una rama (0 a `MaxResearchPriority`). |
-| `IsBuildingAvailable(provincia, tipo)` | ¿Podría construirse aquí algún día? Tiene dueño, se conoce su avance y hay ciudad, yacimiento conocido, costa u otro edificio si los necesita (sin mirar coste ni obras). |
+| `IsBuildingAvailable(provincia, tipo, constructor)` | ¿Podría construirse aquí algún día? Tiene dueño, se conoce su avance (el del constructor, si se da) y hay ciudad, yacimiento conocido, costa u otro edificio si los necesita (sin mirar coste ni obras). |
 | `CanBuild(jugador, provincia, tipo)` / `Build(...)` | Comprueba (es tuya, no está construido, está disponible, no hay otra obra, tiene al menos 10 habitantes y puedes pagarlo) / paga y empieza la obra. `BuildDays(jugador, días)`: lo que dura una obra, menos con los avances que aceleran las obras. |
 | `DailyConstruction(jugador)` | Cada obra avanza un día; al terminar, el edificio empieza a funcionar (o se funda la ciudad) y avisa al jugador. |
+| `EngineersIn(jugador, provincia)` | Batallones de ingenieros del jugador que están en la provincia sin moverse, atacar ni ir embarcados: los que construyen carreteras y ferrocarriles. |
 | `IsCitySite(jugador, provincia)` / `CanBuildCity(...)` / `BuildCity(jugador, provincia, nombre)` | ¿Pueden sus habitantes levantar una ciudad (es tuya, sin ciudad ni otra obra, ninguna ciudad hecha o en obras al lado, al menos 500 habitantes)? / lo mismo y además puedes pagarla / paga y empieza la obra, que ocupa la provincia como un edificio (`PlannedCityName`). |
 | `CheckCityName(nombre)`, `SuggestCityName()` | El nombre no puede estar vacío, pasar de 24 letras ni repetir el de otra ciudad (hecha o en obras) / propone uno libre para el jugador. |
 | `PlaceName(provincia)` | Cómo llamar a un lugar en los mensajes: su ciudad si la tiene, si no la provincia. |
@@ -316,15 +319,15 @@ El ejército dentro de la partida.
 | `AssignOfficer`, `RelieveOfficer`, `RetireOfficer`, `Promote(unidad)` | Poner al mando de una unidad de combate o un cuartel a un oficial de la reserva (el anterior vuelve a ella), relevarlo o retirarlo para siempre. Un oficial asciende solo al rango que pide el tamaño de su unidad, y nunca baja. |
 | `CanAttach`/`Attach`, `Detach` | Ponen una unidad bajo el mando de un cuartel del nivel superior (5 como mucho) o la quitan. |
 | `InCommandRange(unidad)`, `CommandBonus(unidad)` | Si su cuartel la alcanza, y la bonificación de toda la cadena enlazada. |
-| `ComputeSupply(jugador)`, `IsInSupply(unidad)`, `IsSupplied(jugador, provincia)` | Provincias abastecidas: hasta 15 días desde sus ciudades por tierra propia o libre (nunca por mar), y una más allá (el frente). |
+| `ComputeSupply(jugador)`, `IsInSupply(unidad)`, `IsSupplied(jugador, provincia)` | Provincias abastecidas: todo lo que sus carreteras y ferrocarriles unen a sus ciudades (`SupplyNetwork`), y desde ahí hasta 10 días de marcha por tierra propia o libre (nunca por mar), y una más allá (el frente). Se recalcula cada día y al terminar un tramo. |
 | `InBattle(unidad)` | Si ataca o defiende. |
 | `DailyMilitary(jugador)` | Cada día: instrucción, suministro, recuperación de organización, refuerzos desde la capital (los reclutas diluyen la experiencia), desgaste sin suministro (la unidad que se queda sin hombres se dispersa) y, si no se pagó el mantenimiento, pérdida de organización y deserciones sin recuperación; los oficiales y generales organizadores aceleran la recuperación y los desorganizados la frenan. Las tropas embarcadas ni se desgastan ni se recuperan; las flotas solo se reparan y completan su tripulación en puerto, el doble de rápido con dique seco. |
 | `StartAttack(...)`, `CancelAttack(...)` | El regimiento se detiene en la frontera y ataca (se une a la batalla o la abre), o la abandona. |
 | `ResolveBattles()` | Una hora de cada batalla: fuego de ambos bandos, daño, retiradas y abandonos; si no quedan defensores, los atacantes entran. |
-| `Engage(unidades, provincia, ataca)`, `Engaged` | Los batallones de un bando que combaten esta hora: los mejores que caben en el frente (`FrontWidth`) y, detrás, hasta la mitad de artillería y aviación (exposición 0,25); el resto espera en reserva. Fuego de cada uno: ataque o defensa, hombres, organización, experiencia, mando, oficial propio y general, suministro, terreno y murallas. |
-| `SideFire(...)`, `CombinedArms(papeles)` | Fuego de un bando: la suma de sus batallones, más las armas combinadas (+10 % por papel distinto, hasta +30 %) y azar. |
-| `Damage(...)`, `Broken(...)`, `GeneralOf(unidad)` | Reparto del daño entre los batallones que combaten según su exposición (los oficiales tácticos ahorran organización y los indecisos la gastan; en el mar, entre todos los barcos); cuándo se rompe una unidad; el general del cuartel propio si está a su alcance. Cada hora de combate da experiencia, y cada victoria suma una a los oficiales y generales de los vencedores. |
-| `DefenseMultiplier(provincia)` | Cuánto más daño hace quien defiende: el terreno por su muralla o castillo. |
+| `Engage(unidades, provincia, ataca, ingenierosEnemigos)`, `Engaged` | Los batallones de un bando que combaten esta hora: los mejores que caben en el frente (`FrontWidth`) y, detrás, hasta la mitad de artillería, aviación e ingenieros (exposición 0,25); el resto espera en reserva. Fuego de cada uno: ataque o defensa, hombres, organización, experiencia, mando, oficial propio y general, suministro, terreno (menos si el atacante lleva ingenieros) y murallas. |
+| `SideFire(...)`, `ExpectedFire(...)`, `CombinedArms(papeles)` | Fuego de un bando: la suma de sus batallones, más las armas combinadas (+10 % por papel distinto, hasta +30 %) y azar (`ExpectedFire`, sin azar, para la ventana de la batalla). |
+| `Damage(...)`, `Broken(...)`, `AverageOrganisation(...)`, `GeneralOf(unidad)` | Reparto del daño entre los batallones que combaten según su exposición (devuelve los hombres perdidos, que se suman a las bajas de la batalla) (los oficiales tácticos ahorran organización y los indecisos la gastan; en el mar, entre todos los barcos); cuándo se rompe una unidad; el general del cuartel propio si está a su alcance. Cada hora de combate da experiencia, y cada victoria suma una a los oficiales y generales de los vencedores. |
+| `DefenseMultiplier(provincia, ingenieros)`, `HasEngineers(unidades)` | Cuánto más daño hace quien defiende: el terreno (rebajado si el atacante lleva ingenieros) por su muralla o castillo; si alguna de las unidades lleva ingenieros, combatan o no. |
 | `EndBattle(...)`, `Retreat(...)`, `Destroy(...)` | Final de la batalla y avisos; retirada a una provincia vecina sin enemigos (o destrucción si está rodeada); una unidad destruida en combate pierde a su oficial, y una que se dispersa sin pago o sin suministro lo devuelve a la reserva. |
 
 ### `Simulation/GameSession.Institutions.cs`
@@ -353,7 +356,7 @@ Las flotas: barcos construidos en puertos que navegan, llevan tropas y combaten 
 | `CanEmbark`/`Embark(jugador, unidad, flota)` | Una unidad de tierra sube a una flota suya con transportes que está quieta en su provincia o en el mar de al lado, si cabe. |
 | `Disembark(jugador, unidad, provincia)` | La unidad baja en el puerto de la flota o en una costa junto a ella; la tierra enemiga sin tropas se ocupa; una costa con tropas enemigas no se puede tomar desde el mar. |
 | `EnemyFleetsIn(...)`, `NavalBattleProvinces()` | Flotas enemigas en una provincia / mares donde se encuentran flotas de naciones en guerra. |
-| `ResolveNavalBattles()`, `NavalFire(flota)` | Cada hora, en cada mar con enemigos, cada nación dispara con sus barcos (ataque por tripulación y organización, con algo de azar) contra todos los barcos enemigos, calculando todo antes de aplicarlo. |
+| `ResolveNavalBattles()`, `NavalFire(flota)`, `ExpectedNavalFire(flota)` | Cada hora, en cada mar con enemigos, cada nación dispara con sus barcos (ataque por tripulación y organización, con algo de azar) contra todos los barcos enemigos, calculando todo antes de aplicarlo. |
 | `FleeOrSink(flota)`, `Sink(flota)` | La flota rota huye a un mar vecino (o a su puerto) sin enemigos; si no puede, o no le queda tripulación, se hunde con todo lo que lleva. |
 | `NotifyNavalEncounter(...)` | Avisa al jugador cuando su flota topa con una enemiga, o una enemiga con la suya. |
 
@@ -367,7 +370,7 @@ Guardar y cargar partidas.
 | `Fingerprint(mapa, ríos)`, `DrawnRiverFlows(mapa)` | Huella del mapa (bioma, tamaño, posición, vecinos y ríos de cada provincia) para comprobar que el generador sigue haciendo el mismo mundo. Al cargar también vale la huella con el río de cada provincia sacado de los ríos dibujados, como la guardaron la 1.31.0 y la 1.32.0. Un test fija la huella del mundo de los tests: si cambia, las partidas guardadas dejan de cargar. |
 
 ### `Simulation/SaveGame.cs`
-`SaveGame`: la partida guardada como datos, escrita en JSON comprimido con gzip. El mapa no se guarda: se vuelve a generar a partir de `World`. `Write(flujo)` la escribe; `Read(flujo)` la lee y lanza `InvalidDataException` si está dañada o su formato (`Format`) es de otra versión. `InstitutionBirths` guarda dónde y cuándo nació cada institución (vacío en partidas anteriores). `ExtraDeposits` marca las partidas guardadas desde la 1.13.0: al cargar una anterior, los yacimientos que su generador no ponía empiezan llenos. Los registros `PlayerSave`, `ProvinceSave`, `CitySave`, `UnitSave` (con la flota que lleva a cada unidad, `CarrierId`, su oficial, `OfficerSave`, y el nombre que le dio el jugador), etc. son sus partes. Los oficiales en reserva van en `PlayerSave` y el siguiente número de oficial en `NextOfficerId`; `GeneralSave` es el general de las partidas anteriores a los oficiales (un solo rasgo), que al cargar pasa a ser un oficial del rango de su cuartel.
+`SaveGame`: la partida guardada como datos, escrita en JSON comprimido con gzip. El mapa no se guarda: se vuelve a generar a partir de `World`. `Write(flujo)` la escribe; `Read(flujo)` la lee y lanza `InvalidDataException` si está dañada o su formato (`Format`) es de otra versión. `InstitutionBirths` guarda dónde y cuándo nació cada institución (vacío en partidas anteriores). `Roads` (`RoadLinkSave`), `RoadProjects` (`RoadProjectSave`) y `NextRoadProjectId` guardan la red y sus obras; si falta `Roads` (antes de la 1.36.0), al cargar se unen las provincias vecinas que tenían los dos el edificio calzada o ferrocarril (`LoadRoads`). `ExtraDeposits` marca las partidas guardadas desde la 1.13.0: al cargar una anterior, los yacimientos que su generador no ponía empiezan llenos. Los registros `PlayerSave`, `ProvinceSave`, `CitySave`, `UnitSave` (con la flota que lleva a cada unidad, `CarrierId`, su oficial, `OfficerSave`, y el nombre que le dio el jugador), etc. son sus partes. Los oficiales en reserva van en `PlayerSave` y el siguiente número de oficial en `NextOfficerId`; `GeneralSave` es el general de las partidas anteriores a los oficiales (un solo rasgo), que al cargar pasa a ser un oficial del rango de su cuartel.
 
 ### `Simulation/GameSession.Diplomacy.cs`
 Guerra y paz.
@@ -379,6 +382,30 @@ Guerra y paz.
 | `ProposePeace(jugador, otro)` | Propone la paz; la IA acepta si la guerra le va mal o se alarga (`AiPlayer.WouldAcceptPeace`). |
 | `MakePeace(a, b)` | Firma la paz: terminan las batallas, las provincias ocupadas vuelven a sus dueños y los ejércitos regresan a su provincia más cercana. |
 
+### `Simulation/RoadNetwork.cs`
+Carreteras y ferrocarriles.
+
+| Elemento | Qué es |
+| --- | --- |
+| `RoadKind`, `RoadInfo`, `RoadKinds` | Carretera (Ingeniería: 20 de madera y 8 de oro y 10 días de trabajo por tramo, ×1,5 de velocidad) y ferrocarril (Ferrocarril: madera, oro, hierro y carbón, 15 días por tramo, ×2). |
+| `RoadNetwork` | Los tramos entre provincias vecinas, de quien sea: `Between(a, b)`, `Has(a, b, tipo)` (un ferrocarril vale como carretera), `Lay` (pone o mejora, nunca empeora), `Links` y `Version` (sube con cada tramo). |
+| `RoadProject` | Una obra: su dueño, tipo, ruta (de principio a fin), días por tramo, el tramo en curso (`Next`) y el trabajo que le queda. |
+| `RoadPlan` | Lo que costaría una carretera: ruta, tramos nuevos, coste, días de trabajo, ciudades por el camino y horas de marcha. |
+
+### `Simulation/GameSession.Roads.cs`
+Obras de carreteras y ferrocarriles, y el suministro por ellas.
+
+| Función | Qué hace |
+| --- | --- |
+| `Roads`, `RoadProjects` | La red y las obras en curso. |
+| `IsRoadHub(jugador, provincia)`, `RoadHubs(jugador)` | Donde empiezan y acaban las carreteras: sus ciudades (si no están ocupadas) y sus cuarteles generales. |
+| `CanLayRoad(...)`, `Connected(a, b, tipo)` | Tierra por la que puede construir (la suya, la que ocupa y la libre); si dos provincias están unidas por la red. |
+| `PlanRoad(jugador, desde, hasta, tipo)` | La ruta de marcha entre dos provincias por esa tierra (aprovecha las carreteras que hay) y lo que costaría; no cuenta los tramos hechos ni los que ya van a hacer sus obras. |
+| `CanBuildRoad(...)` / `BuildRoad(...)` | Comprueba (avance, ciudad o cuartel en los dos extremos, ingenieros en el origen, hay camino, falta algún tramo y puedes pagarlo) / paga los tramos que faltan y empieza la obra. |
+| `LinksLeft(obra)`, `EngineersOn(obra)`, `CancelRoad(jugador, obra)` | Tramos por hacer, batallones de ingenieros del dueño en cualquier provincia de la ruta, y cancelar devolviendo lo de los tramos sin hacer. |
+| `DailyRoadWork()` | Cada día, cada obra avanza un día de trabajo por batallón de ingenieros en su ruta, tramo a tramo desde el principio (espera si el dueño pierde esa tierra); al acabar, avisa. |
+| `SupplyNetwork(jugador, ciudades)` | Las provincias que las carreteras y ferrocarriles unen a sus ciudades por tierra que controla o libre: de ahí sale el suministro. |
+
 ### `Simulation/Pathfinder.cs`
 Rutas por el grafo de provincias. Solo por tierra: mares y lagos están cerrados (serán para unidades
 navales); el hielo polar se puede cruzar.
@@ -386,7 +413,7 @@ navales); el hielo polar se puede cruzar.
 | Función | Qué hace |
 | --- | --- |
 | `CanEnter(provincia)`, `Allowed(...)` | ¿Puede entrar un viajero sin regla propia (los migrantes)? (no, si es agua). Con una regla (`puedeEntrar`), la regla decide, agua incluida. |
-| `StepHours(a, b)`, `Speed(provincia)`, `FastestSpeed` | Horas para ir de una provincia a su vecina: distancia entre centros / (10 km/h × facilidad del terreno × sus calzadas). La heurística de A* usa la provincia más rápida posible para no pasarse. |
+| `StepHours(a, b)`, `Speed(provincia)`, `FastestSpeed` | Horas para ir de una provincia a su vecina: distancia entre centros / (10 km/h × facilidad del terreno × la carretera (×1,5) o el ferrocarril (×2) que las une, si hay). La heurística de A* usa la provincia más rápida posible para no pasarse. |
 | `FindPath(desde, hasta, puedeEntrar)` | Ruta más rápida (A*) y su duración, o `null` si no hay camino; `puedeEntrar` dice por dónde puede ir (para una unidad, `CanUnitEnter`: ni tierras ajenas en paz ni mar sin navegación). |
 | `FromSources(orígenes, maxHoras, destinos, puedeEntrar)` | Horas desde el origen más cercano a cada provincia (Dijkstra) y cuál es ese origen. Se usa para la migración y para que la IA busque sitio. Puede parar al alcanzar todos los destinos. |
 | `Heuristic` | Estimación para A*: distancia en línea recta a 10 km/h. |
@@ -403,16 +430,17 @@ Rival controlado por el ordenador. Clase parcial: el ejército está en `AiPlaye
 
 | Función | Qué hace |
 | --- | --- |
-| `Think(decisionesDiarias)` | Turno de la IA (sin contar flotas ni tropas embarcadas): clasifica regimientos nuevos, licencia soldados si hay hambre en paz, guía a colonos, reclamadores, soldados (en guerra) y cuarteles, y trae a casa las divisiones sin suministro; `PlayerId` identifica la nación; una vez al día, celebra fiestas, ajusta las prioridades de la investigación, elige qué investigar, recluta y construye. |
+| `Think(decisionesDiarias)` | Turno de la IA (sin contar flotas ni tropas embarcadas): clasifica regimientos nuevos, licencia soldados si hay hambre en paz, guía a colonos, cuarteles, ingenieros, reclamadores y soldados (en guerra), y trae a casa las divisiones sin suministro; `PlayerId` identifica la nación; una vez al día, celebra fiestas, ajusta las prioridades de la investigación, elige qué investigar, recluta y construye. |
 | `HoldFestivals()` | Paga fiestas en las ciudades con humor por debajo de 45 si, tras pagarlas, le quedan 30 de oro para reclutar. |
 | `SetResearchPriorities()` | Prioridades de la investigación: Economía 2, Sociedad 1 y Militar 1 en paz; Economía 3 si pasa hambre; Militar 3 en guerra. |
 | `ChooseResearch()`, `ResearchOrder` | Cada rama sin investigación elige el primer avance que puede de su orden de preferencia (Agricultura, Escritura, Tiro con arco, Carpintería... y en cada era nueva, primero lo que da ciencia, comida o mejores tropas). |
 | `AdoptInstitutions()` | Compra las instituciones que ya han llegado a su nación si, tras pagarlas, le quedan 30 de oro para reclutar. |
 | `BuildCityIfWorthIt()` | Mientras tenga menos de 8 ciudades, convierte en ciudad su provincia sin ciudad más poblada (con al menos 1.000 habitantes) cuando puede pagarla guardando para reclutar. |
-| `Construct()`, `BuildOrder`, `WorthBuilding(...)` | Elige su edificio más deseado (ciudades primero, luego por población y orden de preferencia) donde compense: al menos 200 habitantes, aserraderos en tierra con madera, templos y anfiteatros donde hay inquietud, acueductos al 60 % de la capacidad, calzadas en las ciudades, y murallas y castillos en las de al menos 2.000 habitantes; universidades, bancos, fábricas, hospitales, ferrocarriles y centrales eléctricas en sus ciudades. Lo empieza cuando puede pagarlo guardando madera y oro para reclutar; si no, ahorra. |
+| `Construct()`, `BuildOrder`, `WorthBuilding(...)` | Elige su edificio más deseado (ciudades primero, luego por población y orden de preferencia) donde compense: al menos 200 habitantes, aserraderos en tierra con madera, templos y anfiteatros donde hay inquietud, acueductos al 60 % de la capacidad, y murallas y castillos en las de al menos 2.000 habitantes; universidades, bancos, fábricas, hospitales y centrales eléctricas en sus ciudades. Lo empieza cuando puede pagarlo guardando madera y oro para reclutar; si no, ahorra. |
 | `GuideSettlers(unidad)` | Busca el mejor sitio cercano para una ciudad, va allí y la funda. |
-| `GuideWarriors(unidad)` | Reclamadores en paz: Reclama la provincia si está libre; si no, va a la mejor provincia libre de su frontera. No reclama más rápido de lo que llegan los migrantes. |
-| `Recruit()` | Envía colonos cuando una ciudad ha crecido lo bastante y entrena guerreros para reclamar tierra si le sobra comida. |
+| `GuideWarriors(unidad)` | Reclamadores (exploradores) en paz: Reclama la provincia si está libre; si no, va a la mejor provincia libre de su frontera. No reclama más rápido de lo que llegan los migrantes. |
+| `Recruit()` | Envía colonos cuando una ciudad ha crecido lo bastante, entrena exploradores para reclamar tierra si le sobra comida y, con `TrainEngineers`, un batallón de ingenieros si no tiene y quiere una carretera o un ferrocarril. |
+| `IsEngineerUnit(unidad)`, `WantedRoad()`, `GuideEngineers(unidad)` | Sus unidades de solo ingenieros no van al ejército: une a su capital la ciudad más cercana que aún no lo está, primero por carretera y luego por ferrocarril, desde la ciudad unida más próxima a ella. Los ingenieros van allí y empiezan la obra cuando puede pagarla, y se quedan en su ruta hasta acabarla. |
 | `FreeBorderProvinces()` | Provincias libres y reclamables junto a su territorio. |
 | `CanSettle(provincia)` | ¿Se puede fundar ciudad aquí? |
 | `SiteScore(provincia)` | Lo buena que es una provincia: comida, yacimientos conocidos sin agotar y costa. |
@@ -423,10 +451,10 @@ El ejército de un rival.
 
 | Función | Qué hace |
 | --- | --- |
-| `ClassifyNewRegiments()` | Los regimientos nuevos de una sola cohorte de guerreros cubren primero los puestos de «reclamadores» (uno por ciudad, más uno); el resto forma el ejército. |
+| `ClassifyNewRegiments()`, `Auxiliary(tipo)` | Los regimientos nuevos de un solo batallón de exploradores (o de guerreros, en partidas antiguas) cubren primero los puestos de «reclamadores» (uno por ciudad, más uno); el resto forma el ejército. |
 | `BuildArmy()`, `Spare(coste)` | Desde el día 180, hasta tener 2 batallones por ciudad (4 en guerra), entrena unidades enteras de su plantilla, del tamaño que su ciudad puede dar (hasta 6 batallones: infantería con dos de choque), o si no el mejor batallón suelto; sin gastar la reserva ni entrenar si pierde oro cada día. |
 | `BuildNavy()` | Una flota de guerra por cada tres puertos: el barco de combate con más ataque que puede construir, en su puerto más poblado. Las flotas se quedan en puerto. |
-| `ArmyTemplate(tamaño)`, `CanSupply(tipo)` | Su plantilla: dos de su infantería más resistente, su tropa más ofensiva y otra de infantería, recortada al tamaño; solo con tropas cuyos materiales (cobre, hierro…) tiene o produce. |
+| `ArmyTemplate(tamaño)`, `CanSupply(tipo)` | Su plantilla (nunca con exploradores ni ingenieros, igual que `BuildArmy`): dos de su infantería más resistente, su tropa más ofensiva y otra de infantería, recortada al tamaño; solo con tropas cuyos materiales (cobre, hierro…) tiene o produce. |
 | `OrganiseArmy()`, `RaiseAndAttach(...)`, `HighestHeadquarters` | Une unidades pequeñas (hasta 6 batallones), forma cuarteles de cuerpo y ejército cuando hacen falta y asigna a todos. |
 | `StaffArmy()` | Una vez al día pone oficial a su mayor unidad sin él: el mejor de la reserva (más virtudes y estrellas, menos defectos) o uno nuevo si la reserva está vacía y le sobra el oro. |
 | `FollowTroops(cuartel)` | El cuartel va adonde están sus unidades si alguna queda fuera de alcance. |
@@ -575,7 +603,7 @@ Punto de entrada. Comprueba OpenGL 3.3 (`GlSupport.Ensure`), pone el formato de 
 Partidas guardadas en disco, en la carpeta de datos del usuario: `~/.local/share/Conquer/Partidas` en Linux, `%LOCALAPPDATA%\Conquer\Partidas` en Windows y `~/Library/Application Support/Conquer/Partidas` en macOS. Cada una es un fichero `.conquer` que se llama como la nación y la fecha de juego ("Kartesia - 5 feb 3999 a.C. 00h"). `List()` las devuelve de la más reciente a la más antigua; `Save(partida)` escribe primero un fichero temporal y luego lo renombra, para no dejar nunca una partida a medio escribir; `Read(ruta)` y `Delete(partida)`.
 
 ### `Screens/GameScreen.cs`
-La pantalla de juego. Clase parcial: el ejército en pantalla está en `GameScreen.Army.cs`, y la ventana de edición de unidades en `GameScreen.UnitEditor.cs`.
+La pantalla de juego. Clase parcial: el ejército en pantalla está en `GameScreen.Army.cs`, la ventana de edición de unidades en `GameScreen.UnitEditor.cs` la de cada batalla en `GameScreen.Battle.cs` y la de las carreteras nuevas en `GameScreen.Roads.cs`.
 
 | Función | Qué hace |
 | --- | --- |
@@ -592,7 +620,7 @@ La pantalla de juego. Clase parcial: el ejército en pantalla está en `GameScre
 | `NationRect`, `ViewProvince(provincia)` | Rectángulo de la pantalla de la nación, y seleccionar y centrar una provincia cuando se pide desde ella. |
 | `Show(resultado)`, `CollectNotifications()` | Mensajes temporales en pantalla. |
 | `Center`, `Between`, `OnScreen` | Posición de una provincia, punto intermedio entre dos (cruzando el borde del mapa por el lado corto) y si algo está en pantalla. |
-| `DrawRivers()` | Dibuja los ríos con `RiverLayer` (con la vega verde solo en el modo terreno). |
+| `DrawRivers()` | Dibuja los ríos con `RiverLayer` (con la vega verde solo en el modo terreno). Después, `RoadLayer` dibuja carreteras y ferrocarriles. |
 | `DrawCities()` | Marcadores de ciudad y sus nombres. |
 | `DrawMigrations()` | Puntos que representan a los migrantes en camino. |
 | `DrawPath(unidad, desde, seleccionada)` | Ruta como flecha verde (`PathArrow`) por el centro de cada provincia del camino, cruzando el borde del mapa por el lado corto: entera para la unidad seleccionada y más tenue para tus demás unidades en marcha. |
@@ -615,8 +643,8 @@ El ejército en pantalla.
 | `ProvinceTab` | Pestañas del panel de provincia: General, Edificios y Ejército (esta solo en tus ciudades). |
 | `DrawNationNames()` | El nombre de cada nación sobre su tierra: en su centro (media circular de las longitudes), del tamaño que ocupa en pantalla, oculto si se ve muy pequeña y desvanecido al acercarse mucho. |
 | `DrawUnits()`, `Bar(...)` | Fichas estilo OTAN: aspa para infantería, barra para montados, marcas de nivel en los cuarteles y «C» para colonos; las flotas llevan un casco bajo la letra de su barco y un punto por cada unidad a bordo, y las unidades embarcadas no se dibujan. Barras de hombres (verde) y organización (ámbar). Dibuja la ruta (`DrawPath`), la línea a su cuartel (verde si está a su alcance) y una flecha roja (`PathArrow`) al atacar. |
-| `DrawBattles()`, `DrawBattleMark(...)`, `BattleSummary(...)`, `NavalBattleSummary(...)` | Espadas cruzadas sobre cada batalla, en tierra o en el mar; al pasar el ratón, los dos bandos, su organización y el terreno. |
-| `UnitPanel(...)`, `UnitState(...)`, `EmbarkButtons(...)` | Panel de la unidad: tipo, nación, ubicación, estado («A bordo de…», «Combatiendo en el mar») y botones («Editar unidad» en unidades de combate, cuarteles y flotas; fundar, reclamar, embarcar en una flota cercana con sitio, licenciar, detener). Una unidad embarcada explica cómo desembarcar. |
+| `DrawBattles()`, `DrawBattleMark(...)`, `BattleSummary(...)`, `NavalBattleSummary(...)` | Espadas cruzadas sobre cada batalla, en tierra o en el mar; al pasar el ratón, los dos bandos, su organización y el terreno; al hacer clic, la ventana de la batalla. |
+| `UnitPanel(...)`, `UnitState(...)`, `EmbarkButtons(...)`, `EngineerButtons(...)` | Panel de la unidad: tipo, nación, ubicación, estado («A bordo de…», «Combatiendo en el mar») y botones («Editar unidad» en unidades de combate, cuarteles y flotas; fundar, reclamar, construir una carretera o un ferrocarril con ingenieros desde una ciudad o cuartel, las obras que pasan por aquí con «Cancelar obra», embarcar en una flota cercana con sitio, licenciar, detener). Una unidad embarcada explica cómo desembarcar. |
 | `RegimentDetails(...)` | Suministro, velocidad, mando, oficial propio, general de su cuartel y experiencia media (en una flota: velocidad en el mar, si está en puerto y su carga), y cada batallón con sus barras, su papel y experiencia al pasar el ratón. Separar y unir se hacen en la ventana de edición. |
 | `HeadquartersDetails(...)`, `CommandLine(...)`, `OfficerLine(...)`, `AttachButtons(...)` | Alcance, general (nombre y estrellas, con sus rasgos al pasar el ratón) y subordinados de un cuartel, de quién depende la unidad y botones para asignarla a un cuartel cercano o quitarla. |
 | `ArmyPanel(ciudad)` | Pestaña Ejército de una ciudad: regimientos que puedes entrenar de tus plantillas (las cuatro primeras), batallones que puedes entrenar (los de avances sin descubrir no aparecen), cuarteles generales y lo que está en instrucción, con los nombres de la época. |
@@ -632,6 +660,27 @@ La ventana para editar una unidad tuya (botón «Editar unidad» de su panel). E
 | `MergeSection(...)` | Botones para unir las demás unidades tuyas de la provincia, diciendo qué pasa con su oficial. |
 | `OfficerSection(...)`, `OfficerCard(...)`, `OfficerTooltip(...)` | El oficial al mando con sus rasgos (virtudes en verde, defectos en rojo) y «Relevar del mando»; la reserva, con «Asignar» y «Retirar» para cada oficial; y «Reclutar oficial». |
 | `ShowSampleOfficers(unidad)` | Para `--panel edit`: recluta cuatro oficiales, pone el primero al mando y abre la ventana. |
+
+### `Screens/GameScreen.Battle.cs`
+La ventana de una batalla (clic en sus espadas). Se actualiza en directo y el tiempo sigue corriendo (Espacio lo para).
+
+| Función | Qué hace |
+| --- | --- |
+| `OpenBattle(...)`, `CloseBattle()`, `DrawBattleWindow()` | Abre, cierra (Esc o «Cerrar») y dibuja la ventana; «Ir a la provincia» centra el mapa en la batalla. |
+| `LandBattle(...)`, `FireBalance(...)` | Batalla en tierra: estado y duración (o quién ganó), terreno, defensa y frente, y una barra con el fuego por hora de cada bando. Terminada, muestra cómo acabó la última hora y las bajas. |
+| `BattleSide(...)`, `StatRow(...)`, `Casualties(...)` | Cada bando: hombres, bajas, organización (con la marca donde se rompen), fuego, batallones en el frente, detrás y en reserva, armas combinadas y sus unidades. |
+| `BattleUnitRow(...)`, `BattleUnitTooltip(...)` | Cada unidad: nombre, oficial, hombres, cuántos batallones combaten, suministro y barras; al pasar el ratón, su mando, general, oficial y cada batallón con su puesto y su fuego. |
+| `OrganisationChart(...)` | La organización de cada bando hora a hora, con la línea donde se rompen; al pasar el ratón, los datos de esa hora. |
+| `NavalBattle(...)` | Batalla en el mar: cada nación con sus barcos, tripulantes, organización, fuego y flotas. |
+| `ShowFirstBattle()` | Para `--panel battle`: abre la primera batalla en curso. |
+
+### `Screens/GameScreen.Roads.cs`
+La ventana para construir una carretera o un ferrocarril (botón de los ingenieros en una ciudad o cuartel). El tiempo se para mientras está abierta.
+
+| Función | Qué hace |
+| --- | --- |
+| `OpenRoadWindow(desde, tipo)`, `CloseRoadWindow()`, `DrawRoadWindow()` | A la izquierda, para que se vea la ruta: tus otras ciudades y cuarteles, del más cercano al más lejano (el más cercano que lo necesita ya elegido); los ya unidos, apagados; tramos nuevos, coste, trabajo y ciudades que une por el camino; «Construir» y «Cancelar» (o Esc). |
+| `PlannedRoute`, `HubName(provincia)` | La ruta elegida, que `RoadLayer` dibuja en el mapa; el nombre de la ciudad o de los cuarteles de una provincia. |
 
 ### `Screens/NationView.Military.cs`
 Pestañas Ejército, Plantillas y Diplomacia de la pantalla de la nación.
@@ -698,6 +747,9 @@ Dibuja el mapa entero con un único shader.
 | `Begin`, `Flush` | Empezar un fotograma / dibujar lo acumulado. |
 | `Quad`, `Rect`, `Outline`, `Line` | Figuras básicas en píxeles de pantalla. |
 | `Triangle`, `Gradient`, `Circle`, `RoundedRect`, `RoundedOutline`, `Shadow`, `Mix` | Triángulos con color por esquina, rectángulos en degradado vertical, círculos y anillos, rectángulos con esquinas redondeadas (con degradado opcional) y su borde, sombras suaves por capas y mezcla de dos colores. |
+
+### `Graphics/RoadLayer.cs`
+`RoadLayer`: carreteras y ferrocarriles como líneas entre los centros de las provincias, como en Hearts of Iron. La carretera es una franja clara con borde oscuro; el ferrocarril, una línea oscura con traviesas. Las obras del jugador se ven como trazos dorados y la ruta que se está eligiendo, como una línea discontinua brillante. Se ocultan con el mapa muy alejado (`MinZoom`).
 
 ### `Graphics/RiverLayer.cs`
 `RiverLayer`: los ríos como cauces continuos. Al crearse une los segmentos de cada tramo en un solo camino; `Draw(lote, cámara, modoTerreno)` dibuja cada tramo con bordes suavizados, una orilla más oscura, el agua, un reflejo claro en los anchos y, en el modo terreno, una vega verde a los lados de los grandes ríos. La anchura crece con el caudal y con el zoom; con el zoom alejado solo se ven los grandes ríos.
@@ -779,12 +831,12 @@ Uso: ver el README.
 | `WorldGenerationTests.cs` | Ambos mapas salen con unas 25.000 provincias y todos los píxeles asignados. |
 | `PeakTests.cs` | En la Tierra del generador 2, cada cordillera por encima de 5.000 m (el Tíbet y el Himalaya, los Andes…) es una sola provincia de cumbres y la Antártida sigue siendo hielo; las cumbres no se reclaman pero las tropas las cruzan; la partida guarda la versión del generador; los mapas del generador 1 no tienen cumbres. |
 | `GameplayTests.cs` | Inicio sin territorio y con los recursos correctos; fundar la capital; océanos y polos no reclamables; las unidades terrestres no entran al mar pero sí cruzan hielo; nada cruza el mar; provincias mayores en desiertos, polos y océanos; solo las unidades militares reclaman; velocidad de 10 km/h; migración diaria; migración forzada con su coste; consumo de comida; la capital gana humor y fertilidad; el hambre los hunde; los migrantes forzados llegan descontentos; las provincias descontentas no pagan impuestos; la fertilidad acelera el crecimiento; las reservas de comida alegran; las fiestas cuestan oro y duran un mes; las estadísticas de la nación suman bien; cada yacimiento es una bolsa finita que empieza llena; muchas provincias tienen yacimientos y algunas varios; las bolsas se agotan y dejan de producir; las ciudades producen ciencia que descubre avances; los niveles se abren con un avance del anterior; elegir otro avance de la rama sustituye al que investigaba; la ciencia se reparte según la prioridad entre las ramas que investigan algo; sin nada elegido la ciencia se guarda y entra en el siguiente avance elegido; los vecinos que conocen un avance lo abaratan; los avances mejoran la economía; los edificios cuestan y tardan, tienen sus requisitos y mejoran su provincia; al principio solo se conocen los recursos antiguos y los avances revelan los demás; los recursos desconocidos no se explotan; la IA se expande e investiga. `WorldFixture` genera un único mundo para todos. |
-| `MilitaryTests.cs` | Instrucción de batallones (hombres, recursos y días); batallones que piden su avance (o sus dos avances); legionarios, catapultas y catafractos piden sus avances de la era Clásica; unir (hasta 12), separar y velocidad del batallón más lento; no se entra en tierras ajenas sin guerra; ocupar tierra enemiga sin defensa; un ataque fuerte gana y uno débil se rompe; defensores rodeados destruidos; la paz devuelve lo ocupado; la IA solo acepta la paz pasado un tiempo; desgaste sin suministro; recuperación y refuerzos desde la capital; bonificación de mando en cadena y alcance; las unidades se llaman por su tamaño y conservan su número; un cuerpo manda 5 unidades como mucho; el mantenimiento diario y el ejército sin pagar; cada cuartel tiene un general de su rango que manda a las unidades a su alcance; los oficiales ganan estrellas con victorias y ayudan por sus virtudes; las batallas dan experiencia y victorias al general; los reclutas diluyen la experiencia; solo combate lo que cabe en el frente, con la artillería detrás; las armas combinadas; generales y experiencia se guardan, los generales de partidas antiguas pasan a ser oficiales y los cuarteles sin general reciben uno al cargar; cada nación empieza con una plantilla de dos guerreros; las plantillas se editan dentro de sus límites; una plantilla entrena un regimiento entero a la vez. |
+| `MilitaryTests.cs` | Instrucción de batallones (hombres, recursos y días); batallones que piden su avance (o sus dos avances); legionarios, catapultas y catafractos piden sus avances de la era Clásica; unir (hasta 12), separar y velocidad del batallón más lento; no se entra en tierras ajenas sin guerra; ocupar tierra enemiga sin defensa; un ataque fuerte gana y uno débil se rompe; defensores rodeados destruidos; la paz devuelve lo ocupado; la IA solo acepta la paz pasado un tiempo; desgaste sin suministro; recuperación y refuerzos desde la capital; bonificación de mando en cadena y alcance; las unidades se llaman por su tamaño y conservan su número; un cuerpo manda 5 unidades como mucho; el mantenimiento diario y el ejército sin pagar; cada cuartel tiene un general de su rango que manda a las unidades a su alcance; los oficiales ganan estrellas con victorias y ayudan por sus virtudes; las batallas dan experiencia y victorias al general; las batallas cuentan las bajas y guardan cada hora y su final, y las bajas se guardan; los exploradores son baratos, rápidos y débiles y reclaman tierra; los ingenieros piden Ingeniería, van detrás del frente y rebajan el terreno y el río del defensor; los ingenieros construyen carreteras solo desde una ciudad o cuartel hasta otro, por la ruta de marcha, pagando solo los tramos que faltan, más deprisa cuantos más hay en la ruta; sin ellos la obra se para y al cancelarla se devuelve lo que falta; el suministro llega por las carreteras más allá de su alcance; las partidas antiguas convierten las calzadas en tramos; los reclutas diluyen la experiencia; solo combate lo que cabe en el frente, con la artillería detrás; las armas combinadas; generales y experiencia se guardan, los generales de partidas antiguas pasan a ser oficiales y los cuarteles sin general reciben uno al cargar; cada nación empieza con una plantilla de dos guerreros; las plantillas se editan dentro de sus límites; una plantilla entrena un regimiento entero a la vez. |
 | `OfficerTests.cs` | Reclutar oficiales cuesta oro y llena la reserva; ningún defecto anula una virtud; asignar, relevar y retirar pasan por la reserva; los oficiales ascienden al crecer su unidad y no bajan; al unir, la unidad conserva su oficial o toma el de la otra; varios batallones se separan juntos y sin oficial; renombrar y volver al nombre automático; los defectos estorban y las virtudes ayudan (ataque, velocidad, mantenimiento); licenciar devuelve el oficial a la reserva; oficiales, reserva y nombres se guardan. |
-| `CityTests.cs` | Solo granja, granero, aserradero, mina, calzada y ferrocarril van sin ciudad; los habitantes construyen una ciudad con el nombre que eligen y la provincia conserva el suyo; hacen falta 500 habitantes, sitio y un nombre libre; el granero salva a la mitad de los que morirían de hambre; una ciudad en obras se guarda y se termina tras cargar; las provincias empiezan sin nombre, reciben uno distinto al reclamarlas y lo guardan con la partida. |
+| `CityTests.cs` | Solo granja, granero, aserradero y mina van sin ciudad; los habitantes construyen una ciudad con el nombre que eligen y la provincia conserva el suyo; hacen falta 500 habitantes, sitio y un nombre libre; el granero salva a la mitad de los que morirían de hambre; una ciudad en obras se guarda y se termina tras cargar; las provincias empiezan sin nombre, reciben uno distinto al reclamarlas y lo guardan con la partida. |
 | `NavalTests.cs` | El puerto pide costa y Navegación a vela; sin puerto no se construyen barcos ni atracan flotas; el dique seco pide puerto, permite los barcos avanzados y repara el doble de rápido. Las tropas necesitan barco para cruzar el mar (los aviones no); los barcos se construyen en puertos y forman flotas; las flotas navegan hasta donde sabe su nación; los transportes llevan tropas y las desembarcan en otra costa; clic derecho sobre una flota embarca; los barcos de guerra hunden una flota enemiga con su carga; unir flotas conserva la carga; las flotas y la carga se guardan; los barcos van más rápido que a pie. |
 | `EraTests.cs` | Cada era cuesta más hasta adoptar su institución y se abre al conocer la anterior; el Feudalismo nace en la capital de la primera nación con 8 ciudades el Humanismo en la mayor ciudad con universidad y la Industrialización donde una fábrica trabaja carbón; la Electrificación en la capital de la primera nación con Electricidad; Química revela el caucho y el ferrocarril dobla la velocidad; los avances modernos revelan los últimos recursos y todos los recursos se pueden descubrir; los edificios y batallones de cada era piden su avance; el castillo dobla el daño de los defensores. |
-| `ClassicalMechanicsTests.cs` | La muralla hace que los defensores peguen más; las calzadas acortan la marcha (y la ruta más rápida las usa); Construcción acelera las obras; Administración reduce a la mitad el humor perdido por la distancia. |
+| `ClassicalMechanicsTests.cs` | La muralla hace que los defensores peguen más; las carreteras acortan la marcha (y la ruta más rápida las usa); Construcción acelera las obras; Administración reduce a la mitad el humor perdido por la distancia. |
 | `InstitutionTests.cs` | Los avances de la era Clásica cuestan más sin Urbanismo y sus niveles siguen a los de la Antigüedad; Construcción permite el anfiteatro. El Urbanismo nace en la primera ciudad grande; se extiende solo a provincias asentadas; una nación lo adopta cuando lo tiene la mitad de su población y gana su bonus; se puede adoptar antes pagando oro; los avances de una era cuestan más hasta adoptar su institución; las instituciones se guardan con la partida. |
 | `DifficultyTests.cs` | En Muy difícil hay menos yacimientos, los mismos de la primera tirada y con la mitad de bolsa; el humano empieza con los recursos de su dificultad y los rivales con los normales; los rivales producen más ciencia en dificultades altas; la dificultad se guarda con la partida. `VeryHardWorldFixture` genera el mismo mundo en Muy difícil. |
 | `SaveGameTests.cs` | Cargar una partida y volver a guardarla da exactamente el mismo fichero; la partida cargada sigue jugándose; los mismos ajustes generan el mismo mapa; las partidas anteriores a la 1.13.0 reciben llenos los yacimientos nuevos; el mapa de los tests conserva su huella y cargan las partidas guardadas con la 1.30.1 y con la 1.31.0/1.32.0; se rechazan las partidas de otro mapa y las dañadas. |

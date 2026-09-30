@@ -45,8 +45,7 @@ public class ClassicalMechanicsTests(WorldFixture world)
         var s = WithCapital(a);
         double hours = s.Pathfinder.StepHours(a.Id, b.Id);
 
-        a.AddBuilding(BuildingType.Road);
-        b.AddBuilding(BuildingType.Road);
+        s.Roads.Lay(a.Id, b.Id, RoadKind.Road);
 
         Assert.Equal(hours / 1.5, s.Pathfinder.StepHours(a.Id, b.Id), 6);
         Assert.Equal(s.Pathfinder.StepHours(a.Id, b.Id), s.Pathfinder.FindPath(a.Id, b.Id)!.Value.Hours, 6);
