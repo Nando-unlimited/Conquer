@@ -555,14 +555,16 @@ public sealed partial class GameSession
     // ------------------------------------------------------------------ supply and upkeep
 
     /// <summary>
-    /// Supply runs from the nation's cities through land it controls (or nobody owns) up to
-    /// <see cref="MilitaryRules.SupplyRangeHours"/> away, and one province beyond: the front line.
+    /// Supply runs from the nation's cities along its roads and railways as far as they go through land it controls
+    /// (or nobody owns) (<see cref="SupplyNetwork"/>), and from there through that land up to
+    /// <see cref="MilitaryRules.SupplyRangeHours"/> away (sooner along roads), and one province beyond: the front line.
     /// </summary>
     private HashSet<int> ComputeSupply(Player player)
     {
-        var sources = Cities.Where(c => c.OwnerId == player.Id && !Map.Provinces[c.ProvinceId].IsOccupied).Select(c => c.ProvinceId).ToList();
+        var cities = Cities.Where(c => c.OwnerId == player.Id && !Map.Provinces[c.ProvinceId].IsOccupied).Select(c => c.ProvinceId).ToList();
         var supplied = new HashSet<int>();
-        if (sources.Count == 0) return supplied;
+        if (cities.Count == 0) return supplied;
+        var sources = SupplyNetwork(player.Id, cities);
         var (hours, _) = Pathfinder.FromSources(sources, MilitaryRules.SupplyRangeHours,
             canEnter: id => !Map.Provinces[id].IsWater && (!Map.Provinces[id].IsOwned || Map.Provinces[id].ControllerId == player.Id));
         for (int id = 0; id < hours.Length; id++)

@@ -1,4 +1,5 @@
 using Conquer.Game.AI;
+using Conquer.Game.Buildings;
 using Conquer.Game.Economy;
 using Conquer.Game.Entities;
 using Conquer.Game.Military;
@@ -52,7 +53,30 @@ public sealed partial class GameSession
         NextTemplateId = _nextTemplateId,
         NextOfficerId = _nextOfficerId,
         InstitutionBirths = _institutionBirths.OrderBy(b => b.Key).Select(b => new InstitutionBirthSave(b.Key, b.Value.ProvinceId, b.Value.Hours)).ToList(),
+        Roads = Roads.Links.OrderBy(l => l.A).ThenBy(l => l.B).Select(l => new RoadLinkSave(l.A, l.B, l.Kind)).ToList(),
+        RoadProjects = _roadProjects.Select(r => new RoadProjectSave(r.Id, r.OwnerId, r.Kind, [.. r.Route], r.DaysPerLink, r.Next, r.WorkLeft)).ToList(),
+        NextRoadProjectId = _nextRoadProjectId,
     };
+
+    /// <summary>
+    /// The roads and railways, and the works under way. Saves from before 1.36.0 had roads and railways as buildings of
+    /// a province: two neighbours that both had one are joined by it.
+    /// </summary>
+    private void LoadRoads(SaveGame save)
+    {
+        Roads.Clear();
+        foreach (var l in save.Roads ?? []) Roads.Lay(l.A, l.B, l.Kind);
+        foreach (var r in save.RoadProjects ?? []) _roadProjects.Add(new RoadProject(r.Id, r.OwnerId, r.Kind, r.Route, r.DaysPerLink, r.Next, r.WorkLeft));
+        _nextRoadProjectId = save.NextRoadProjectId;
+        if (save.Roads != null) return;
+        foreach (var (building, kind) in new[] { (BuildingType.Road, RoadKind.Road), (BuildingType.Railway, RoadKind.Railway) })
+        {
+            var had = save.Provinces.Where(p => p.Buildings.Contains(building)).Select(p => p.Id).ToHashSet();
+            foreach (int id in had)
+                foreach (int n in Map.Provinces[id].Neighbors)
+                    if (had.Contains(n)) Roads.Lay(id, n, kind);
+        }
+    }
 
     private static OfficerSave ToSave(Officer o) => new(o.Id, o.Name, [.. o.Traits], o.StartingSkill, o.Victories, o.Rank);
 
@@ -82,6 +106,7 @@ public sealed partial class GameSession
         // Saves from before officers have none with an id, so numbering starts afresh.
         var session = new GameSession(map, seed) { _computerRivals = save.ComputerRivals, Date = new GameDate(save.Hours), _nextOfficerId = save.NextOfficerId ?? 0 };
         foreach (var b in save.InstitutionBirths ?? []) session._institutionBirths[b.Institution] = (b.ProvinceId, b.Hours);
+        session.LoadRoads(save);
 
         foreach (var ps in save.Provinces)
         {
@@ -97,8 +122,8 @@ public sealed partial class GameSession
             if (!save.ExtraDeposits)
                 foreach (var r in Resources.Deposits)
                     if (p.Reserves[(int)r] == 0) p.Reserves[(int)r] = p.DepositSizes[(int)r] * GameRules.DepositSizeMultiplier;
-            foreach (var b in ps.Buildings) p.AddBuilding(b);
-            p.Constructing = ps.Constructing;
+            foreach (var b in ps.Buildings.Where(Buildings.Buildings.All.Contains)) p.AddBuilding(b);
+            p.Constructing = ps.Constructing is BuildingType c && Buildings.Buildings.All.Contains(c) ? c : null;
             p.ConstructionDaysLeft = ps.ConstructionDaysLeft;
             p.PlannedCityName = ps.PlannedCityName;
             p.Institutions.UnionWith(ps.Institutions ?? []);

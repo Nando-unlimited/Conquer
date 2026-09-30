@@ -60,6 +60,10 @@ public sealed record SaveGame
     public int? NextOfficerId { get; init; }
     /// <summary>Absent in saves from before institutions existed.</summary>
     public List<InstitutionBirthSave>? InstitutionBirths { get; init; }
+    /// <summary>Roads and railways between provinces. Absent before 1.36.0, when they were buildings (see <see cref="BuildingType.Road"/>).</summary>
+    public List<RoadLinkSave>? Roads { get; init; }
+    public List<RoadProjectSave>? RoadProjects { get; init; }
+    public int NextRoadProjectId { get; init; }
 
     private static readonly JsonSerializerOptions Options = new()
     {
@@ -134,6 +138,10 @@ public sealed record BattleSave(
     int ProvinceId, int AttackerId, int DefenderId, long StartHours, List<int> Attackers, double AttackerLosses = 0, double DefenderLosses = 0);
 
 public sealed record WarSave(int A, int B, long StartHours);
+
+public sealed record RoadLinkSave(int A, int B, RoadKind Kind);
+
+public sealed record RoadProjectSave(int Id, int OwnerId, RoadKind Kind, List<int> Route, int DaysPerLink, int Next, double WorkLeft);
 
 public sealed record UnitNumberSave(int PlayerId, int Level, int Number);
 

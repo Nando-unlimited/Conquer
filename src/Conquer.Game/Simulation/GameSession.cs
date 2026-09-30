@@ -64,7 +64,7 @@ public sealed partial class GameSession
     private GameSession(WorldMap map, int seed)
     {
         Map = map;
-        Pathfinder = new Pathfinder(map);
+        Pathfinder = new Pathfinder(map, Roads);
         _seed = seed;
         _random = new Random(seed);
     }
@@ -214,7 +214,7 @@ public sealed partial class GameSession
             foreach (var player in Players) DailyScience(player);
             DailyInstitutions();
             foreach (var player in Players) DailyConstruction(player);
-            DailyEngineering();
+            DailyRoadWork();
             foreach (var player in Players) DailyMilitary(player);
         }
         if (Date.Hours % 6 == 0)
@@ -449,11 +449,11 @@ public sealed partial class GameSession
     /// Whether the building could go up in this province one day, ignoring cost and ongoing work:
     /// its advance is known, and the province has a city or a deposit if the building needs one.
     /// </summary>
-    public CommandResult IsBuildingAvailable(Province p, BuildingType type, int? builderId = null)
+    public CommandResult IsBuildingAvailable(Province p, BuildingType type)
     {
         var info = type.Info();
         if (p.OwnerId < 0) return CommandResult.Fail("La provincia no es de nadie.");
-        if (info.RequiresTech is Tech tech && !Players[builderId ?? p.OwnerId].Techs.Contains(tech))
+        if (info.RequiresTech is Tech tech && !Players[p.OwnerId].Techs.Contains(tech))
             return CommandResult.Fail($"Requiere {tech.Info().Name.ToLowerInvariant()}.");
         if (info.CityOnly && !p.CityId.HasValue) return CommandResult.Fail("Solo en provincias con ciudad.");
         if (info.NeedsCoast && !p.Neighbors.Any(n => Map.Provinces[n].IsWater)) return CommandResult.Fail("Solo en provincias con costa.");
@@ -466,7 +466,6 @@ public sealed partial class GameSession
 
     public CommandResult CanBuild(int playerId, Province p, BuildingType type)
     {
-        if (type.Info().NeedsEngineers) return CanEngineer(playerId, p, type);
         if (p.OwnerId != playerId) return CommandResult.Fail("La provincia no es tuya.");
         if (p.IsOccupied) return CommandResult.Fail("La provincia está ocupada por el enemigo.");
         if (p.Buildings.Contains(type)) return CommandResult.Fail("Ya está construido.");
@@ -478,23 +477,7 @@ public sealed partial class GameSession
         return CommandResult.Success();
     }
 
-    /// <summary>
-    /// Whether the player's engineers could start a road or railway here: land the player holds (its own, or occupied
-    /// enemy land), the advance known, engineers standing in the province and the cost at hand.
-    /// </summary>
-    private CommandResult CanEngineer(int playerId, Province p, BuildingType type)
-    {
-        if (!p.IsOwned || p.ControllerId != playerId) return CommandResult.Fail("Solo en tu tierra o en la que ocupas.");
-        if (p.Buildings.Contains(type)) return CommandResult.Fail("Ya está construido.");
-        var available = IsBuildingAvailable(p, type, playerId);
-        if (!available.Ok) return available;
-        if (Busy(p) is { } busy) return busy;
-        if (EngineersIn(playerId, p.Id) == 0) return CommandResult.Fail("Hacen falta ingenieros en la provincia.");
-        if (!Players[playerId].Stockpile.Has(type.Info().Cost)) return CommandResult.Fail($"Cuesta {type.Info().Cost}.");
-        return CommandResult.Success();
-    }
-
-    /// <summary>Battalions of engineers the player has standing in a province (not marching, attacking or aboard): they build its roads and railways.</summary>
+    /// <summary>Battalions of engineers the player has standing in a province (not marching, attacking or aboard): they lay roads and railways.</summary>
     public int EngineersIn(int playerId, int provinceId) =>
         Units.Where(u => u.OwnerId == playerId && u.ProvinceId == provinceId && u.IsMilitary && !u.IsMoving && !u.IsAboard && !u.AttackingProvinceId.HasValue)
             .Sum(u => u.Battalions.Count(b => b.Type == BattalionType.Engineers));
@@ -580,16 +563,12 @@ public sealed partial class GameSession
     /// <summary>What to call a place in messages: its city if it has one, otherwise the province.</summary>
     public string PlaceName(Province p) => CityIn(p)?.Name ?? p.DisplayName;
 
-    /// <summary>
-    /// Every construction advances a day; finished buildings start working at once and finished cities are founded.
-    /// Roads and railways advance instead with the engineers at work on them (<see cref="DailyEngineering"/>).
-    /// </summary>
+    /// <summary>Every construction advances a day; finished buildings start working at once and finished cities are founded.</summary>
     private void DailyConstruction(Player player)
     {
         foreach (int id in player.Provinces)
         {
             var p = Map.Provinces[id];
-            if (p.Constructing?.Info().NeedsEngineers == true) continue;
             if ((!p.Constructing.HasValue && p.PlannedCityName == null) || p.IsOccupied || --p.ConstructionDaysLeft > 0) continue;
             p.ConstructionDaysLeft = 0;
             if (p.Constructing is BuildingType type)
@@ -604,26 +583,6 @@ public sealed partial class GameSession
                 p.PlannedCityName = null;
                 AddCity(player, p, name);
             }
-        }
-    }
-
-    /// <summary>
-    /// Roads and railways under way advance with the engineers of whoever holds the province standing there: a day of
-    /// work per battalion, stopped while there are none.
-    /// </summary>
-    private void DailyEngineering()
-    {
-        foreach (var p in Map.Provinces)
-        {
-            if (p.Constructing is not BuildingType type || !type.Info().NeedsEngineers || p.ControllerId < 0) continue;
-            int engineers = EngineersIn(p.ControllerId, p.Id);
-            if (engineers == 0) continue;
-            p.ConstructionDaysLeft -= engineers * MilitaryRules.EngineerWorkDays;
-            if (p.ConstructionDaysLeft > 0) continue;
-            p.ConstructionDaysLeft = 0;
-            p.AddBuilding(type);
-            p.Constructing = null;
-            if (p.ControllerId == HumanPlayerId) Notify(HumanPlayerId, $"Terminada la obra: {type.Info().Name} en {PlaceName(p)}.");
         }
     }
 
@@ -928,9 +887,10 @@ public sealed partial class GameSession
 
     public static string FormatHours(double hours)
     {
-        if (hours < 24) return $"{Math.Ceiling(hours):0} h";
-        int days = (int)(hours / 24);
-        int rest = (int)Math.Ceiling(hours - days * 24);
+        int total = (int)Math.Ceiling(hours);
+        if (total < 24) return $"{total} h";
+        int days = total / 24;
+        int rest = total % 24;
         return rest == 0 ? $"{days} d" : $"{days} d {rest} h";
     }
 

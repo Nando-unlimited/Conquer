@@ -238,37 +238,111 @@ public class MilitaryTests(WorldFixture world)
         Assert.Equal(MilitaryRules.SupportExposure, engaged.Single(e => e.Role == BattalionRole.Engineers).Exposure);
     }
 
-    [Fact]
-    public void OnlyEngineersBuildRoadsAndTheyWorkFasterTogether()
+    /// <summary>A province a few stretches from <paramref name="from"/> through land player 0 may build roads on.</summary>
+    private int FewStretchesAway(GameSession s, Province from)
     {
-        var (s, a, b) = TwoNations();
+        bool Allowed(int id) => !_map.Provinces[id].IsWater && _map.Provinces[id].OwnerId != 1;
+        return _map.Provinces.Where(p => Allowed(p.Id) && _map.DistanceKm(from, p) < 800)
+            .Select(p => (p.Id, Path: s.Pathfinder.FindPath(from.Id, p.Id, Allowed)))
+            .First(t => t.Path is { } path && path.Path.Count is >= 3 and <= 5).Id;
+    }
+
+    [Fact]
+    public void EngineersLayRoadsFromACityOrHqToAnotherAlongTheMarchingRoute()
+    {
+        var (s, a, _) = TwoNations();
+        s.Human.Stockpile[ResourceType.Wood] = s.Human.Stockpile[ResourceType.Gold] = 1000;
+        int far = FewStretchesAway(s, a);
+        var hq = s.AddUnit(0, UnitType.Headquarters, far, 50, headquartersLevel: 1);
+        Assert.Equal(new[] { a.Id, far }.Order(), s.RoadHubs(0).Order());
+        Assert.True(s.IsRoadHub(0, hq.ProvinceId));
+
+        Assert.StartsWith("Requiere", s.CanBuildRoad(0, a.Id, far, RoadKind.Road).Message);
+        s.Human.Learn(Tech.Engineering);
+        Assert.Equal("Hacen falta ingenieros en la provincia.", s.CanBuildRoad(0, a.Id, far, RoadKind.Road).Message);
+
+        // Only from a city or HQ.
+        int between = s.PlanRoad(0, a.Id, far, RoadKind.Road)!.Route[1];
+        s.AddRegiment(0, between, BattalionType.Engineers);
+        Assert.StartsWith("Solo desde", s.CanBuildRoad(0, between, far, RoadKind.Road).Message);
+
+        s.AddRegiment(0, a.Id, BattalionType.Engineers, BattalionType.Engineers);
+        var plan = s.PlanRoad(0, a.Id, far, RoadKind.Road)!;
+        Assert.Equal(s.Pathfinder.FindPath(a.Id, far, id => !_map.Provinces[id].IsWater && _map.Provinces[id].OwnerId != 1)!.Value.Path, plan.Route.Skip(1));
+        Assert.Equal(plan.Route.Count - 1, plan.NewLinks);
+        Assert.True(s.BuildRoad(0, a.Id, far, RoadKind.Road).Ok);
+        Assert.Equal(1000 - 20 * plan.NewLinks, s.Human.Stockpile[ResourceType.Wood], 6);
+        Assert.Equal("Ya están unidas por carretera (o lo estarán con las obras en curso).", s.CanBuildRoad(0, a.Id, far, RoadKind.Road).Message);
+
+        // Three battalions along the route: three days of work a day, stretch after stretch from the start.
+        var work = Assert.Single(s.RoadProjects);
+        RunHours(s, 24);
+        Assert.Equal(work.DaysPerLink - 3, work.WorkLeft, 6);
+        RunUntil(s, () => s.RoadProjects.Count == 0, 24 * 60);
+        Assert.Empty(s.RoadProjects);
+        Assert.True(s.Connected(a.Id, far, RoadKind.Road));
+        Assert.False(s.Connected(a.Id, far, RoadKind.Railway));
+        Assert.Contains(s.Notifications, n => n.Text.StartsWith("Terminada la carretera"));
+
+        // Marching along it is faster.
+        double hours = s.Pathfinder.FindPath(a.Id, far)!.Value.Hours;
+        s.Roads.Clear();
+        Assert.True(s.Pathfinder.FindPath(a.Id, far)!.Value.Hours > hours * 1.4);
+    }
+
+    [Fact]
+    public void RoadWorkStopsWithoutEngineersAndCancellingGivesBackTheRest()
+    {
+        var (s, a, _) = TwoNations();
         s.Human.Stockpile[ResourceType.Wood] = s.Human.Stockpile[ResourceType.Gold] = 1000;
         s.Human.Learn(Tech.Engineering);
-        Assert.Equal("Hacen falta ingenieros en la provincia.", s.Build(0, a.Id, BuildingType.Road).Message);
+        int far = FewStretchesAway(s, a);
+        s.AddUnit(0, UnitType.Headquarters, far, 50, headquartersLevel: 1);
+        var engineers = s.AddRegiment(0, a.Id, BattalionType.Engineers);
+        Assert.True(s.BuildRoad(0, a.Id, far, RoadKind.Road).Ok);
+        var work = s.RoadProjects[0];
 
-        var engineers = s.AddRegiment(0, a.Id, BattalionType.Engineers, BattalionType.Engineers);
-        Assert.True(s.Build(0, a.Id, BuildingType.Road).Ok);
-        int days = a.ConstructionDaysLeft;
-        RunHours(s, 24);
-        Assert.Equal(days - 2, a.ConstructionDaysLeft); // a day of work per battalion
-
-        // Without engineers the work stops.
         s.Disband(0, engineers.Id);
-        int left = a.ConstructionDaysLeft;
-        RunHours(s, 48);
-        Assert.Equal(left, a.ConstructionDaysLeft);
+        RunHours(s, 24 * 3);
+        Assert.Equal(work.DaysPerLink, work.WorkLeft, 6);
 
-        s.AddRegiment(0, a.Id, BattalionType.Engineers, BattalionType.Engineers, BattalionType.Engineers, BattalionType.Engineers);
-        RunUntil(s, () => a.Buildings.Contains(BuildingType.Road), 24 * 40);
-        Assert.Contains(BuildingType.Road, a.Buildings);
-        Assert.Null(a.Constructing);
+        double wood = s.Human.Stockpile[ResourceType.Wood];
+        int left = s.LinksLeft(work);
+        Assert.True(s.CancelRoad(0, work.Id).Ok);
+        Assert.Empty(s.RoadProjects);
+        Assert.Equal(wood + 20 * left, s.Human.Stockpile[ResourceType.Wood], 6);
+    }
 
-        // Also in enemy land the nation occupies, and there however few people live in it.
-        Assert.False(s.CanBuild(0, b, BuildingType.Road).Ok);
-        s.DeclareWar(0, 1);
-        b.ControllerId = 0;
-        s.AddRegiment(0, b.Id, BattalionType.Engineers);
-        Assert.True(s.Build(0, b.Id, BuildingType.Road).Ok);
+    [Fact]
+    public void SupplyTravelsAlongRoadsBeyondItsRange()
+    {
+        var (s, a, _) = TwoNations();
+        bool Allowed(int id) => !_map.Provinces[id].IsWater && _map.Provinces[id].OwnerId != 1;
+        var (hours, _) = s.Pathfinder.FromSources([a.Id], canEnter: Allowed);
+        int far = Enumerable.Range(0, hours.Length).First(id => hours[id] > MilitaryRules.SupplyRangeHours * 3 && hours[id] < MilitaryRules.SupplyRangeHours * 5);
+        RunHours(s, 24);
+        Assert.False(s.IsSupplied(0, far));
+
+        var route = s.Pathfinder.FindPath(a.Id, far, Allowed)!.Value.Path.Prepend(a.Id).ToList();
+        for (int i = 0; i + 1 < route.Count; i++) s.Roads.Lay(route[i], route[i + 1], RoadKind.Road);
+        RunHours(s, 24);
+        Assert.True(s.IsSupplied(0, far));
+    }
+
+    [Fact]
+    public void OldSavesTurnRoadBuildingsIntoRoadsBetweenNeighbours()
+    {
+        var (s, a, b) = TwoNations();
+        var save = s.ToSave("test");
+        save = save with
+        {
+            Roads = null,
+            Provinces = [.. save.Provinces.Select(p => p.Id == a.Id || p.Id == b.Id ? p with { Buildings = [.. p.Buildings, BuildingType.Road] } : p)],
+        };
+        var loaded = GameSession.Load(_map, save);
+        Assert.Equal(RoadKind.Road, loaded.Roads.Between(a.Id, b.Id));
+        Assert.Equal(1, loaded.Roads.Count);
+        Assert.DoesNotContain(BuildingType.Road, a.Buildings);
     }
 
     [Fact]

@@ -94,8 +94,8 @@ public static class MilitaryRules
     public const int MaxUnitNameLength = 30;
 
     // Supply and recovery, every day
-    /// <summary>Supply reaches this many hours of marching from a city through territory the nation controls.</summary>
-    public const double SupplyRangeHours = 24 * 15;
+    /// <summary>Supply reaches this many hours of marching through territory the nation controls from a city, or from its roads and railways joined to one.</summary>
+    public const double SupplyRangeHours = 24 * 10;
     public const double OutOfSupplyEfficiency = 0.75;
     /// <summary>Share of their full organisation regiments regain each day in supply and out of combat.</summary>
     public const double OrganisationRecovery = 0.2;

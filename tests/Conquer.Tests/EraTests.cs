@@ -94,7 +94,6 @@ public class EraTests(WorldFixture world)
     [InlineData(BuildingType.Castle, Tech.Castles)]
     [InlineData(BuildingType.Factory, Tech.Industrialization)]
     [InlineData(BuildingType.Hospital, Tech.Sanitation)]
-    [InlineData(BuildingType.Railway, Tech.Railroad)]
     [InlineData(BuildingType.PowerPlant, Tech.Electricity)]
     public void BuildingsNeedTheirAdvance(BuildingType type, Tech tech)
     {
@@ -173,8 +172,7 @@ public class EraTests(WorldFixture world)
 
         var b = _map.Provinces[a.Neighbors.First(n => !_map.Provinces[n].IsWater)];
         double hours = s.Pathfinder.StepHours(a.Id, b.Id);
-        a.AddBuilding(BuildingType.Railway);
-        b.AddBuilding(BuildingType.Railway);
+        s.Roads.Lay(a.Id, b.Id, RoadKind.Railway);
         Assert.Equal(hours / 2, s.Pathfinder.StepHours(a.Id, b.Id), 6);
     }
 

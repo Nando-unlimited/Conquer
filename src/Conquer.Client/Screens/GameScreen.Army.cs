@@ -216,30 +216,35 @@ public sealed partial class GameScreen
     }
 
     /// <summary>
-    /// For a unit with engineers: a button for each road-like work its advances allow that the province still lacks.
-    /// It can go up in the player's land or in land they occupy, and advances only while engineers stay there.
+    /// For a unit with engineers: a button for each kind of road its advances allow, which opens the window to choose
+    /// where it goes (only from a city or HQ of the player's), and the works under way along whose route it stands.
     /// </summary>
     private void EngineerButtons(Unit unit, Province here, float x, ref float y, float w)
     {
-        int engineers = unit.Battalions.Count(b => b.Type == BattalionType.Engineers);
-        if (engineers == 0) return;
-        foreach (var type in Buildings.All.Where(t => t.Info().NeedsEngineers && !here.Buildings.Contains(t) && IsBuildingKnown(t)))
+        if (!unit.Battalions.Any(b => b.Type == BattalionType.Engineers)) return;
+        bool hub = _session.IsRoadHub(Human.Id, here.Id);
+        foreach (var kind in RoadKinds.All.Where(k => Human.Techs.Contains(k.Info().Requires)))
         {
-            var info = type.Info();
-            if (here.Constructing == type)
-            {
-                Ui.Text(x, y + 6, $"Construyendo {info.Name.ToLowerInvariant()}: quedan {here.ConstructionDaysLeft} días de trabajo", Theme.Accent, FontSize.Small);
-                y += 32;
-                continue;
-            }
-            var can = _session.CanBuild(Human.Id, here, type);
-            if (unit.IsMoving && can.Ok) can = CommandResult.Fail("La unidad está en marcha.");
-            int days = GameSession.BuildDays(Human, info.Days);
-            string tip = $"{info.Description}\nCoste: {info.Cost}. Son {days} días de trabajo: cada batallón de ingenieros en la provincia hace " +
-                         $"{MilitaryRules.EngineerWorkDays} al día, y la obra se para si se van." + (can.Ok ? "" : "\n" + can.Message);
-            if (Ui.Button(new Rect(x, y, w, 32), $"Construir {info.Name.ToLowerInvariant()}", can.Ok, tooltip: tip, size: FontSize.Small))
-                Show(_session.Build(Human.Id, here.Id, type));
+            var info = kind.Info();
+            bool can = hub && !unit.IsMoving;
+            string tip = !hub ? "Solo desde una provincia con una ciudad o un cuartel general tuyos."
+                : unit.IsMoving ? "La unidad está en marcha."
+                : $"Elige la ciudad o el cuartel general que quieres unir con {(info.Feminine ? "una" : "un")} {info.Name.ToLowerInvariant()}.";
+            if (Ui.Button(new Rect(x, y, w, 32), $"Construir {info.Name.ToLowerInvariant()}...", can, tooltip: tip, size: FontSize.Small))
+                OpenRoadWindow(here.Id, kind);
             y += 38;
+        }
+        foreach (var work in _session.RoadProjects.Where(r => r.OwnerId == Human.Id && r.Route.Contains(here.Id)).ToList())
+        {
+            var info = work.Kind.Info();
+            Ui.Text(x, y, $"{info.Name} a {HubName(work.To)}", Theme.Accent, FontSize.Small, bold: true);
+            y += 18;
+            int engineers = _session.EngineersOn(work);
+            Ui.Text(x, y, $"Quedan {_session.LinksLeft(work)} tramos · {Formations.BattalionCount(engineers)} de ingenieros en la ruta", Theme.TextDim, FontSize.Small);
+            y += 20;
+            if (Ui.Button(new Rect(x, y, w, 26), "Cancelar obra", size: FontSize.Small, tooltip: "Se devuelve lo que costaban los tramos sin hacer."))
+                Show(_session.CancelRoad(Human.Id, work.Id));
+            y += 32;
         }
     }
 

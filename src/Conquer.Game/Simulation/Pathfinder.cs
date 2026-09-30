@@ -1,4 +1,3 @@
-using Conquer.Game.Buildings;
 using Conquer.Game.Rules;
 using Conquer.Game.World;
 
@@ -9,13 +8,18 @@ namespace Conquer.Game.Simulation;
 /// a rule (<c>canEnter</c>) decides everything, the sea included, as it does for nations that sail and
 /// for aircraft. Polar ice can be crossed although it cannot be claimed. A step between neighbours
 /// takes the distance between their centres divided by the walking speed, scaled by how easy both
-/// terrains are to cross and how fast their roads are; ships sail faster.
+/// terrains are to cross and faster along a road or railway between them; ships sail faster.
 /// </summary>
 public sealed class Pathfinder
 {
     private readonly WorldMap _map;
+    private readonly RoadNetwork? _roads;
 
-    public Pathfinder(WorldMap map) => _map = map;
+    public Pathfinder(WorldMap map, RoadNetwork? roads = null)
+    {
+        _map = map;
+        _roads = roads;
+    }
 
     /// <summary>Whether land travellers (migrants, and anyone without a rule of their own) may enter the province.</summary>
     public bool CanEnter(int province) => !_map.Provinces[province].IsWater;
@@ -26,16 +30,16 @@ public sealed class Pathfinder
     {
         var a = _map.Provinces[from];
         var b = _map.Provinces[to];
-        double speed = GameRules.CitizenSpeedKmh * (Speed(a) + Speed(b)) / 2;
+        double speed = GameRules.CitizenSpeedKmh * (Speed(a) + Speed(b)) / 2 * (_roads?.Between(from, to)?.Info().Speed ?? 1);
         return _map.DistanceKm(a, b) / speed;
     }
 
-    /// <summary>How fast a province is crossed: its terrain, sped up by its roads and railways; the sea at sailing speed.</summary>
-    private static double Speed(Province p) => p.IsWater ? GameRules.SailingSpeed : p.Info.MoveSpeed * (1 + p.BuildingBonuses.MoveSpeed);
+    /// <summary>How fast a province is crossed: its terrain; the sea at sailing speed.</summary>
+    private static double Speed(Province p) => p.IsWater ? GameRules.SailingSpeed : p.Info.MoveSpeed;
 
-    /// <summary>The fastest a province can be crossed: the best terrain with every road-like building on it, or the sea.</summary>
+    /// <summary>The fastest a stretch can be crossed: the best terrain along the fastest railway, or the sea.</summary>
     private static readonly double FastestSpeed = Math.Max(GameRules.SailingSpeed,
-        Enum.GetValues<Biome>().Max(b => b.Info().MoveSpeed) * (1 + Enum.GetValues<BuildingType>().Sum(b => b.Info().Effects.MoveSpeed)));
+        Enum.GetValues<Biome>().Max(b => b.Info().MoveSpeed) * RoadKinds.All.Max(r => r.Info().Speed));
 
     /// <summary>
     /// Fastest route (A*), excluding the start province, or null when unreachable. <paramref name="canEnter"/>

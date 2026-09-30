@@ -2,6 +2,22 @@
 
 Todos los cambios del juego, del más reciente al más antiguo. Cada versión es un commit cuyo título es su número.
 
+## [1.36.0] - 2026-09-30
+
+### Cambiado
+- **Carreteras y ferrocarriles**: ya no son edificios de una provincia, sino líneas que unen ciudades y cuarteles generales.
+  - Los construyen los ingenieros, solo desde una provincia con una ciudad o un cuartel general tuyos. Con el botón «Construir carretera…» (o «Construir ferrocarril…») de su panel eliges qué otra ciudad o cuartel unir; el más cercano sale elegido.
+  - La ruta es la misma que seguiría un ejército, por tu tierra, la que ocupas o la libre, y aprovecha las carreteras que ya hay. Las ciudades por las que pasa quedan unidas también. La ventana muestra la ruta en el mapa, los tramos nuevos, el coste, el trabajo y las ciudades que une.
+  - Se paga por tramo entre dos provincias: la carretera, 20 de madera y 8 de oro; el ferrocarril, 25 de madera, 20 de oro, 15 de hierro y 5 de carbón. Cada tramo lleva 10 días de trabajo (15 el ferrocarril). Cada batallón de ingenieros en la ruta hace un día de trabajo al día, tramo a tramo desde el origen; sin ingenieros la obra se para. Se puede cancelar desde el panel de los ingenieros y se devuelve lo de los tramos sin hacer.
+  - Se ven en el mapa como en Hearts of Iron: la carretera como una franja clara, el ferrocarril como una línea oscura con traviesas y las obras como trazos dorados.
+  - Por ellas se marcha más deprisa: ×1,5 por carretera y ×2 por ferrocarril.
+- **Suministro**: llega a todo lo que tus carreteras y ferrocarriles unen a tus ciudades, y desde ahí hasta 10 días de marcha por tierra propia o libre (antes, 15 días desde las ciudades).
+- Los rivales unen sus ciudades con su capital, primero por carretera y después por ferrocarril.
+- Las partidas guardadas convierten sus calzadas y ferrocarriles en tramos entre provincias vecinas que tuvieran los dos el mismo; las obras de calzada o ferrocarril a medias se pierden.
+
+### Corregido
+- Las duraciones ya no salen como «6 d 24 h».
+
 ## [1.35.0] - 2026-09-30
 
 ### Añadido
