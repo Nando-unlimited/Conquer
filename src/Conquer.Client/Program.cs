@@ -26,7 +26,7 @@ namespace Conquer.Client
 
     /// <summary>
     /// Command line, mainly for testing:
-    /// <c>--new random|earth [--seed N] [--players N] [--difficulty veryeasy|easy|normal|hard|veryhard] [--size small|medium|large]</c> skips the menus and starts a game;
+    /// <c>--new random|earth [--seed N] [--players N] [--difficulty veryeasy|easy|normal|hard|veryhard] [--size tiny|small|medium|large]</c> skips the menus and starts a game;
     /// <c>--days N</c> founds the player's capital and fast-forwards N days;
     /// <c>--zoom Z</c>, <c>--at longitude,latitude</c> and <c>--mode terrain|political|population|mood|fertility</c> set the view;
     /// <c>--nation summary|cities|provinces|science</c> opens the nation screen on that tab;

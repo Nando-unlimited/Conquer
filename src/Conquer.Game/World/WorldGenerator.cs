@@ -26,6 +26,7 @@ public sealed record WorldSettings(MapKind Kind, int Seed, int ProvinceCount = 2
 /// <summary>How big a random world is.</summary>
 public enum MapSize
 {
+    Tiny,
     Small,
     Medium,
     Large,
@@ -41,6 +42,7 @@ public static class MapSizes
 
     private static readonly Dictionary<MapSize, MapSizeInfo> Table = new()
     {
+        [MapSize.Tiny] = new("Diminuto", "Unas islas y un continente pequeño, en provincias grandes: unas seis veces menos provincias que el grande.", 0.12, 5100),
         [MapSize.Small] = new("Pequeño", "Poca tierra, en provincias más grandes: unas tres veces menos provincias que el grande.", 0.18, 9300),
         [MapSize.Medium] = new("Mediano", "Menos tierra y provincias algo más grandes: unos dos tercios de las provincias del grande.", 0.24, 17500),
         [MapSize.Large] = new("Grande", "Un 30 % de tierra en provincias del tamaño de siempre.", 0.3, 25000),

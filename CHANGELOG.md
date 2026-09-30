@@ -2,6 +2,11 @@
 
 Todos los cambios del juego, del más reciente al más antiguo. Cada versión es un commit cuyo título es su número.
 
+## [1.38.0] - 2026-09-30
+
+### Añadido
+- **Mapa diminuto**: un cuarto tamaño para el mapa aleatorio, con un 12 % de tierra en provincias unas 2,5 veces más grandes que las del mapa grande: unas 3.500 provincias de tierra, la sexta parte del grande.
+
 ## [1.37.0] - 2026-09-30
 
 ### Añadido

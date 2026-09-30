@@ -36,6 +36,12 @@ public class WorldGenerationTests(ITestOutputHelper output)
         Assert.True(smallLand.Average(p => p.AreaKm2) > 1.5 * bigLand.Average(p => p.AreaKm2));
         Assert.Equal(MapSize.Small, small.Settings!.Size);
 
+        var tiny = WorldGenerator.Generate(WorldSettings.New(MapKind.Random, 1234, Difficulty.Normal, MapSize.Tiny));
+        var tinyLand = tiny.Provinces.Where(p => !p.IsWater).ToList();
+        output.WriteLine($"tiny {tinyLand.Count} land provinces of {tinyLand.Average(p => p.AreaKm2):0} km2");
+        Assert.InRange(tinyLand.Count / (double)bigLand.Count, 0.12, 0.22);
+        Assert.True(tinyLand.Average(p => p.AreaKm2) > smallLand.Average(p => p.AreaKm2));
+
         // The Earth has one size; old saves, which never wrote it, were large.
         Assert.Equal(MapSize.Large, WorldSettings.New(MapKind.Earth, 1, Difficulty.Normal, MapSize.Small).Size);
         Assert.Equal(MapSize.Large, new WorldSettings(MapKind.Random, 1).Size);

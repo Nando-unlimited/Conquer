@@ -88,7 +88,7 @@ public sealed class NewGameScreen : IScreen
             var size = MapSizes.All[i];
             bool chosen = randomMap ? _size == size : size == MapSize.Large;
             if (ui.Button(new Rect(x + 120 + i * (sizeWidth + 6), y, sizeWidth, 32), size.Info().Name, randomMap, active: chosen,
-                    tooltip: randomMap ? size.Info().Description : "La Tierra real tiene un solo tamaño."))
+                    tooltip: randomMap ? size.Info().Description : "La Tierra real tiene un solo tamaño.", size: FontSize.Small))
                 _size = size;
         }
         y += 46;
