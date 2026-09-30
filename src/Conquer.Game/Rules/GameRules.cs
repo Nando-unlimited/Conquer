@@ -51,6 +51,11 @@ public static class GameRules
     public const float GreatRiverFlow = 300;
     /// <summary>A river's floodplain grows this many times the food, and feeds this many times the people.</summary>
     public const double RiverFertility = 1.25;
+
+    /// <summary>Land above this height (in metres) is peaks: one province per range, crossable but never claimed (maps since 1.33.0).</summary>
+    public const short PeakElevation = 5000;
+    /// <summary>Patches of peaks smaller than this many pixels keep the biome they would have had.</summary>
+    public const int MinPeakPixels = 30;
     /// <summary>Workers beyond the land's capacity still produce this share of normal food.</summary>
     public const double OvercrowdedFoodShare = 0.3;
 

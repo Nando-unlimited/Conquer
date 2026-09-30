@@ -722,7 +722,7 @@ public sealed partial class GameSession
         if (!unit.IsMilitary) return CommandResult.Fail("Solo las unidades militares reclaman territorio.");
         if (unit.IsMoving) return CommandResult.Fail("La unidad está en marcha.");
         var p = Map.Provinces[unit.ProvinceId];
-        if (!p.IsClaimable) return CommandResult.Fail(p.IsWater ? "El océano no se puede reclamar." : "Los polos no se pueden reclamar.");
+        if (!p.IsClaimable) return CommandResult.Fail(p.IsWater ? "El océano no se puede reclamar." : p.Biome == Biome.Peaks ? "Las cumbres no se pueden reclamar." : "Los polos no se pueden reclamar.");
         if (p.OwnerId == unit.OwnerId) return CommandResult.Fail("Ya es tuya.");
         if (p.OwnerId >= 0) return CommandResult.Fail("Esta provincia tiene dueño.");
         return CommandResult.Success();

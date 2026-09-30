@@ -89,6 +89,8 @@ public sealed partial class GameScreen : IScreen
             _selectedProvince = capitalProvince;
         }
         if (options.Zoom is float zoom) _camera.LookAt(_camera.Center, zoom);
+        if (options.At is { } at)
+            _camera.LookAt(new Vector2((at.Longitude + 180) / 360 * Map.Width, (90 - at.Latitude) / 180 * Map.Height));
         if (Enum.TryParse<MapMode>(options.Mode, ignoreCase: true, out var mode)) _renderer.Mode = mode;
         if (Enum.TryParse<NationTab>(options.Nation, ignoreCase: true, out var tab)) { _nation.Tab = tab; _nation.Visible = true; }
         _provinceTab = options.Panel switch { "buildings" => ProvinceTab.Buildings, "army" => ProvinceTab.Army, _ => ProvinceTab.General };

@@ -2,6 +2,12 @@
 
 Todos los cambios del juego, del más reciente al más antiguo. Cada versión es un commit cuyo título es su número.
 
+## [1.33.0] - 2026-09-30
+
+### Añadido
+- **Cumbres**: en las partidas nuevas, la tierra por encima de 5.000 m es un bioma propio, «Cumbres», y cada cordillera es una sola provincia: el Tíbet y el Himalaya, los Andes centrales, el Kunlun, el Tian Shan… Como los polos, no se pueden reclamar ni poblar, pero las tropas las cruzan, despacio. La Antártida sigue siendo hielo polar. En los mapas aleatorios casi no hay tierra tan alta.
+- Las partidas guardadas conservan su mapa: la partida guarda la versión del generador con que se creó, y las anteriores siguen sin cumbres.
+
 ## [1.32.1] - 2026-09-30
 
 ### Corregido

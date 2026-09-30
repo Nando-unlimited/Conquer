@@ -28,13 +28,13 @@ namespace Conquer.Client
     /// Command line, mainly for testing:
     /// <c>--new random|earth [--seed N] [--players N] [--difficulty veryeasy|easy|normal|hard|veryhard]</c> skips the menus and starts a game;
     /// <c>--days N</c> founds the player's capital and fast-forwards N days;
-    /// <c>--zoom Z</c> and <c>--mode terrain|political|population|mood|fertility</c> set the view;
+    /// <c>--zoom Z</c>, <c>--at longitude,latitude</c> and <c>--mode terrain|political|population|mood|fertility</c> set the view;
     /// <c>--nation summary|cities|provinces|science</c> opens the nation screen on that tab;
     /// <c>--panel buildings|army</c> shows that tab of the selected province, and <c>--panel regiment</c> a sample regiment (<c>--panel march</c> sends it a few provinces away, <c>--panel edit</c> opens its editor with officers in the reserve), and <c>--panel found</c> the dialog to name the first city;
     /// <c>--load file.conquer</c> carries on a saved game; <c>--menu new|load</c> opens that menu screen;
     /// <c>--screenshot file.png</c> saves the first frames to a PNG and exits.
     /// </summary>
-    public sealed record StartOptions(QuickStart? QuickStart, int Days = 0, float? Zoom = null, string? Mode = null, string? Screenshot = null, string? Nation = null, string? Panel = null, string? Load = null, string? Menu = null)
+    public sealed record StartOptions(QuickStart? QuickStart, int Days = 0, float? Zoom = null, string? Mode = null, string? Screenshot = null, string? Nation = null, string? Panel = null, string? Load = null, string? Menu = null, (float Longitude, float Latitude)? At = null)
     {
         public static StartOptions Parse(string[] args)
         {
@@ -42,6 +42,7 @@ namespace Conquer.Client
             int seed = Environment.TickCount & 0xFFFF, players = 4, days = 0;
             var difficulty = Difficulty.Normal;
             float? zoom = null;
+            (float, float)? at = null;
             for (int i = 0; i < args.Length - 1; i++)
             {
                 string value = args[i + 1];
@@ -59,15 +60,19 @@ namespace Conquer.Client
                     case "--panel": panel = value; break;
                     case "--load": load = value; break;
                     case "--menu": menu = value; break;
+                    case "--at":
+                        var parts = value.Split(',');
+                        at = (float.Parse(parts[0], System.Globalization.CultureInfo.InvariantCulture), float.Parse(parts[1], System.Globalization.CultureInfo.InvariantCulture));
+                        break;
                 }
             }
             QuickStart? quick = null;
             if (kind != null)
             {
                 var map = kind.Equals("earth", StringComparison.OrdinalIgnoreCase) ? MapKind.Earth : MapKind.Random;
-                quick = new QuickStart(new WorldSettings(map, seed, Difficulty: difficulty), players);
+                quick = new QuickStart(new WorldSettings(map, seed, Difficulty: difficulty, Generator: WorldGenerator.LatestGenerator), players);
             }
-            return new StartOptions(quick, days, zoom, mode, screenshot, nation, panel, load, menu);
+            return new StartOptions(quick, days, zoom, mode, screenshot, nation, panel, load, menu, at);
         }
     }
 }

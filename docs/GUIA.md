@@ -73,6 +73,7 @@ Todas las constantes de equilibrio (por día de juego salvo que se diga otra cos
 | `InstitutionPenalty` | Mientras no se adopta, los avances de la era que abre cuestan un 50 % más. |
 | `NeighbourResearchDiscount`, `MaxNeighbourDiscounts` | Un avance cuesta un 10 % menos por cada nación vecina que ya lo conoce, contando 3 como mucho. |
 | `MinRiverFlow`, `GreatRiverFlow` | Agua que ha de reunir un tramo para ser río (60) y para ser gran río (300); solo los grandes ríos cambian el juego. |
+| `PeakElevation`, `MinPeakPixels` | La tierra por encima de 5.000 m es cumbres (en los mapas del generador 2); las manchas de menos de 30 píxeles conservan su bioma. |
 | `RiverFertility` | La tierra de un gran río da un 25 % más de comida y de capacidad. |
 | `OvercrowdedFoodShare` | Lo que rinden los trabajadores que superan la capacidad de la tierra. |
 | `DailyEmigrationShare`, `MinEmigrationCityPopulation` | Parte de una ciudad que emigra cada día, y población por debajo de la cual deja de enviar gente. |
@@ -437,7 +438,7 @@ El ejército de un rival.
 ### `World/Biome.cs`
 | Elemento | Qué es |
 | --- | --- |
-| `Biome` | Los 17 biomas (océano profundo, océano, mar costero, lago, hielo polar, tundra, taiga, bosque templado, pradera, estepa, desierto, sabana, selva tropical, humedal, colinas, montañas, alta montaña). |
+| `Biome` | Los 18 biomas (océano profundo, océano, mar costero, lago, hielo polar, tundra, taiga, bosque templado, pradera, estepa, desierto, sabana, selva tropical, humedal, colinas, montañas, alta montaña y cumbres, este al final para no cambiar el número de los demás). Las cumbres no son habitables (no se reclaman) pero se cruzan despacio, como el hielo. |
 | `BiomeInfo` | Ficha de cada bioma: nombre, si es agua, si es habitable, densidad de provincias (valores bajos, provincias grandes), rendimiento de comida y madera, habitantes por km², facilidad de paso y color. |
 | `Biomes.Info(bioma)` | Devuelve la ficha. **Aquí se equilibra cada tipo de terreno.** |
 
@@ -463,7 +464,7 @@ Edificios: los terminados (`Buildings`) y la suma de sus efectos (`BuildingBonus
 ### `World/WorldGenerator.cs`
 | Elemento | Qué es |
 | --- | --- |
-| `WorldSettings` | Tipo de mapa, semilla, número objetivo de provincias (25.000) y dificultad (Normal si no se dice, también en las partidas guardadas antes de que existiera). |
+| `WorldSettings` | Tipo de mapa, semilla, número objetivo de provincias (25.000), dificultad (Normal si no se dice, también en las partidas guardadas antes de que existiera) y versión del generador (`Generator`): las partidas nuevas usan `WorldGenerator.LatestGenerator` (2, con cumbres) y las guardadas antes de que existiera, el 1, así que su mapa se regenera igual. **Un cambio en la generación que altere el mapa debe ir en una versión nueva del generador**, o las partidas guardadas dejarán de cargar. |
 | `Generate(ajustes, progreso)` | Crea el mundo en cinco pasos: relieve → clima y biomas → provincias → recursos → ríos (cada provincia guarda el mayor que la cruza). Las provincias nacen sin nombre. Informa del paso en curso para la pantalla de carga. |
 
 ### `World/EarthData.cs`
@@ -494,7 +495,7 @@ lago y glaciar por píxel.
 ### `World/Generation/ClimateGenerator.cs`
 | Función | Qué hace |
 | --- | --- |
-| `Assign(...)` | Bioma de cada píxel a partir de temperatura (latitud y altitud) y humedad (bandas de latitud y distancia al mar). |
+| `Assign(...)` | Bioma de cada píxel a partir de temperatura (latitud y altitud) y humedad (bandas de latitud y distancia al mar). Con cumbres (generador 2), `MarkPeaks` convierte en cumbres cada mancha de tierra por encima de 5.000 m (sin contar lagos ni las latitudes de más de 60°, donde la altura es la del casquete polar). |
 | `LatitudeMoisture(lat)` | Humedad según la latitud: ecuador húmedo, subtrópicos secos, latitudes medias húmedas, polos secos. |
 | `Slope(...)` | Desnivel con los vecinos (para detectar colinas). |
 | `DistanceToOceanKm(...)` | Distancia de cada píxel al mar (los interiores de los continentes son más secos). |
@@ -505,13 +506,14 @@ Divide el mapa en provincias.
 | Función | Qué hace |
 | --- | --- |
 | `Generate(...)` | Proceso completo: semillas → crecimiento → relajación → segundo crecimiento → huecos → provincias. |
-| `Category(bioma)` | Mar, lago, hielo o tierra: una provincia nunca mezcla categorías. |
+| `Category(bioma)` | Mar, lago, hielo, cumbres o tierra: una provincia nunca mezcla categorías. |
 | `StepCosts(...)` | Coste con algo de ruido por píxel, para que las fronteras no sean rectas. |
 | `PlaceSeeds(...)` | Reparte las semillas según la densidad del bioma y el área real (menos semillas en desiertos, polos y océanos, así que sus provincias son mayores). |
 | `Grow(...)` | Cada semilla se extiende por su categoría (camino más corto con cola por cubos). |
 | `Relax(...)` | Mueve cada semilla al centro de su región (paso de Lloyd) para formas más regulares. |
 | `CircularMeanX(...)` | Media de X teniendo en cuenta que el mapa da la vuelta. |
 | `FillLeftovers(...)` | Zonas sin semilla (islas, lagos aislados): las diminutas se unen a una vecina y el resto pasan a ser provincias propias. |
+| `MergePeaks(...)` | Cada cordillera de cumbres (píxeles que se tocan, también en diagonal) pasa a ser una sola provincia. |
 | `Neighbours4(...)`, `Edge(...)` | Ayudas. |
 | `BuildProvinces(...)` | Crea los objetos `Province`: bioma dominante, área, altitud, centro y vecinas. |
 
@@ -546,7 +548,7 @@ Punto de entrada. Comprueba OpenGL 3.3 (`GlSupport.Ensure`), pone el formato de 
 
 | Elemento | Qué es |
 | --- | --- |
-| `StartOptions.Parse(args)` | Opciones de línea de comandos para pruebas: `--new random|earth`, `--seed`, `--players`, `--difficulty veryeasy|easy|normal|hard|veryhard`, `--days` (funda la capital y avanza N días), `--zoom`, `--mode terrain|political|population|mood|fertility|resources|institutions`, `--nation summary|cities|provinces|science|army|templates|diplomacy` (abre la pantalla de la nación), `--panel buildings|army|regiment|found` (una pestaña de la provincia seleccionada, un regimiento de muestra o el diálogo para nombrar la primera ciudad), `--load fichero.conquer` (carga una partida guardada), `--menu new|load` (abre esa pantalla del menú) y `--screenshot fichero.png` (guarda una captura del juego y se cierra). |
+| `StartOptions.Parse(args)` | Opciones de línea de comandos para pruebas: `--new random|earth`, `--seed`, `--players`, `--difficulty veryeasy|easy|normal|hard|veryhard`, `--days` (funda la capital y avanza N días), `--zoom`, `--at longitud,latitud` (centra la vista ahí), `--mode terrain|political|population|mood|fertility|resources|institutions`, `--nation summary|cities|provinces|science|army|templates|diplomacy` (abre la pantalla de la nación), `--panel buildings|army|regiment|march|edit|found` (una pestaña de la provincia seleccionada, un regimiento de muestra, en marcha o con su ventana de edición abierta, o el diálogo para nombrar la primera ciudad), `--load fichero.conquer` (carga una partida guardada), `--menu new|load` (abre esa pantalla del menú) y `--screenshot fichero.png` (guarda una captura del juego y se cierra). |
 | `QuickStart` | Partida que empieza directamente, sin menús. |
 
 ### `ConquerApp.cs`
@@ -578,7 +580,7 @@ La pantalla de juego. Clase parcial: el ejército en pantalla está en `GameScre
 | Función | Qué hace |
 | --- | --- |
 | `GameScreen(...)` | Crea el renderizador y la cámara y centra la vista en tus colonos o, en una partida cargada, en tu capital (sin repetir los avisos antiguos). |
-| `ApplyTestOptions(...)`, `ShowSampleArmy(...)` | Aplican `--days`, `--zoom`, `--mode`, `--nation` y `--panel` (con `regiment`, entrena y selecciona una unidad de muestra bajo un cuerpo; con `march`, además la pone en marcha para ver su ruta; con `edit`, recluta oficiales y abre su ventana de edición, `ShowSampleOfficers`; con `found`, abre el diálogo para nombrar la ciudad de los colonos). |
+| `ApplyTestOptions(...)`, `ShowSampleArmy(...)` | Aplican `--days`, `--zoom`, `--at`, `--mode`, `--nation` y `--panel` (con `regiment`, entrena y selecciona una unidad de muestra bajo un cuerpo; con `march`, además la pone en marcha para ver su ruta; con `edit`, recluta oficiales y abre su ventana de edición, `ShowSampleOfficers`; con `found`, abre el diálogo para nombrar la ciudad de los colonos). |
 | `Frame(dt)` | Fotograma: teclas, tiempo, refresco del mapa, dibujo del mapa, marcadores, paneles e interacción. |
 | `AdvanceTime(dt)` | Convierte tiempo real en horas de juego según la velocidad (pausa, 1 h/s … 7 días/s). |
 | `SetSpeed`, `HandleKeys` | Velocidad y teclado (Espacio, 1-5, Tab, Inicio, N, F1, +/-, WASD, Esc). Mientras la ayuda (`HelpView`) está abierta el tiempo se para y el mapa no responde; con la ventana de edición de una unidad abierta, las teclas van a su nombre (Intro renombra, Esc cierra). |
@@ -775,6 +777,7 @@ Uso: ver el README.
 | Fichero | Qué comprueba |
 | --- | --- |
 | `WorldGenerationTests.cs` | Ambos mapas salen con unas 25.000 provincias y todos los píxeles asignados. |
+| `PeakTests.cs` | En la Tierra del generador 2, cada cordillera por encima de 5.000 m (el Tíbet y el Himalaya, los Andes…) es una sola provincia de cumbres y la Antártida sigue siendo hielo; las cumbres no se reclaman pero las tropas las cruzan; la partida guarda la versión del generador; los mapas del generador 1 no tienen cumbres. |
 | `GameplayTests.cs` | Inicio sin territorio y con los recursos correctos; fundar la capital; océanos y polos no reclamables; las unidades terrestres no entran al mar pero sí cruzan hielo; nada cruza el mar; provincias mayores en desiertos, polos y océanos; solo las unidades militares reclaman; velocidad de 10 km/h; migración diaria; migración forzada con su coste; consumo de comida; la capital gana humor y fertilidad; el hambre los hunde; los migrantes forzados llegan descontentos; las provincias descontentas no pagan impuestos; la fertilidad acelera el crecimiento; las reservas de comida alegran; las fiestas cuestan oro y duran un mes; las estadísticas de la nación suman bien; cada yacimiento es una bolsa finita que empieza llena; muchas provincias tienen yacimientos y algunas varios; las bolsas se agotan y dejan de producir; las ciudades producen ciencia que descubre avances; los niveles se abren con un avance del anterior; elegir otro avance de la rama sustituye al que investigaba; la ciencia se reparte según la prioridad entre las ramas que investigan algo; sin nada elegido la ciencia se guarda y entra en el siguiente avance elegido; los vecinos que conocen un avance lo abaratan; los avances mejoran la economía; los edificios cuestan y tardan, tienen sus requisitos y mejoran su provincia; al principio solo se conocen los recursos antiguos y los avances revelan los demás; los recursos desconocidos no se explotan; la IA se expande e investiga. `WorldFixture` genera un único mundo para todos. |
 | `MilitaryTests.cs` | Instrucción de batallones (hombres, recursos y días); batallones que piden su avance (o sus dos avances); legionarios, catapultas y catafractos piden sus avances de la era Clásica; unir (hasta 12), separar y velocidad del batallón más lento; no se entra en tierras ajenas sin guerra; ocupar tierra enemiga sin defensa; un ataque fuerte gana y uno débil se rompe; defensores rodeados destruidos; la paz devuelve lo ocupado; la IA solo acepta la paz pasado un tiempo; desgaste sin suministro; recuperación y refuerzos desde la capital; bonificación de mando en cadena y alcance; las unidades se llaman por su tamaño y conservan su número; un cuerpo manda 5 unidades como mucho; el mantenimiento diario y el ejército sin pagar; cada cuartel tiene un general de su rango que manda a las unidades a su alcance; los oficiales ganan estrellas con victorias y ayudan por sus virtudes; las batallas dan experiencia y victorias al general; los reclutas diluyen la experiencia; solo combate lo que cabe en el frente, con la artillería detrás; las armas combinadas; generales y experiencia se guardan, los generales de partidas antiguas pasan a ser oficiales y los cuarteles sin general reciben uno al cargar; cada nación empieza con una plantilla de dos guerreros; las plantillas se editan dentro de sus límites; una plantilla entrena un regimiento entero a la vez. |
 | `OfficerTests.cs` | Reclutar oficiales cuesta oro y llena la reserva; ningún defecto anula una virtud; asignar, relevar y retirar pasan por la reserva; los oficiales ascienden al crecer su unidad y no bajan; al unir, la unidad conserva su oficial o toma el de la otra; varios batallones se separan juntos y sin oficial; renombrar y volver al nombre automático; los defectos estorban y las virtudes ayudan (ataque, velocidad, mantenimiento); licenciar devuelve el oficial a la reserva; oficiales, reserva y nombres se guardan. |

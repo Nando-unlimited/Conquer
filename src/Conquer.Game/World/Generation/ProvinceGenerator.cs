@@ -4,12 +4,13 @@ namespace Conquer.Game.World.Generation;
 /// Splits the raster into provinces. Seeds are scattered with a density that depends on the biome
 /// (deserts, ice and oceans get far fewer, so their provinces are much larger) and on the real
 /// area of each pixel, then grown outwards with slightly noisy costs so borders look organic.
-/// A province never mixes sea, lake, ice and habitable land.
+/// A province never mixes sea, lake, ice, peaks and habitable land, and each range of peaks is a single province.
 /// </summary>
 internal static class ProvinceGenerator
 {
     private const int CellSize = 5;
     private const int MinComponentPixels = 3;
+    private const byte PeaksCategory = 4;
 
     public static (int[] Ids, List<Province> Provinces) Generate(short[] elevation, Biome[] biomes, int width, int height, int seed, int targetCount)
     {
@@ -23,6 +24,7 @@ internal static class ProvinceGenerator
         seeds = Relax(seeds, ids, width, height);
         ids = Grow(seeds, category, stepCost, width, height);
         FillLeftovers(ids, seeds, category, stepCost, width, height);
+        MergePeaks(ids, category, width, height);
 
         var provinces = BuildProvinces(ids, seeds, elevation, biomes, width, height);
         return (ids, provinces);
@@ -32,6 +34,7 @@ internal static class ProvinceGenerator
     {
         Biome.Lake => 1,
         Biome.PolarIce => 2,
+        Biome.Peaks => PeaksCategory,
         _ when b.Info().IsWater => 0,
         _ => 3,
     };
@@ -230,6 +233,41 @@ internal static class ProvinceGenerator
             int id = seeds.Count;
             seeds.Add(component[component.Count / 2]);
             foreach (int i in component) ids[i] = id;
+        }
+    }
+
+    /// <summary>
+    /// Each range of peaks (pixels touching, as provinces grow, also corner to corner) becomes one province: all its
+    /// pixels take the id of its first one. The ids left unused are compacted away later.
+    /// </summary>
+    private static void MergePeaks(int[] ids, byte[] category, int width, int height)
+    {
+        var visited = new bool[ids.Length];
+        var stack = new Stack<int>();
+        for (int start = 0; start < ids.Length; start++)
+        {
+            if (visited[start] || category[start] != PeaksCategory) continue;
+            int id = ids[start];
+            visited[start] = true;
+            stack.Push(start);
+            while (stack.Count > 0)
+            {
+                int i = stack.Pop();
+                ids[i] = id;
+                int x = i % width, y = i / width;
+                for (int dy = -1; dy <= 1; dy++)
+                {
+                    int ny = y + dy;
+                    if (ny < 0 || ny >= height) continue;
+                    for (int dx = -1; dx <= 1; dx++)
+                    {
+                        int j = ny * width + (x + dx + width) % width;
+                        if (visited[j] || category[j] != PeaksCategory) continue;
+                        visited[j] = true;
+                        stack.Push(j);
+                    }
+                }
+            }
         }
     }
 

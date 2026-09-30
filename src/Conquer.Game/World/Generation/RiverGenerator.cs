@@ -240,7 +240,7 @@ internal static class RiverGenerator
         Biome.TropicalForest => 1.5,
         Biome.Wetland => 1.2,
         Biome.TemperateForest or Biome.Hills or Biome.Mountains => 1.0,
-        Biome.HighMountains or Biome.Taiga => 0.8,
+        Biome.HighMountains or Biome.Peaks or Biome.Taiga => 0.8,
         Biome.Grassland or Biome.Savanna => 0.6,
         Biome.Tundra => 0.4,
         Biome.Steppe => 0.25,

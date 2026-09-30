@@ -32,6 +32,7 @@ public sealed class HelpView
             "## Qué hacer después",
             "- En la pantalla de la nación (N), pestaña Ciencia, elige qué investigar en cada rama.",
             "- Entrena guerreros en la ciudad y reclama con ellos las provincias libres de alrededor: los colonos de tus ciudades irán a vivir allí solos.",
+            $"- El mar, el hielo polar y las cumbres (por encima de {GameRules.PeakElevation:N0} m, una sola provincia por cordillera) no se pueden reclamar. Las tropas cruzan el hielo y las cumbres, despacio.",
             "- Construye granjas y aserraderos, y una ciudad nueva donde haya 500 habitantes.",
             "- Envía colonos desde una ciudad para fundar otras más lejos.",
             "## Consejo",

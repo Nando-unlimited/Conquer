@@ -43,7 +43,7 @@ public static class MilitaryRules
     /// </summary>
     public static int FrontWidth(Biome biome) => biome switch
     {
-        Biome.HighMountains => 4,
+        Biome.HighMountains or Biome.Peaks => 4,
         Biome.Mountains => 6,
         Biome.TemperateForest or Biome.Taiga or Biome.TropicalForest or Biome.Wetland => 8,
         Biome.Hills => 9,
@@ -54,7 +54,7 @@ public static class MilitaryRules
     public static double TerrainDefense(Biome biome) => biome switch
     {
         Biome.Hills => 1.25,
-        Biome.Mountains or Biome.HighMountains => 1.5,
+        Biome.Mountains or Biome.HighMountains or Biome.Peaks => 1.5,
         Biome.TemperateForest or Biome.Taiga or Biome.TropicalForest or Biome.Wetland => 1.2,
         _ => 1,
     };

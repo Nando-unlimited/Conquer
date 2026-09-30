@@ -109,7 +109,7 @@ public sealed class NewGameScreen : IScreen
 
         // The Earth map is fixed, but the seed still drives start positions, resources and rivals.
         if (ui.Button(new Rect(x, panel.Bottom - 64, w, 44), "Comenzar", size: FontSize.Large))
-            _app.Show(new LoadingScreen(_app, new WorldSettings(_kind, _seed, Difficulty: _difficulty), _players));
+            _app.Show(new LoadingScreen(_app, new WorldSettings(_kind, _seed, Difficulty: _difficulty, Generator: WorldGenerator.LatestGenerator), _players));
 
         if (ui.Button(new Rect(cx - 230, panel.Bottom + 20, 460, 40), "Volver") || ui.Input.KeysPressed.Contains(Silk.NET.Input.Key.Escape))
             _app.Show(new MainMenuScreen(_app));

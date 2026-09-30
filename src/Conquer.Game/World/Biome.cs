@@ -19,6 +19,8 @@ public enum Biome : byte
     Hills,
     Mountains,
     HighMountains,
+    /// <summary>Land above <see cref="Rules.GameRules.PeakElevation"/> (maps since 1.33.0): one province per range, crossable but never claimed. Last, so the others keep their numbers.</summary>
+    Peaks,
 }
 
 /// <param name="Habitable">Whether the province can be claimed, settled and populated.</param>
@@ -59,6 +61,7 @@ public static class Biomes
         new("Colinas", false, true, 0.9f, 1.0f, 1.2f, 8f, 0.7f, 0xFF9C9460),
         new("Montañas", false, true, 0.6f, 0.6f, 0.8f, 3f, 0.5f, 0xFF8A7B6A),
         new("Alta montaña", false, true, 0.3f, 0.3f, 0.1f, 0.5f, 0.35f, 0xFFC8C3BE),
+        new("Cumbres", false, false, 0.02f, 0, 0, 0, 0.4f, 0xFFDEDAD6),
     ];
 
     public static BiomeInfo Info(this Biome biome) => Table[(int)biome];

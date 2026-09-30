@@ -3,13 +3,20 @@ using Conquer.Game.World.Generation;
 
 namespace Conquer.Game.World;
 
-/// <summary>What a map is generated from. The difficulty changes how many deposits it has and how big they are.</summary>
-public sealed record WorldSettings(MapKind Kind, int Seed, int ProvinceCount = 25000, Difficulty Difficulty = Difficulty.Normal);
+/// <summary>
+/// What a map is generated from. The difficulty changes how many deposits it has and how big they are. <paramref name="Generator"/>
+/// is the version of the generator that made it: saves keep theirs, so a game carries on on the map it began on, and
+/// new games use <see cref="WorldGenerator.LatestGenerator"/>. It is 1 in saves from before it was written.
+/// </summary>
+public sealed record WorldSettings(MapKind Kind, int Seed, int ProvinceCount = 25000, Difficulty Difficulty = Difficulty.Normal, int Generator = 1);
 
 public static class WorldGenerator
 {
     public const int Width = EarthData.Width;
     public const int Height = EarthData.Height;
+
+    /// <summary>The generator new games use. 2 (1.33.0): land above <see cref="GameRules.PeakElevation"/> becomes peaks, one province per range.</summary>
+    public const int LatestGenerator = 2;
 
     /// <param name="progress">Receives a short description of each stage as it starts.</param>
     public static WorldMap Generate(WorldSettings settings, Action<string>? progress = null)
@@ -20,7 +27,7 @@ public static class WorldGenerator
             : TerrainGenerator.Random(Width, Height, settings.Seed);
 
         progress?.Invoke("Calculando clima y biomas...");
-        var biomes = ClimateGenerator.Assign(terrain, Width, Height, settings.Seed, settings.Kind == MapKind.Earth);
+        var biomes = ClimateGenerator.Assign(terrain, Width, Height, settings.Seed, settings.Kind == MapKind.Earth, peaks: settings.Generator >= 2);
 
         progress?.Invoke("Trazando provincias...");
         var (ids, provinces) = ProvinceGenerator.Generate(terrain.Elevation, biomes, Width, Height, settings.Seed, settings.ProvinceCount);

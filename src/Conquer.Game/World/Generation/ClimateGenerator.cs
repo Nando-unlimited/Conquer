@@ -3,11 +3,12 @@ namespace Conquer.Game.World.Generation;
 /// <summary>
 /// Assigns a biome to every pixel from a simple climate model: temperature falls with latitude
 /// and altitude; moisture follows the global circulation bands (wet equator, dry subtropics,
-/// wet mid-latitudes, dry poles) and drops with distance from the ocean.
+/// wet mid-latitudes, dry poles) and drops with distance from the ocean. With <c>peaks</c>, the highest ranges
+/// (above <see cref="Rules.GameRules.PeakElevation"/>) become peaks, whatever their climate.
 /// </summary>
 internal static class ClimateGenerator
 {
-    public static Biome[] Assign(Terrain terrain, int width, int height, int seed, bool isEarth)
+    public static Biome[] Assign(Terrain terrain, int width, int height, int seed, bool isEarth, bool peaks = false)
     {
         var elevation = terrain.Elevation;
         var oceanDistanceKm = DistanceToOceanKm(terrain, width, height);
@@ -75,7 +76,44 @@ internal static class ClimateGenerator
                 };
             }
         });
+        if (peaks) MarkPeaks(biomes, elevation, width, height);
         return biomes;
+    }
+
+    /// <summary>
+    /// Land (not lakes) above <see cref="Rules.GameRules.PeakElevation"/> becomes peaks, in patches of pixels touching
+    /// side by side; patches smaller than <see cref="Rules.GameRules.MinPeakPixels"/> keep their biome. Beyond 60° of
+    /// latitude the height is the polar ice sheet's (Antarctica's plateau), not a mountain range, so it stays ice.
+    /// </summary>
+    private static void MarkPeaks(Biome[] biomes, short[] elevation, int width, int height)
+    {
+        int polar = height / 6; // rows within 30° of either pole
+        bool High(int i) => elevation[i] >= Rules.GameRules.PeakElevation && !biomes[i].Info().IsWater && i / width >= polar && i / width < height - polar;
+        var visited = new bool[biomes.Length];
+        var patch = new List<int>();
+        var stack = new Stack<int>();
+        for (int start = 0; start < biomes.Length; start++)
+        {
+            if (visited[start] || !High(start)) continue;
+            patch.Clear();
+            visited[start] = true;
+            stack.Push(start);
+            while (stack.Count > 0)
+            {
+                int i = stack.Pop();
+                patch.Add(i);
+                int x = i % width, y = i / width;
+                foreach (int j in (int[])[y * width + (x + 1) % width, y * width + (x + width - 1) % width,
+                                         y > 0 ? i - width : -1, y < height - 1 ? i + width : -1])
+                {
+                    if (j < 0 || visited[j] || !High(j)) continue;
+                    visited[j] = true;
+                    stack.Push(j);
+                }
+            }
+            if (patch.Count < Rules.GameRules.MinPeakPixels) continue;
+            foreach (int i in patch) biomes[i] = Biome.Peaks;
+        }
     }
 
     private static double LatitudeMoisture(double absLat) => absLat switch
