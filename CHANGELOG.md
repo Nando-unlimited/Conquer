@@ -2,6 +2,11 @@
 
 Todos los cambios del juego, del más reciente al más antiguo. Cada versión es un commit cuyo título es su número.
 
+## [1.41.1] - 2026-09-30
+
+### Cambiado
+- Los cuarteles generales vuelven a llevar «HQ» dentro del marco en lugar del asta de la OTAN; encima siguen sus marcas de nivel (XXX, XXXX, XXXXX).
+
 ## [1.41.0] - 2026-09-30
 
 ### Cambiado

@@ -27,7 +27,7 @@ public sealed partial class GameScreen
 
     /// <summary>
     /// NATO-style counters: the symbol of the unit's arm inside the frame (see <see cref="UnitFunction"/>), its size
-    /// marks above it (III regiment, X brigade, XX division, XXX to XXXXX for HQs), a staff under an HQ's frame
+    /// marks above it (III regiment, X brigade, XX division, XXX to XXXXX for HQs), "HQ" inside an HQ's frame
     /// and a "C" for settlers. Combat units carry a strength bar (green) and an organisation bar (amber).
     /// </summary>
     private void DrawUnits()
@@ -75,8 +75,7 @@ public sealed partial class GameScreen
                 Bar(new Rect(r.X - 2, r.Bottom + 3, r.W + 4, 3), unit.StrengthShare, StrengthColor);
                 Bar(new Rect(r.X - 2, r.Bottom + 7, r.W + 4, 3), unit.OrganisationShare, OrganisationColor);
             }
-            else if (unit.IsHeadquarters) Batch.Line(new(r.X - 1, r.Bottom + 2), new(r.X - 1, r.Bottom + 2 + H), Rgba.Black, 2);
-            else if (scale > 0.7f) Ui.TextCentered(r, unit.Symbol, Rgba.Black, FontSize.Small, bold: true);
+            else if (scale > 0.7f) Ui.TextCentered(r, unit.IsHeadquarters ? "HQ" : unit.Symbol, Rgba.Black, FontSize.Small, bold: true);
             if (unit.Echelon.Length > 0) DrawEchelon(r, unit.Echelon, scale);
             _unitHitBoxes.Add((unit.Id, r));
         }
