@@ -121,11 +121,11 @@ public sealed partial class GameSession
     }
 
     /// <summary>A fleet's fire in an hour: its ships' guns, scaled by their crews and organisation, and a little luck.</summary>
-    private double NavalFire(Unit fleet)
-    {
-        double fire = fleet.Battalions.Sum(b => b.Info.Attack * b.StrengthShare * (0.5 + 0.5 * b.OrganisationShare));
-        return fire * (1 + (_random.NextDouble() * 2 - 1) * MilitaryRules.CombatRandomness);
-    }
+    private double NavalFire(Unit fleet) => ExpectedNavalFire(fleet) * (1 + (_random.NextDouble() * 2 - 1) * MilitaryRules.CombatRandomness);
+
+    /// <summary>A fleet's fire in an hour before luck: its ships' guns, scaled by their crews and organisation.</summary>
+    public static double ExpectedNavalFire(Unit fleet) =>
+        fleet.Battalions.Sum(b => b.Info.Attack * b.StrengthShare * (0.5 + 0.5 * b.OrganisationShare));
 
     /// <summary>
     /// The fleet runs to a neighbouring sea (or its own port) with no enemy ships; with nowhere to go, or no

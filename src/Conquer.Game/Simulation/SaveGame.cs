@@ -130,7 +130,8 @@ public sealed record OfficerSave(int Id, string Name, List<OfficerTrait> Traits,
 
 public sealed record MigrationSave(int Id, int OwnerId, int From, int To, int People, long DepartHours, long ArriveHours, bool Forced, double Mood);
 
-public sealed record BattleSave(int ProvinceId, int AttackerId, int DefenderId, long StartHours, List<int> Attackers);
+public sealed record BattleSave(
+    int ProvinceId, int AttackerId, int DefenderId, long StartHours, List<int> Attackers, double AttackerLosses = 0, double DefenderLosses = 0);
 
 public sealed record WarSave(int A, int B, long StartHours);
 

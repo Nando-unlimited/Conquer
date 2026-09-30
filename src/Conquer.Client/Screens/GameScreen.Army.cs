@@ -87,11 +87,13 @@ public sealed partial class GameScreen
     /// <summary>Crossed swords over every province being fought for, on land or at sea; hovering shows both sides.</summary>
     private void DrawBattles()
     {
-        foreach (var battle in _session.Battles) DrawBattleMark(battle.ProvinceId, BattleSummary(battle));
-        foreach (int sea in _session.NavalBattleProvinces()) DrawBattleMark(sea, NavalBattleSummary(sea));
+        _battleHitBoxes.Clear();
+        foreach (var battle in _session.Battles) DrawBattleMark(battle.ProvinceId, battle, () => BattleSummary(battle));
+        foreach (int sea in _session.NavalBattleProvinces()) DrawBattleMark(sea, null, () => NavalBattleSummary(sea));
     }
 
-    private void DrawBattleMark(int provinceId, string summary)
+    /// <summary>The crossed swords: hovering shows a summary, clicking opens the battle's window.</summary>
+    private void DrawBattleMark(int provinceId, Battle? battle, Func<string> summary)
     {
         var s = _camera.MapToScreen(Center(provinceId));
         if (!OnScreen(s)) return;
@@ -99,7 +101,9 @@ public sealed partial class GameScreen
         Batch.Rect(s.X - size - 2, s.Y - size - 2, 2 * size + 4, 2 * size + 4, Rgba.Black.WithAlpha(0.6f));
         Batch.Line(new(s.X - size, s.Y - size), new(s.X + size, s.Y + size), BattleColor, 3);
         Batch.Line(new(s.X - size, s.Y + size), new(s.X + size, s.Y - size), BattleColor, 3);
-        if (Ui.Hover(new Rect(s.X - size, s.Y - size, 2 * size, 2 * size))) Ui.Tooltip(summary);
+        var bounds = new Rect(s.X - 11, s.Y - 11, 22, 22);
+        _battleHitBoxes.Add((provinceId, battle, bounds));
+        if (Ui.Hover(bounds)) Ui.Tooltip(summary() + "\nClic para ver la batalla en detalle.");
     }
 
     private string NavalBattleSummary(int provinceId)

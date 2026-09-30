@@ -188,6 +188,35 @@ public class MilitaryTests(WorldFixture world)
     }
 
     [Fact]
+    public void BattlesRecordLossesHourByHourAndHowTheyEnded()
+    {
+        var (s, a, b) = TwoNations();
+        var defender = s.AddRegiment(1, b.Id, BattalionType.Warriors, BattalionType.Warriors);
+        var attacker = s.AddRegiment(0, a.Id, BattalionType.IronInfantry, BattalionType.IronInfantry, BattalionType.IronInfantry);
+        s.DeclareWar(0, 1);
+        s.MoveUnit(0, attacker.Id, b.Id);
+        RunUntil(s, () => s.BattleIn(b.Id) != null, 24 * 5);
+        var battle = s.BattleIn(b.Id)!;
+        int recorded = battle.History.Count;
+        RunHours(s, 3);
+
+        Assert.Equal(recorded + 3, battle.History.Count);
+        Assert.True(battle.AttackerLosses > 0 && battle.DefenderLosses > 0);
+        Assert.Equal(attacker.Citizens, battle.History[^1].AttackerMen, 0.5);
+        Assert.Equal(defender.OrganisationShare, battle.History[^1].DefenderOrganisation, 6);
+        Assert.True(battle.History[^1].AttackerFire > 0);
+        Assert.Null(battle.AttackersWon);
+
+        var loaded = GameSession.Load(_map, s.ToSave("test")).BattleIn(b.Id)!;
+        Assert.Equal(battle.AttackerLosses, loaded.AttackerLosses);
+        Assert.Equal(battle.DefenderLosses, loaded.DefenderLosses);
+
+        RunUntil(s, () => s.BattleIn(b.Id) == null, 24 * 10);
+        Assert.True(battle.AttackersWon);
+        Assert.Equal(s.Date.Hours, battle.EndHours);
+    }
+
+    [Fact]
     public void AWeakAttackBreaksAndGivesUp()
     {
         var (s, a, b) = TwoNations();

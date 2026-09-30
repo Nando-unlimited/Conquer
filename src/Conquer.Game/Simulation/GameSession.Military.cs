@@ -721,8 +721,10 @@ public sealed partial class GameSession
             var attacking = Engage(attackers, province, attacking: true);
             var defending = Engage(defenders, province, attacking: false);
             double attackFire = SideFire(attacking), defenseFire = SideFire(defending);
-            Damage(defending, attackFire);
-            Damage(attacking, defenseFire);
+            battle.DefenderLosses += Damage(defending, attackFire);
+            battle.AttackerLosses += Damage(attacking, defenseFire);
+            battle.History.Add(new BattleHour(attackers.Sum(u => u.Citizens), defenders.Sum(u => u.Citizens),
+                AverageOrganisation(attackers), AverageOrganisation(defenders), attackFire, defenseFire));
             foreach (var e in attacking.Concat(defending))
                 e.Battalion.Experience += MilitaryRules.ExperiencePerBattleHour * (1 - e.Battalion.Experience);
 
@@ -736,6 +738,9 @@ public sealed partial class GameSession
             }
         }
     }
+
+    /// <summary>The organisation (0-1) of a side's units, on average; 0 when none are left.</summary>
+    public static double AverageOrganisation(IReadOnlyCollection<Unit> units) => units.Count == 0 ? 0 : units.Average(u => u.OrganisationShare);
 
     private static bool Broken(Unit unit) => unit.OrganisationShare < MilitaryRules.BreakingOrganisation || unit.Citizens < 1;
 
@@ -780,7 +785,10 @@ public sealed partial class GameSession
 
     /// <summary>A side's fire this hour: its engaged battalions', more for mixing kinds of troops, and a little luck.</summary>
     private double SideFire(List<Engaged> side) =>
-        side.Sum(e => e.Fire) * (1 + CombinedArms(side.Select(e => e.Role))) * (1 + (_random.NextDouble() * 2 - 1) * MilitaryRules.CombatRandomness);
+        ExpectedFire(side) * (1 + (_random.NextDouble() * 2 - 1) * MilitaryRules.CombatRandomness);
+
+    /// <summary>A side's fire in an hour before luck: its engaged battalions', more for mixing kinds of troops.</summary>
+    public static double ExpectedFire(List<Engaged> side) => side.Sum(e => e.Fire) * (1 + CombinedArms(side.Select(e => e.Role)));
 
     /// <summary>Extra fire for each kind of troop beyond the first among those fighting, up to a limit.</summary>
     public static double CombinedArms(IEnumerable<BattalionRole> roles) =>
@@ -789,18 +797,23 @@ public sealed partial class GameSession
     /// <summary>
     /// Spreads the enemy's fire over a side's engaged battalions as lost organisation and men: artillery and
     /// aircraft behind the line take a smaller share, and the officers leading them may spare or lose organisation.
+    /// Returns the men lost.
     /// </summary>
-    private void Damage(List<Engaged> side, double fire)
+    private double Damage(List<Engaged> side, double fire)
     {
         double exposure = side.Sum(e => e.Exposure);
-        if (exposure <= 0) return;
+        if (exposure <= 0) return 0;
+        double lost = 0;
         foreach (var e in side)
         {
             double share = fire * e.Exposure / exposure;
             double loss = Math.Max(0, 1 + (GeneralOf(e.Unit)?.OrganisationLoss ?? 0) + (e.Unit.Officer?.OrganisationLoss ?? 0));
             e.Battalion.Organisation = Math.Max(0, e.Battalion.Organisation - share * MilitaryRules.OrganisationDamage * loss);
-            e.Battalion.Strength = Math.Max(0, e.Battalion.Strength - share * MilitaryRules.StrengthDamage);
+            double strength = Math.Max(0, e.Battalion.Strength - share * MilitaryRules.StrengthDamage);
+            lost += e.Battalion.Strength - strength;
+            e.Battalion.Strength = strength;
         }
+        return lost;
     }
 
     /// <summary>Spreads a side's fire over the enemy battalions as lost organisation and men (battles at sea).</summary>
@@ -818,6 +831,8 @@ public sealed partial class GameSession
     private void EndBattle(Battle battle, List<Unit> attackers, bool attackersWon)
     {
         _battles.Remove(battle);
+        battle.AttackersWon = attackersWon;
+        battle.EndHours = Date.Hours;
         var province = Map.Provinces[battle.ProvinceId];
         string place = PlaceName(province);
         if (attackersWon)

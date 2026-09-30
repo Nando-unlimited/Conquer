@@ -17,7 +17,7 @@ public sealed class HelpView
         ("Controles",
         [
             "## Ratón",
-            "- Clic izquierdo: selecciona una unidad o una provincia.",
+            "- Clic izquierdo: selecciona una unidad o una provincia; sobre unas espadas rojas, abre la batalla.",
             "- Clic derecho: mueve la unidad seleccionada. Sobre una provincia enemiga con tropas, la ataca; sobre una flota tuya en el mar de al lado, embarca.",
             "- Arrastrar: mueve el mapa. Rueda: zoom.",
             "## Teclado",
@@ -131,7 +131,7 @@ public sealed class HelpView
             "- Población, Humor y Fertilidad: el estado de cada provincia habitada.",
             "- Recursos: los yacimientos que conoces, con un filtro por recurso.",
             "- Instituciones: por dónde se han extendido.",
-            "Al pasar el ratón por una provincia verás sus datos. Las espadas rojas marcan batallas, en tierra o en el mar.",
+            "Al pasar el ratón por una provincia verás sus datos. Las espadas rojas marcan batallas, en tierra o en el mar: haz clic en ellas para ver la batalla en detalle.",
         ]),
         ("Partida",
         [

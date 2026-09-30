@@ -2,6 +2,19 @@
 
 Todos los cambios del juego, del más reciente al más antiguo. Cada versión es un commit cuyo título es su número.
 
+## [1.34.0] - 2026-09-30
+
+### Añadido
+- **Ventana de la batalla**: haz clic en las espadas rojas de una batalla para verla en detalle. Se actualiza en directo mientras corre el tiempo:
+  - El terreno, la defensa que da y cuántos batallones caben en el frente.
+  - Una barra con el fuego por hora de cada bando, para ver quién gana el intercambio.
+  - Cada bando con sus hombres, sus bajas desde que empezó, su organización (con la marca donde se rompen), su fuego, cuántos batallones combaten en el frente, detrás y en reserva, y sus armas combinadas.
+  - Cada unidad con su oficial, sus hombres, cuántos de sus batallones combaten y si está sin suministro; al pasar el ratón, su mando, su general y cada batallón con su puesto, su experiencia y su fuego.
+  - Una gráfica de la organización de cada bando hora a hora.
+  - Al terminar, dice quién ganó, cuánto duró y las bajas de cada bando. «Ir a la provincia» centra el mapa en la batalla.
+  - Las batallas en el mar muestran los barcos, tripulantes, organización y fuego de cada nación.
+- Las partidas guardadas conservan las bajas de las batallas en curso; su gráfica empieza de nuevo al cargar.
+
 ## [1.33.0] - 2026-09-30
 
 ### Añadido

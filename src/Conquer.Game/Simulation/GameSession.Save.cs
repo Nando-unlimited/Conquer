@@ -40,7 +40,7 @@ public sealed partial class GameSession
             Officer: u.Officer is { } o ? ToSave(o) : null, CustomName: u.CustomName)).ToList(),
         Migrations = Migrations.Select(m => new MigrationSave(m.Id, m.OwnerId, m.FromProvinceId, m.ToProvinceId, m.People,
             m.DepartHours, m.ArriveHours, m.Forced, m.Mood)).ToList(),
-        Battles = _battles.Select(b => new BattleSave(b.ProvinceId, b.AttackerId, b.DefenderId, b.StartHours, [.. b.Attackers])).ToList(),
+        Battles = _battles.Select(b => new BattleSave(b.ProvinceId, b.AttackerId, b.DefenderId, b.StartHours, [.. b.Attackers], b.AttackerLosses, b.DefenderLosses)).ToList(),
         Wars = _wars.Select(w => new WarSave(w.Key.Item1, w.Key.Item2, w.Value)).ToList(),
         Notifications = [.. Notifications],
         Ais = _ais.Select(ai => ai.ToSave()).ToList(),
@@ -161,7 +161,11 @@ public sealed partial class GameSession
             session.Migrations.Add(new Migration(m.Id, m.OwnerId, m.From, m.To, m.People, m.DepartHours, m.ArriveHours, m.Forced, m.Mood));
         foreach (var b in save.Battles)
         {
-            var battle = new Battle(b.ProvinceId, b.AttackerId, b.DefenderId, b.StartHours);
+            var battle = new Battle(b.ProvinceId, b.AttackerId, b.DefenderId, b.StartHours)
+            {
+                AttackerLosses = b.AttackerLosses,
+                DefenderLosses = b.DefenderLosses,
+            };
             battle.Attackers.AddRange(b.Attackers);
             session._battles.Add(battle);
         }
