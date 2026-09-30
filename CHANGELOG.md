@@ -2,6 +2,11 @@
 
 Todos los cambios del juego, del más reciente al más antiguo. Cada versión es un commit cuyo título es su número.
 
+## [1.40.0] - 2026-09-30
+
+### Cambiado
+- El panel de la provincia muestra siempre sus **inmigrantes** (los que vienen hacia ella) y sus **emigrantes** (los que se van), en camino ahora mismo, con una explicación de cómo funciona la migración al pasar el ratón. Antes solo aparecían los que llegaban, y solo si había alguno.
+
 ## [1.39.0] - 2026-09-30
 
 ### Cambiado

@@ -651,7 +651,14 @@ public sealed partial class GameScreen : IScreen
                 Line(x, ref y, "Nacimientos", $"+{_session.DailyBirths(p, owner.IsStarving):0.##} al día", owner.IsStarving ? Theme.Bad : Theme.Text);
             }
             int incoming = _session.Migrations.Where(m => m.ToProvinceId == p.Id).Sum(m => m.People);
-            if (incoming > 0) Line(x, ref y, "En camino", $"{incoming:N0} migrantes");
+            int outgoing = _session.Migrations.Where(m => m.FromProvinceId == p.Id).Sum(m => m.People);
+            var migrants = new Rect(x, y, w, 48);
+            Line(x, ref y, "Inmigrantes", $"{incoming:N0}", incoming > 0 ? Theme.Text : Theme.TextDim);
+            Line(x, ref y, "Emigrantes", $"{outgoing:N0}", outgoing > 0 ? Theme.Text : Theme.TextDim);
+            if (Ui.Hover(migrants))
+                Ui.Tooltip("Gente en camino hacia esta provincia y desde ella.\n" +
+                           $"Las ciudades de más de {GameRules.MinEmigrationCityPopulation} habitantes envían cada día un {GameRules.DailyEmigrationShare:P2} de su gente " +
+                           $"a tus provincias sin ciudad que no llegan al {GameRules.MigrationTargetShare:P0} de su capacidad.");
         }
         else
         {
