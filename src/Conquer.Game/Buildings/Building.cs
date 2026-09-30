@@ -6,7 +6,8 @@ namespace Conquer.Game.Buildings;
 
 /// <summary>
 /// The buildings a province can have, one of each. The order is the order they are listed in. Farms,
-/// granaries, sawmills, mines, roads and railways go anywhere; the rest need a city.
+/// granaries, sawmills, mines, roads and railways go anywhere; the rest need a city. Roads and railways are
+/// built only by engineers, also in enemy land the nation occupies.
 /// </summary>
 public enum BuildingType
 {
@@ -40,9 +41,14 @@ public enum BuildingType
 /// <param name="Effects">What it improves in its own province.</param>
 /// <param name="NeedsCoast">Only a province next to the sea or a lake can build it.</param>
 /// <param name="RequiresBuilding">Another building the province must have first.</param>
+/// <param name="NeedsEngineers">
+/// Built by engineers: only where the nation has some (see <see cref="Rules.MilitaryRules.EngineerWorkDays"/>), in its own
+/// land or land it occupies, however few people live there; the work stops while none are there.
+/// </param>
 public sealed record BuildingInfo(
     string Name, string Description, ResourceCost Cost, int Days,
-    Tech? RequiresTech, bool CityOnly, bool NeedsDeposit, Modifiers Effects, bool NeedsCoast = false, BuildingType? RequiresBuilding = null);
+    Tech? RequiresTech, bool CityOnly, bool NeedsDeposit, Modifiers Effects, bool NeedsCoast = false, BuildingType? RequiresBuilding = null,
+    bool NeedsEngineers = false);
 
 public static class Buildings
 {
@@ -72,8 +78,8 @@ public static class Buildings
             new ResourceCost((ResourceType.Wood, 120), (ResourceType.Gold, 60)), 60, Tech.Construction, true, false, new() { Mood = 10 }),
         [BuildingType.Walls] = new("Muralla", "Quien defiende la provincia hace un 50 % más de daño.",
             new ResourceCost((ResourceType.Wood, 150), (ResourceType.Gold, 50)), 90, Tech.Fortifications, true, false, new() { Defense = 0.5 }),
-        [BuildingType.Road] = new("Calzada", "La provincia se cruza un 50 % más deprisa.",
-            new ResourceCost((ResourceType.Wood, 80), (ResourceType.Gold, 30)), 40, Tech.Engineering, false, false, new() { MoveSpeed = 0.5 }),
+        [BuildingType.Road] = new("Calzada", "La provincia se cruza un 50 % más deprisa. La construyen tus ingenieros.",
+            new ResourceCost((ResourceType.Wood, 80), (ResourceType.Gold, 30)), 40, Tech.Engineering, false, false, new() { MoveSpeed = 0.5 }, NeedsEngineers: true),
         [BuildingType.University] = new("Universidad", "+50 % de ciencia de la ciudad.",
             new ResourceCost((ResourceType.Wood, 150), (ResourceType.Gold, 120)), 90, Tech.Education, true, false, new() { Science = 0.5 }),
         [BuildingType.Bank] = new("Banco", "+50 % de oro de los impuestos de la provincia.",
@@ -85,9 +91,9 @@ public static class Buildings
             new() { Wood = 0.5, Deposits = 0.5 }),
         [BuildingType.Hospital] = new("Hospital", "+20 % de fertilidad y la tierra alimenta un 10 % más de gente en la provincia.",
             new ResourceCost((ResourceType.Wood, 150), (ResourceType.Gold, 150)), 90, Tech.Sanitation, true, false, new() { Fertility = 0.2, Capacity = 0.1 }),
-        [BuildingType.Railway] = new("Ferrocarril", "La provincia se cruza el doble de deprisa.",
+        [BuildingType.Railway] = new("Ferrocarril", "La provincia se cruza el doble de deprisa. Lo construyen tus ingenieros.",
             new ResourceCost((ResourceType.Wood, 100), (ResourceType.Gold, 80), (ResourceType.Iron, 60), (ResourceType.Coal, 20)), 60, Tech.Railroad, false, false,
-            new() { MoveSpeed = 1 }),
+            new() { MoveSpeed = 1 }, NeedsEngineers: true),
         [BuildingType.PowerPlant] = new("Central eléctrica", "+25 % de ciencia y de impuestos en la provincia.",
             new ResourceCost((ResourceType.Wood, 100), (ResourceType.Gold, 250), (ResourceType.Iron, 80), (ResourceType.Coal, 80)), 120, Tech.Electricity, true, false,
             new() { Science = 0.25, Taxes = 0.25 }),

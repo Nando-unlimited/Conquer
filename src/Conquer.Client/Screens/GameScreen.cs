@@ -745,7 +745,14 @@ public sealed partial class GameScreen : IScreen
             Batch.Rect(x, y, w, 8, Theme.ButtonDisabled);
             Batch.Rect(x, y, w * done, 8, Theme.Accent);
             y += 14;
-            Ui.Text(x, y, $"Quedan {p.ConstructionDaysLeft} días", Theme.TextDim, FontSize.Small);
+            if (p.Constructing?.Info().NeedsEngineers == true)
+            {
+                int engineers = p.ControllerId < 0 ? 0 : _session.EngineersIn(p.ControllerId, p.Id);
+                Ui.Text(x, y, engineers == 0 ? $"Parada: no hay ingenieros. Quedan {p.ConstructionDaysLeft} días de trabajo"
+                        : $"Quedan {p.ConstructionDaysLeft} días de trabajo · {Formations.BattalionCount(engineers)} de ingenieros",
+                    engineers == 0 ? Theme.Bad : Theme.TextDim, FontSize.Small);
+            }
+            else Ui.Text(x, y, $"Quedan {p.ConstructionDaysLeft} días", Theme.TextDim, FontSize.Small);
             y += 30;
         }
 

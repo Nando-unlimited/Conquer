@@ -64,8 +64,22 @@ public static class MilitaryRules
     /// <summary>Defenders of a province with a river fire this much harder: the attackers have to cross it.</summary>
     public const double RiverDefense = 1.25;
 
-    /// <summary>How much harder a province is to take: its terrain, and its river if it has one.</summary>
-    public static double DefenseMultiplier(Province province) => TerrainDefense(province.Biome) * (province.HasRiver ? RiverDefense : 1);
+    /// <summary>Days of work each battalion of engineers puts into a road or railway every day.</summary>
+    public const int EngineerWorkDays = 1;
+
+    /// <summary>Share of the terrain's defence bonus left to defenders facing engineers; they bridge rivers outright.</summary>
+    public const double EngineeredTerrainDefense = 0.5;
+
+    /// <summary>
+    /// How much harder a province is to take: its terrain, and its river if it has one. Attackers with
+    /// <paramref name="engineers"/> halve the terrain's bonus and cross the river as if it were not there.
+    /// </summary>
+    public static double DefenseMultiplier(Province province, bool engineers = false)
+    {
+        double terrain = TerrainDefense(province.Biome);
+        if (!engineers) return terrain * (province.HasRiver ? RiverDefense : 1);
+        return 1 + (terrain - 1) * EngineeredTerrainDefense;
+    }
 
     // Chain of command
     /// <summary>Combat and recovery bonus of a regiment whose own HQ is within range.</summary>

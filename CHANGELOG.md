@@ -2,6 +2,18 @@
 
 Todos los cambios del juego, del más reciente al más antiguo. Cada versión es un commit cuyo título es su número.
 
+## [1.35.0] - 2026-09-30
+
+### Añadido
+- **Exploradores**: un batallón que se entrena desde el principio. Son 50 hombres, muy baratos (10 de madera y 5 de oro), se instruyen en 7 días y marchan un 50 % más rápido, pero casi no atacan ni defienden. Reclaman tierra libre como cualquier unidad. Los rivales los usan ahora para expandirse.
+- **Ingenieros**: un batallón que llega con el avance Ingeniería.
+  - En combate van detrás del frente, como la artillería. Si el atacante lleva ingenieros, el río no frena el ataque y la ventaja del terreno del defensor (colinas, bosques, pantanos, montañas) se queda en la mitad. La ventana y el resumen de la batalla muestran la defensa con y sin ellos.
+  - Son los únicos que construyen **calzadas** y **ferrocarriles**, con los botones «Construir calzada» y «Construir ferrocarril» de su panel, en tu tierra o en tierra enemiga que ocupas, sin mínimo de habitantes. Cada batallón de ingenieros en la provincia hace un día de trabajo al día; si se van, la obra se para.
+  - Los rivales entrenan ingenieros y los llevan a sus ciudades para construir calzadas y ferrocarriles.
+
+### Cambiado
+- Las calzadas y los ferrocarriles necesitan ingenieros en la provincia. La pestaña Edificios muestra su obra con cuántos ingenieros trabajan, o si está parada.
+
 ## [1.34.0] - 2026-09-30
 
 ### Añadido

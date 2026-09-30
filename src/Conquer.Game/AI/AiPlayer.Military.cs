@@ -7,7 +7,7 @@ using Conquer.Game.Simulation;
 namespace Conquer.Game.AI;
 
 /// <summary>
-/// The rival's army. In peace a few lone warriors claim land while the rest train and garrison;
+/// The rival's army. In peace a few lone scouts claim land while the rest train and garrison (engineers build instead, see AiPlayer.cs);
 /// regiments are merged, put under corps and army HQs and given officers. It declares war on a weaker
 /// neighbour now and then, attacks the least defended enemy provinces, rushes to cities under attack
 /// and makes peace when a war goes badly.
@@ -23,7 +23,7 @@ internal sealed partial class AiPlayer
     /// <summary>The highest HQ level it raises: corps and armies.</summary>
     private const int HighestHeadquarters = 2;
 
-    /// <summary>Lone warriors that claim free land; every other regiment belongs to the army.</summary>
+    /// <summary>Lone scouts (or warriors, in older games) that claim free land; every other regiment but the engineers belongs to the army.</summary>
     private readonly HashSet<int> _claimers = [];
     private readonly HashSet<int> _knownRegiments = [];
     private RegimentTemplate? _armyTemplate;
@@ -38,10 +38,13 @@ internal sealed partial class AiPlayer
         _armyTemplate = _player.Templates.FirstOrDefault(t => t.Id == save.ArmyTemplateId);
     }
 
-    private IEnumerable<Unit> Army => _session.Units.Where(u => u.OwnerId == _player.Id && u.IsMilitary && !_claimers.Contains(u.Id));
+    private IEnumerable<Unit> Army => _session.Units.Where(u => u.OwnerId == _player.Id && u.IsMilitary && !_claimers.Contains(u.Id) && !IsEngineerUnit(u));
+
+    /// <summary>Battalions that stay out of its fighting army: scouts claim land and engineers build.</summary>
+    private static bool Auxiliary(BattalionType type) => type is BattalionType.Scouts or BattalionType.Engineers;
 
     /// <summary>
-    /// New regiments fill the claimer slots first if they are lone warriors (one per city, plus one);
+    /// New regiments fill the claimer slots first if they are lone scouts or warriors (one per city, plus one);
     /// the rest join the army.
     /// </summary>
     private void ClassifyNewRegiments()
@@ -49,7 +52,7 @@ internal sealed partial class AiPlayer
         _claimers.RemoveWhere(id => _session.UnitById(id) is null);
         int wanted = 1 + _session.Cities.Count(c => c.OwnerId == _player.Id);
         foreach (var unit in _session.Units.Where(u => u.OwnerId == _player.Id && u.IsMilitary && _knownRegiments.Add(u.Id)))
-            if (_claimers.Count < wanted && unit.Battalions.Count == 1 && unit.Battalions[0].Type == BattalionType.Warriors)
+            if (_claimers.Count < wanted && unit.Battalions.Count == 1 && unit.Battalions[0].Type is BattalionType.Scouts or BattalionType.Warriors)
                 _claimers.Add(unit.Id);
     }
 
@@ -65,7 +68,7 @@ internal sealed partial class AiPlayer
         if (cities.Count == 0 || _session.Date.Days < 180) return;
         int target = cities.Count * (_session.EnemiesOf(_player.Id).Any() ? 4 : 2);
         int battalions = Army.Sum(u => u.Battalions.Count)
-            + cities.Sum(c => c.Training.Sum(o => o.TemplateBattalions.Count + (o.Battalion is BattalionType t && t != BattalionType.Warriors ? 1 : 0)));
+            + cities.Sum(c => c.Training.Sum(o => o.TemplateBattalions.Count + (o.Battalion is BattalionType t && !Auxiliary(t) ? 1 : 0)));
         if (battalions >= target) return;
 
         var city = cities.OrderByDescending(c => Map.Provinces[c.ProvinceId].Population).First();
@@ -75,7 +78,7 @@ internal sealed partial class AiPlayer
         if (size >= 2 && ArmyTemplate(size) is var template && Spare(template.Cost)
             && _session.TrainTemplate(_player.Id, city.Id, template.Id).Ok) return;
         var best = Battalions.All
-            .Where(t => !t.Info().Naval && _session.CanTrain(city, t).Ok && Spare(t.Info().Cost))
+            .Where(t => !t.Info().Naval && !Auxiliary(t) && _session.CanTrain(city, t).Ok && Spare(t.Info().Cost))
             .OrderByDescending(t => t.Info().Attack + t.Info().Defense)
             .Cast<BattalionType?>().FirstOrDefault();
         if (best is BattalionType type) _session.Train(_player.Id, city.Id, type);
@@ -106,7 +109,7 @@ internal sealed partial class AiPlayer
     /// </summary>
     private RegimentTemplate ArmyTemplate(int size)
     {
-        var known = Battalions.All.Where(t => !t.Info().Naval && t.Info().Requires.All(_player.Techs.Contains) && CanSupply(t)).ToList();
+        var known = Battalions.All.Where(t => !t.Info().Naval && !Auxiliary(t) && t.Info().Requires.All(_player.Techs.Contains) && CanSupply(t)).ToList();
         var infantry = known.Where(t => !t.Info().Mounted).MaxBy(t => t.Info().Defense);
         var striker = known.MaxBy(t => t.Info().Attack);
         BattalionType[] design = [.. new[] { infantry, infantry, striker, infantry, striker, infantry }.Take(size)];

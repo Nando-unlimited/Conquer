@@ -81,16 +81,19 @@ public sealed partial class GameScreen
         Ui.Text(panel.Right - 24 - Ui.Font.Measure(state, FontSize.Normal, true), y + 8, state, stateColor, bold: true);
         y += 40;
 
-        int front = MilitaryRules.FrontWidth(p.Biome);
-        Ui.Text(x, y, $"{p.Info.Name}{(p.HasRiver ? " con río" : "")} · defensa ×{GameSession.DefenseMultiplier(p):0.##} · " +
-                      $"frente de {front} batallones, con hasta {front / 2} de artillería y aviación detrás", Theme.TextDim, FontSize.Small);
-        y += 26;
-
         // While it lasts, the sides as they stand; afterwards, what the last hour left of them.
         var attackers = battle.Attackers.Select(_session.UnitById).OfType<Unit>().Where(u => u.AttackingProvinceId == battle.ProvinceId).ToList();
         var defenders = ongoing ? _session.EnemyRegimentsIn(battle.ProvinceId, battle.AttackerId).ToList() : [];
+        bool engineers = GameSession.HasEngineers(attackers);
         var attacking = ongoing ? _session.Engage(attackers, p, attacking: true) : [];
-        var defending = ongoing ? _session.Engage(defenders, p, attacking: false) : [];
+        var defending = ongoing ? _session.Engage(defenders, p, attacking: false, engineers) : [];
+
+        int front = MilitaryRules.FrontWidth(p.Biome);
+        double defense = GameSession.DefenseMultiplier(p, engineers), unengineered = GameSession.DefenseMultiplier(p);
+        Ui.Text(x, y, $"{p.Info.Name}{(p.HasRiver ? " con río" : "")} · defensa ×{defense:0.##}" +
+                      (defense < unengineered ? $" (×{unengineered:0.##} sin los ingenieros del atacante)" : "") + " · " +
+                      $"frente de {front} batallones, con hasta {front / 2} de artillería, aviación e ingenieros detrás", Theme.TextDim, FontSize.Small);
+        y += 26;
         var last = battle.History.Count > 0 ? battle.History[^1] : default;
         var attackSide = ongoing
             ? new SideStats(attackers.Sum(u => u.Citizens), GameSession.AverageOrganisation(attackers), GameSession.ExpectedFire(attacking))

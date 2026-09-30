@@ -719,7 +719,7 @@ public sealed partial class GameSession
             }
 
             var attacking = Engage(attackers, province, attacking: true);
-            var defending = Engage(defenders, province, attacking: false);
+            var defending = Engage(defenders, province, attacking: false, HasEngineers(attackers));
             double attackFire = SideFire(attacking), defenseFire = SideFire(defending);
             battle.DefenderLosses += Damage(defending, attackFire);
             battle.AttackerLosses += Damage(attacking, defenseFire);
@@ -744,9 +744,15 @@ public sealed partial class GameSession
 
     private static bool Broken(Unit unit) => unit.OrganisationShare < MilitaryRules.BreakingOrganisation || unit.Citizens < 1;
 
-    /// <summary>How much harder those defending a province hit: its terrain, and its walls or castle.</summary>
-    public static double DefenseMultiplier(Province province) =>
-        MilitaryRules.DefenseMultiplier(province) * (1 + province.BuildingBonuses.Defense);
+    /// <summary>
+    /// How much harder those defending a province hit: its terrain (less against <paramref name="engineers"/>), and its
+    /// walls or castle.
+    /// </summary>
+    public static double DefenseMultiplier(Province province, bool engineers = false) =>
+        MilitaryRules.DefenseMultiplier(province, engineers) * (1 + province.BuildingBonuses.Defense);
+
+    /// <summary>Whether any of these units brings engineers, fighting or not.</summary>
+    public static bool HasEngineers(IEnumerable<Unit> units) => units.Any(u => u.Battalions.Any(b => b.Type == BattalionType.Engineers));
 
     /// <summary>The general of a unit's own HQ, if it is within range to lead it (the unit's own officer is <see cref="Unit.Officer"/>).</summary>
     public Officer? GeneralOf(Unit unit) => InCommandRange(unit) ? CommanderOf(unit)!.Officer : null;
@@ -756,18 +762,19 @@ public sealed partial class GameSession
 
     /// <summary>
     /// The battalions of one side that fight this hour: the strongest of the front-line troops, as many as
-    /// the terrain's front holds, and up to half as many artillery and aircraft behind them. The rest wait
+    /// the terrain's front holds, and up to half as many artillery, aircraft and engineers behind them. The rest wait
     /// in reserve. Each fires its attack or defence, scaled by its men, organisation and experience, the
-    /// chain of command, its officer and its HQ's general, supply and, for defenders, the terrain and walls.
+    /// chain of command, its officer and its HQ's general, supply and, for defenders, the terrain and walls
+    /// (the terrain counting less when <paramref name="enemyEngineers"/> come with the attack).
     /// </summary>
-    public List<Engaged> Engage(List<Unit> units, Province province, bool attacking)
+    public List<Engaged> Engage(List<Unit> units, Province province, bool attacking, bool enemyEngineers = false)
     {
         var all = new List<Engaged>();
         foreach (var unit in units)
         {
             double multiplier = Math.Max(0, 1 + CommandBonus(unit) + (GeneralOf(unit)?.FireBonus(attacking) ?? 0) + (unit.Officer?.FireBonus(attacking) ?? 0))
                                 * (IsInSupply(unit) ? 1 : MilitaryRules.OutOfSupplyEfficiency)
-                                * (attacking ? 1 : DefenseMultiplier(province));
+                                * (attacking ? 1 : DefenseMultiplier(province, enemyEngineers));
             foreach (var b in unit.Battalions)
             {
                 double value = attacking ? b.Info.Attack : b.Info.Defense;
@@ -777,7 +784,7 @@ public sealed partial class GameSession
             }
         }
         int width = MilitaryRules.FrontWidth(province.Biome);
-        bool Support(Engaged e) => e.Role is BattalionRole.Artillery or BattalionRole.Air;
+        bool Support(Engaged e) => e.Role is BattalionRole.Artillery or BattalionRole.Air or BattalionRole.Engineers;
         var front = all.Where(e => !Support(e)).OrderByDescending(e => e.Fire).Take(width);
         var behind = all.Where(Support).OrderByDescending(e => e.Fire).Take(width / 2).Select(e => e with { Exposure = MilitaryRules.SupportExposure });
         return [.. front, .. behind];

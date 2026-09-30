@@ -7,6 +7,7 @@ namespace Conquer.Game.Military;
 /// <summary>The kinds of battalion a city can train. Regiments are built from 1 to 4 of them.</summary>
 public enum BattalionType
 {
+    Scouts,
     Warriors,
     Archers,
     BronzeSpearmen,
@@ -16,6 +17,7 @@ public enum BattalionType
     IronInfantry,
     Legionaries,
     Catapults,
+    Engineers,
     Cataphracts,
     Knights,
     Crossbowmen,
@@ -61,6 +63,9 @@ public static class Battalions
 
     private static readonly Dictionary<BattalionType, BattalionInfo> Table = new()
     {
+        // Few men, cheap and quick on their feet: they explore and claim land, but barely fight.
+        [BattalionType.Scouts] = new("Exploradores", "S", 50,
+            new ResourceCost((ResourceType.Wood, 10), (ResourceType.Gold, 5)), 7, [], 1, 1, 15, 1.5, false),
         [BattalionType.Warriors] = new("Guerreros", "G", 100,
             new ResourceCost((ResourceType.Wood, 30), (ResourceType.Gold, 15)), 15, [], 2, 3, 30, 1, false),
         [BattalionType.Archers] = new("Arqueros", "A", 100,
@@ -79,6 +84,9 @@ public static class Battalions
             new ResourceCost((ResourceType.Wood, 20), (ResourceType.Gold, 40), (ResourceType.Iron, 25)), 35, [Tech.MilitaryTactics], 7, 9, 50, 1, false),
         [BattalionType.Catapults] = new("Catapultas", "T", 100,
             new ResourceCost((ResourceType.Wood, 90), (ResourceType.Gold, 40), (ResourceType.Copper, 10)), 40, [Tech.SiegeEngines], 12, 1, 20, 0.7, false),
+        // Sappers and bridge builders: behind the line they blunt the defenders' terrain; they alone build roads and railways.
+        [BattalionType.Engineers] = new("Ingenieros", "E", 100,
+            new ResourceCost((ResourceType.Wood, 40), (ResourceType.Gold, 40)), 30, [Tech.Engineering], 2, 3, 30, 1, false),
         [BattalionType.Cataphracts] = new("Catafractos", "F", 100,
             new ResourceCost((ResourceType.Wood, 20), (ResourceType.Gold, 60), (ResourceType.Iron, 30)), 40, [Tech.HeavyCavalry], 10, 5, 45, 1.6, true),
         [BattalionType.Knights] = new("Caballeros", "N", 100,
@@ -138,6 +146,7 @@ public static class Battalions
         return info.Naval ? BattalionRole.Naval
             : info.Flies ? BattalionRole.Air
             : Artillery.Contains(type) ? BattalionRole.Artillery
+            : type == BattalionType.Engineers ? BattalionRole.Engineers
             : type == BattalionType.Tanks ? BattalionRole.Armour
             : info.Mounted ? BattalionRole.Cavalry
             : BattalionRole.Infantry;
@@ -150,6 +159,7 @@ public static class Battalions
         BattalionRole.Artillery => "Artillería",
         BattalionRole.Armour => "Blindados",
         BattalionRole.Air => "Aviación",
+        BattalionRole.Engineers => "Ingenieros",
         BattalionRole.Naval => "Marina",
         _ => role.ToString(),
     };
@@ -197,4 +207,6 @@ public enum BattalionRole
     Air,
     /// <summary>Ships, which fight only at sea.</summary>
     Naval,
+    /// <summary>Behind the front line; attacking, they blunt the defenders' terrain and river (<see cref="Rules.MilitaryRules.DefenseMultiplier"/>).</summary>
+    Engineers,
 }

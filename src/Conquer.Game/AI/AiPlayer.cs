@@ -10,8 +10,8 @@ using Conquer.Game.World;
 namespace Conquer.Game.AI;
 
 /// <summary>
-/// A computer rival. It settles a good site quickly, then keeps a few warriors claiming the best
-/// free land along its borders, sends out new settlers once its cities have grown, pays for
+/// A computer rival. It settles a good site quickly, then keeps a few scouts claiming the best
+/// free land along its borders, sends engineers to build roads and railways in its cities, sends out new settlers once its cities have grown, pays for
 /// festivals when a city grows restless, researches advances and puts up buildings in a fixed order of
 /// preference. Its army (AiPlayer.Military.cs) trains, organises itself, declares wars it can win and
 /// makes peace when they go badly.
@@ -81,6 +81,7 @@ internal sealed partial class AiPlayer
         {
             if (unit.Type == UnitType.Settlers) GuideSettlers(unit);
             else if (unit.IsHeadquarters) FollowTroops(unit);
+            else if (IsEngineerUnit(unit)) GuideEngineers(unit);
             else if (atWar) GuideSoldier(unit);
             else if (_claimers.Contains(unit.Id)) GuideWarriors(unit);
             else if (unit.IsMilitary) GoHomeIfCutOff(unit);
@@ -148,8 +149,8 @@ internal sealed partial class AiPlayer
         BuildingType.Sawmill => p.Info.WoodYield >= 1,
         BuildingType.Temple or BuildingType.Amphitheatre => p.Mood < FestivalMood + 15,
         BuildingType.Aqueduct => p.Population > 0.6 * _session.CapacityOf(p),
-        // Roads where the armies gather, walls around the big cities.
-        BuildingType.Road or BuildingType.Railway => p.CityId.HasValue,
+        // Roads where the armies gather (once its engineers are there), walls around the big cities.
+        BuildingType.Road or BuildingType.Railway => p.CityId.HasValue && _session.EngineersIn(_player.Id, p.Id) > 0,
         BuildingType.Walls or BuildingType.Castle => p.Population >= BigCityPopulation,
         _ => true,
     };
@@ -248,13 +249,17 @@ internal sealed partial class AiPlayer
         _session.MoveUnit(_player.Id, unit.Id, best);
     }
 
-    /// <summary>Sends out settlers once its cities have grown, and trains warriors to claim land (see <see cref="ClassifyNewRegiments"/>).</summary>
+    /// <summary>
+    /// Sends out settlers once its cities have grown, trains scouts to claim land (see <see cref="ClassifyNewRegiments"/>)
+    /// and a battalion of engineers when a city could use a road or railway.
+    /// </summary>
     private void Recruit()
     {
         var cities = _session.Cities.Where(c => c.OwnerId == _player.Id).ToList();
         if (cities.Count == 0) return;
+        TrainEngineers(cities);
         int settlers = _session.Units.Count(u => u.OwnerId == _player.Id && u.Type == UnitType.Settlers);
-        int claimers = _claimers.Count + cities.Sum(c => c.Training.Count(o => o.Battalion == BattalionType.Warriors));
+        int claimers = _claimers.Count + cities.Sum(c => c.Training.Count(o => o.Battalion == BattalionType.Scouts));
 
         foreach (var city in cities.OrderByDescending(c => Map.Provinces[c.ProvinceId].Population))
         {
@@ -267,9 +272,40 @@ internal sealed partial class AiPlayer
                 continue;
             }
             bool foodToSpare = _player.LastDayNet[(int)ResourceType.Food] > 3 || _player.Stockpile[ResourceType.Food] > 500;
-            if (claimers < 1 + cities.Count && pop > 250 && foodToSpare && _session.Train(_player.Id, city.Id, BattalionType.Warriors).Ok)
+            if (claimers < 1 + cities.Count && pop > 250 && foodToSpare && _session.Train(_player.Id, city.Id, BattalionType.Scouts).Ok)
                 claimers++;
         }
+    }
+
+    /// <summary>A unit made only of engineers: it builds rather than fights.</summary>
+    private static bool IsEngineerUnit(Unit unit) =>
+        unit.IsMilitary && unit.Battalions.Count > 0 && unit.Battalions.All(b => b.Type == BattalionType.Engineers);
+
+    /// <summary>Its cities where engineers could start a road or a railway (cost aside), nearest to <paramref name="from"/> first.</summary>
+    private IEnumerable<Province> CitiesNeedingEngineers(Province from) =>
+        _session.Cities.Where(c => c.OwnerId == _player.Id).Select(c => Map.Provinces[c.ProvinceId])
+            .Where(p => !p.IsOccupied && !p.Constructing.HasValue && p.PlannedCityName == null
+                        && Buildings.Buildings.All.Any(t => t.Info().NeedsEngineers && !p.Buildings.Contains(t) && _session.IsBuildingAvailable(p, t).Ok))
+            .OrderBy(p => Map.DistanceKm(from, p));
+
+    /// <summary>One battalion of engineers, in its biggest city, when it has none and a city could use one.</summary>
+    private void TrainEngineers(List<City> cities)
+    {
+        if (!_player.Techs.Contains(Tech.Engineering)) return;
+        if (_session.Units.Any(u => u.OwnerId == _player.Id && IsEngineerUnit(u))
+            || cities.Any(c => c.Training.Any(o => o.Battalion == BattalionType.Engineers))) return;
+        var city = cities.MaxBy(c => Map.Provinces[c.ProvinceId].Population)!;
+        if (!CitiesNeedingEngineers(Map.Provinces[city.ProvinceId]).Any() || !Spare(BattalionType.Engineers.Info().Cost)) return;
+        _session.Train(_player.Id, city.Id, BattalionType.Engineers);
+    }
+
+    /// <summary>Engineers stay while a road or railway goes up where they are, else walk to the nearest city that could use one.</summary>
+    private void GuideEngineers(Unit unit)
+    {
+        var here = Map.Provinces[unit.ProvinceId];
+        if (here.Constructing?.Info().NeedsEngineers == true && here.ControllerId == _player.Id) return;
+        var target = CitiesNeedingEngineers(here).FirstOrDefault();
+        if (target != null && target.Id != unit.ProvinceId) _session.MoveUnit(_player.Id, unit.Id, target.Id);
     }
 
     private double TotalPopulation() => _player.Provinces.Sum(id => Map.Provinces[id].Population);

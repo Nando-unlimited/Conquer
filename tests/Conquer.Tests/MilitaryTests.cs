@@ -1,3 +1,4 @@
+using Conquer.Game.Buildings;
 using Conquer.Game.Economy;
 using Conquer.Game.Military;
 using Conquer.Game.Rules;
@@ -185,6 +186,89 @@ public class MilitaryTests(WorldFixture world)
         Assert.All(attackers, u => Assert.Equal(b.Id, u.ProvinceId));
         Assert.Equal(0, b.ControllerId);
         Assert.True(s.UnitById(defender.Id) is null || s.UnitById(defender.Id)!.ProvinceId != b.Id);
+    }
+
+    [Fact]
+    public void ScoutsAreCheapFastWeakAndClaimLand()
+    {
+        var (s, a, _) = TwoNations();
+        var city = s.CityIn(a)!;
+        a.Population = 1000;
+        s.Human.Stockpile[ResourceType.Wood] = s.Human.Stockpile[ResourceType.Gold] = 500;
+        var scouts = BattalionType.Scouts.Info();
+        var warriors = BattalionType.Warriors.Info();
+        Assert.Empty(scouts.Requires);
+        Assert.True(scouts.Cost.Items.Sum(i => i.Amount) < warriors.Cost.Items.Sum(i => i.Amount) / 2);
+        Assert.True(scouts.Speed > warriors.Speed);
+        Assert.True(scouts.Attack < warriors.Attack && scouts.Defense < warriors.Defense);
+        Assert.True(s.Train(0, city.Id, BattalionType.Scouts).Ok);
+
+        var free = _map.Provinces.First(p => p.IsClaimable && !p.IsOwned);
+        var unit = s.AddRegiment(0, free.Id, BattalionType.Scouts);
+        Assert.True(s.Claim(0, unit.Id).Ok);
+        Assert.Equal(0, free.OwnerId);
+    }
+
+    [Fact]
+    public void EngineersNeedEngineeringAndBluntTheDefendersTerrain()
+    {
+        var (s, a, b) = TwoNations();
+        var city = s.CityIn(a)!;
+        a.Population = 1000;
+        s.Human.Stockpile[ResourceType.Wood] = s.Human.Stockpile[ResourceType.Gold] = 500;
+        Assert.False(s.Train(0, city.Id, BattalionType.Engineers).Ok);
+        s.Human.Learn(Tech.Engineering);
+        Assert.True(s.Train(0, city.Id, BattalionType.Engineers).Ok);
+        Assert.Equal(BattalionRole.Engineers, BattalionType.Engineers.Role());
+
+        var hillsWithRiver = _map.Provinces.First(p => p.Biome == Biome.Hills && p.HasRiver);
+        Assert.Equal(1.25 * MilitaryRules.RiverDefense, MilitaryRules.DefenseMultiplier(hillsWithRiver), 6);
+        Assert.Equal(1 + 0.25 * MilitaryRules.EngineeredTerrainDefense, MilitaryRules.DefenseMultiplier(hillsWithRiver, engineers: true), 6);
+        var plain = _map.Provinces.First(p => p.Biome == Biome.Grassland && !p.HasRiver);
+        Assert.Equal(1, MilitaryRules.DefenseMultiplier(plain, engineers: true), 6);
+
+        var defenders = new List<Conquer.Game.Entities.Unit> { s.AddRegiment(1, hillsWithRiver.Id, BattalionType.Warriors) };
+        double normal = GameSession.ExpectedFire(s.Engage(defenders, hillsWithRiver, attacking: false));
+        double engineered = GameSession.ExpectedFire(s.Engage(defenders, hillsWithRiver, attacking: false, enemyEngineers: true));
+        Assert.Equal(normal * MilitaryRules.DefenseMultiplier(hillsWithRiver, true) / MilitaryRules.DefenseMultiplier(hillsWithRiver), engineered, 6);
+
+        var sappers = s.AddRegiment(0, a.Id, BattalionType.Warriors, BattalionType.Engineers);
+        Assert.True(GameSession.HasEngineers([sappers]));
+        var engaged = s.Engage([sappers], a, attacking: true);
+        Assert.Equal(MilitaryRules.SupportExposure, engaged.Single(e => e.Role == BattalionRole.Engineers).Exposure);
+    }
+
+    [Fact]
+    public void OnlyEngineersBuildRoadsAndTheyWorkFasterTogether()
+    {
+        var (s, a, b) = TwoNations();
+        s.Human.Stockpile[ResourceType.Wood] = s.Human.Stockpile[ResourceType.Gold] = 1000;
+        s.Human.Learn(Tech.Engineering);
+        Assert.Equal("Hacen falta ingenieros en la provincia.", s.Build(0, a.Id, BuildingType.Road).Message);
+
+        var engineers = s.AddRegiment(0, a.Id, BattalionType.Engineers, BattalionType.Engineers);
+        Assert.True(s.Build(0, a.Id, BuildingType.Road).Ok);
+        int days = a.ConstructionDaysLeft;
+        RunHours(s, 24);
+        Assert.Equal(days - 2, a.ConstructionDaysLeft); // a day of work per battalion
+
+        // Without engineers the work stops.
+        s.Disband(0, engineers.Id);
+        int left = a.ConstructionDaysLeft;
+        RunHours(s, 48);
+        Assert.Equal(left, a.ConstructionDaysLeft);
+
+        s.AddRegiment(0, a.Id, BattalionType.Engineers, BattalionType.Engineers, BattalionType.Engineers, BattalionType.Engineers);
+        RunUntil(s, () => a.Buildings.Contains(BuildingType.Road), 24 * 40);
+        Assert.Contains(BuildingType.Road, a.Buildings);
+        Assert.Null(a.Constructing);
+
+        // Also in enemy land the nation occupies, and there however few people live in it.
+        Assert.False(s.CanBuild(0, b, BuildingType.Road).Ok);
+        s.DeclareWar(0, 1);
+        b.ControllerId = 0;
+        s.AddRegiment(0, b.Id, BattalionType.Engineers);
+        Assert.True(s.Build(0, b.Id, BuildingType.Road).Ok);
     }
 
     [Fact]
