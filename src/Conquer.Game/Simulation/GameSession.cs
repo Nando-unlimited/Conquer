@@ -854,9 +854,14 @@ public sealed partial class GameSession
         return unit;
     }
 
-    /// <summary>Takes a unit off the map: its subordinates lose their commander and it leaves any battle.</summary>
-    private void RemoveUnit(Unit unit)
+    /// <summary>
+    /// Takes a unit off the map: its subordinates lose their commander and it leaves any battle. Its officer goes back
+    /// to the nation's reserve unless <paramref name="officerSurvives"/> is false (the unit was destroyed).
+    /// </summary>
+    private void RemoveUnit(Unit unit, bool officerSurvives = true)
     {
+        if (unit.Officer is { } officer && officerSurvives) unit.Owner.OfficerReserve.Add(officer);
+        unit.Officer = null;
         Units.Remove(unit);
         _unitsById.Remove(unit.Id);
         foreach (var sub in Units.Where(u => u.CommanderId == unit.Id)) sub.CommanderId = null;

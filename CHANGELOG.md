@@ -2,6 +2,22 @@
 
 Todos los cambios del juego, del más reciente al más antiguo. Cada versión es un commit cuyo título es su número.
 
+## [1.32.0] - 2026-09-30
+
+### Añadido
+- **Editar unidades**: el botón «Editar unidad» de su panel abre una ventana para renombrarla (o volver a su nombre automático), separar varios batallones o barcos a la vez en una unidad nueva, unirla con otras de la provincia y elegir su oficial. El tiempo se para mientras está abierta.
+- **Oficiales**:
+  - Tu nación tiene una reserva de oficiales. Se reclutan por 40 de oro y desde ahí se ponen al mando de unidades de combate y cuarteles generales.
+  - Su rango va con el tamaño de lo que mandan: Coronel (regimiento), Brigadier (brigada), General de división (división), Teniente general (cuerpo), General (ejército) y Mariscal (grupo de ejércitos). Ascienden solos cuando su unidad crece.
+  - Cada uno tiene una o dos virtudes que mejoran con sus estrellas (ofensivo, defensivo, organizador, táctico, marchador, intendente) y a veces un defecto (timorato, temerario, desorganizado, indeciso, lento, corrupto), que afectan a ataque, defensa, recuperación, organización perdida en combate, velocidad o mantenimiento. Un mal oficial es peor que ninguno.
+  - El oficial de una unidad le aplica sus rasgos; el general de un cuartel, a las unidades bajo su mando que estén a su alcance. Ganan estrellas con las victorias.
+  - Si su unidad es destruida en combate, caen con ella; si la relevas, la unes a otra o la licencias, vuelven a la reserva.
+  - Los rivales también reclutan oficiales. En las partidas guardadas, los generales pasan a ser oficiales de su rango.
+
+### Cambiado
+- Separar y unir unidades se hace ahora en la ventana de edición, en vez de en el panel de la unidad.
+- **Rutas de las unidades como flechas**: la ruta es una flecha verde que se curva por cada provincia del camino, con contorno oscuro, punta en el destino y marcas que avanzan hacia él. La unidad seleccionada la muestra entera; tus demás unidades en marcha, más tenue. Los ataques se marcan con una flecha roja.
+
 ## [1.31.0] - 2026-09-30
 
 ### Cambiado

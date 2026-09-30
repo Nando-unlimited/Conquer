@@ -53,6 +53,9 @@ public sealed class Player
     /// <summary>Its regiment designs; every nation starts with one of two warrior battalions.</summary>
     public List<RegimentTemplate> Templates { get; } = [];
 
+    /// <summary>Officers recruited but not leading anything, ready to be put at the head of a unit.</summary>
+    public List<Officer> OfficerReserve { get; } = [];
+
     /// <summary>Institutions the nation has adopted.</summary>
     public HashSet<Institution> Institutions { get; } = [];
 
@@ -128,8 +131,10 @@ public sealed class Unit
     public int? AttackingProvinceId { get; set; }
     /// <summary>The fleet carrying this unit over the sea; null on land. It goes wherever the fleet goes.</summary>
     public int? CarrierId { get; set; }
-    /// <summary>The general at the head of an HQ; null for other units.</summary>
-    public General? General { get; set; }
+    /// <summary>The officer at the head of a combat unit, or an HQ's general; null while it has none.</summary>
+    public Officer? Officer { get; set; }
+    /// <summary>A name the player gave it; null keeps the one that goes with its number and size.</summary>
+    public string? CustomName { get; set; }
 
     /// <summary>Provinces still to enter, in order; empty when the unit is idle.</summary>
     public List<int> Path { get; } = [];
@@ -148,8 +153,14 @@ public sealed class Unit
         HeadquartersLevel = headquartersLevel;
     }
 
-    /// <summary>"3.er Regimiento", "3.ª Brigada" or "3.ª División" by its size, "II Cuerpo" for an HQ, "2.ª Flota"; settlers are just "Colonos".</summary>
-    public string Name => Type switch
+    /// <summary>
+    /// The name the player gave it, or else "3.er Regimiento", "3.ª Brigada" or "3.ª División" by its size, "II Cuerpo"
+    /// for an HQ, "2.ª Flota"; settlers are just "Colonos".
+    /// </summary>
+    public string Name => CustomName ?? AutomaticName;
+
+    /// <summary>The name that goes with its number and size.</summary>
+    public string AutomaticName => Type switch
     {
         UnitType.Settlers => "Colonos",
         UnitType.Fleet => Formations.FleetName(Number),
@@ -167,6 +178,12 @@ public sealed class Unit
     /// <summary>Men a fleet can carry: the sum of its ships' holds.</summary>
     public int Capacity => IsFleet ? Battalions.Sum(b => b.Info.Capacity) : 0;
     public bool CanFoundCity => Type == UnitType.Settlers;
+    /// <summary>Combat units and HQs are led by an officer; settlers and fleets are not.</summary>
+    public bool HasOfficer => Type is UnitType.Regiment or UnitType.Headquarters;
+    /// <summary>The rank that goes with its size: colonel to major general for combat units, lieutenant general up for HQs.</summary>
+    public OfficerRank RequiredRank => Type == UnitType.Headquarters
+        ? OfficerRank.MajorGeneral + HeadquartersLevel
+        : Battalions.Count <= 3 ? OfficerRank.Colonel : Battalions.Count <= 6 ? OfficerRank.Brigadier : OfficerRank.MajorGeneral;
     /// <summary>0 for regiments, 1-5 for HQs, -1 for units outside the chain of command.</summary>
     public int CommandLevel => Type switch
     {
@@ -174,8 +191,11 @@ public sealed class Unit
         UnitType.Headquarters => HeadquartersLevel,
         _ => -1,
     };
-    /// <summary>Speed as a multiple of a walking citizen's (a ship's, of the sailing speed): the slowest battalion or ship sets the pace.</summary>
-    public double Speed => Type switch
+    /// <summary>
+    /// Speed as a multiple of a walking citizen's (a ship's, of the sailing speed): the slowest battalion or ship sets
+    /// the pace, and the officer at its head may quicken or slow it.
+    /// </summary>
+    public double Speed => (1 + (Officer?.SpeedBonus ?? 0)) * Type switch
     {
         UnitType.Regiment or UnitType.Fleet => Battalions.Count == 0 ? 1 : Battalions.Min(b => b.Info.Speed),
         UnitType.Headquarters => MilitaryRules.HeadquartersSpeed,

@@ -435,30 +435,31 @@ public class MilitaryTests(WorldFixture world)
     }
 
     [Fact]
-    public void EveryHeadquartersHasAGeneralWhoLeadsTheUnitsInRange()
+    public void EveryHeadquartersHasAGeneralOfItsRankWhoLeadsTheUnitsInRange()
     {
         var (s, a, _) = TwoNations();
         var corps = s.AddHeadquarters(0, a.Id, 1);
         var unit = s.AddRegiment(0, a.Id, BattalionType.Warriors);
-        Assert.NotNull(corps.General);
-        Assert.InRange(corps.General!.Skill, 1, 3);
+        Assert.NotNull(corps.Officer);
+        Assert.Equal(OfficerRank.LieutenantGeneral, corps.Officer!.Rank);
+        Assert.InRange(corps.Officer.Skill, 1, 3);
         Assert.Null(s.GeneralOf(unit));
         Assert.True(s.Attach(0, unit.Id, corps.Id).Ok);
-        Assert.Same(corps.General, s.GeneralOf(unit));
+        Assert.Same(corps.Officer, s.GeneralOf(unit));
     }
 
     [Fact]
-    public void GeneralsEarnStarsWithVictoriesAndHelpByTheirTrait()
+    public void OfficersEarnStarsWithVictoriesAndHelpByTheirVirtues()
     {
-        var general = new General("Álvaro Castro", GeneralTrait.Offensive, 1);
-        general.Victories = General.VictoriesPerStar;
+        var general = new Officer(0, "Álvaro Castro", [OfficerTrait.Offensive], 1);
+        general.Victories = Officer.VictoriesPerStar;
         Assert.Equal(2, general.Skill);
         general.Victories = 100;
-        Assert.Equal(General.MaxSkill, general.Skill);
-        Assert.Equal(General.AttackPerStar * General.MaxSkill, general.FireBonus(attacking: true), 6);
+        Assert.Equal(Officer.MaxSkill, general.Skill);
+        Assert.Equal(Officer.AttackPerStar * Officer.MaxSkill, general.FireBonus(attacking: true), 6);
         Assert.Equal(0, general.FireBonus(attacking: false));
-        Assert.Equal(0, general.Shield);
-        Assert.Equal(0.5, new General("Inés Lara", GeneralTrait.Tactician, 5).Shield, 6);
+        Assert.Equal(0, general.OrganisationLoss);
+        Assert.Equal(-Officer.MaxShield, new Officer(1, "Inés Lara", [OfficerTrait.Tactician], 5).OrganisationLoss, 6);
     }
 
     [Fact]
@@ -469,7 +470,7 @@ public class MilitaryTests(WorldFixture world)
         var attacker = s.AddRegiment(0, a.Id, [.. Enumerable.Repeat(BattalionType.IronInfantry, 6)]);
         var corps = s.AddHeadquarters(0, a.Id, 1);
         s.Attach(0, attacker.Id, corps.Id);
-        int victories = corps.General!.Victories;
+        int victories = corps.Officer!.Victories;
         s.DeclareWar(0, 1);
         s.MoveUnit(0, attacker.Id, b.Id);
 
@@ -477,7 +478,7 @@ public class MilitaryTests(WorldFixture world)
         RunUntil(s, () => s.BattleIn(b.Id) == null, 24 * 10);
         Assert.Equal(0, b.ControllerId);
         Assert.All(attacker.Battalions, x => Assert.True(x.Experience > 0));
-        Assert.Equal(victories + 1, corps.General.Victories);
+        Assert.Equal(victories + 1, corps.Officer.Victories);
     }
 
     [Fact]
@@ -526,15 +527,22 @@ public class MilitaryTests(WorldFixture world)
         var corps = s.AddHeadquarters(0, a.Id, 1);
         var unit = s.AddRegiment(0, a.Id, BattalionType.Warriors);
         unit.Battalions[0].Experience = 0.4;
-        corps.General!.Victories = 4;
+        corps.Officer!.Victories = 4;
 
         var save = s.ToSave("test");
         var loaded = GameSession.Load(_map, save);
         Assert.Equal(0.4, loaded.UnitById(unit.Id)!.Battalions[0].Experience, 6);
-        var general = loaded.UnitById(corps.Id)!.General!;
-        Assert.Equal((corps.General.Name, corps.General.Trait, corps.General.Skill), (general.Name, general.Trait, general.Skill));
+        var general = loaded.UnitById(corps.Id)!.Officer!;
+        Assert.Equal((corps.Officer.Name, corps.Officer.Skill, corps.Officer.Rank), (general.Name, general.Skill, general.Rank));
+        Assert.Equal(corps.Officer.Traits, general.Traits);
 
-        for (int i = 0; i < save.Units.Count; i++) save.Units[i] = save.Units[i] with { General = null };
-        Assert.NotNull(GameSession.Load(_map, save).UnitById(corps.Id)!.General);
+        // A general as saves before officers wrote it becomes an officer of the HQ's rank.
+        int corpsIndex = save.Units.FindIndex(u => u.Id == corps.Id);
+        save.Units[corpsIndex] = save.Units[corpsIndex] with { Officer = null, General = new GeneralSave("Olga Haro", OfficerTrait.Organiser, 2, 1) };
+        var old = GameSession.Load(_map, save).UnitById(corps.Id)!.Officer!;
+        Assert.Equal(("Olga Haro", OfficerTrait.Organiser, OfficerRank.LieutenantGeneral), (old.Name, old.Traits.Single(), old.Rank));
+
+        for (int i = 0; i < save.Units.Count; i++) save.Units[i] = save.Units[i] with { Officer = null, General = null };
+        Assert.NotNull(GameSession.Load(_map, save).UnitById(corps.Id)!.Officer);
     }
 }

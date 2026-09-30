@@ -18,6 +18,7 @@ public sealed partial class GameSession
     private readonly Dictionary<int, HashSet<int>> _supplied = [];
     private readonly Dictionary<(int Player, int Level), int> _unitNumbers = [];
     private int _nextTemplateId;
+    private int _nextOfficerId;
 
     public IReadOnlyList<Battle> Battles => _battles;
 
@@ -33,11 +34,11 @@ public sealed partial class GameSession
         return unit;
     }
 
-    /// <summary>A new HQ, with a newly appointed general at its head.</summary>
+    /// <summary>A new HQ, with a newly recruited general of the right rank at its head.</summary>
     internal Unit AddHeadquarters(int ownerId, int provinceId, int level)
     {
         var hq = AddUnit(ownerId, UnitType.Headquarters, provinceId, CommandLevels.Info(level).Staff, NextUnitNumber(ownerId, level), level);
-        hq.General = General.Appoint(_random);
+        hq.Officer = NewOfficer(hq.Owner, hq.RequiredRank);
         return hq;
     }
 
@@ -387,25 +388,122 @@ public sealed partial class GameSession
         other.Battalions.Clear();
         foreach (var cargo in CargoOf(other).ToList()) cargo.CarrierId = unit.Id;
         unit.CommanderId ??= other.CommanderId;
+        // The unit keeps its own officer; the other's takes over only if it had none, or else goes to the reserve.
+        if (unit.Officer == null)
+        {
+            unit.Officer = other.Officer;
+            other.Officer = null;
+        }
         RemoveUnit(other);
         unit.Path.Clear();
         unit.StepHours = unit.HoursToNext = 0;
+        Promote(unit);
         return CommandResult.Success($"{other.Name} se une a {unit.Name}.");
     }
 
     /// <summary>One battalion leaves its regiment and forms a new one in the same province.</summary>
-    public CommandResult Split(int playerId, int unitId, int battalionIndex)
+    public CommandResult Split(int playerId, int unitId, int battalionIndex) => Split(playerId, unitId, [battalionIndex]);
+
+    /// <summary>
+    /// The chosen battalions (or ships) leave their unit together and form a new one in the same province, with no
+    /// officer; the officer stays with the unit they leave.
+    /// </summary>
+    public CommandResult Split(int playerId, int unitId, IReadOnlyCollection<int> battalionIndexes)
     {
         if (UnitById(unitId) is not { } unit || unit.OwnerId != playerId || !(unit.IsMilitary || unit.IsFleet) || unit.IsAboard) return CommandResult.Fail("Unidad no válida.");
-        if (unit.Battalions.Count < 2) return CommandResult.Fail(unit.IsFleet ? "Solo tiene un barco." : $"Solo tiene {Formations.BattalionCount(1)}.");
+        var indexes = battalionIndexes.Distinct().OrderDescending().ToList();
+        if (indexes.Count == 0) return CommandResult.Fail(unit.IsFleet ? "Elige qué barcos separar." : "Elige qué batallones separar.");
+        if (indexes.Any(i => i < 0 || i >= unit.Battalions.Count)) return CommandResult.Fail("Tropa no válida.");
+        if (indexes.Count >= unit.Battalions.Count) return CommandResult.Fail(unit.IsFleet ? "Debe quedar al menos un barco." : "Debe quedar al menos un batallón.");
         if (unit.AttackingProvinceId.HasValue) return CommandResult.Fail("Está atacando.");
-        if (battalionIndex < 0 || battalionIndex >= unit.Battalions.Count) return CommandResult.Fail("Tropa no válida.");
-        var battalion = unit.Battalions[battalionIndex];
-        if (unit.IsFleet && CargoMen(unit) > unit.Capacity - battalion.Info.Capacity) return CommandResult.Fail("La carga no cabría en el resto de la flota.");
-        unit.Battalions.RemoveAt(battalionIndex);
+        var leaving = indexes.Select(i => unit.Battalions[i]).Reverse().ToList();
+        if (unit.IsFleet && CargoMen(unit) > unit.Capacity - leaving.Sum(b => b.Info.Capacity)) return CommandResult.Fail("La carga no cabría en el resto de la flota.");
+        foreach (int i in indexes) unit.Battalions.RemoveAt(i);
         var split = AddUnit(playerId, unit.Type, unit.ProvinceId, 0, NextUnitNumber(playerId, unit.IsFleet ? FleetNumbering : CommandLevels.Combat));
-        split.Battalions.Add(battalion);
-        return CommandResult.Success($"{Formations.BattalionName(battalion.Info)} forma una unidad nueva: {split.Name}.");
+        split.Battalions.AddRange(leaving);
+        string what = leaving.Count == 1 ? Formations.BattalionName(leaving[0].Info) : unit.IsFleet ? $"{leaving.Count} barcos" : Formations.BattalionCount(leaving.Count);
+        return CommandResult.Success($"{what} {(leaving.Count == 1 ? "forma" : "forman")} una unidad nueva: {split.Name}.");
+    }
+
+    /// <summary>Gives a unit a name of the player's choosing; an empty one brings back the automatic name.</summary>
+    public CommandResult RenameUnit(int playerId, int unitId, string name)
+    {
+        if (UnitById(unitId) is not { } unit || unit.OwnerId != playerId || unit.Type == UnitType.Settlers) return CommandResult.Fail("Unidad no válida.");
+        name = name.Trim();
+        if (name.Length > MilitaryRules.MaxUnitNameLength) return CommandResult.Fail($"Como mucho {MilitaryRules.MaxUnitNameLength} letras.");
+        unit.CustomName = name.Length == 0 || name == unit.AutomaticName ? null : name;
+        return CommandResult.Success(unit.CustomName == null ? $"Vuelve a llamarse {unit.Name}." : $"Ahora se llama {unit.Name}.");
+    }
+
+    // ------------------------------------------------------------------ officers
+
+    public CommandResult CanRecruitOfficer(Player player) =>
+        player.Stockpile[Economy.ResourceType.Gold] < MilitaryRules.OfficerCost
+            ? CommandResult.Fail($"Hacen falta {MilitaryRules.OfficerCost:0} de oro.")
+            : CommandResult.Success();
+
+    /// <summary>A new officer, with random traits, joins the nation's reserve for gold.</summary>
+    public CommandResult RecruitOfficer(int playerId)
+    {
+        var player = Players[playerId];
+        var check = CanRecruitOfficer(player);
+        if (!check.Ok) return check;
+        player.Stockpile[Economy.ResourceType.Gold] -= MilitaryRules.OfficerCost;
+        var officer = NewOfficer(player, OfficerRank.Colonel);
+        player.OfficerReserve.Add(officer);
+        return CommandResult.Success($"{officer.Title} se une a la reserva: {officer.Summary}.");
+    }
+
+    /// <summary>
+    /// Puts an officer from the reserve at the head of a combat unit or HQ; whoever led it goes back to the reserve.
+    /// The officer is promoted if the unit calls for a higher rank.
+    /// </summary>
+    public CommandResult AssignOfficer(int playerId, int unitId, int officerId)
+    {
+        if (UnitById(unitId) is not { } unit || unit.OwnerId != playerId || !unit.HasOfficer) return CommandResult.Fail("Unidad no válida.");
+        var reserve = Players[playerId].OfficerReserve;
+        if (reserve.FirstOrDefault(o => o.Id == officerId) is not { } officer) return CommandResult.Fail("Ese oficial no está en la reserva.");
+        reserve.Remove(officer);
+        if (unit.Officer is { } previous) reserve.Add(previous);
+        unit.Officer = officer;
+        Promote(unit);
+        return CommandResult.Success($"{officer.Title} toma el mando de {unit.Name}.");
+    }
+
+    /// <summary>The unit's officer steps down and goes back to the reserve.</summary>
+    public CommandResult RelieveOfficer(int playerId, int unitId)
+    {
+        if (UnitById(unitId) is not { } unit || unit.OwnerId != playerId) return CommandResult.Fail("Unidad no válida.");
+        if (unit.Officer is not { } officer) return CommandResult.Fail("No tiene oficial.");
+        unit.Officer = null;
+        Players[playerId].OfficerReserve.Add(officer);
+        return CommandResult.Success($"{officer.Title} vuelve a la reserva.");
+    }
+
+    /// <summary>An officer in the reserve leaves the army for good.</summary>
+    public CommandResult RetireOfficer(int playerId, int officerId)
+    {
+        var reserve = Players[playerId].OfficerReserve;
+        if (reserve.FirstOrDefault(o => o.Id == officerId) is not { } officer) return CommandResult.Fail("Ese oficial no está en la reserva.");
+        reserve.Remove(officer);
+        return CommandResult.Success($"{officer.Title} se retira.");
+    }
+
+    /// <summary>A newly recruited officer whose name no other officer of the nation already has (if a few tries find one).</summary>
+    private Officer NewOfficer(Player player, OfficerRank rank)
+    {
+        var taken = Units.Where(u => u.OwnerId == player.Id).Select(u => u.Officer?.Name).Concat(player.OfficerReserve.Select(o => o.Name)).ToHashSet();
+        var officer = Officer.Recruit(_nextOfficerId++, _random, rank);
+        for (int i = 0; i < 10 && taken.Contains(officer.Name); i++) officer = Officer.Recruit(officer.Id, _random, rank);
+        return officer;
+    }
+
+    /// <summary>Raises the unit's officer to the rank its size calls for, if below it.</summary>
+    private void Promote(Unit unit)
+    {
+        if (unit.Officer is not { } officer || officer.Rank >= unit.RequiredRank) return;
+        officer.Rank = unit.RequiredRank;
+        if (unit.OwnerId == HumanPlayerId) Notify(HumanPlayerId, $"{officer.Name} asciende a {Officer.RankName(officer.Rank).ToLowerInvariant()} al frente de {unit.Name}.");
     }
 
     public CommandResult CanAttach(Unit unit, Unit hq)
@@ -478,26 +576,27 @@ public sealed partial class GameSession
 
     /// <summary>
     /// What a nation's forces cost each day, by resource: a share of what every battalion, ship and HQ cost to
-    /// raise, gold and materials alike (wood only goes into building them).
+    /// raise, gold and materials alike (wood only goes into building them), more or less as the officer leading it keeps it.
     /// </summary>
     public double[] Upkeep(Player player)
     {
         var upkeep = new double[Economy.Resources.All.Length];
         foreach (var unit in Units.Where(u => u.OwnerId == player.Id))
         {
-            if (unit.IsHeadquarters) AddUpkeep(upkeep, CommandLevels.Info(unit.HeadquartersLevel).Cost);
-            foreach (var b in unit.Battalions) AddUpkeep(upkeep, b.Info.Cost);
+            double factor = Math.Max(0, 1 + (unit.Officer?.UpkeepChange ?? 0));
+            if (unit.IsHeadquarters) AddUpkeep(upkeep, CommandLevels.Info(unit.HeadquartersLevel).Cost, factor);
+            foreach (var b in unit.Battalions) AddUpkeep(upkeep, b.Info.Cost, factor);
         }
         return upkeep;
     }
 
-    /// <summary>What one battalion, ship or HQ of this cost adds to the daily upkeep.</summary>
-    public static void AddUpkeep(double[] upkeep, Economy.ResourceCost cost)
+    /// <summary>What one battalion, ship or HQ of this cost adds to the daily upkeep, times <paramref name="factor"/>.</summary>
+    public static void AddUpkeep(double[] upkeep, Economy.ResourceCost cost, double factor = 1)
     {
         foreach (var (type, amount) in cost.Items)
         {
             if (type == Economy.ResourceType.Wood) continue;
-            upkeep[(int)type] += amount * (type == Economy.ResourceType.Gold ? MilitaryRules.UpkeepGoldShare : MilitaryRules.UpkeepResourceShare);
+            upkeep[(int)type] += amount * factor * (type == Economy.ResourceType.Gold ? MilitaryRules.UpkeepGoldShare : MilitaryRules.UpkeepResourceShare);
         }
     }
 
@@ -537,7 +636,7 @@ public sealed partial class GameSession
                 }
                 if (unit.Citizens >= 1) continue;
                 if (unit.IsFleet) Sink(unit);
-                else Destroy(unit, "se ha disuelto: nadie le pagaba");
+                else Destroy(unit, "se ha disuelto: nadie le pagaba", officerSurvives: true);
                 continue;
             }
             // Troops aboard live off the ships' stores; fleets are repaired and crewed only in their ports.
@@ -549,13 +648,13 @@ public sealed partial class GameSession
                     b.Organisation = Math.Max(0, b.Organisation - b.Info.MaxOrganisation * MilitaryRules.OutOfSupplyOrganisationLoss);
                     b.Strength = Math.Max(0, b.Strength - b.Info.Men * MilitaryRules.OutOfSupplyAttrition);
                 }
-                if (unit.Citizens < 1) Destroy(unit, "se ha dispersado sin suministro");
+                if (unit.Citizens < 1) Destroy(unit, "se ha dispersado sin suministro", officerSurvives: true);
                 continue;
             }
             if (InBattle(unit)) continue;
             // A dry dock repairs a fleet faster: organisation and crews both.
             double repair = unit.IsFleet && Map.Provinces[unit.ProvinceId].Buildings.Contains(BuildingType.DryDock) ? MilitaryRules.DryDockRepair : 1;
-            double recovery = MilitaryRules.OrganisationRecovery * (1 + CommandBonus(unit) + (GeneralOf(unit)?.RecoveryBonus ?? 0))
+            double recovery = MilitaryRules.OrganisationRecovery * Math.Max(0, 1 + CommandBonus(unit) + (GeneralOf(unit)?.RecoveryBonus ?? 0) + (unit.Officer?.RecoveryBonus ?? 0))
                               * (unit.IsMoving ? 0.5 : 1) * repair;
             foreach (var b in unit.Battalions)
             {
@@ -644,8 +743,8 @@ public sealed partial class GameSession
     public static double DefenseMultiplier(Province province) =>
         MilitaryRules.DefenseMultiplier(province) * (1 + province.BuildingBonuses.Defense);
 
-    /// <summary>The general of a unit's own HQ, if it is within range to lead it.</summary>
-    public General? GeneralOf(Unit unit) => InCommandRange(unit) ? CommanderOf(unit)!.General : null;
+    /// <summary>The general of a unit's own HQ, if it is within range to lead it (the unit's own officer is <see cref="Unit.Officer"/>).</summary>
+    public Officer? GeneralOf(Unit unit) => InCommandRange(unit) ? CommanderOf(unit)!.Officer : null;
 
     /// <summary>A battalion in the fight: whose it is, the damage it deals this hour and its share of the enemy's.</summary>
     public readonly record struct Engaged(Unit Unit, Battalion Battalion, BattalionRole Role, double Fire, double Exposure);
@@ -654,14 +753,14 @@ public sealed partial class GameSession
     /// The battalions of one side that fight this hour: the strongest of the front-line troops, as many as
     /// the terrain's front holds, and up to half as many artillery and aircraft behind them. The rest wait
     /// in reserve. Each fires its attack or defence, scaled by its men, organisation and experience, the
-    /// chain of command and its general, supply and, for defenders, the terrain and walls.
+    /// chain of command, its officer and its HQ's general, supply and, for defenders, the terrain and walls.
     /// </summary>
     public List<Engaged> Engage(List<Unit> units, Province province, bool attacking)
     {
         var all = new List<Engaged>();
         foreach (var unit in units)
         {
-            double multiplier = (1 + CommandBonus(unit) + (GeneralOf(unit)?.FireBonus(attacking) ?? 0))
+            double multiplier = Math.Max(0, 1 + CommandBonus(unit) + (GeneralOf(unit)?.FireBonus(attacking) ?? 0) + (unit.Officer?.FireBonus(attacking) ?? 0))
                                 * (IsInSupply(unit) ? 1 : MilitaryRules.OutOfSupplyEfficiency)
                                 * (attacking ? 1 : DefenseMultiplier(province));
             foreach (var b in unit.Battalions)
@@ -689,7 +788,7 @@ public sealed partial class GameSession
 
     /// <summary>
     /// Spreads the enemy's fire over a side's engaged battalions as lost organisation and men: artillery and
-    /// aircraft behind the line take a smaller share, and a tactician general spares part of the organisation.
+    /// aircraft behind the line take a smaller share, and the officers leading them may spare or lose organisation.
     /// </summary>
     private void Damage(List<Engaged> side, double fire)
     {
@@ -698,8 +797,8 @@ public sealed partial class GameSession
         foreach (var e in side)
         {
             double share = fire * e.Exposure / exposure;
-            double shield = GeneralOf(e.Unit)?.Shield ?? 0;
-            e.Battalion.Organisation = Math.Max(0, e.Battalion.Organisation - share * MilitaryRules.OrganisationDamage * (1 - shield));
+            double loss = Math.Max(0, 1 + (GeneralOf(e.Unit)?.OrganisationLoss ?? 0) + (e.Unit.Officer?.OrganisationLoss ?? 0));
+            e.Battalion.Organisation = Math.Max(0, e.Battalion.Organisation - share * MilitaryRules.OrganisationDamage * loss);
             e.Battalion.Strength = Math.Max(0, e.Battalion.Strength - share * MilitaryRules.StrengthDamage);
         }
     }
@@ -732,7 +831,7 @@ public sealed partial class GameSession
         }
         foreach (var unit in attackers.Where(u => !attackersWon)) unit.AttackingProvinceId = null;
         var winners = attackersWon ? attackers : EnemyRegimentsIn(battle.ProvinceId, battle.AttackerId).ToList();
-        foreach (var general in winners.Select(GeneralOf).OfType<General>().Distinct()) general.Victories++;
+        foreach (var officer in winners.Select(GeneralOf).Concat(winners.Select(u => u.Officer)).OfType<Officer>().Distinct()) officer.Victories++;
 
         if (battle.AttackerId == HumanPlayerId) Notify(HumanPlayerId, attackersWon ? $"Victoria en {place}." : $"Nuestro ataque a {place} ha fracasado.");
         else if (battle.DefenderId == HumanPlayerId) Notify(HumanPlayerId, attackersWon ? $"Hemos perdido {place}." : $"Hemos resistido en {place}.");
@@ -762,9 +861,15 @@ public sealed partial class GameSession
         else Destroy(unit, "rodeada y destruida");
     }
 
-    private void Destroy(Unit unit, string how)
+    /// <summary>
+    /// The unit is lost. Its officer falls with it when it is wiped out in battle or sunk, but makes it back to the
+    /// reserve when it just melts away (<paramref name="officerSurvives"/>).
+    /// </summary>
+    private void Destroy(Unit unit, string how, bool officerSurvives = false)
     {
-        RemoveUnit(unit);
-        if (unit.OwnerId == HumanPlayerId) Notify(HumanPlayerId, $"{unit.Name}: {how}.");
+        var officer = unit.Officer;
+        RemoveUnit(unit, officerSurvives);
+        if (unit.OwnerId != HumanPlayerId) return;
+        Notify(HumanPlayerId, $"{unit.Name}: {how}." + (officer != null && !officerSurvives ? $" Ha caído el {char.ToLowerInvariant(officer.Title[0])}{officer.Title[1..]}." : ""));
     }
 }

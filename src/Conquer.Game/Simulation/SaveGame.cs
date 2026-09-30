@@ -56,6 +56,8 @@ public sealed record SaveGame
     public required int NextCityId { get; init; }
     public required int NextMigrationId { get; init; }
     public required int NextTemplateId { get; init; }
+    /// <summary>Absent in saves from before officers.</summary>
+    public int? NextOfficerId { get; init; }
     /// <summary>Absent in saves from before institutions existed.</summary>
     public List<InstitutionBirthSave>? InstitutionBirths { get; init; }
 
@@ -95,7 +97,8 @@ public sealed record PlayerSave(
     int Id, string Name, uint Color, bool IsHuman, double[] Stockpile, int? CapitalCityId,
     double[] LastDayNet, bool IsStarving, double FoodReserveDays, List<Tech> Techs,
     double[] ResearchProgress, double SpareScience, double LastDayScience, List<TemplateSave> Templates,
-    int[]? ResearchPriorities = null, List<Tech>? CurrentResearch = null, List<Institution>? Institutions = null);
+    int[]? ResearchPriorities = null, List<Tech>? CurrentResearch = null, List<Institution>? Institutions = null,
+    List<OfficerSave>? OfficerReserve = null);
 
 /// <summary>Where and when an institution was born.</summary>
 public sealed record InstitutionBirthSave(Institution Institution, int ProvinceId, long Hours);
@@ -116,11 +119,14 @@ public sealed record TrainingSave(
 public sealed record UnitSave(
     int Id, int OwnerId, UnitType Type, int ProvinceId, int Citizens, int Number, int HeadquartersLevel,
     List<BattalionSave> Battalions, int? CommanderId, int? AttackingProvinceId, List<int> Path, double HoursToNext, double StepHours,
-    int? CarrierId = null, GeneralSave? General = null);
+    int? CarrierId = null, GeneralSave? General = null, OfficerSave? Officer = null, string? CustomName = null);
 
 public sealed record BattalionSave(BattalionType Type, double Strength, double Organisation, double Experience = 0);
 
-public sealed record GeneralSave(string Name, GeneralTrait Trait, int StartingSkill, int Victories);
+/// <summary>An HQ's general as saves before officers (1.32.0) wrote it: one trait, no rank; loaded as an officer.</summary>
+public sealed record GeneralSave(string Name, OfficerTrait Trait, int StartingSkill, int Victories);
+
+public sealed record OfficerSave(int Id, string Name, List<OfficerTrait> Traits, int StartingSkill, int Victories, OfficerRank Rank);
 
 public sealed record MigrationSave(int Id, int OwnerId, int From, int To, int People, long DepartHours, long ArriveHours, bool Forced, double Mood);
 

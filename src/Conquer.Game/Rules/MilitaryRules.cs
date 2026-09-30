@@ -73,6 +73,12 @@ public static class MilitaryRules
     /// <summary>Extra bonus for each higher HQ in an unbroken chain above it.</summary>
     public const double HigherCommandBonus = 0.05;
 
+    // Officers
+    /// <summary>Gold it costs to recruit an officer into the reserve.</summary>
+    public const double OfficerCost = 40;
+    /// <summary>Longest name a player may give a unit.</summary>
+    public const int MaxUnitNameLength = 30;
+
     // Supply and recovery, every day
     /// <summary>Supply reaches this many hours of marching from a city through territory the nation controls.</summary>
     public const double SupplyRangeHours = 24 * 15;

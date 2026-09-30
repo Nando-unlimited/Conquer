@@ -8,7 +8,7 @@ namespace Conquer.Game.AI;
 
 /// <summary>
 /// The rival's army. In peace a few lone warriors claim land while the rest train and garrison;
-/// regiments are merged and put under brigade, division and corps HQs. It declares war on a weaker
+/// regiments are merged, put under corps and army HQs and given officers. It declares war on a weaker
 /// neighbour now and then, attacks the least defended enemy provinces, rushes to cities under attack
 /// and makes peace when a war goes badly.
 /// </summary>
@@ -148,6 +148,23 @@ internal sealed partial class AiPlayer
             var below = level == 1 ? army : hqs.Where(h => h.HeadquartersLevel == level - 1).ToList();
             RaiseAndAttach(below, hqs.Where(h => h.HeadquartersLevel == level).ToList(), level);
         }
+        StaffArmy();
+    }
+
+    /// <summary>
+    /// Puts an officer at the head of the biggest unit without one: the best in the reserve (most virtues and stars,
+    /// fewest flaws), or a newly recruited one when the reserve is empty and it can spare the gold. One a day.
+    /// </summary>
+    private void StaffArmy()
+    {
+        if (Army.Where(u => u.Officer == null).OrderByDescending(u => u.Battalions.Count).FirstOrDefault() is not { } unit) return;
+        if (_player.OfficerReserve.Count == 0)
+        {
+            if (_player.Stockpile[ResourceType.Gold] - MilitaryRules.OfficerCost < GoldKeptForRecruiting) return;
+            _session.RecruitOfficer(_player.Id);
+        }
+        var best = _player.OfficerReserve.OrderByDescending(o => o.Traits.Count(t => !Officer.IsFlaw(t)) * o.Skill - 2 * o.Traits.Count(Officer.IsFlaw)).First();
+        _session.AssignOfficer(_player.Id, unit.Id, best.Id);
     }
 
     /// <summary>Attaches unattached subordinates to the nearest HQ of the level with room, raising a new HQ when all are full.</summary>

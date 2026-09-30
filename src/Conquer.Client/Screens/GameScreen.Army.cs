@@ -42,14 +42,11 @@ public sealed partial class GameScreen
             s += new Vector2(stack * 5, -stack * 7 - 14);
 
             bool selected = unit.Id == _selectedUnitId;
-            if (selected)
-            {
-                DrawPath(unit, s);
-                if (_session.CommanderOf(unit) is { } hq)
-                    Batch.Line(s, _camera.MapToScreen(Center(hq.ProvinceId)), (_session.InCommandRange(unit) ? Theme.Good : Theme.Bad).WithAlpha(0.8f), 1.5f);
-            }
+            if (selected || (unit.OwnerId == Human.Id && _camera.Zoom >= 1.5f)) DrawPath(unit, pos, selected);
+            if (selected && _session.CommanderOf(unit) is { } hq)
+                Batch.Line(s, _camera.MapToScreen(Center(hq.ProvinceId)), (_session.InCommandRange(unit) ? Theme.Good : Theme.Bad).WithAlpha(0.8f), 1.5f);
             if (unit.AttackingProvinceId is int target)
-                Batch.Line(s, _camera.MapToScreen(Center(target)), BattleColor.WithAlpha(0.9f), 2.5f);
+                PathArrow.Draw(Batch, [_camera.MapToScreen(pos), _camera.MapToScreen(Between(unit.ProvinceId, target, 1))], BattleColor, _realTime, 5);
 
             // Counters shrink when zoomed out so they don't bury the map.
             float scale = selected ? 1 : Math.Clamp(_camera.Zoom / 3, 0.45f, 1);
@@ -169,6 +166,12 @@ public sealed partial class GameScreen
             Paragraph(x, ref y, w, "Clic derecho en la costa junto a su flota (o en su puerto) para desembarcar. En tierra enemiga sin tropas, desembarcar la ocupa.", Theme.TextDim);
             return;
         }
+        if (unit.IsMilitary || unit.IsFleet || unit.IsHeadquarters)
+        {
+            if (Ui.Button(new Rect(x, y, w, 32), "Editar unidad", tooltip: "Renombrar, separar y unir tropas, y elegir su oficial."))
+                OpenUnitEditor(unit);
+            y += 38;
+        }
         EmbarkButtons(unit, x, ref y, w);
         float half = (w - 6) / 2;
         if (unit.CanFoundCity)
@@ -250,7 +253,7 @@ public sealed partial class GameScreen
         return "Esperando órdenes";
     }
 
-    /// <summary>A regiment's battalions, or a fleet's ships and cargo, with the buttons to split and merge them.</summary>
+    /// <summary>A regiment's battalions, or a fleet's ships and cargo (split and merged in the unit editor).</summary>
     private void RegimentDetails(Unit unit, float x, ref float y, float w)
     {
         if (unit.IsFleet)
@@ -274,7 +277,8 @@ public sealed partial class GameScreen
             Line(x, ref y, "Suministro", unit.IsAboard ? "Víveres del barco" : supplied ? "Con suministro" : "Sin suministro", supplied ? Theme.Good : Theme.Bad);
             Line(x, ref y, "Velocidad", $"{unit.Speed * GameRules.CitizenSpeedKmh:0.#} km/h");
             CommandLine(unit, x, ref y);
-            GeneralLine(_session.GeneralOf(unit), x, ref y, w);
+            OfficerLine("Oficial", unit.Officer, "Manda esta unidad.", x, ref y, w);
+            OfficerLine("General", _session.GeneralOf(unit), "Manda las unidades de su cuartel general que estén a su alcance.", x, ref y, w);
             if (unit.Battalions.Count > 0)
             {
                 double xp = unit.Battalions.Sum(b => b.Experience * b.Strength) / Math.Max(1, unit.Battalions.Sum(b => b.Strength));
@@ -285,16 +289,11 @@ public sealed partial class GameScreen
         }
         y += 4;
 
-        bool mine = unit.OwnerId == Human.Id;
-        for (int i = 0; i < unit.Battalions.Count; i++)
+        foreach (var b in unit.Battalions)
         {
-            var b = unit.Battalions[i];
             Ui.Text(x, y, Formations.BattalionName(b.Info), Theme.Text, FontSize.Small, bold: true);
             string men = $"{b.Strength:0}/{b.Info.Men}";
-            Ui.Text(x + w - (mine && unit.Battalions.Count > 1 ? 74 : 0) - Ui.Font.Measure(men, FontSize.Small), y, men, Theme.TextDim, FontSize.Small);
-            if (mine && unit.Battalions.Count > 1 && Ui.Button(new Rect(x + w - 66, y - 2, 66, 20), "Separar", !unit.AttackingProvinceId.HasValue,
-                    tooltip: "Sale de esta unidad y forma una nueva.", size: FontSize.Small))
-                Show(_session.Split(Human.Id, unit.Id, i));
+            Ui.Text(x + w - Ui.Font.Measure(men, FontSize.Small), y, men, Theme.TextDim, FontSize.Small);
             var row = new Rect(x, y, w, 30);
             y += 19;
             Bar(new Rect(x, y, w, 4), b.StrengthShare, StrengthColor);
@@ -306,18 +305,7 @@ public sealed partial class GameScreen
                            (b.Info.Capacity > 0 ? $"\nLleva {b.Info.Capacity:N0} hombres." : ""));
             y += 16;
         }
-        if (!mine || unit.IsAboard) return;
-
-        var others = _session.Units.Where(u => u.IsFleet == unit.IsFleet && (u.IsMilitary || u.IsFleet) && !u.IsAboard
-                                               && u.OwnerId == Human.Id && u.ProvinceId == unit.ProvinceId && u.Id != unit.Id).Take(3).ToList();
-        foreach (var other in others)
-        {
-            var can = _session.CanMerge(unit, other);
-            string size = other.IsFleet ? Formations.ShipCount(other.Battalions.Count) : $"{other.Battalions.Count} br.";
-            if (Ui.Button(new Rect(x, y, w, 26), $"Unir {other.Name} ({size})", can.Ok, tooltip: can.Ok ? null : can.Message, size: FontSize.Small))
-                Show(_session.Merge(Human.Id, unit.Id, other.Id));
-            y += 30;
-        }
+        if (unit.OwnerId != Human.Id || unit.IsAboard) return;
         if (!unit.IsFleet) AttachButtons(unit, x, ref y, w);
     }
 
@@ -326,7 +314,7 @@ public sealed partial class GameScreen
         var info = CommandLevels.Info(hq.HeadquartersLevel);
         Line(x, ref y, "Alcance", $"{info.RangeKm:N0} km");
         CommandLine(hq, x, ref y);
-        GeneralLine(hq.General, x, ref y, w);
+        OfficerLine("General", hq.Officer, "Manda las unidades de su cuartel general que estén a su alcance.", x, ref y, w);
         var subs = _session.SubordinatesOf(hq).ToList();
         string below = Formations.SubordinatesPlural(hq.HeadquartersLevel);
         Ui.Text(x, y, $"Al mando ({subs.Count}/{info.MaxSubordinates} {below})", Theme.Text, bold: true);
@@ -346,19 +334,17 @@ public sealed partial class GameScreen
         if (hq.OwnerId == Human.Id) AttachButtons(hq, x, ref y, w);
     }
 
-    /// <summary>The general leading the unit (or at the head of the HQ), with what their trait does on hover.</summary>
-    private void GeneralLine(General? general, float x, ref float y, float w)
+    /// <summary>An officer leading the unit, or its HQ's general, with their traits and what they do on hover.</summary>
+    private void OfficerLine(string label, Officer? officer, string role, float x, ref float y, float w)
     {
-        if (general == null)
+        if (officer == null)
         {
-            Line(x, ref y, "General", "Ninguno", Theme.TextDim);
+            Line(x, ref y, label, "Ninguno", Theme.TextDim);
             return;
         }
-        Line(x, ref y, "General", $"{general.Name}, {general.Summary}");
-        if (Ui.Hover(new Rect(x, y - 24, w, 22)))
-            Ui.Tooltip($"{General.TraitName(general.Trait)}: {General.TraitDescription(general.Trait)}.\n" +
-                       $"{general.Skill} de {General.MaxSkill} estrellas, {general.Victories} victorias (una estrella más cada {General.VictoriesPerStar}).\n" +
-                       "Manda las unidades de su cuartel general que estén a su alcance.");
+        // Just the name and stars fit; the traits are in the tooltip, and a flawed officer is not shown in green.
+        Line(x, ref y, label, $"{officer.Name} {new string('*', officer.Skill)}", officer.Traits.Any(Officer.IsFlaw) ? Theme.Text : Theme.Good);
+        if (Ui.Hover(new Rect(x, y - 24, w, 22))) Ui.Tooltip($"{OfficerTooltip(officer)}\n{role}");
     }
 
     /// <summary>Who the unit reports to, whether that HQ is in range, and the bonus it gives.</summary>

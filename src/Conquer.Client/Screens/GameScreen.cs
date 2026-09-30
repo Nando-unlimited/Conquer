@@ -92,15 +92,17 @@ public sealed partial class GameScreen : IScreen
         if (Enum.TryParse<MapMode>(options.Mode, ignoreCase: true, out var mode)) _renderer.Mode = mode;
         if (Enum.TryParse<NationTab>(options.Nation, ignoreCase: true, out var tab)) { _nation.Tab = tab; _nation.Visible = true; }
         _provinceTab = options.Panel switch { "buildings" => ProvinceTab.Buildings, "army" => ProvinceTab.Army, _ => ProvinceTab.General };
-        if (options.Panel == "regiment" && Human.CapitalCityId is int capital) ShowSampleArmy(capital);
+        if (options.Panel is "regiment" or "march" or "edit" && Human.CapitalCityId is int capital) ShowSampleArmy(capital, march: options.Panel == "march");
+        if (options.Panel == "edit" && _selectedUnitId is int sample && _session.UnitById(sample) is { HasOfficer: true }) ShowSampleOfficers(sample);
         if (options.Panel == "found" && _session.UnitById(settlers.Id) != null) OpenCityNaming(settlers.Id, settlers.ProvinceId);
     }
 
     /// <summary>
     /// For <c>--panel regiment</c>: trains three battalions and a corps HQ in the capital, merges the
-    /// battalions into one regiment under the corps and selects it.
+    /// battalions into one regiment under the corps and selects it. With <paramref name="march"/> (<c>--panel march</c>)
+    /// it also orders the regiment to the nearest land province some way off, to show its route.
     /// </summary>
-    private void ShowSampleArmy(int capitalId)
+    private void ShowSampleArmy(int capitalId, bool march = false)
     {
         var city = _session.CityById(capitalId)!;
         Map.Provinces[city.ProvinceId].Population += 1000;
@@ -114,6 +116,10 @@ public sealed partial class GameScreen : IScreen
         if (_session.Units.FirstOrDefault(u => u.OwnerId == Human.Id && u.IsHeadquarters) is { } corps) _session.Attach(Human.Id, regiments[0].Id, corps.Id);
         _selectedUnitId = regiments[0].Id;
         _selectedProvince = -1;
+        if (!march) return;
+        var from = Center(city.ProvinceId);
+        foreach (var p in Map.Provinces.Where(p => !p.IsWater).OrderBy(p => MathF.Abs(Vector2.Distance(Center(p.Id), from) - 30)))
+            if (_session.MoveUnit(Human.Id, regiments[0].Id, p.Id).Ok) break;
     }
 
     public void Frame(double dt)
@@ -148,11 +154,12 @@ public sealed partial class GameScreen : IScreen
         _nation.Frame(Ui, NationRect);
         DrawMessages();
         if (_naming.HasValue) DrawCityNaming();
+        if (_editingUnitId.HasValue) DrawUnitEditor();
         if (_menuOpen) DrawPauseMenu();
         _changelog.Frame(Ui, new Rect(_app.ScreenSize.X / 2 - 380, 70, 760, _app.ScreenSize.Y - 140));
         _help.Frame(Ui, new Rect(Math.Max(8, _app.ScreenSize.X / 2 - 520), 70, Math.Min(1040, _app.ScreenSize.X - 16), _app.ScreenSize.Y - 140));
 
-        bool modal = _menuOpen || _naming.HasValue;
+        bool modal = _menuOpen || _naming.HasValue || _editingUnitId.HasValue;
         if (!modal && !_changelog.Visible && !_help.Visible && !_nation.Visible) HandleMapMouse();
         if (!Ui.MouseOverUi && !modal && !_help.Visible && !_nation.Visible && _hoverProvince >= 0 && !_dragging) HoverTooltip();
     }
@@ -161,7 +168,7 @@ public sealed partial class GameScreen : IScreen
 
     private void AdvanceTime(double dt)
     {
-        if (_menuOpen || _changelog.Visible || _help.Visible || _naming.HasValue || _speed == 0) return;
+        if (_menuOpen || _changelog.Visible || _help.Visible || _naming.HasValue || _editingUnitId.HasValue || _speed == 0) return;
         _hourAccumulator += dt * HoursPerSecond[_speed];
         int steps = Math.Min((int)_hourAccumulator, 400);
         _hourAccumulator -= steps;
@@ -183,6 +190,13 @@ public sealed partial class GameScreen : IScreen
             // While the city's name is being typed, keys belong to the text field.
             if (input.KeysPressed.Contains(Key.Escape)) _naming = null;
             else if (input.KeysPressed.Contains(Key.Enter) || input.KeysPressed.Contains(Key.KeypadEnter)) ConfirmCityName();
+            return;
+        }
+        if (_editingUnitId.HasValue)
+        {
+            // Likewise while a unit is being edited: typing goes to its name.
+            if (input.KeysPressed.Contains(Key.Escape)) CloseUnitEditor();
+            else if (input.KeysPressed.Contains(Key.Enter) || input.KeysPressed.Contains(Key.KeypadEnter)) RenameEditedUnit();
             return;
         }
         foreach (var key in input.KeysPressed)
@@ -412,16 +426,27 @@ public sealed partial class GameScreen : IScreen
         }
     }
 
-    private void DrawPath(Unit unit, Vector2 start)
+    private static readonly Rgba MoveColor = new(0xFF62B83E);
+
+    /// <summary>
+    /// The unit's route as an arrow from where it is through each province it will cross: full for the selected
+    /// unit, fainter for the player's other units on the move. Each step crosses the date line the short way.
+    /// </summary>
+    private void DrawPath(Unit unit, Vector2 from, bool selected)
     {
-        var previous = start;
+        if (unit.Path.Count == 0) return;
+        var origin = _camera.MapToScreen(from);
+        var points = new List<Vector2> { origin };
+        var previous = from;
         foreach (int step in unit.Path)
         {
-            var s = _camera.MapToScreen(Center(step));
-            Batch.Line(previous, s, Theme.Accent.WithAlpha(0.85f), 2.5f);
-            previous = s;
+            var c = Center(step);
+            float dx = c.X - previous.X;
+            dx -= Map.Width * MathF.Round(dx / Map.Width);
+            previous = new Vector2(previous.X + dx, c.Y);
+            points.Add(origin + (previous - from) * _camera.Zoom);
         }
-        if (unit.Path.Count > 0) Batch.Rect(previous.X - 4, previous.Y - 4, 8, 8, Theme.Accent);
+        PathArrow.Draw(Batch, points, MoveColor, _realTime, selected ? 6 : 4, selected ? 1 : 0.55f);
     }
 
     // ------------------------------------------------------------------ panels

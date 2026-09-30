@@ -26,7 +26,7 @@ public sealed partial class GameSession
             [.. p.LastDayNet], p.IsStarving, p.FoodReserveDays, [.. p.Techs.Order()],
             [.. p.ResearchProgress], p.SpareScience, p.LastDayScience,
             [.. p.Templates.Select(t => new TemplateSave(t.Id, t.Number, [.. t.Battalions]))], [.. p.ResearchPriorities],
-            [.. p.Researching.OfType<Tech>()], [.. p.Institutions.Order()])).ToList(),
+            [.. p.Researching.OfType<Tech>()], [.. p.Institutions.Order()], [.. p.OfficerReserve.Select(ToSave)])).ToList(),
         // Provinces nobody has touched keep their generated state, so only the rest are stored.
         Provinces = Map.Provinces.Where(Changed).Select(p => new ProvinceSave(
             p.Id, p.OwnerId, p.ControllerId, p.Population, p.CityId, p.Mood, p.Fertility, [.. p.Reserves],
@@ -37,7 +37,7 @@ public sealed partial class GameSession
             u.Id, u.OwnerId, u.Type, u.ProvinceId, u.Type is UnitType.Regiment or UnitType.Fleet ? 0 : u.Citizens, u.Number, u.HeadquartersLevel,
             [.. u.Battalions.Select(b => new BattalionSave(b.Type, b.Strength, b.Organisation, b.Experience))],
             u.CommanderId, u.AttackingProvinceId, [.. u.Path], u.HoursToNext, u.StepHours, u.CarrierId,
-            u.General is { } g ? new GeneralSave(g.Name, g.Trait, g.StartingSkill, g.Victories) : null)).ToList(),
+            Officer: u.Officer is { } o ? ToSave(o) : null, CustomName: u.CustomName)).ToList(),
         Migrations = Migrations.Select(m => new MigrationSave(m.Id, m.OwnerId, m.FromProvinceId, m.ToProvinceId, m.People,
             m.DepartHours, m.ArriveHours, m.Forced, m.Mood)).ToList(),
         Battles = _battles.Select(b => new BattleSave(b.ProvinceId, b.AttackerId, b.DefenderId, b.StartHours, [.. b.Attackers])).ToList(),
@@ -50,8 +50,13 @@ public sealed partial class GameSession
         NextCityId = _nextCityId,
         NextMigrationId = _nextMigrationId,
         NextTemplateId = _nextTemplateId,
+        NextOfficerId = _nextOfficerId,
         InstitutionBirths = _institutionBirths.OrderBy(b => b.Key).Select(b => new InstitutionBirthSave(b.Key, b.Value.ProvinceId, b.Value.Hours)).ToList(),
     };
+
+    private static OfficerSave ToSave(Officer o) => new(o.Id, o.Name, [.. o.Traits], o.StartingSkill, o.Victories, o.Rank);
+
+    private static Officer FromSave(OfficerSave o) => new(o.Id, o.Name, o.Traits, o.StartingSkill, o.Victories, o.Rank);
 
     /// <summary>Whether the province differs from how <see cref="ResetProvinces"/> leaves it.</summary>
     private static bool Changed(Province p) =>
@@ -74,7 +79,8 @@ public sealed partial class GameSession
         // Random choices after loading follow from the seed and the date rather than repeat the original game's.
         int seed = unchecked(map.Seed * 31 + (int)save.Hours);
         ResetProvinces(map);
-        var session = new GameSession(map, seed) { _computerRivals = save.ComputerRivals, Date = new GameDate(save.Hours) };
+        // Saves from before officers have none with an id, so numbering starts afresh.
+        var session = new GameSession(map, seed) { _computerRivals = save.ComputerRivals, Date = new GameDate(save.Hours), _nextOfficerId = save.NextOfficerId ?? 0 };
         foreach (var b in save.InstitutionBirths ?? []) session._institutionBirths[b.Institution] = (b.ProvinceId, b.Hours);
 
         foreach (var ps in save.Provinces)
@@ -116,6 +122,7 @@ public sealed partial class GameSession
             player.SpareScience = s.SpareScience;
             player.LastDayScience = s.LastDayScience;
             foreach (var t in s.Templates) player.Templates.Add(new RegimentTemplate(t.Id, t.Number, t.Battalions));
+            foreach (var o in s.OfficerReserve ?? []) player.OfficerReserve.Add(FromSave(o));
             player.Provinces.UnionWith(save.Provinces.Where(p => p.OwnerId == s.Id).Select(p => p.Id));
             session.Players.Add(player);
         }
@@ -140,9 +147,11 @@ public sealed partial class GameSession
                 StepHours = u.StepHours,
             };
             foreach (var b in u.Battalions) unit.Battalions.Add(new Battalion(b.Type) { Strength = b.Strength, Organisation = b.Organisation, Experience = b.Experience });
-            // HQs from before generals get one now.
-            if (unit.IsHeadquarters)
-                unit.General = u.General is { } g ? new General(g.Name, g.Trait, g.StartingSkill, g.Victories) : General.Appoint(session._random);
+            unit.CustomName = u.CustomName;
+            // Generals from before officers become officers of their HQ's rank, and HQs from before generals get one now.
+            if (u.Officer is { } o) unit.Officer = FromSave(o);
+            else if (u.General is { } g) unit.Officer = new Officer(session._nextOfficerId++, g.Name, [g.Trait], g.StartingSkill, g.Victories, unit.RequiredRank);
+            else if (unit.IsHeadquarters) unit.Officer = Officer.Recruit(session._nextOfficerId++, session._random, unit.RequiredRank);
             unit.Path.AddRange(u.Path);
             session.Units.Add(unit);
             session._unitsById[unit.Id] = unit;
