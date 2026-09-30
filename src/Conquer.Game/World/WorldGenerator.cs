@@ -8,7 +8,48 @@ namespace Conquer.Game.World;
 /// is the version of the generator that made it: saves keep theirs, so a game carries on on the map it began on, and
 /// new games use <see cref="WorldGenerator.LatestGenerator"/>. It is 1 in saves from before it was written.
 /// </summary>
-public sealed record WorldSettings(MapKind Kind, int Seed, int ProvinceCount = 25000, Difficulty Difficulty = Difficulty.Normal, int Generator = 1);
+/// <param name="Size">
+/// How big a random world is (<see cref="MapSizes"/>): its share of land and how many provinces the whole map is split into.
+/// The Earth is always <see cref="MapSize.Large"/>.
+/// </param>
+public sealed record WorldSettings(MapKind Kind, int Seed, int ProvinceCount = 25000, Difficulty Difficulty = Difficulty.Normal, int Generator = 1,
+    MapSize Size = MapSize.Large)
+{
+    /// <summary>A new game's settings: the latest generator, and the province count of the world's size.</summary>
+    public static WorldSettings New(MapKind kind, int seed, Difficulty difficulty, MapSize size = MapSize.Large)
+    {
+        if (kind == MapKind.Earth) size = MapSize.Large;
+        return new(kind, seed, size.Info().ProvinceCount, difficulty, WorldGenerator.LatestGenerator, size);
+    }
+}
+
+/// <summary>How big a random world is.</summary>
+public enum MapSize
+{
+    Tiny,
+    Small,
+    Medium,
+    Large,
+}
+
+/// <param name="LandFraction">Share of the planet that is land.</param>
+/// <param name="ProvinceCount">Provinces the whole map is split into, sea included: fewer for the land makes them bigger.</param>
+public sealed record MapSizeInfo(string Name, string Description, double LandFraction, int ProvinceCount);
+
+public static class MapSizes
+{
+    public static readonly MapSize[] All = Enum.GetValues<MapSize>();
+
+    private static readonly Dictionary<MapSize, MapSizeInfo> Table = new()
+    {
+        [MapSize.Tiny] = new("Diminuto", "Unas islas y un continente pequeño, en provincias grandes: unas seis veces menos provincias que el grande.", 0.12, 5100),
+        [MapSize.Small] = new("Pequeño", "Poca tierra, en provincias más grandes: unas tres veces menos provincias que el grande.", 0.18, 9300),
+        [MapSize.Medium] = new("Mediano", "Menos tierra y provincias algo más grandes: unos dos tercios de las provincias del grande.", 0.24, 17500),
+        [MapSize.Large] = new("Grande", "Un 30 % de tierra en provincias del tamaño de siempre.", 0.3, 25000),
+    };
+
+    public static MapSizeInfo Info(this MapSize size) => Table[size];
+}
 
 public static class WorldGenerator
 {
@@ -24,7 +65,7 @@ public static class WorldGenerator
         progress?.Invoke(settings.Kind == MapKind.Earth ? "Cargando la Tierra..." : "Levantando continentes...");
         var terrain = settings.Kind == MapKind.Earth
             ? TerrainGenerator.Earth()
-            : TerrainGenerator.Random(Width, Height, settings.Seed);
+            : TerrainGenerator.Random(Width, Height, settings.Seed, settings.Size.Info().LandFraction);
 
         progress?.Invoke("Calculando clima y biomas...");
         var biomes = ClimateGenerator.Assign(terrain, Width, Height, settings.Seed, settings.Kind == MapKind.Earth, peaks: settings.Generator >= 2);

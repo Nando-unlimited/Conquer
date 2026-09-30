@@ -2,6 +2,20 @@
 
 Todos los cambios del juego, del más reciente al más antiguo. Cada versión es un commit cuyo título es su número.
 
+## [1.38.0] - 2026-09-30
+
+### Añadido
+- **Mapa diminuto**: un cuarto tamaño para el mapa aleatorio, con un 12 % de tierra en provincias unas 2,5 veces más grandes que las del mapa grande: unas 3.500 provincias de tierra, la sexta parte del grande.
+
+## [1.37.0] - 2026-09-30
+
+### Añadido
+- **Tamaño del mapa aleatorio**: al crear una partida con mapa aleatorio se elige Pequeño, Mediano o Grande.
+  - Grande es el mapa de siempre: un 30 % de tierra y unas 21.000 provincias de tierra.
+  - Mediano tiene menos tierra (24 %) y provincias algo más grandes: unas 14.000, dos tercios del grande.
+  - Pequeño tiene poca tierra (18 %) y provincias casi el doble de grandes: unas 7.000, un tercio del grande.
+  - La Tierra real tiene un solo tamaño. Las partidas guardadas conservan el suyo, y las anteriores son grandes.
+
 ## [1.36.0] - 2026-09-30
 
 ### Cambiado

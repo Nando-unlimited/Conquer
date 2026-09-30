@@ -13,6 +13,7 @@ Para saltarse los menús y empezar directamente (útil para probar):
 
 ```
 dotnet run --project src/Conquer.Client -c Release -- --new random --seed 1234 --players 4
+dotnet run --project src/Conquer.Client -c Release -- --new random --size small   # tiny, small, medium o large
 dotnet run --project src/Conquer.Client -c Release -- --new earth
 ```
 
