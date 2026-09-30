@@ -1,0 +1,17 @@
+#!/bin/sh
+# Publishes Windows and Linux builds to publish/<version>/<rid>/ whenever a commit bumps the game version.
+# Enable once per clone with: git config core.hooksPath .githooks
+
+csproj=src/Conquer.Client/Conquer.Client.csproj
+
+git diff HEAD~1 HEAD -- "$csproj" 2>/dev/null | grep -q '^+.*<Version>' || exit 0
+
+version=$(sed -n 's:.*<Version>\(.*\)</Version>.*:\1:p' "$csproj")
+
+for rid in win-x64 linux-x64; do
+  out="publish/$version/$rid"
+  echo "post-commit: publishing Conquer $version ($rid) to $out"
+  dotnet publish "$csproj" -c Release -r "$rid" --self-contained \
+    -p:PublishSingleFile=true \
+    -o "$out" --nologo -v quiet || echo "post-commit: publish FAILED for $version ($rid)"
+done

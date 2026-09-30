@@ -328,7 +328,7 @@ public sealed partial class GameScreen
         CommandLine(hq, x, ref y);
         GeneralLine(hq.General, x, ref y, w);
         var subs = _session.SubordinatesOf(hq).ToList();
-        string below = Formations.LevelPlural(hq.HeadquartersLevel - 1);
+        string below = Formations.SubordinatesPlural(hq.HeadquartersLevel);
         Ui.Text(x, y, $"Al mando ({subs.Count}/{info.MaxSubordinates} {below})", Theme.Text, bold: true);
         y += 24;
         foreach (var sub in subs)
@@ -442,7 +442,7 @@ public sealed partial class GameScreen
         foreach (var level in CommandLevels.All)
         {
             var can = _session.CanRaiseHeadquarters(city, level.Level);
-            string tip = $"Manda hasta {level.MaxSubordinates} {Formations.LevelPlural(level.Level - 1)} a menos de {level.RangeKm:N0} km: " +
+            string tip = $"Manda hasta {level.MaxSubordinates} {Formations.SubordinatesPlural(level.Level)} a menos de {level.RangeKm:N0} km: " +
                          $"+{MilitaryRules.CommandBonus:P0} en combate y recuperación (+{MilitaryRules.HigherCommandBonus:P0} por cada nivel superior enlazado)." +
                          $"\n{level.Staff} hombres de la ciudad. Coste: {level.Cost}. Tarda {level.TrainingDays} días." + (can.Ok ? "" : "\n" + can.Message);
             if (Ui.Button(new Rect(x, y, w, 28), $"{Formations.LevelName(level.Level)}  ·  {level.Cost}  ·  {level.TrainingDays} d", can.Ok, tooltip: tip, size: FontSize.Small))

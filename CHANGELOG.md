@@ -2,6 +2,11 @@
 
 Todos los cambios del juego, del más reciente al más antiguo. Cada versión es un commit cuyo título es su número.
 
+## [1.30.1] - 2026-09-30
+
+### Corregido
+- Abrir la pestaña Ejército de una ciudad, o seleccionar un cuartel de cuerpo, cerraba el juego con un error de índice fuera de los límites.
+
 ## [1.30.0] - 2026-09-29
 
 ### Cambiado
