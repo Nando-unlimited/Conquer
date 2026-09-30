@@ -47,7 +47,7 @@ public sealed class MainMenuScreen : IScreen
     public void Dispose() { }
 }
 
-/// <summary>The new-game options: map, seed, number of players and difficulty.</summary>
+/// <summary>The new-game options: map, its size (random maps only), seed, number of players and difficulty.</summary>
 public sealed class NewGameScreen : IScreen
 {
     private readonly ConquerApp _app;
@@ -55,6 +55,7 @@ public sealed class NewGameScreen : IScreen
     private int _seed = Random.Shared.Next(1, 100000);
     private int _players = 4;
     private Difficulty _difficulty = Difficulty.Normal;
+    private MapSize _size = MapSize.Large;
 
     public NewGameScreen(ConquerApp app) => _app = app;
 
@@ -67,7 +68,7 @@ public sealed class NewGameScreen : IScreen
 
         ui.TextCentered(new Rect(0, s.Y * 0.1f, s.X, 80), "CONQUER", Theme.Accent, FontSize.Title, bold: true);
 
-        var panel = new Rect(cx - 230, s.Y * 0.1f + 110, 460, 400);
+        var panel = new Rect(cx - 230, s.Y * 0.1f + 110, 460, 446);
         ui.Panel(panel);
         float x = panel.X + 24, y = panel.Y + 20, w = panel.W - 48;
         ui.Text(x, y, "Nueva partida", Theme.Text, FontSize.Large, bold: true);
@@ -79,6 +80,19 @@ public sealed class NewGameScreen : IScreen
         y += 46;
 
         bool randomMap = _kind == MapKind.Random;
+        // The Earth has one size; random worlds come smaller, with less land and bigger provinces.
+        ui.Text(x, y + 6, "Tamaño", randomMap ? Theme.TextDim : Theme.TextDisabled);
+        float sizeWidth = (w - 120 - 12) / MapSizes.All.Length;
+        for (int i = 0; i < MapSizes.All.Length; i++)
+        {
+            var size = MapSizes.All[i];
+            bool chosen = randomMap ? _size == size : size == MapSize.Large;
+            if (ui.Button(new Rect(x + 120 + i * (sizeWidth + 6), y, sizeWidth, 32), size.Info().Name, randomMap, active: chosen,
+                    tooltip: randomMap ? size.Info().Description : "La Tierra real tiene un solo tamaño."))
+                _size = size;
+        }
+        y += 46;
+
         ui.Text(x, y + 6, "Semilla", randomMap ? Theme.TextDim : Theme.TextDisabled);
         if (ui.Button(new Rect(x + 120, y, 36, 32), "-", randomMap)) _seed = Math.Max(1, _seed - 1);
         ui.TextCentered(new Rect(x + 160, y, 110, 32), randomMap ? _seed.ToString() : "-", randomMap ? Theme.Text : Theme.TextDisabled);
@@ -109,7 +123,7 @@ public sealed class NewGameScreen : IScreen
 
         // The Earth map is fixed, but the seed still drives start positions, resources and rivals.
         if (ui.Button(new Rect(x, panel.Bottom - 64, w, 44), "Comenzar", size: FontSize.Large))
-            _app.Show(new LoadingScreen(_app, new WorldSettings(_kind, _seed, Difficulty: _difficulty, Generator: WorldGenerator.LatestGenerator), _players));
+            _app.Show(new LoadingScreen(_app, WorldSettings.New(_kind, _seed, _difficulty, _size), _players));
 
         if (ui.Button(new Rect(cx - 230, panel.Bottom + 20, 460, 40), "Volver") || ui.Input.KeysPressed.Contains(Silk.NET.Input.Key.Escape))
             _app.Show(new MainMenuScreen(_app));

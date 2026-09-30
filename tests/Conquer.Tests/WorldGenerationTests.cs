@@ -22,6 +22,25 @@ public class WorldGenerationTests(ITestOutputHelper output)
         Assert.DoesNotContain(map.ProvinceIds, id => id < 0 || id >= map.Provinces.Count);
     }
 
+    [Fact]
+    public void SmallerWorldsHaveLessLandInFewerBiggerProvinces()
+    {
+        var large = WorldGenerator.Generate(WorldSettings.New(MapKind.Random, 1234, Difficulty.Normal));
+        var small = WorldGenerator.Generate(WorldSettings.New(MapKind.Random, 1234, Difficulty.Normal, MapSize.Small));
+        var bigLand = large.Provinces.Where(p => !p.IsWater).ToList();
+        var smallLand = small.Provinces.Where(p => !p.IsWater).ToList();
+        output.WriteLine($"large {bigLand.Count} land provinces of {bigLand.Average(p => p.AreaKm2):0} km2; small {smallLand.Count} of {smallLand.Average(p => p.AreaKm2):0} km2");
+
+        Assert.InRange(smallLand.Count / (double)bigLand.Count, 0.25, 0.42);
+        Assert.True(smallLand.Sum(p => p.AreaKm2) < 0.7 * bigLand.Sum(p => p.AreaKm2));
+        Assert.True(smallLand.Average(p => p.AreaKm2) > 1.5 * bigLand.Average(p => p.AreaKm2));
+        Assert.Equal(MapSize.Small, small.Settings!.Size);
+
+        // The Earth has one size; old saves, which never wrote it, were large.
+        Assert.Equal(MapSize.Large, WorldSettings.New(MapKind.Earth, 1, Difficulty.Normal, MapSize.Small).Size);
+        Assert.Equal(MapSize.Large, new WorldSettings(MapKind.Random, 1).Size);
+    }
+
     [Theory]
     [InlineData(MapKind.Random)]
     [InlineData(MapKind.Earth)]
