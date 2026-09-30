@@ -2,6 +2,11 @@
 
 Todos los cambios del juego, del más reciente al más antiguo. Cada versión es un commit cuyo título es su número.
 
+## [1.32.1] - 2026-09-30
+
+### Corregido
+- Las partidas guardadas con la 1.30.1 o anteriores vuelven a cargarse. Desde la 1.31.0, el arreglo de las desembocaduras y las confluencias cambiaba un poco el río de algunas provincias, y el juego creía que el mapa era otro. Ahora el río de cada provincia se calcula como antes, y los arreglos solo afectan al dibujo. Las partidas guardadas con la 1.31.0 y la 1.32.0 también cargan.
+
 ## [1.32.0] - 2026-09-30
 
 ### Añadido

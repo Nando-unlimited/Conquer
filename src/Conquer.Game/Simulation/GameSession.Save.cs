@@ -71,7 +71,7 @@ public sealed partial class GameSession
     /// </summary>
     public static GameSession Load(WorldMap map, SaveGame save)
     {
-        if (Fingerprint(map) != save.MapFingerprint)
+        if (Fingerprint(map) != save.MapFingerprint && Fingerprint(map, DrawnRiverFlows(map)) != save.MapFingerprint)
             throw new InvalidDataException($"Esta versión del juego genera el mapa de otra forma; la partida ({save.GameVersion}) no se puede cargar.");
         // Older saves had five HQ levels: brigades and divisions become corps, and the rest move down two.
         int Level(int old) => save.ThreeCommandLevels || old <= 0 ? old : Math.Max(1, old - 2);
@@ -192,8 +192,11 @@ public sealed partial class GameSession
         return session;
     }
 
-    /// <summary>A number that changes if the generator makes a different map from the same settings.</summary>
-    public static long Fingerprint(WorldMap map)
+    /// <summary>
+    /// A number that changes if the generator makes a different map from the same settings. With
+    /// <paramref name="riverFlows"/>, each province's river is taken from there instead of from the province.
+    /// </summary>
+    public static long Fingerprint(WorldMap map, float[]? riverFlows = null)
     {
         // FNV-1a over what shapes the game: each province's biome, size, place and neighbours.
         ulong hash = 14695981039346656037;
@@ -212,8 +215,23 @@ public sealed partial class GameSession
             Add(p.CenterX);
             Add(p.CenterY);
             Add(p.Neighbors.Length);
-            Add(BitConverter.SingleToInt32Bits(p.RiverFlow));
+            Add(BitConverter.SingleToInt32Bits(riverFlows?[p.Id] ?? p.RiverFlow));
         }
         return (long)hash;
+    }
+
+    /// <summary>
+    /// Each province's river as 1.31.0 and 1.32.0 worked it out, from the rivers as drawn. Their saves were
+    /// fingerprinted with it, so loading one checks against it too; the game itself uses the rivers of 1.30.1.
+    /// </summary>
+    private static float[] DrawnRiverFlows(WorldMap map)
+    {
+        var flows = new float[map.Provinces.Count];
+        foreach (var r in map.Rivers)
+        {
+            var p = map.Provinces[map.ProvinceIds[(int)r.Y1 * map.Width + (int)r.X1]];
+            if (!p.IsWater) flows[p.Id] = Math.Max(flows[p.Id], r.Flow);
+        }
+        return flows;
     }
 }

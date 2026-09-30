@@ -85,6 +85,21 @@ public class SaveGameTests(WorldFixture world)
         Assert.Equal(GameSession.Fingerprint(_map), GameSession.Fingerprint(again));
     }
 
+    /// <summary>
+    /// The generator must keep making the map older saves were played on. These are the fingerprints of the test
+    /// world as 1.30.1 made it, and as 1.31.0 and 1.32.0 recorded it (they took each province's river from the rivers
+    /// as drawn); a change to the generator that breaks this breaks every save.
+    /// </summary>
+    [Theory]
+    [InlineData(-7352737610506749324)]
+    [InlineData(-3434530806986038682)]
+    public void SavesFromEarlierVersionsOfTheMapStillLoad(long fingerprint)
+    {
+        Assert.Equal(-7352737610506749324, GameSession.Fingerprint(_map));
+        var save = GameSession.Create(_map, 2, seed: 7).ToSave("test") with { MapFingerprint = fingerprint };
+        Assert.NotNull(GameSession.Load(_map, save));
+    }
+
     [Fact]
     public void ASaveFromAnotherMapIsRefused()
     {

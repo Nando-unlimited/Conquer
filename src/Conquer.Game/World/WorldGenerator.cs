@@ -29,9 +29,9 @@ public static class WorldGenerator
         ResourceGenerator.Place(provinces, settings.Seed, settings.Difficulty.Info());
 
         progress?.Invoke("Trazando ríos...");
-        var rivers = RiverGenerator.Trace(terrain.Elevation, biomes, Width, Height, settings.Seed);
-        // Each province remembers the biggest river that runs through it.
-        foreach (var r in rivers)
+        var (rivers, flowSegments) = RiverGenerator.Trace(terrain.Elevation, biomes, Width, Height, settings.Seed);
+        // Each province remembers the biggest river that runs through it (from the rivers as traced up to 1.30.1).
+        foreach (var r in flowSegments)
         {
             var p = provinces[ids[(int)r.Y1 * Width + (int)r.X1]];
             if (!p.IsWater) p.RiverFlow = Math.Max(p.RiverFlow, r.Flow);

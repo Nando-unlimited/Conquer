@@ -13,7 +13,7 @@ internal static class RiverGenerator
     /// <summary>Grid cells are this many map pixels on a side.</summary>
     private const int Step = 2;
 
-    public static List<RiverSegment> Trace(short[] elevation, Biome[] biomes, int width, int height, int seed)
+    public static (List<RiverSegment> Drawn, List<RiverSegment> Flow) Trace(short[] elevation, Biome[] biomes, int width, int height, int seed)
     {
         var wobble = new Noise(seed + 40);
         int w = width / Step, h = height / Step, n = w * h;
@@ -89,45 +89,63 @@ internal static class RiverGenerator
     }
 
     /// <summary>
-    /// Links the river cells into stretches from a source or a confluence to the next confluence or the
-    /// sea, rounds each stretch off (Chaikin, keeping its ends so stretches still meet), ends it where it
-    /// reaches the water and cuts it into
-    /// short segments for drawing.
+    /// Links the river cells into stretches from a source or a confluence to the next confluence or the sea,
+    /// rounds each stretch off (Chaikin, keeping its ends so stretches still meet) and cuts it into short segments.
+    /// <c>Drawn</c> are the ones drawn: each stretch meets the next at the same nudged point and ends
+    /// where it reaches the water. <c>Flow</c> are the ones as they were before those fixes (1.30.1),
+    /// kept only to work out each province's river exactly as then, so the map, and older saves, stay the same.
     /// </summary>
-    private static List<RiverSegment> Smooth(List<int> order, int[] downstream, bool[] water, float[] flow, int w, int width, int height, Biome[] biomes)
+    private static (List<RiverSegment> Drawn, List<RiverSegment> Flow) Smooth(
+        List<int> order, int[] downstream, bool[] water, float[] flow, int w, int width, int height, Biome[] biomes)
     {
         bool IsRiver(int c) => !water[c] && flow[c] >= GameRules.MinRiverFlow && downstream[c] >= 0;
         var inflows = new Dictionary<int, int>();
         foreach (int c in order)
             if (IsRiver(c)) inflows[downstream[c]] = inflows.GetValueOrDefault(downstream[c]) + 1;
 
-        var rivers = new List<RiverSegment>();
+        var drawn = new List<RiverSegment>();
+        var flowSegments = new List<RiverSegment>();
         var points = new List<(float X, float Y, float Flow)>();
         foreach (int start in order)
         {
             // A stretch starts at a source or just below a confluence.
             if (!IsRiver(start) || inflows.GetValueOrDefault(start) == 1) continue;
             points.Clear();
-            int c = start;
+            int c = start, end;
             while (true)
             {
                 points.Add(((c % w + 0.5f + Jitter(c, 1)) * Step, (c / w + 0.5f + Jitter(c, 2)) * Step, flow[c]));
-                int next = downstream[c];
-                if (next < 0) break;
-                if (!IsRiver(next) || inflows.GetValueOrDefault(next) != 1)
-                {
-                    // The same nudged point the stretch below starts from, so the two meet at the confluence.
-                    points.Add(((next % w + 0.5f + Jitter(next, 1)) * Step, (next / w + 0.5f + Jitter(next, 2)) * Step, IsRiver(next) ? flow[next] : flow[c]));
-                    break;
-                }
-                c = next;
+                end = downstream[c];
+                if (end < 0) break;
+                if (!IsRiver(end) || inflows.GetValueOrDefault(end) != 1) break;
+                c = end;
+            }
+            var last = points[^1];
+            if (end >= 0)
+            {
+                float endFlow = IsRiver(end) ? flow[end] : last.Flow;
+                var old = new List<(float X, float Y, float Flow)>(points) { ((end % w + 0.5f) * Step, (end / w + 0.5f) * Step, endFlow) };
+                Unwrap(old, width);
+                AddSegments(flowSegments, Chaikin(Chaikin(Chaikin(old))), width);
+                // The same nudged point the stretch below starts from, so the two meet at the confluence.
+                points.Add(((end % w + 0.5f + Jitter(end, 1)) * Step, (end / w + 0.5f + Jitter(end, 2)) * Step, endFlow));
+            }
+            else
+            {
+                var old = new List<(float X, float Y, float Flow)>(points);
+                Unwrap(old, width);
+                AddSegments(flowSegments, Chaikin(Chaikin(Chaikin(old))), width);
             }
             Unwrap(points, width);
-            var smooth = TrimAtWater(Chaikin(Chaikin(Chaikin(points))), width, height, biomes);
-            for (int i = 0; i + 1 < smooth.Count; i++)
-                rivers.Add(new RiverSegment(Wrap(smooth[i].X, width), smooth[i].Y, Wrap(smooth[i].X, width) + smooth[i + 1].X - smooth[i].X, smooth[i + 1].Y, smooth[i].Flow));
+            AddSegments(drawn, TrimAtWater(Chaikin(Chaikin(Chaikin(points))), width, height, biomes), width);
         }
-        return rivers;
+        return (drawn, flowSegments);
+    }
+
+    private static void AddSegments(List<RiverSegment> segments, List<(float X, float Y, float Flow)> p, int width)
+    {
+        for (int i = 0; i + 1 < p.Count; i++)
+            segments.Add(new RiverSegment(Wrap(p[i].X, width), p[i].Y, Wrap(p[i].X, width) + p[i + 1].X - p[i].X, p[i + 1].Y, p[i].Flow));
     }
 
     /// <summary>A fixed pseudo-random nudge of up to a third of a cell, so courses do not follow the grid.</summary>
