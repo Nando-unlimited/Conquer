@@ -127,6 +127,32 @@ public static class Battalions
     };
 
     public static BattalionInfo Info(this BattalionType type) => Table[type];
+
+    private static readonly HashSet<BattalionType> Artillery =
+        [BattalionType.Catapults, BattalionType.Cannons, BattalionType.FieldArtillery, BattalionType.HeavyArtillery];
+
+    /// <summary>What a battalion does in battle: this decides where it stands and what it adds to a mixed force.</summary>
+    public static BattalionRole Role(this BattalionType type)
+    {
+        var info = type.Info();
+        return info.Naval ? BattalionRole.Naval
+            : info.Flies ? BattalionRole.Air
+            : Artillery.Contains(type) ? BattalionRole.Artillery
+            : type == BattalionType.Tanks ? BattalionRole.Armour
+            : info.Mounted ? BattalionRole.Cavalry
+            : BattalionRole.Infantry;
+    }
+
+    public static string Name(this BattalionRole role) => role switch
+    {
+        BattalionRole.Infantry => "Infantería",
+        BattalionRole.Cavalry => "Caballería",
+        BattalionRole.Artillery => "Artillería",
+        BattalionRole.Armour => "Blindados",
+        BattalionRole.Air => "Aviación",
+        BattalionRole.Naval => "Marina",
+        _ => role.ToString(),
+    };
 }
 
 /// <summary>One battalion of a regiment: how many men it has left and how much fight is left in them.</summary>
@@ -135,6 +161,8 @@ public sealed class Battalion
     public BattalionType Type { get; }
     public double Strength { get; set; }
     public double Organisation { get; set; }
+    /// <summary>0 (raw recruits) to 1 (elite): earned in battle, watered down by fresh recruits.</summary>
+    public double Experience { get; set; }
 
     public Battalion(BattalionType type)
     {
@@ -148,4 +176,25 @@ public sealed class Battalion
     public double StrengthShare => Strength / Info.Men;
     /// <summary>0..1 of full organisation.</summary>
     public double OrganisationShare => Organisation / Info.MaxOrganisation;
+
+    /// <summary>"Novato", "Regular", "Veterano" or "Élite".</summary>
+    public static string ExperienceName(double experience) =>
+        experience < 0.2 ? "Novato" : experience < 0.5 ? "Regular" : experience < 0.8 ? "Veterano" : "Élite";
+}
+
+/// <summary>What a battalion does in battle (see <see cref="Battalions.Role"/>).</summary>
+public enum BattalionRole
+{
+    /// <summary>Holds the front line.</summary>
+    Infantry,
+    /// <summary>Fast and hard-hitting on open ground; in the front line.</summary>
+    Cavalry,
+    /// <summary>Fires from behind the front line and is hard to reach.</summary>
+    Artillery,
+    /// <summary>Tanks; in the front line.</summary>
+    Armour,
+    /// <summary>Aircraft: fire from above, hard to reach.</summary>
+    Air,
+    /// <summary>Ships, which fight only at sea.</summary>
+    Naval,
 }

@@ -99,7 +99,7 @@ public sealed class NewGameScreen : IScreen
         if (ui.Button(new Rect(x + 274, y, 36, 32), "+", _difficulty < Difficulty.VeryHard)) _difficulty++;
         y += 40;
         double start = difficulty.StartingResources;
-        string text = $"{difficulty.Description} Empiezas con 300 colonos, {GameRules.StartingFood * start:0} de comida, " +
+        string text = $"{difficulty.Description} Empiezas con {GameRules.StartingCitizens:N0} colonos, {GameRules.StartingFood * start:0} de comida, " +
                       $"{GameRules.StartingGold * start:0} de oro y {GameRules.StartingWood * start:0} de madera. Nadie posee tierra todavía.";
         foreach (var line in ui.Font.Wrap(text, w, FontSize.Small))
         {

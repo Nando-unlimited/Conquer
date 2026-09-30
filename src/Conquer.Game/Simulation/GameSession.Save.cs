@@ -18,6 +18,7 @@ public sealed partial class GameSession
         World = Map.Settings ?? new WorldSettings(Map.Kind, Map.Seed),
         MapFingerprint = Fingerprint(Map),
         ExtraDeposits = true,
+        ThreeCommandLevels = true,
         Hours = Date.Hours,
         ComputerRivals = _computerRivals,
         Players = Players.Select(p => new PlayerSave(
@@ -34,8 +35,9 @@ public sealed partial class GameSession
             [.. c.Training.Select(o => new TrainingSave(o.Battalion, o.TemplateName, [.. o.TemplateBattalions], o.HeadquartersLevel, o.DaysLeft, o.TotalDays))])).ToList(),
         Units = Units.Select(u => new UnitSave(
             u.Id, u.OwnerId, u.Type, u.ProvinceId, u.Type is UnitType.Regiment or UnitType.Fleet ? 0 : u.Citizens, u.Number, u.HeadquartersLevel,
-            [.. u.Battalions.Select(b => new BattalionSave(b.Type, b.Strength, b.Organisation))],
-            u.CommanderId, u.AttackingProvinceId, [.. u.Path], u.HoursToNext, u.StepHours, u.CarrierId)).ToList(),
+            [.. u.Battalions.Select(b => new BattalionSave(b.Type, b.Strength, b.Organisation, b.Experience))],
+            u.CommanderId, u.AttackingProvinceId, [.. u.Path], u.HoursToNext, u.StepHours, u.CarrierId,
+            u.General is { } g ? new GeneralSave(g.Name, g.Trait, g.StartingSkill, g.Victories) : null)).ToList(),
         Migrations = Migrations.Select(m => new MigrationSave(m.Id, m.OwnerId, m.FromProvinceId, m.ToProvinceId, m.People,
             m.DepartHours, m.ArriveHours, m.Forced, m.Mood)).ToList(),
         Battles = _battles.Select(b => new BattleSave(b.ProvinceId, b.AttackerId, b.DefenderId, b.StartHours, [.. b.Attackers])).ToList(),
@@ -66,6 +68,8 @@ public sealed partial class GameSession
     {
         if (Fingerprint(map) != save.MapFingerprint)
             throw new InvalidDataException($"Esta versión del juego genera el mapa de otra forma; la partida ({save.GameVersion}) no se puede cargar.");
+        // Older saves had five HQ levels: brigades and divisions become corps, and the rest move down two.
+        int Level(int old) => save.ThreeCommandLevels || old <= 0 ? old : Math.Max(1, old - 2);
 
         // Random choices after loading follow from the seed and the date rather than repeat the original game's.
         int seed = unchecked(map.Seed * 31 + (int)save.Hours);
@@ -120,14 +124,14 @@ public sealed partial class GameSession
         {
             var city = new City(c.Id, c.Name, c.OwnerId, c.ProvinceId, c.FoundedHours) { FestivalUntilHours = c.FestivalUntilHours };
             foreach (var o in c.Training)
-                city.Training.Add(new TrainingOrder(o.Battalion, o.TemplateName, o.TemplateBattalions, o.HeadquartersLevel, o.DaysLeft, o.TotalDays));
+                city.Training.Add(new TrainingOrder(o.Battalion, o.TemplateName, o.TemplateBattalions, Level(o.HeadquartersLevel), o.DaysLeft, o.TotalDays));
             session.Cities.Add(city);
             session._usedCityNames.Add(c.Name);
         }
 
         foreach (var u in save.Units)
         {
-            var unit = new Unit(u.Id, session.Players[u.OwnerId], u.Type, u.ProvinceId, u.Citizens, u.Number, u.HeadquartersLevel)
+            var unit = new Unit(u.Id, session.Players[u.OwnerId], u.Type, u.ProvinceId, u.Citizens, u.Number, Level(u.HeadquartersLevel))
             {
                 CommanderId = u.CommanderId,
                 AttackingProvinceId = u.AttackingProvinceId,
@@ -135,7 +139,10 @@ public sealed partial class GameSession
                 HoursToNext = u.HoursToNext,
                 StepHours = u.StepHours,
             };
-            foreach (var b in u.Battalions) unit.Battalions.Add(new Battalion(b.Type) { Strength = b.Strength, Organisation = b.Organisation });
+            foreach (var b in u.Battalions) unit.Battalions.Add(new Battalion(b.Type) { Strength = b.Strength, Organisation = b.Organisation, Experience = b.Experience });
+            // HQs from before generals get one now.
+            if (unit.IsHeadquarters)
+                unit.General = u.General is { } g ? new General(g.Name, g.Trait, g.StartingSkill, g.Victories) : General.Appoint(session._random);
             unit.Path.AddRange(u.Path);
             session.Units.Add(unit);
             session._unitsById[unit.Id] = unit;
@@ -152,7 +159,14 @@ public sealed partial class GameSession
         foreach (var w in save.Wars) session._wars[(w.A, w.B)] = w.StartHours;
         session.Notifications.AddRange(save.Notifications);
         foreach (var (province, carry) in save.EmigrationCarry) session._emigrationCarry[province] = carry;
-        foreach (var n in save.UnitNumbers) session._unitNumbers[(n.PlayerId, n.Level)] = n.Number;
+        foreach (var n in save.UnitNumbers)
+        {
+            var key = (n.PlayerId, n.Level > 0 ? Level(n.Level) : n.Level);
+            session._unitNumbers[key] = Math.Max(session._unitNumbers.GetValueOrDefault(key), n.Number);
+        }
+        // A chain of command that no longer fits the levels (after moving old HQs) comes apart.
+        foreach (var unit in session.Units.Where(u => u.CommanderId is int c && (session.UnitById(c) is not { } hq || hq.HeadquartersLevel != u.CommandLevel + 1)))
+            unit.CommanderId = null;
         session._nextUnitId = save.NextUnitId;
         session._nextCityId = save.NextCityId;
         session._nextMigrationId = save.NextMigrationId;

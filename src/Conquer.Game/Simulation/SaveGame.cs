@@ -33,6 +33,11 @@ public sealed record SaveGame
     /// those, so loading one fills them up.
     /// </summary>
     public bool ExtraDeposits { get; init; }
+    /// <summary>
+    /// Written since HQs have three levels (corps, army, army group; 1.30.0). Older saves had five (brigade and
+    /// division below corps); loading one moves each HQ to the nearest new level.
+    /// </summary>
+    public bool ThreeCommandLevels { get; init; }
     public required long Hours { get; init; }
     public required bool ComputerRivals { get; init; }
 
@@ -111,9 +116,11 @@ public sealed record TrainingSave(
 public sealed record UnitSave(
     int Id, int OwnerId, UnitType Type, int ProvinceId, int Citizens, int Number, int HeadquartersLevel,
     List<BattalionSave> Battalions, int? CommanderId, int? AttackingProvinceId, List<int> Path, double HoursToNext, double StepHours,
-    int? CarrierId = null);
+    int? CarrierId = null, GeneralSave? General = null);
 
-public sealed record BattalionSave(BattalionType Type, double Strength, double Organisation);
+public sealed record BattalionSave(BattalionType Type, double Strength, double Organisation, double Experience = 0);
+
+public sealed record GeneralSave(string Name, GeneralTrait Trait, int StartingSkill, int Victories);
 
 public sealed record MigrationSave(int Id, int OwnerId, int From, int To, int People, long DepartHours, long ArriveHours, bool Forced, double Mood);
 

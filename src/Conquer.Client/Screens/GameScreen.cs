@@ -672,9 +672,9 @@ public sealed partial class GameScreen : IScreen
             Ui.Text(x, y, "Colonos", Theme.Text, FontSize.Normal, bold: true);
             y += 26;
             var settlers = _session.CanRecruitSettlers(city);
-            string settlersTip = $"{GameRules.StartingCitizens} ciudadanos salen de la ciudad para fundar otra. Coste: {GameRules.SettlersCost}." +
+            string settlersTip = $"{GameRules.SettlerCitizens} ciudadanos salen de la ciudad para fundar otra. Coste: {GameRules.SettlersCost}." +
                                  (settlers.Ok ? "" : "\n" + settlers.Message);
-            if (Ui.Button(new Rect(x, y, w, 34), $"Enviar colonos ({GameRules.StartingCitizens} hab.)", settlers.Ok, tooltip: settlersTip))
+            if (Ui.Button(new Rect(x, y, w, 34), $"Enviar colonos ({GameRules.SettlerCitizens} hab.)", settlers.Ok, tooltip: settlersTip))
                 Show(_session.RecruitSettlers(Human.Id, city.Id));
             y += 40;
         }

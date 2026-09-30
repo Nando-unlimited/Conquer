@@ -3,11 +3,10 @@ using Conquer.Game.Economy;
 namespace Conquer.Game.Military;
 
 /// <summary>
-/// The chain of command, as in Hearts of Iron III: regiments report to a brigade HQ, brigades to a
-/// division, divisions to a corps, corps to an army and armies to an army group. Level 0 is the
-/// regiment itself. Names depend on the era (<see cref="Formations"/>).
+/// The chain of command: combat units (regiments, brigades and divisions, level 0) report to a corps HQ,
+/// corps to an army and armies to an army group (<see cref="Formations"/> names them).
 /// </summary>
-/// <param name="Level">1 brigade … 5 army group.</param>
+/// <param name="Level">1 corps, 2 army, 3 army group.</param>
 /// <param name="RangeKm">An HQ commands its subordinates only while they are this close.</param>
 /// <param name="MaxSubordinates">Units of the level below it can command.</param>
 /// <param name="Staff">Citizens that form the HQ.</param>
@@ -15,16 +14,15 @@ public sealed record CommandLevelInfo(int Level, string Symbol, double RangeKm, 
 
 public static class CommandLevels
 {
-    public const int Regiment = 0;
-    public const int Highest = 5;
+    /// <summary>The level of combat units.</summary>
+    public const int Combat = 0;
+    public const int Highest = 3;
 
     private static readonly CommandLevelInfo[] Table =
     [
-        new(1, "X", 150, 4, 50, new ResourceCost((ResourceType.Wood, 20), (ResourceType.Gold, 20)), 15),
-        new(2, "XX", 300, 4, 50, new ResourceCost((ResourceType.Wood, 20), (ResourceType.Gold, 40)), 20),
-        new(3, "XXX", 600, 5, 50, new ResourceCost((ResourceType.Wood, 20), (ResourceType.Gold, 60)), 25),
-        new(4, "XXXX", 1200, 5, 50, new ResourceCost((ResourceType.Wood, 20), (ResourceType.Gold, 90)), 30),
-        new(5, "XXXXX", 2500, 5, 50, new ResourceCost((ResourceType.Wood, 20), (ResourceType.Gold, 120)), 35),
+        new(1, "XXX", 600, 5, 50, new ResourceCost((ResourceType.Wood, 20), (ResourceType.Gold, 60)), 25),
+        new(2, "XXXX", 1200, 5, 50, new ResourceCost((ResourceType.Wood, 20), (ResourceType.Gold, 90)), 30),
+        new(3, "XXXXX", 2500, 5, 50, new ResourceCost((ResourceType.Wood, 20), (ResourceType.Gold, 120)), 35),
     ];
 
     public static IReadOnlyList<CommandLevelInfo> All => Table;
@@ -74,23 +72,23 @@ public sealed class TrainingOrder
         TotalDays = totalDays;
     }
 
-    /// <summary>"Cohorte de arqueros", "Legión (Plantilla II)", "Cuartel general de vexilación"… in the era's names.</summary>
-    public string Name(ArmyEra era) =>
-        Battalion is BattalionType b ? Formations.BattalionName(b.Info(), era)
-        : TemplateName != null ? $"{Formations.LevelName(CommandLevels.Regiment, era)} ({TemplateName})"
-        : $"Cuartel general de {Formations.LevelName(HeadquartersLevel, era).ToLowerInvariant()}";
+    /// <summary>"Batallón de arqueros", "Brigada (Plantilla II)", "Cuartel general de cuerpo".</summary>
+    public string Name =>
+        Battalion is BattalionType b ? Formations.BattalionName(b.Info())
+        : TemplateName != null ? $"{Formations.CombatName(TemplateBattalions.Count)} ({TemplateName})"
+        : $"Cuartel general de {Formations.LevelName(HeadquartersLevel).ToLowerInvariant()}";
 }
 
 /// <summary>
-/// A fight for a province: regiments attacking it from their neighbouring provinces against the
-/// enemy regiments inside. It is resolved hour by hour until one side runs out of regiments.
+/// A fight for a province: combat units attacking it from their neighbouring provinces against the
+/// enemy units inside. It is resolved hour by hour until one side runs out of units.
 /// </summary>
 public sealed class Battle
 {
     public int ProvinceId { get; }
     public int AttackerId { get; }
     public int DefenderId { get; }
-    /// <summary>Regiments attacking; they stay in their own provinces until they win.</summary>
+    /// <summary>Units attacking; they stay in their own provinces until they win.</summary>
     public List<int> Attackers { get; } = [];
     public long StartHours { get; }
 

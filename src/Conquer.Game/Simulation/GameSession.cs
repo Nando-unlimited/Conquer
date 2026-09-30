@@ -276,9 +276,18 @@ public sealed partial class GameSession
                         + Units.Where(u => u.OwnerId == player.Id).Sum(u => u.Citizens)
                         + Migrations.Where(m => m.OwnerId == player.Id).Sum(m => m.People);
         net[(int)ResourceType.Food] -= GameRules.FoodPerCitizen * eaters;
+        var upkeep = Upkeep(player);
+        for (int i = 0; i < net.Length; i++) net[i] -= upkeep[i];
 
         foreach (var r in Resources.All) player.Stockpile[r] += net[(int)r];
         Array.Copy(net, player.LastDayNet, net.Length);
+
+        // An army the nation cannot pay loses heart and men (see DailyMilitary); what is owed is forgiven.
+        bool unpaid = Resources.All.Any(r => r != ResourceType.Food && upkeep[(int)r] > 0 && player.Stockpile[r] < 0);
+        foreach (var r in Resources.All.Where(r => r != ResourceType.Food)) player.Stockpile[r] = Math.Max(0, player.Stockpile[r]);
+        if (unpaid && !player.ArmyUnpaid && player.IsHuman)
+            Notify(player.Id, "No hay con qué pagar al ejército: las tropas pierden organización y desertan. Licencia unidades o consigue más oro.");
+        player.ArmyUnpaid = unpaid;
 
         bool starving = player.Stockpile[ResourceType.Food] < 0;
         if (starving)
@@ -735,8 +744,8 @@ public sealed partial class GameSession
     {
         var p = Map.Provinces[city.ProvinceId];
         if (p.IsOccupied) return CommandResult.Fail("La ciudad está ocupada por el enemigo.");
-        if (p.Population - GameRules.StartingCitizens < GameRules.MinCityPopulation)
-            return CommandResult.Fail($"Hacen falta {GameRules.StartingCitizens + GameRules.MinCityPopulation} habitantes.");
+        if (p.Population - GameRules.SettlerCitizens < GameRules.MinCityPopulation)
+            return CommandResult.Fail($"Hacen falta {GameRules.SettlerCitizens + GameRules.MinCityPopulation} habitantes.");
         if (!Players[city.OwnerId].Stockpile.Has(GameRules.SettlersCost)) return CommandResult.Fail($"Cuesta {GameRules.SettlersCost}.");
         return CommandResult.Success();
     }
@@ -748,8 +757,8 @@ public sealed partial class GameSession
         var check = CanRecruitSettlers(city);
         if (!check.Ok) return check;
         Players[playerId].Stockpile.TrySpend(GameRules.SettlersCost);
-        Map.Provinces[city.ProvinceId].Population -= GameRules.StartingCitizens;
-        AddUnit(playerId, UnitType.Settlers, city.ProvinceId, GameRules.StartingCitizens);
+        Map.Provinces[city.ProvinceId].Population -= GameRules.SettlerCitizens;
+        AddUnit(playerId, UnitType.Settlers, city.ProvinceId, GameRules.SettlerCitizens);
         return CommandResult.Success();
     }
 

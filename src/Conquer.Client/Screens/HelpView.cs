@@ -1,6 +1,8 @@
 using Conquer.Client.Graphics;
 using Conquer.Client.UI;
+using Conquer.Game.Military;
 using Conquer.Game.Rules;
+using Conquer.Game.World;
 
 namespace Conquer.Client.Screens;
 
@@ -26,7 +28,7 @@ public sealed class HelpView
         ]),
         ("Primeros pasos",
         [
-            $"Empiezas con {GameRules.StartingCitizens} colonos y nada de tierra. Busca una provincia fértil (mejor junto a un gran río) y pulsa «Fundar ciudad»: será tu capital.",
+            $"Empiezas con {GameRules.StartingCitizens:N0} colonos y nada de tierra. Busca una provincia fértil (mejor junto a un gran río) y pulsa «Fundar ciudad»: será tu capital.",
             "## Qué hacer después",
             "- En la pantalla de la nación (N), pestaña Ciencia, elige qué investigar en cada rama.",
             "- Entrena guerreros en la ciudad y reclama con ellos las provincias libres de alrededor: los colonos de tus ciudades irán a vivir allí solos.",
@@ -79,14 +81,24 @@ public sealed class HelpView
         ]),
         ("Ejército",
         [
-            "Los regimientos se forman con batallones entrenados en las ciudades (pestaña Ejército de la provincia). Los hombres salen de la ciudad.",
+            "Las unidades de combate se forman con batallones entrenados en las ciudades (pestaña Ejército de la provincia). Los hombres salen de la ciudad.",
             "## Organización",
-            "- Diseña plantillas en la pestaña Plantillas de la nación para entrenar regimientos enteros de golpe.",
-            "- Une y separa regimientos desde su panel. Los cuarteles generales dan un bonus en combate a las unidades bajo su mando que estén a su alcance.",
-            "- En la era Renacimiento, Ciencia militar da a tu ejército los nombres modernos.",
+            $"- Cada unidad se llama por su tamaño: Regimiento (1 a 3 batallones), Brigada (4 a 6) y División (7 a {MilitaryRules.MaxBattalionsPerUnit}). Son las que se mueven y combaten.",
+            "- Diseña plantillas en la pestaña Plantillas de la nación para entrenar unidades enteras de golpe. Une y separa unidades desde su panel.",
+            "- Por encima están los cuarteles generales: Cuerpo, Ejército y Grupo de ejércitos. Dan un bonus en combate a las unidades bajo su mando que estén a su alcance.",
+            "## Mantenimiento",
+            $"- Cada día, batallones, barcos y cuarteles cuestan un {MilitaryRules.UpkeepGoldShare:P0} de su oro y un {MilitaryRules.UpkeepResourceShare:P0} de sus demás recursos (la madera no).",
+            "- Si no hay con qué pagar, las tropas pierden organización, desertan y no se recuperan.",
+            "## Generales y experiencia",
+            "- Cada cuartel general tiene un general de 1 a 5 estrellas: ofensivo (más ataque), defensivo (más defensa), organizador (se recupera antes) o táctico (pierde menos organización).",
+            $"- Gana una estrella cada {General.VictoriesPerStar} victorias de sus unidades.",
+            $"- Los batallones ganan experiencia combatiendo (Novato, Regular, Veterano, Élite): hasta +{MilitaryRules.ExperienceBonus:P0} de fuego. Los reclutas nuevos la diluyen.",
             "## Suministro y combate",
             "- Las tropas se abastecen desde tus ciudades a través de tierra propia o libre; sin suministro pierden hombres y organización.",
-            "- Mover un regimiento a una provincia enemiga con tropas la ataca; sin tropas, la ocupa. Cada hora ambos bandos se dañan; el que pierde la organización se retira.",
+            "- Mover una unidad a una provincia enemiga con tropas la ataca; sin tropas, la ocupa. Cada hora ambos bandos se dañan; el que pierde la organización se retira.",
+            $"- Frente: solo combaten a la vez los mejores batallones que caben en él ({MilitaryRules.FrontWidth(Biome.Grassland)} en llano, {MilitaryRules.FrontWidth(Biome.HighMountains)} en alta montaña); el resto espera en reserva.",
+            "- La artillería y la aviación disparan desde detrás del frente (la mitad de ancho) y reciben menos daño.",
+            $"- Armas combinadas: cada tipo de tropa distinto (infantería, caballería, artillería, blindados, aviación) suma +{MilitaryRules.CombinedArmsBonus:P0} de fuego, hasta +{MilitaryRules.MaxCombinedArmsBonus:P0}.",
             "- Defender es más fácil en montañas, bosques, ríos y detrás de murallas o castillos. La caballería rinde menos en terreno difícil.",
         ]),
         ("Flotas y mar",

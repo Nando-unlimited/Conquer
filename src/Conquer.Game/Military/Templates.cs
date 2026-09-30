@@ -6,7 +6,7 @@ namespace Conquer.Game.Military;
 
 /// <summary>
 /// A regiment design, as in Hearts of Iron: which battalions it has (1 to
-/// <see cref="MilitaryRules.MaxBattalionsPerRegiment"/>). Cities train whole regiments from it.
+/// <see cref="MilitaryRules.MaxBattalionsPerUnit"/>). Cities train whole regiments from it.
 /// </summary>
 public sealed class RegimentTemplate
 {

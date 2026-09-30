@@ -6,11 +6,15 @@ namespace Conquer.Game.Rules;
 public static class GameRules
 {
     // Starting conditions
-    public const int StartingCitizens = 300;
-    public const double StartingFood = 600;
+    /// <summary>The band each nation starts with, enough to found a capital that can raise an army soon.</summary>
+    public const int StartingCitizens = 3000;
+    /// <summary>Ten days of food for the starting band while it looks for a place to settle.</summary>
+    public const double StartingFood = 3000;
     public const double StartingGold = 50;
     public const double StartingWood = 100;
-    /// <summary>A band of settlers: <see cref="StartingCitizens"/> citizens from the city that sends them, plus this.</summary>
+    /// <summary>A band of settlers a city sends out: this many of its citizens, plus <see cref="SettlersCost"/>.</summary>
+    public const int SettlerCitizens = 300;
+    /// <summary>What a band of settlers costs besides its <see cref="SettlerCitizens"/>.</summary>
     public static readonly ResourceCost SettlersCost = new((ResourceType.Food, 150), (ResourceType.Wood, 50), (ResourceType.Gold, 20));
 
     // Movement

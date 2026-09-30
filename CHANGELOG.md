@@ -2,6 +2,24 @@
 
 Todos los cambios del juego, del más reciente al más antiguo. Cada versión es un commit cuyo título es su número.
 
+## [1.30.0] - 2026-09-29
+
+### Cambiado
+- **Estructura militar revisada**:
+  - **Adiós a los nombres romanos**: batallones y unidades usan siempre los nombres modernos.
+  - **Unidades de combate hasta la división**: son las que se mueven y combaten, y se llaman por su tamaño: Regimiento (1 a 3 batallones), Brigada (4 a 6) y División (7 a 12). Al crecer conservan su número («3.er Regimiento» pasa a «3.ª Brigada»).
+  - **Solo tres niveles de cuartel general**: Cuerpo, Ejército y Grupo de ejércitos, con 5 subordinados cada uno. En las partidas guardadas los cuarteles antiguos bajan de nivel, y se deshacen los enlaces de mando que ya no encajan.
+- **Mantenimiento**: cada día, batallones, barcos y cuarteles cuestan un 2 % del oro y un 1 % de los demás recursos (salvo la madera) de lo que costaron. Si no hay con qué pagar, pierden organización, desertan y no se recuperan. La nación muestra el mantenimiento del ejército, y los batallones y plantillas el suyo.
+- **Generales**: cada cuartel general tiene uno, con un rasgo (ofensivo, defensivo, organizador o táctico) y de 1 a 5 estrellas. Ganan una estrella cada 3 victorias y ayudan a las unidades de su cuartel que estén a su alcance.
+- **Experiencia**: los batallones la ganan combatiendo (Novato, Regular, Veterano, Élite), hasta +50 % de fuego; los reclutas nuevos la diluyen.
+- **Combate con frente y armas combinadas**:
+  - Solo combaten los mejores batallones que caben en el frente: 12 en llano, menos en bosques, colinas y montañas (4 en alta montaña). El resto espera en reserva.
+  - La artillería y la aviación disparan desde detrás y reciben menos daño.
+  - Cada tipo de tropa distinto entre los que combaten suma +10 % de fuego, hasta +30 %.
+  - El resumen de la batalla lo muestra todo.
+- **Se empieza con 3.000 colonos y 3.000 de comida**, para poder formar un ejército antes. Los colonos enviados desde una ciudad siguen siendo 300.
+- La IA forma unidades de hasta 6 batallones y no entrena tropas mientras pierde oro cada día.
+
 ## [1.29.0] - 2026-09-29
 
 ### Cambiado

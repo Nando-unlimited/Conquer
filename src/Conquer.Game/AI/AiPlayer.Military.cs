@@ -16,11 +16,12 @@ internal sealed partial class AiPlayer
 {
     /// <summary>No wars in the first years, while nations settle.</summary>
     private const double PeacefulDays = 2 * 365;
-    /// <summary>Regiments attack once they have recovered this share of their organisation.</summary>
+    /// <summary>Units attack once they have recovered this share of their organisation.</summary>
     private const double ReadyOrganisation = 0.6;
-    private const int BattalionsPerRegiment = 4;
-    /// <summary>The highest HQ level it raises: brigades, divisions and corps.</summary>
-    private const int HighestHeadquarters = 3;
+    /// <summary>It builds its combat units up to brigades.</summary>
+    private const int BattalionsPerUnit = 6;
+    /// <summary>The highest HQ level it raises: corps and armies.</summary>
+    private const int HighestHeadquarters = 2;
 
     /// <summary>Lone warriors that claim free land; every other regiment belongs to the army.</summary>
     private readonly HashSet<int> _claimers = [];
@@ -58,6 +59,8 @@ internal sealed partial class AiPlayer
     /// </summary>
     private void BuildArmy()
     {
+        // An army it could not keep: no new troops while its gold is falling.
+        if (_player.LastDayNet[(int)ResourceType.Gold] < 0) return;
         var cities = _session.Cities.Where(c => c.OwnerId == _player.Id).ToList();
         if (cities.Count == 0 || _session.Date.Days < 180) return;
         int target = cities.Count * (_session.EnemiesOf(_player.Id).Any() ? 4 : 2);
@@ -67,8 +70,8 @@ internal sealed partial class AiPlayer
 
         var city = cities.OrderByDescending(c => Map.Provinces[c.ProvinceId].Population).First();
         if (Map.Provinces[city.ProvinceId].Population < 400) return;
-        // A regiment as big as the city can spare (keeping 100 people beyond the minimum), from 2 to 4 battalions.
-        int size = Math.Clamp((int)((Map.Provinces[city.ProvinceId].Population - GameRules.MinCityPopulation - 100) / 100), 0, BattalionsPerRegiment);
+        // A unit as big as the city can spare (keeping 100 people beyond the minimum), from 2 to 6 battalions.
+        int size = Math.Clamp((int)((Map.Provinces[city.ProvinceId].Population - GameRules.MinCityPopulation - 100) / 100), 0, BattalionsPerUnit);
         if (size >= 2 && ArmyTemplate(size) is var template && Spare(template.Cost)
             && _session.TrainTemplate(_player.Id, city.Id, template.Id).Ok) return;
         var best = Battalions.All
@@ -84,6 +87,7 @@ internal sealed partial class AiPlayer
     /// </summary>
     private void BuildNavy()
     {
+        if (_player.LastDayNet[(int)ResourceType.Gold] < 0) return;
         var ports = _session.Cities.Where(c => c.OwnerId == _player.Id && _session.IsPort(Map.Provinces[c.ProvinceId], _player.Id)).ToList();
         if (ports.Count == 0) return;
         int fleets = _session.Units.Count(u => u.IsFleet && u.OwnerId == _player.Id)
@@ -97,15 +101,15 @@ internal sealed partial class AiPlayer
     }
 
     /// <summary>
-    /// Its regiment design, kept up to date with what it knows and can supply: two of its sturdiest
-    /// infantry, its hardest-hitting troop and one more infantry, cut down to the size the city can spare.
+    /// Its unit design, kept up to date with what it knows and can supply: its sturdiest infantry, with its
+    /// hardest-hitting troop as the third and fifth battalions, cut down to the size the city can spare.
     /// </summary>
     private RegimentTemplate ArmyTemplate(int size)
     {
         var known = Battalions.All.Where(t => !t.Info().Naval && t.Info().Requires.All(_player.Techs.Contains) && CanSupply(t)).ToList();
         var infantry = known.Where(t => !t.Info().Mounted).MaxBy(t => t.Info().Defense);
         var striker = known.MaxBy(t => t.Info().Attack);
-        BattalionType[] design = [.. new[] { infantry, infantry, striker, infantry }.Take(size)];
+        BattalionType[] design = [.. new[] { infantry, infantry, striker, infantry, striker, infantry }.Take(size)];
         _armyTemplate ??= _session.AddTemplate(_player, design);
         if (!_armyTemplate.Battalions.SequenceEqual(design))
         {
@@ -124,15 +128,15 @@ internal sealed partial class AiPlayer
     private bool Spare(ResourceCost cost) => cost.Items.All(i =>
         _player.Stockpile[i.Type] - i.Amount >= (i.Type == ResourceType.Wood ? WoodKeptForRecruiting : i.Type == ResourceType.Gold ? GoldKeptForRecruiting : 0));
 
-    /// <summary>Merges small regiments, raises brigade, division and corps HQs as the army grows, and attaches everyone.</summary>
+    /// <summary>Merges small units into brigades, raises corps and army HQs as the army grows, and attaches everyone.</summary>
     private void OrganiseArmy()
     {
         foreach (var group in Army.Where(u => !u.IsMoving && !_session.InBattle(u)).GroupBy(u => u.ProvinceId))
         {
             var regiments = group.OrderByDescending(u => u.Battalions.Count).ToList();
-            foreach (var small in regiments.Where(u => u.Battalions.Count < BattalionsPerRegiment).ToList())
+            foreach (var small in regiments.Where(u => u.Battalions.Count < BattalionsPerUnit).ToList())
             {
-                var host = regiments.FirstOrDefault(u => u != small && _session.UnitById(u.Id) != null && u.Battalions.Count + small.Battalions.Count <= BattalionsPerRegiment);
+                var host = regiments.FirstOrDefault(u => u != small && _session.UnitById(u.Id) != null && u.Battalions.Count + small.Battalions.Count <= BattalionsPerUnit);
                 if (host != null && _session.UnitById(small.Id) != null) _session.Merge(_player.Id, host.Id, small.Id);
             }
         }

@@ -195,7 +195,7 @@ public static class Techs
         [Tech.Castles] = new("Castillos", TechBranch.Military, 7, "Castillos para las ciudades.", Modifiers.None, [Tech.Fortifications], Era: Era.Medieval),
         [Tech.Gunpowder] = new("Pólvora", TechBranch.Military, 8, "Arcabuces: armas de fuego para la infantería.", Modifiers.None, [Tech.Machinery], Era: Era.Renaissance),
         [Tech.Metallurgy] = new("Metalurgia", TechBranch.Military, 8, "Cañones de hierro fundido.", Modifiers.None, [Tech.Gunpowder, Tech.Guilds], Era: Era.Renaissance),
-        [Tech.MilitaryScience] = new("Ciencia militar", TechBranch.Military, 9, "Mosqueteros y ejércitos modernos: regimientos, brigadas y divisiones.",
+        [Tech.MilitaryScience] = new("Ciencia militar", TechBranch.Military, 9, "Mosqueteros: infantería de fuego disciplinada.",
             Modifiers.None, [Tech.Gunpowder, Tech.PrintingPress], Era: Era.Renaissance),
         [Tech.Rifling] = new("Estriado", TechBranch.Military, 10, "Fusiles de ánima rayada, más certeros.", Modifiers.None, [Tech.MilitaryScience], Era: Era.Industrial),
         [Tech.Steel] = new("Acero", TechBranch.Military, 10, "Artillería de campaña de acero.", Modifiers.None, [Tech.Metallurgy, Tech.SteamEngine], Era: Era.Industrial),

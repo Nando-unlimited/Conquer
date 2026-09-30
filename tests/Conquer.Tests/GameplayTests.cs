@@ -47,11 +47,11 @@ public class GameplayTests(WorldFixture world)
         {
             var unit = Assert.Single(s.Units, u => u.OwnerId == player.Id);
             Assert.Equal(UnitType.Settlers, unit.Type);
-            Assert.Equal(300, unit.Citizens);
+            Assert.Equal(GameRules.StartingCitizens, unit.Citizens);
             Assert.True(_map.Provinces[unit.ProvinceId].IsClaimable);
-            Assert.Equal(600, player.Stockpile[ResourceType.Food]);
-            Assert.Equal(50, player.Stockpile[ResourceType.Gold]);
-            Assert.Equal(100, player.Stockpile[ResourceType.Wood]);
+            Assert.Equal(GameRules.StartingFood, player.Stockpile[ResourceType.Food]);
+            Assert.Equal(GameRules.StartingGold, player.Stockpile[ResourceType.Gold]);
+            Assert.Equal(GameRules.StartingWood, player.Stockpile[ResourceType.Wood]);
         }
         Assert.Equal("1 ene 4000 a.C., 00:00", s.Date.ToString());
     }
@@ -68,7 +68,7 @@ public class GameplayTests(WorldFixture world)
         Assert.True(result.Ok, result.Message);
         Assert.Empty(s.Units);
         Assert.Equal(0, province.OwnerId);
-        Assert.Equal(300, province.Population);
+        Assert.Equal(GameRules.StartingCitizens, province.Population);
         var city = Assert.Single(s.Cities);
         Assert.Equal(city.Id, s.Human.CapitalCityId);
         Assert.Contains(province.Id, s.Human.Provinces);
@@ -230,7 +230,7 @@ public class GameplayTests(WorldFixture world)
     {
         var s = NewSession();
         RunHours(s, 24);
-        Assert.Equal(600 - 300 * GameRules.FoodPerCitizen, s.Human.Stockpile[ResourceType.Food], 6);
+        Assert.Equal(GameRules.StartingFood - GameRules.StartingCitizens * GameRules.FoodPerCitizen, s.Human.Stockpile[ResourceType.Food], 6);
     }
 
     [Fact]
@@ -239,6 +239,7 @@ public class GameplayTests(WorldFixture world)
         var s = NewSession();
         var (a, _) = GrasslandPair();
         s.FoundCity(0, s.AddUnit(0, UnitType.Settlers, a.Id, 300).Id);
+        s.Human.Stockpile[ResourceType.Food] = 1e6; // the starting settlers still waiting eat too
         double target = GameRules.BaseMood + GameRules.CityMood + GameRules.CapitalMood;
 
         Assert.Equal(target, s.TargetMood(a));
@@ -254,7 +255,8 @@ public class GameplayTests(WorldFixture world)
         var s = NewSession();
         var (a, _) = GrasslandPair();
         s.FoundCity(0, s.AddUnit(0, UnitType.Settlers, a.Id, 300).Id);
-        s.Human.Stockpile[ResourceType.Food] = 300 * GameRules.FoodPerCitizen * GameRules.FoodReserveFullDays * 2;
+        // Everyone eats: the city and the starting settlers still waiting.
+        s.Human.Stockpile[ResourceType.Food] = (300 + GameRules.StartingCitizens) * GameRules.FoodPerCitizen * GameRules.FoodReserveFullDays * 2;
 
         RunHours(s, 24);
         Assert.True(s.Human.FoodReserveDays > GameRules.FoodReserveFullDays);
@@ -359,9 +361,9 @@ public class GameplayTests(WorldFixture world)
 
         var stats = s.Stats(s.Human);
         Assert.Equal(1400, stats.Settled);
-        Assert.Equal(300 + 100, stats.InUnits); // the starting settlers are still waiting, plus the warriors
+        Assert.Equal(GameRules.StartingCitizens + 100, stats.InUnits); // the starting settlers are still waiting, plus the warriors
         Assert.Equal(100, stats.Migrating);
-        Assert.Equal(1900, stats.Total);
+        Assert.Equal(1400 + GameRules.StartingCitizens + 100 + 100, stats.Total);
         Assert.Equal((2, 1, 2), (stats.Provinces, stats.Cities, stats.Units));
         Assert.Equal((900 * 80 + 500 * 20) / 1400.0, stats.AverageMood, 6);
         Assert.Equal(500, stats.PopulationByMood[0]); // unrest
@@ -508,8 +510,8 @@ public class GameplayTests(WorldFixture world)
             s.FoundCity(0, s.AddUnit(0, UnitType.Settlers, a.Id, 300).Id);
             foreach (var t in techs) s.Human.Learn(t);
             RunHours(s, 24);
-            // Harvest = balance + what was eaten: 300 in the city and the 300 starting settlers still waiting.
-            return (s.Human.LastDayNet[(int)ResourceType.Food] + GameRules.FoodPerCitizen * 600, s.CapacityOf(a));
+            // Harvest = balance + what was eaten: 300 in the city and the starting settlers still waiting.
+            return (s.Human.LastDayNet[(int)ResourceType.Food] + GameRules.FoodPerCitizen * (300 + GameRules.StartingCitizens), s.CapacityOf(a));
         }
 
         var plain = OneDay();

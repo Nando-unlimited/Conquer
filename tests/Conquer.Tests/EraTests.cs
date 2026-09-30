@@ -148,15 +148,6 @@ public class EraTests(WorldFixture world)
     }
 
     [Fact]
-    public void MilitaryScienceBringsModernNames()
-    {
-        var (s, _) = WithCapital();
-        Assert.Equal(ArmyEra.Classical, s.Human.ArmyEra);
-        s.Human.Learn(Tech.MilitaryScience);
-        Assert.Equal(ArmyEra.Modern, s.Human.ArmyEra);
-    }
-
-    [Fact]
     public void IndustrializationIsBornWhereAFactoryWorksCoal()
     {
         var coal = _map.Provinces.First(p => p.IsClaimable && p.Deposits[(int)ResourceType.Coal] > 0 && p.Neighbors.Length > 3);

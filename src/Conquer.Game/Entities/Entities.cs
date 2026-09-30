@@ -18,6 +18,8 @@ public sealed class Player
     /// <summary>Net change of each resource over the last day, for display.</summary>
     public double[] LastDayNet { get; } = new double[Resources.All.Length];
     public bool IsStarving { get; set; }
+    /// <summary>The last day's upkeep could not be paid in full; worked out again every day.</summary>
+    public bool ArmyUnpaid { get; set; }
     /// <summary>Days the food stockpile would last at the last day's consumption.</summary>
     public double FoodReserveDays { get; set; }
 
@@ -47,9 +49,6 @@ public sealed class Player
     /// <summary>Science no branch could take (nothing chosen to research); it goes into research again the next day.</summary>
     public double SpareScience { get; set; }
     public double LastDayScience { get; set; }
-
-    /// <summary>Whether its formations have Roman or modern names.</summary>
-    public ArmyEra ArmyEra => Formations.EraOf(Techs);
 
     /// <summary>Its regiment designs; every nation starts with one of two warrior battalions.</summary>
     public List<RegimentTemplate> Templates { get; } = [];
@@ -129,6 +128,8 @@ public sealed class Unit
     public int? AttackingProvinceId { get; set; }
     /// <summary>The fleet carrying this unit over the sea; null on land. It goes wherever the fleet goes.</summary>
     public int? CarrierId { get; set; }
+    /// <summary>The general at the head of an HQ; null for other units.</summary>
+    public General? General { get; set; }
 
     /// <summary>Provinces still to enter, in order; empty when the unit is idle.</summary>
     public List<int> Path { get; } = [];
@@ -147,12 +148,13 @@ public sealed class Unit
         HeadquartersLevel = headquartersLevel;
     }
 
-    /// <summary>"Legión III", "Vexilación I"… in its nation's era ("3.er Regimiento" in modern times); settlers are just "Colonos".</summary>
+    /// <summary>"3.er Regimiento", "3.ª Brigada" or "3.ª División" by its size, "II Cuerpo" for an HQ, "2.ª Flota"; settlers are just "Colonos".</summary>
     public string Name => Type switch
     {
         UnitType.Settlers => "Colonos",
-        UnitType.Fleet => Formations.FleetName(Number, Owner.ArmyEra),
-        _ => Formations.UnitName(CommandLevel, Number, Owner.ArmyEra),
+        UnitType.Fleet => Formations.FleetName(Number),
+        UnitType.Headquarters => Formations.HeadquartersName(HeadquartersLevel, Number),
+        _ => Formations.CombatUnitName(Number, Battalions.Count),
     };
 
     /// <summary>Citizens in the unit: its settlers or staff, or the men left in a regiment's battalions or a fleet's crews.</summary>
@@ -168,7 +170,7 @@ public sealed class Unit
     /// <summary>0 for regiments, 1-5 for HQs, -1 for units outside the chain of command.</summary>
     public int CommandLevel => Type switch
     {
-        UnitType.Regiment => CommandLevels.Regiment,
+        UnitType.Regiment => CommandLevels.Combat,
         UnitType.Headquarters => HeadquartersLevel,
         _ => -1,
     };

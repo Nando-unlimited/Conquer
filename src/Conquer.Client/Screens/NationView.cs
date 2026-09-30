@@ -234,14 +234,14 @@ public sealed partial class NationView
 
             float bw = (columns[5].Width - 14) / 2;
             var settlers = _session.CanRecruitSettlers(city);
-            string settlersTip = $"{GameRules.StartingCitizens} ciudadanos salen a fundar otra ciudad. Coste: {GameRules.SettlersCost}." +
+            string settlersTip = $"{GameRules.SettlerCitizens} ciudadanos salen a fundar otra ciudad. Coste: {GameRules.SettlersCost}." +
                                  (settlers.Ok ? "" : "\n" + settlers.Message);
             if (ui.Button(new Rect(x, rowY + 3, bw, RowHeight - 6), "Colonos", settlers.Ok, tooltip: settlersTip, size: FontSize.Small))
                 _show(_session.RecruitSettlers(_player.Id, city.Id));
             x += bw + 4;
             var warriors = BattalionType.Warriors.Info();
             var train = _session.CanTrain(city, BattalionType.Warriors);
-            string trainTip = $"Entrena {Formations.BattalionName(warriors, _player.ArmyEra).ToLowerInvariant()} ({warriors.Men} hombres). Coste: {warriors.Cost}. " +
+            string trainTip = $"Entrena {Formations.BattalionName(warriors).ToLowerInvariant()} ({warriors.Men} hombres). Coste: {warriors.Cost}. " +
                               $"Tarda {warriors.TrainingDays} días." + (city.Training.Count > 0 ? $"\nEn instrucción: {city.Training.Count}." : "") +
                               (train.Ok ? "" : "\n" + train.Message);
             if (ui.Button(new Rect(x, rowY + 3, bw, RowHeight - 6), warriors.Name, train.Ok, tooltip: trainTip, size: FontSize.Small))

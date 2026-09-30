@@ -24,13 +24,13 @@ public sealed partial class NationView
     {
         var mine = _session.Units.Where(u => u.OwnerId == _player.Id && (u.CommandLevel >= 0 || u.IsFleet)).ToList();
         var regiments = mine.Where(u => u.IsMilitary).ToList();
-        var era = _player.ArmyEra;
-        ui.Text(r.X, r.Y, $"{Plural(regiments.Count, Formations.LevelName(CommandLevels.Regiment, era).ToLowerInvariant(), Formations.LevelPlural(CommandLevels.Regiment, era))} · {Formations.BattalionCount(regiments.Sum(u => u.Battalions.Count), era)} · {regiments.Sum(u => u.Citizens):N0} hombres · " +
-                          $"poder militar {_session.MilitaryPower(_player.Id):0}", Theme.Text, bold: true);
+        ui.Text(r.X, r.Y, $"{Plural(regiments.Count, "unidad de combate", Formations.CombatPlural)} · {Formations.BattalionCount(regiments.Sum(u => u.Battalions.Count))} · {regiments.Sum(u => u.Citizens):N0} hombres · " +
+                          $"poder militar {_session.MilitaryPower(_player.Id):0} · mantenimiento {_session.Upkeep(_player)[(int)ResourceType.Gold]:0.#} de oro/día" +
+                          (_player.ArmyUnpaid ? " (sin pagar)" : ""), _player.ArmyUnpaid ? Theme.Bad : Theme.Text, bold: true);
         var body = new Rect(r.X, r.Y + 34, r.W, r.H - 34);
         if (mine.Count == 0)
         {
-            ui.Text(body.X, body.Y, $"No tienes ejército. Entrena {Formations.BattalionPlural(era)} en la pestaña Ejército de tus ciudades.", Theme.TextDim);
+            ui.Text(body.X, body.Y, $"No tienes ejército. Entrena batallones en la pestaña Ejército de tus ciudades.", Theme.TextDim);
             return;
         }
 
@@ -96,6 +96,15 @@ public sealed partial class NationView
 
     private static string Plural(int n, string one, string many) => $"{n:N0} {(n == 1 ? one : many)}";
 
+    /// <summary>Daily upkeep in words: "0,3 oro/día" or "1,2 oro, 0,4 hierro/día".</summary>
+    public static string UpkeepText(IEnumerable<ResourceCost> costs)
+    {
+        var upkeep = new double[Resources.All.Length];
+        foreach (var cost in costs) GameSession.AddUpkeep(upkeep, cost);
+        var parts = Resources.All.Where(r => upkeep[(int)r] > 0).Select(r => $"{upkeep[(int)r]:0.##} {r.Name().ToLowerInvariant()}").ToList();
+        return parts.Count == 0 ? "nada" : string.Join(", ", parts) + "/día";
+    }
+
     private string UnitActivity(Unit unit)
     {
         if (unit.CarrierId is int carrier && _session.UnitById(carrier) is { } fleet) return $"A bordo de {fleet.Name}";
@@ -116,7 +125,6 @@ public sealed partial class NationView
     /// </summary>
     private void Templates(Ui ui, Rect r)
     {
-        var era = _player.ArmyEra;
         if (_session.TemplateById(_player, _selectedTemplateId) is not { } template)
         {
             template = _player.Templates[0];
@@ -130,7 +138,7 @@ public sealed partial class NationView
         foreach (var t in _player.Templates)
         {
             if (y > r.Bottom - 130) break;
-            if (ui.Button(new Rect(r.X, y, ListW, 30), $"{t.Name}  ({Formations.BattalionCount(t.Battalions.Count, era)})", active: t.Id == template.Id, size: FontSize.Small))
+            if (ui.Button(new Rect(r.X, y, ListW, 30), $"{t.Name}  ({Formations.BattalionCount(t.Battalions.Count)})", active: t.Id == template.Id, size: FontSize.Small))
                 _selectedTemplateId = t.Id;
             y += 34;
         }
@@ -155,16 +163,16 @@ public sealed partial class NationView
         y = r.Y;
         ui.Text(x, y, template.Name, Theme.Accent, FontSize.Large, bold: true);
         ui.Text(x + ui.Font.Measure(template.Name, FontSize.Large, true) + 16, y + 8,
-            $"{Formations.LevelName(CommandLevels.Regiment, era)} de {Formations.BattalionCount(template.Battalions.Count, era)}", Theme.TextDim, FontSize.Small);
+            $"{Formations.CombatName(template.Battalions.Count)} de {Formations.BattalionCount(template.Battalions.Count)}", Theme.TextDim, FontSize.Small);
         y += 40;
-        for (int i = 0; i < MilitaryRules.MaxBattalionsPerRegiment; i++)
+        for (int i = 0; i < MilitaryRules.MaxBattalionsPerUnit; i++)
         {
             var slot = new Rect(x, y, w * 0.6f, 32);
             ui.Batch.Rect(slot.X, slot.Y, slot.W, slot.H, Theme.Button.WithAlpha(0.35f));
             if (i < template.Battalions.Count)
             {
                 var info = template.Battalions[i].Info();
-                ui.Text(slot.X + 10, slot.Y + 6, Formations.BattalionName(info, era), Theme.Text);
+                ui.Text(slot.X + 10, slot.Y + 6, Formations.BattalionName(info), Theme.Text);
                 string stats = $"A {info.Attack:0.#} · D {info.Defense:0.#} · {info.Men} h";
                 ui.Text(slot.Right - 90 - ui.Font.Measure(stats, FontSize.Small), slot.Y + 9, stats, Theme.TextDim, FontSize.Small);
                 if (ui.Button(new Rect(slot.Right - 80, slot.Y + 4, 74, 24), "Quitar", template.Battalions.Count > 1, size: FontSize.Small))
@@ -185,14 +193,14 @@ public sealed partial class NationView
             var type = known[i];
             var can = _session.CanAddToTemplate(_player, template, type);
             var button = new Rect(x + i % 3 * (bw + 6), y + i / 3 * 34, bw, 30);
-            if (ui.Button(button, "+ " + type.Info().Name, can.Ok, tooltip: can.Ok ? Formations.BattalionName(type.Info(), era) : can.Message, size: FontSize.Small))
+            if (ui.Button(button, "+ " + type.Info().Name, can.Ok, tooltip: can.Ok ? Formations.BattalionName(type.Info()) : can.Message, size: FontSize.Small))
                 _show(_session.AddToTemplate(_player.Id, template.Id, type));
         }
 
         // What a regiment of this design is like.
         float sx = x + w * 0.6f + 30, sw = r.Right - sx;
         float sy = r.Y + 40;
-        ui.Text(sx, sy, "Regimiento", Theme.Accent, bold: true);
+        ui.Text(sx, sy, Formations.CombatName(template.Battalions.Count), Theme.Accent, bold: true);
         sy += 28;
         Row(ui, sx, ref sy, sw, "Hombres", $"{template.Men:N0}");
         Row(ui, sx, ref sy, sw, "Instrucción", $"{template.TrainingDays} días");
@@ -200,13 +208,14 @@ public sealed partial class NationView
         Row(ui, sx, ref sy, sw, "Defensa", $"{template.Defense:0.#}");
         Row(ui, sx, ref sy, sw, "Organización", $"{template.MaxOrganisation:0}");
         Row(ui, sx, ref sy, sw, "Velocidad", $"{template.Speed * GameRules.CitizenSpeedKmh:0.#} km/h");
+        Row(ui, sx, ref sy, sw, "Mantenimiento", UpkeepText(template.Battalions.Select(b => b.Info().Cost)));
         sy += 6;
         ui.Text(sx, sy, "Coste", Theme.TextDim);
         sy += 22;
         foreach (var (type, amount) in template.Cost.Items)
             Row(ui, sx + 12, ref sy, sw - 12, type.Name(), $"{amount:0}");
         sy += 10;
-        var notes = new List<string> { $"Se entrena entero en la pestaña Ejército de tus ciudades; sus {Formations.BattalionPlural(era)} se instruyen a la vez." };
+        var notes = new List<string> { $"Se entrena entero en la pestaña Ejército de tus ciudades; sus batallones se instruyen a la vez." };
         if (template.AnyMounted) notes.Add("Los montados atacan a la mitad en bosques, pantanos y montañas.");
         foreach (var note in notes)
             foreach (var line in ui.Font.Wrap(note, sw, FontSize.Small))
