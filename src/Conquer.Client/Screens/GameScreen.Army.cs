@@ -26,8 +26,9 @@ public sealed partial class GameScreen
     private static readonly Rgba BattleColor = new(0xFFE04A3A);
 
     /// <summary>
-    /// NATO-style counters: a cross for infantry, a slash for mounted troops, the level marks for HQs
-    /// and a "C" for settlers. Regiments carry a strength bar (green) and an organisation bar (amber).
+    /// NATO-style counters: the symbol of the unit's arm inside the frame (see <see cref="UnitFunction"/>), its size
+    /// marks above it (III regiment, X brigade, XX division, XXX to XXXXX for HQs), a staff under an HQ's frame
+    /// and a "C" for settlers. Combat units carry a strength bar (green) and an organisation bar (amber).
     /// </summary>
     private void DrawUnits()
     {
@@ -58,12 +59,7 @@ public sealed partial class GameScreen
             Batch.Rect(r.X - 2, r.Y - 2, r.W + 4, r.H + 4, selected ? Theme.Accent : Rgba.Black);
             Batch.Rect(r.X, r.Y, r.W, r.H, color.Scale(0.55f).WithAlpha(1));
             Batch.Rect(r.X + 2, r.Y + 2, r.W - 4, r.H - 4, color);
-            if (unit.IsMilitary)
-            {
-                bool mounted = unit.Battalions.Count(b => b.Info.Mounted) * 2 > unit.Battalions.Count;
-                Batch.Line(new(r.X + 2, r.Bottom - 2), new(r.Right - 2, r.Y + 2), Rgba.Black, 1.5f);
-                if (!mounted) Batch.Line(new(r.X + 2, r.Y + 2), new(r.Right - 2, r.Bottom - 2), Rgba.Black, 1.5f);
-            }
+            if (unit.IsMilitary) DrawFunction(new Rect(r.X + 2, r.Y + 2, r.W - 4, r.H - 4), unit.Function);
             else if (unit.IsFleet)
             {
                 // A hull under the ship letter; a dot for every unit aboard.
@@ -79,10 +75,88 @@ public sealed partial class GameScreen
                 Bar(new Rect(r.X - 2, r.Bottom + 3, r.W + 4, 3), unit.StrengthShare, StrengthColor);
                 Bar(new Rect(r.X - 2, r.Bottom + 7, r.W + 4, 3), unit.OrganisationShare, OrganisationColor);
             }
-            else if (scale > 0.7f) Ui.TextCentered(r, unit.IsHeadquarters ? "HQ" : unit.Symbol, Rgba.Black, FontSize.Small, bold: true);
-            if (unit.IsHeadquarters && scale > 0.7f)
-                Ui.TextCentered(new Rect(r.X - 10, r.Y - 16, r.W + 20, 14), unit.Symbol, Rgba.White, FontSize.Small, bold: true);
+            else if (unit.IsHeadquarters) Batch.Line(new(r.X - 1, r.Bottom + 2), new(r.X - 1, r.Bottom + 2 + H), Rgba.Black, 2);
+            else if (scale > 0.7f) Ui.TextCentered(r, unit.Symbol, Rgba.Black, FontSize.Small, bold: true);
+            if (unit.Echelon.Length > 0) DrawEchelon(r, unit.Echelon, scale);
             _unitHitBoxes.Add((unit.Id, r));
+        }
+    }
+
+    /// <summary>The NATO symbol of a unit's arm, inside the frame <paramref name="r"/>.</summary>
+    private void DrawFunction(Rect r, UnitFunction function)
+    {
+        var ink = Rgba.Black;
+        const float t = 1.5f;
+        var centre = new Vector2(r.X + r.W / 2, r.Y + r.H / 2);
+        void Cross()
+        {
+            Batch.Line(new(r.X, r.Bottom), new(r.Right, r.Y), ink, t);
+            Batch.Line(new(r.X, r.Y), new(r.Right, r.Bottom), ink, t);
+        }
+        switch (function)
+        {
+            case UnitFunction.Infantry:
+                Cross();
+                break;
+            case UnitFunction.MotorisedInfantry:
+                Cross();
+                Batch.Line(new(centre.X, r.Y), new(centre.X, r.Bottom), ink, t);
+                break;
+            case UnitFunction.Mechanised:
+                Cross();
+                Ellipse(centre, r.W * 0.32f, r.H * 0.3f, ink, t);
+                break;
+            case UnitFunction.Cavalry:
+                Batch.Line(new(r.X, r.Bottom), new(r.Right, r.Y), ink, t);
+                break;
+            case UnitFunction.Armour:
+                Ellipse(centre, r.W * 0.32f, r.H * 0.3f, ink, t);
+                break;
+            case UnitFunction.Artillery:
+                Batch.Circle(centre, Math.Min(r.W, r.H) * 0.22f, ink);
+                break;
+            case UnitFunction.Engineers:
+            {
+                float left = r.X + r.W * 0.25f, right = r.Right - r.W * 0.25f, top = r.Y + r.H * 0.35f, bottom = r.Y + r.H * 0.7f;
+                Batch.Line(new(left, top), new(right, top), ink, t);
+                foreach (float x in new[] { left, centre.X, right }) Batch.Line(new(x, top), new(x, bottom), ink, t);
+                break;
+            }
+            case UnitFunction.Air:
+                // Fixed wing: two loops meeting in the middle.
+                Ellipse(centre - new Vector2(r.W * 0.16f, 0), r.W * 0.16f, r.H * 0.22f, ink, t);
+                Ellipse(centre + new Vector2(r.W * 0.16f, 0), r.W * 0.16f, r.H * 0.22f, ink, t);
+                break;
+        }
+    }
+
+    private void Ellipse(Vector2 centre, float rx, float ry, Rgba color, float thickness, int segments = 16)
+    {
+        for (int i = 0; i < segments; i++)
+        {
+            float a0 = MathF.Tau * i / segments, a1 = MathF.Tau * (i + 1) / segments;
+            Batch.Line(centre + new Vector2(MathF.Cos(a0) * rx, MathF.Sin(a0) * ry),
+                       centre + new Vector2(MathF.Cos(a1) * rx, MathF.Sin(a1) * ry), color, thickness);
+        }
+    }
+
+    /// <summary>NATO size marks centred over the frame: a bar for each "I", a small cross for each "X".</summary>
+    private void DrawEchelon(Rect r, string marks, float scale)
+    {
+        float h = 7 * scale, w = 5 * scale, gap = 3 * scale;
+        float total = marks.Sum(c => c == 'I' ? 0 : w) + (marks.Length - 1) * gap;
+        float x = r.X + (r.W - total) / 2, bottom = r.Y - 4, top = bottom - h;
+        Batch.Rect(x - 2, top - 2, total + 4, h + 4, Rgba.Black.WithAlpha(0.45f));
+        foreach (char c in marks)
+        {
+            if (c == 'I') Batch.Line(new(x, top), new(x, bottom), Rgba.White, 1.5f);
+            else
+            {
+                Batch.Line(new(x, top), new(x + w, bottom), Rgba.White, 1.5f);
+                Batch.Line(new(x, bottom), new(x + w, top), Rgba.White, 1.5f);
+                x += w;
+            }
+            x += gap;
         }
     }
 

@@ -209,6 +209,15 @@ public sealed class Unit
     /// <summary>A regiment's strength as a share of its full complement (0..1).</summary>
     public double StrengthShare =>
         Battalions.Count == 0 ? 0 : Battalions.Sum(b => b.Strength) / Battalions.Sum(b => b.Info.Men);
+    /// <summary>NATO echelon marks over its symbol: III, X or XX for combat units by size, XXX to XXXXX for HQs; none otherwise.</summary>
+    public string Echelon => Type switch
+    {
+        UnitType.Regiment => Formations.CombatEchelon(Battalions.Count),
+        UnitType.Headquarters => CommandLevels.Info(HeadquartersLevel).Symbol,
+        _ => "",
+    };
+    /// <summary>What its NATO symbol shows inside the frame, from its battalions.</summary>
+    public UnitFunction Function => Formations.Function(Battalions.Select(b => b.Type));
     public string Symbol => Type switch
     {
         UnitType.Settlers => "C",

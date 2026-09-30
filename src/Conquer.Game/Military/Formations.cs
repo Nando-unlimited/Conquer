@@ -26,6 +26,39 @@ public static class Formations
     /// <summary>A combat unit of so many battalions: regiment up to 3, brigade up to 6, division beyond.</summary>
     private static Names CombatSize(int battalions) => battalions <= 3 ? Regiment : battalions <= 6 ? Brigade : Division;
 
+    /// <summary>NATO echelon marks over a combat unit of so many battalions: "III" regiment, "X" brigade, "XX" division.</summary>
+    public static string CombatEchelon(int battalions) => battalions <= 3 ? "III" : battalions <= 6 ? "X" : "XX";
+
+    /// <summary>
+    /// The NATO symbol a combat unit shows for its battalions: the role most of them share (ties go to the front line);
+    /// tanks with motorised infantry make mechanised infantry.
+    /// </summary>
+    public static UnitFunction Function(IEnumerable<BattalionType> battalions)
+    {
+        var counts = new Dictionary<UnitFunction, int>();
+        foreach (var b in battalions)
+        {
+            var f = FunctionOf(b);
+            counts[f] = counts.GetValueOrDefault(f) + 1;
+        }
+        if (counts.Count == 0) return UnitFunction.Infantry;
+        if (counts.ContainsKey(UnitFunction.Armour) && counts.ContainsKey(UnitFunction.MotorisedInfantry)) return UnitFunction.Mechanised;
+        return counts.OrderByDescending(c => c.Value).ThenBy(c => c.Key).First().Key;
+    }
+
+    /// <summary>The NATO symbol of one kind of battalion.</summary>
+    public static UnitFunction FunctionOf(BattalionType type) => type == BattalionType.MotorisedInfantry ? UnitFunction.MotorisedInfantry : type.Role() switch
+    {
+        BattalionRole.Cavalry => UnitFunction.Cavalry,
+        BattalionRole.Armour => UnitFunction.Armour,
+        BattalionRole.Artillery => UnitFunction.Artillery,
+        BattalionRole.Engineers => UnitFunction.Engineers,
+        BattalionRole.Air => UnitFunction.Air,
+        BattalionRole.Naval => UnitFunction.Naval,
+        // Scouts are reconnaissance, drawn like cavalry.
+        _ => type == BattalionType.Scouts ? UnitFunction.Cavalry : UnitFunction.Infantry,
+    };
+
     /// <summary>"Regimiento", "Brigada" or "División" for a combat unit of so many battalions.</summary>
     public static string CombatName(int battalions) => CombatSize(battalions).Singular;
 
@@ -81,4 +114,26 @@ public static class Formations
             for (; n >= value; n -= value) text.Append(digits);
         return text.ToString();
     }
+}
+
+/// <summary>What a unit's NATO symbol shows inside its frame (see <see cref="Formations.Function"/>).</summary>
+public enum UnitFunction
+{
+    /// <summary>A cross (X).</summary>
+    Infantry,
+    /// <summary>The infantry cross with a vertical line.</summary>
+    MotorisedInfantry,
+    /// <summary>The infantry cross with the tracks of armour.</summary>
+    Mechanised,
+    /// <summary>A diagonal slash: horse, chariots and reconnaissance.</summary>
+    Cavalry,
+    /// <summary>An oval: tracks.</summary>
+    Armour,
+    /// <summary>A filled dot.</summary>
+    Artillery,
+    /// <summary>A bridge: a bar with three legs.</summary>
+    Engineers,
+    /// <summary>Wings.</summary>
+    Air,
+    Naval,
 }
