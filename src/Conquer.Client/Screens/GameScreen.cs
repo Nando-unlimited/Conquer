@@ -648,6 +648,7 @@ public sealed partial class GameScreen : IScreen
                 if (Ui.Hover(row))
                     Ui.Tooltip("Nacimientos respecto a lo normal. Sube con el buen humor, cae con el hambre y cambia despacio.\n" +
                                $"Tiende a {_session.TargetFertility(p, owner, owner.IsStarving):P0}.");
+                Line(x, ref y, "Nacimientos", $"+{_session.DailyBirths(p, owner.IsStarving):0.##} al día", owner.IsStarving ? Theme.Bad : Theme.Text);
             }
             int incoming = _session.Migrations.Where(m => m.ToProvinceId == p.Id).Sum(m => m.People);
             if (incoming > 0) Line(x, ref y, "En camino", $"{incoming:N0} migrantes");

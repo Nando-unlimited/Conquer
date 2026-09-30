@@ -101,6 +101,7 @@ public sealed partial class NationView
         Row(ui, x, ref y, colW, "Migrando", $"{stats.Migrating:N0}");
         Row(ui, x, ref y, colW, "Fertilidad media", $"{stats.AverageFertility:P0}",
             stats.AverageFertility < 0.75 ? Theme.Bad : stats.AverageFertility >= 1.15 ? Theme.Good : Theme.Text);
+        Row(ui, x, ref y, colW, "Nacimientos al día", $"+{stats.DailyBirths:0.#}", _player.IsStarving ? Theme.Bad : Theme.Text);
         y += 10;
 
         Heading(ui, x, ref y, "Humor");
@@ -474,6 +475,8 @@ public sealed partial class NationView
 
         ui.Text(x, rowY + 6, populated ? $"{p.Fertility:P0}" : "-",
             !populated ? Theme.TextDim : p.Fertility < 0.75 ? Theme.Bad : p.Fertility >= 1.15 ? Theme.Good : Theme.Text);
+        if (populated && ui.Hover(new Rect(x, rowY, columns[3].Width, RowHeight)))
+            ui.Tooltip($"Nacimientos: +{_session.DailyBirths(p, _player.IsStarving):0.##} al día.");
         x += columns[3].Width;
     }
 

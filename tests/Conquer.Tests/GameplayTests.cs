@@ -347,6 +347,26 @@ public class GameplayTests(WorldFixture world)
     }
 
     [Fact]
+    public void EveryPopulatedProvinceHasBirthsByItsOwnFertility()
+    {
+        var s = NewSession();
+        var (a, b) = GrasslandPair();
+        s.FoundCity(0, s.AddUnit(0, UnitType.Settlers, a.Id, 300).Id);
+        b.Population = 20;
+
+        b.Fertility = 1;
+        double normal = s.DailyBirths(b, starving: false);
+        b.Fertility = 1.5;
+        double fertile = s.DailyBirths(b, starving: false);
+
+        // A thinly populated countryside still grows by its land, beyond its few citizens' own share.
+        Assert.True(normal > 20 * GameRules.GrowthRate, $"births {normal}");
+        Assert.Equal(1.5 * normal, fertile, 6);
+        Assert.Equal(0, s.DailyBirths(b, starving: true));
+        Assert.Equal(s.DailyBirths(a, starving: false), s.Stats(s.Human).DailyBirths, 6);
+    }
+
+    [Fact]
     public void NationStatsAddUpPeopleWhereverTheyAre()
     {
         var s = NewSession();

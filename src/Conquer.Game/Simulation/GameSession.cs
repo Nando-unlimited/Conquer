@@ -20,9 +20,10 @@ public readonly record struct CommandResult(bool Ok, string Message)
 /// <param name="Migrating">Citizens on the road to a new home.</param>
 /// <param name="PopulationByMood">Settled citizens at each mood level, worst first (see <see cref="GameRules.MoodNames"/>).</param>
 /// <param name="Reserves">What is left in the deposits of the nation's provinces, by resource.</param>
+/// <param name="DailyBirths">Citizens born each day across the nation's provinces, each at its own fertility.</param>
 public sealed record NationStats(
     double Settled, int InUnits, int Migrating, int Provinces, int Cities, int Units,
-    double AverageMood, double AverageFertility, double[] PopulationByMood, double[] Reserves)
+    double AverageMood, double AverageFertility, double[] PopulationByMood, double[] Reserves, double DailyBirths)
 {
     public double Total => Settled + InUnits + Migrating;
 }
@@ -171,7 +172,7 @@ public sealed partial class GameSession
     /// <summary>Totals and averages of a player's nation, for the nation screen.</summary>
     public NationStats Stats(Player player)
     {
-        double settled = 0, mood = 0, fertility = 0;
+        double settled = 0, mood = 0, fertility = 0, births = 0;
         var byMood = new double[GameRules.MoodNames.Length];
         var reserves = new double[Resources.All.Length];
         foreach (int id in player.Provinces)
@@ -183,6 +184,7 @@ public sealed partial class GameSession
             mood += p.Population * p.Mood;
             fertility += p.Population * p.Fertility;
             byMood[GameRules.MoodLevel(p.Mood)] += p.Population;
+            births += DailyBirths(p, player.IsStarving);
         }
         return new NationStats(
             settled,
@@ -194,7 +196,8 @@ public sealed partial class GameSession
             settled > 0 ? mood / settled : GameRules.StartingMood,
             settled > 0 ? fertility / settled : 1,
             byMood,
-            reserves);
+            reserves,
+            births);
     }
 
     // ------------------------------------------------------------------ time
@@ -313,12 +316,21 @@ public sealed partial class GameSession
             }
             else
             {
-                double capacity = CapacityOf(p);
-                double rate = GameRules.GrowthRate * p.Fertility * (p.CityId.HasValue ? GameRules.CityGrowthMultiplier : 1);
-                if (p.Population < capacity)
-                    p.Population += p.Population * rate * (1 - p.Population / capacity);
+                p.Population += DailyBirths(p, starving: false);
             }
         }
+    }
+
+    /// <summary>
+    /// Citizens born in a populated province each day: a share of its people plus a base set by its land,
+    /// both scaled by the province's own fertility and damped as it fills up. Nobody is born while the nation starves.
+    /// </summary>
+    public double DailyBirths(Province p, bool starving)
+    {
+        double capacity = CapacityOf(p);
+        if (starving || p.Population <= 0 || p.Population >= capacity) return 0;
+        double perCitizen = GameRules.GrowthRate * (p.CityId.HasValue ? GameRules.CityGrowthMultiplier : 1);
+        return (p.Population * perCitizen + capacity * GameRules.BaseBirthsPerCapacity) * p.Fertility * (1 - p.Population / capacity);
     }
 
     /// <summary>Fertility a populated province tends to, with its owner's advances.</summary>

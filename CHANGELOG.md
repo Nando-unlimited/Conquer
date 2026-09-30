@@ -2,6 +2,14 @@
 
 Todos los cambios del juego, del más reciente al más antiguo. Cada versión es un commit cuyo título es su número.
 
+## [1.39.0] - 2026-09-30
+
+### Cambiado
+- **Nacimientos por provincia**: cada provincia habitada tiene sus propios nacimientos según su fertilidad, no solo las que ya tienen mucha gente.
+  - Además del crecimiento de siempre (una parte de sus habitantes), nacen cada día 2 personas por cada 100.000 que pueda alimentar su tierra, multiplicadas por su fertilidad y frenadas a medida que se llena. Así el campo crece por sí mismo y no solo con los migrantes de las ciudades.
+  - Con hambre no nace nadie, como antes.
+- El panel de la provincia muestra sus **nacimientos al día**; en las pestañas Ciudades y Provincias aparecen al pasar el ratón por la fertilidad, y el Resumen da el total de la nación.
+
 ## [1.38.0] - 2026-09-30
 
 ### Añadido
