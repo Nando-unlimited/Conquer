@@ -2,6 +2,13 @@
 
 Todos los cambios del juego, del más reciente al más antiguo. Cada versión es un commit cuyo título es su número.
 
+## [1.49.0] - 2026-10-01
+
+### Cambiado
+- **Montañas y bosques dibujados en el mapa**: en el mapa de terreno, al acercarse, aparecen picos (nevados en las cumbres) sobre la roca y árboles en los bosques, como en un mapa antiguo.
+- **Ciudades con casas**: cada ciudad es un grupo de casas con el tejado del color de su nación, más casas cuanto más poblada; la capital tiene una torre con bandera.
+- Las fichas de las unidades llevan sombra, y el marco de la seleccionada late.
+
 ## [1.48.0] - 2026-10-01
 
 ### Cambiado

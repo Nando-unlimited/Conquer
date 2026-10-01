@@ -57,6 +57,8 @@ public sealed class MapRenderer : IDisposable
         // How strongly the nation's colour bands its border (0: a shadow instead), and how dark that colour is.
         uniform float uNationBand;
         uniform float uBandShade;
+        // 1 on the terrain map, which shows little peaks and trees; 0 on the others.
+        uniform float uSymbols;
         // Each map pixel's distance to the nearest land border between owners (BorderStep per map pixel; 255 far away).
         uniform sampler2D uBorderDistance;
         const float BORDER_STEP = 40.0;
@@ -226,6 +228,73 @@ public sealed class MapRenderer : IDisposable
             terrain = sum / max(total, 1e-4);
         }
 
+        // ---- map symbols: little peaks on mountains and trees in forests, like an old map
+
+        // Symbols sit on a grid fixed to the map, about `targetPx` screen pixels apart; the grid halves or doubles
+        // with the zoom (in powers of two) so they stay put while zooming.
+        float symbolCell(float targetPx) { return exp2(floor(log2(targetPx / uZoom) + 0.5)); }
+
+        // A peak on the point `d` screen pixels from the foot of its middle: lit flank on the left, shadowed on the
+        // right, snow on high ones, a dark outline. Returns the colour and its coverage in alpha.
+        vec4 peak(vec2 d, float w, float h, bool snow) {
+            if (d.y > 0.5 || d.y < -h - 0.5) return vec4(0.0);
+            float halfWidth = w * (d.y + h) / h;
+            float edge = min((halfWidth - abs(d.x)) * h / sqrt(h * h + w * w), -d.y);
+            if (edge < -0.5) return vec4(0.0);
+            vec3 c = d.x < 0.0 ? vec3(0.74, 0.69, 0.60) : vec3(0.47, 0.42, 0.36);
+            if (snow && d.y < -h * 0.62) c = d.x < 0.0 ? vec3(0.96, 0.97, 0.99) : vec3(0.80, 0.84, 0.90);
+            c = mix(vec3(0.17, 0.14, 0.11), c, smoothstep(0.4, 1.3, edge));
+            return vec4(c, clamp(edge + 0.5, 0.0, 1.0));
+        }
+
+        // A tree on the point `d` screen pixels from its foot: a round crown lit from the upper left, and a trunk.
+        vec4 tree(vec2 d, float s) {
+            vec2 crown = d - vec2(0.0, -4.2 * s);
+            float r = 3.1 * s, dist = r - length(crown);
+            if (dist > -0.5) {
+                vec3 c = mix(vec3(0.10, 0.25, 0.10), vec3(0.24, 0.47, 0.20), clamp(0.5 - dot(crown / r, vec2(0.6, 0.6)), 0.0, 1.0));
+                c = mix(vec3(0.06, 0.13, 0.06), c, smoothstep(0.3, 1.2, dist));
+                return vec4(c, clamp(dist + 0.5, 0.0, 1.0));
+            }
+            if (abs(d.x) < 0.8 * s && d.y < 0.0 && d.y > -1.6 * s) return vec4(0.30, 0.20, 0.12, 1.0);
+            return vec4(0.0);
+        }
+
+        // Draws the symbols around the map point m over the colour: those of the nearby grid cells whose ground calls
+        // for one (bare rock for peaks, forest for trees), with a little jitter so they don't line up. Lower ones are
+        // drawn over higher ones, as in a view from the south.
+        vec3 symbols(vec2 m, vec3 col) {
+            float fade = smoothstep(2.5, 4.0, uZoom);
+            if (fade <= 0.0 || uSymbols <= 0.0) return col;
+            float s = clamp(uZoom / 8.0, 0.8, 1.5);
+            // Peaks.
+            float cell = symbolCell(46.0);
+            vec2 base = floor(m / cell);
+            for (int j = -1; j <= 1; j++)
+            for (int i = -1; i <= 1; i++) {
+                vec2 c = base + vec2(float(i), float(j));
+                vec2 p = (c + 0.5 + (vec2(hash(c), hash(c + 7.3)) - 0.5) * 0.6) * cell;
+                vec4 ground = texture(uDetail, p / uMapSize);
+                if (ground.a < 0.3 || isWater(idAt(p)) || hash(c + 3.1) > ground.a + 0.1) continue;
+                float size = (ground.a > 0.6 ? 1.0 : 0.65) * (0.8 + 0.4 * hash(c + 2.2)) * s;
+                vec4 sym = peak((m - p) * uZoom, 11.5 * size, 14.5 * size, ground.r > 0.75);
+                col = mix(col, sym.rgb, sym.a * fade);
+            }
+            // Trees, more of them and smaller.
+            cell = symbolCell(24.0);
+            base = floor(m / cell);
+            for (int j = -1; j <= 1; j++)
+            for (int i = -1; i <= 1; i++) {
+                vec2 c = base + vec2(float(i), float(j));
+                vec2 p = (c + 0.5 + (vec2(hash(c + 1.7), hash(c + 5.9)) - 0.5) * 0.7) * cell;
+                vec4 ground = texture(uDetail, p / uMapSize);
+                if (ground.g < 0.45 || ground.a > 0.3 || isWater(idAt(p)) || hash(c + 9.4) > 0.6 * ground.g) continue;
+                vec4 sym = tree((m - p) * uZoom, 1.3 * (0.8 + 0.4 * hash(c + 4.4)) * s);
+                col = mix(col, sym.rgb, sym.a * fade * 0.9);
+            }
+            return col;
+        }
+
         // ---- national borders
 
         // Zoomed out, the distance in screen pixels to the nearest land of another owner, looking up to 6 pixels away
@@ -288,6 +357,7 @@ public sealed class MapRenderer : IDisposable
 
             vec4 pc = texelFetch(uProvColor, slot(id), 0);
             col = mix(col, pc.rgb, pc.a);
+            if (!sea) col = symbols(m, col);
             col = mix(col, vec3(0.08, 0.08, 0.08), provinceLine * uProvinceBorders);
             col = nationBorder(col, id, sea, ownerDistance, m);
 
@@ -616,6 +686,7 @@ public sealed class MapRenderer : IDisposable
         };
         _shader.Set("uNationBand", band);
         _shader.Set("uBandShade", shade);
+        _shader.Set("uSymbols", Mode == MapMode.Terrain ? 1f : 0f);
         _gl.BindVertexArray(_vao);
         _gl.DrawArrays(PrimitiveType.Triangles, 0, 6);
         _gl.ActiveTexture(TextureUnit.Texture0);

@@ -111,10 +111,11 @@ public sealed partial class GameScreen : IScreen
     {
         var city = _session.CityById(capitalId)!;
         Map.Provinces[city.ProvinceId].Population += 1000;
+        Map.Provinces[city.ProvinceId].AddBuilding(BuildingType.Barracks);
         foreach (var r in new[] { ResourceType.Wood, ResourceType.Gold }) Human.Stockpile[r] += 1000;
         Human.Learn(Tech.Archery);
-        foreach (var type in new[] { BattalionType.Warriors, BattalionType.Archers, BattalionType.Warriors }) _session.Train(Human.Id, capitalId, type);
-        _session.RaiseHeadquarters(Human.Id, capitalId, 1);
+        foreach (var type in new[] { BattalionType.Warriors, BattalionType.Archers, BattalionType.Warriors }) _session.Train(Human.Id, city.ProvinceId, type);
+        _session.RaiseHeadquarters(Human.Id, city.ProvinceId, 1);
         for (int h = 0; h < 24 * 25; h++) _session.Step();
         var regiments = _session.Units.Where(u => u.OwnerId == Human.Id && u.IsMilitary).ToList();
         foreach (var other in regiments.Skip(1)) _session.Merge(Human.Id, regiments[0].Id, other.Id);
@@ -417,16 +418,17 @@ public sealed partial class GameScreen : IScreen
             var s = _camera.MapToScreen(Center(city.ProvinceId));
             if (!OnScreen(s)) continue;
             bool capital = _session.Players[city.OwnerId].CapitalCityId == city.Id;
-            float size = capital ? 12 : 9;
             var color = new Rgba(_session.Players[city.OwnerId].Color);
-            Batch.Rect(s.X - size / 2 - 2, s.Y - size / 2 - 2, size + 4, size + 4, Rgba.Black);
-            Batch.Rect(s.X - size / 2, s.Y - size / 2, size, size, capital ? Theme.Accent : Rgba.White);
-            Batch.Rect(s.X - size / 2 + 2, s.Y - size / 2 + 2, size - 4, size - 4, color);
+            // Houses grow a little as the map is zoomed in; their bases stand on the province's centre.
+            float scale = Math.Clamp(_camera.Zoom / 4.5f, 0.6f, 1.5f);
+            int houses = MapIcons.Houses(Map.Provinces[city.ProvinceId].Population);
+            float below = MapIcons.City(Batch, s + new Vector2(0, 5 * scale), color, houses, capital, scale);
             if (_camera.Zoom >= 2.5f || (capital && _camera.Zoom >= 1))
             {
                 float w = Ui.Font.Measure(city.Name, FontSize.Small, true);
-                Ui.Text(s.X - w / 2 + 1, s.Y + size / 2 + 3, city.Name, Rgba.Black, FontSize.Small, bold: true);
-                Ui.Text(s.X - w / 2, s.Y + size / 2 + 2, city.Name, Rgba.White, FontSize.Small, bold: true);
+                float ty = s.Y + 5 * scale + below;
+                Ui.Text(s.X - w / 2 + 1, ty + 1, city.Name, Rgba.Black, FontSize.Small, bold: true);
+                Ui.Text(s.X - w / 2, ty, city.Name, Rgba.White, FontSize.Small, bold: true);
             }
         }
     }

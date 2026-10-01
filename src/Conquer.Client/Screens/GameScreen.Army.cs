@@ -56,6 +56,13 @@ public sealed partial class GameScreen
             float W = 28 * scale, H = 19 * scale;
             var r = new Rect(s.X - W / 2, s.Y - H / 2, W, H);
             var color = new Rgba(_session.Players[unit.OwnerId].Color);
+            // A soft shadow lifts the counter off the map; the selected one's frame pulses.
+            Batch.Shadow(r.X - 2, r.Y, r.W + 4, r.H + 4, 3, spread: 5, strength: 0.5f);
+            if (selected)
+            {
+                float pulse = 0.5f + 0.5f * MathF.Sin((float)_realTime * 5);
+                Batch.Rect(r.X - 4, r.Y - 4, r.W + 8, r.H + 8, Theme.Accent.WithAlpha(0.25f + 0.35f * pulse));
+            }
             Batch.Rect(r.X - 2, r.Y - 2, r.W + 4, r.H + 4, selected ? Theme.Accent : Rgba.Black);
             Batch.Rect(r.X, r.Y, r.W, r.H, color.Scale(0.55f).WithAlpha(1));
             Batch.Rect(r.X + 2, r.Y + 2, r.W - 4, r.H - 4, color);
