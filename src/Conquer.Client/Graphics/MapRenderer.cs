@@ -59,6 +59,8 @@ public sealed class MapRenderer : IDisposable
         uniform float uBandShade;
         // 1 on the terrain map, which shows little peaks and trees; 0 on the others.
         uniform float uSymbols;
+        // 1 on the political map, drawn as on old parchment; 0 on the others.
+        uniform float uParchment;
         // Each map pixel's distance to the nearest land border between owners (BorderStep per map pixel; 255 far away).
         uniform sampler2D uBorderDistance;
         const float BORDER_STEP = 40.0;
@@ -295,6 +297,15 @@ public sealed class MapRenderer : IDisposable
             return col;
         }
 
+        // Old paper: colours pulled towards warm cream, faint blotches fixed to the map, and edges browned as if by age.
+        vec3 parchment(vec3 col, vec2 m, vec2 frag) {
+            col = mix(col, col * vec3(0.98, 0.92, 0.78) * 1.08, 0.6);
+            float stain = 0.6 * noise(m * 0.05, uMapSize.x * 0.05) + 0.4 * noise(m * 0.22 + 9.0, uMapSize.x * 0.22);
+            col *= 1.0 - 0.12 * (stain - 0.5);
+            vec2 v = frag / uScreen - 0.5;
+            return mix(col, col * vec3(0.80, 0.68, 0.50), clamp(dot(v, v) * 1.6, 0.0, 1.0));
+        }
+
         // ---- national borders
 
         // Zoomed out, the distance in screen pixels to the nearest land of another owner, looking up to 6 pixels away
@@ -361,6 +372,7 @@ public sealed class MapRenderer : IDisposable
             col = mix(col, vec3(0.08, 0.08, 0.08), provinceLine * uProvinceBorders);
             col = nationBorder(col, id, sea, ownerDistance, m);
 
+            if (uParchment > 0.0) col = parchment(col, m, frag);
             if (id == uSelected) col = mix(col, vec3(1.0, 1.0, 0.85), 0.35);
             else if (id == uHover) col = mix(col, vec3(1.0), 0.12);
             // A soft vignette towards the screen edges.
@@ -687,6 +699,7 @@ public sealed class MapRenderer : IDisposable
         _shader.Set("uNationBand", band);
         _shader.Set("uBandShade", shade);
         _shader.Set("uSymbols", Mode == MapMode.Terrain ? 1f : 0f);
+        _shader.Set("uParchment", Mode == MapMode.Political ? 1f : 0f);
         _gl.BindVertexArray(_vao);
         _gl.DrawArrays(PrimitiveType.Triangles, 0, 6);
         _gl.ActiveTexture(TextureUnit.Texture0);

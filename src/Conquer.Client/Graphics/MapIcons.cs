@@ -1,9 +1,10 @@
 using System.Numerics;
+using Conquer.Game.Military;
 
 namespace Conquer.Client.Graphics;
 
 /// <summary>
-/// Markers drawn on the map from shapes: a city as a cluster of houses roofed in its nation's colour, more of them
+/// Markers drawn from shapes: NATO counters for units and battalions, and on the map a city as a cluster of houses roofed in its nation's colour, more of them
 /// the bigger it is, and a capital with a tower flying a golden flag.
 /// </summary>
 public static class MapIcons
@@ -52,6 +53,81 @@ public static class MapIcons
         b.Rect(foot.X - 1.2f * scale, y1 - 3 * scale, 2.4f * scale, 3 * scale, Ink.WithAlpha(0.8f));
         b.Triangle(new(x0 - eave, y0), new(foot.X, y0), new(foot.X, y0 - top), roof.Scale(1.15f).WithAlpha(1));
         b.Triangle(new(foot.X, y0), new(x1 + eave, y0), new(foot.X, y0 - top), roof.Scale(0.8f).WithAlpha(1));
+    }
+
+    /// <summary>The NATO symbol of a unit's arm, in black inside the frame at (<paramref name="x"/>, <paramref name="y"/>).</summary>
+    public static void NatoSymbol(Batch2D b, float x, float y, float w, float h, UnitFunction function)
+    {
+        var ink = Rgba.Black;
+        const float t = 1.5f;
+        float right = x + w, bottom = y + h;
+        var centre = new Vector2(x + w / 2, y + h / 2);
+        void Cross()
+        {
+            b.Line(new(x, bottom), new(right, y), ink, t);
+            b.Line(new(x, y), new(right, bottom), ink, t);
+        }
+        switch (function)
+        {
+            case UnitFunction.Infantry:
+                Cross();
+                break;
+            case UnitFunction.MotorisedInfantry:
+                Cross();
+                b.Line(new(centre.X, y), new(centre.X, bottom), ink, t);
+                break;
+            case UnitFunction.Mechanised:
+                Cross();
+                Ellipse(b, centre, w * 0.32f, h * 0.3f, ink, t);
+                break;
+            case UnitFunction.Cavalry:
+                b.Line(new(x, bottom), new(right, y), ink, t);
+                break;
+            case UnitFunction.Armour:
+                Ellipse(b, centre, w * 0.32f, h * 0.3f, ink, t);
+                break;
+            case UnitFunction.Artillery:
+                b.Circle(centre, Math.Min(w, h) * 0.22f, ink);
+                break;
+            case UnitFunction.Engineers:
+            {
+                float left = x + w * 0.25f, end = right - w * 0.25f, top = y + h * 0.35f, foot = y + h * 0.7f;
+                b.Line(new(left, top), new(end, top), ink, t);
+                foreach (float px in new[] { left, centre.X, end }) b.Line(new(px, top), new(px, foot), ink, t);
+                break;
+            }
+            case UnitFunction.Air:
+                // Fixed wing: two loops meeting in the middle.
+                Ellipse(b, centre - new Vector2(w * 0.16f, 0), w * 0.16f, h * 0.22f, ink, t);
+                Ellipse(b, centre + new Vector2(w * 0.16f, 0), w * 0.16f, h * 0.22f, ink, t);
+                break;
+        }
+    }
+
+    /// <summary>A small NATO counter (20×14) for a battalion, as the lists of troops show it: its arm's symbol on a pale field.</summary>
+    public static void Battalion(Batch2D b, float x, float y, BattalionType type)
+    {
+        const float W = 20, H = 14;
+        b.Rect(x - 1, y - 1, W + 2, H + 2, Ink);
+        b.Rect(x, y, W, H, Wall);
+        if (type.Info().Naval)
+        {
+            // A hull for ships.
+            b.Line(new(x + 3, y + H - 4), new(x + W - 3, y + H - 4), Rgba.Black, 2);
+            b.Line(new(x + 3, y + H - 4), new(x + 7, y + H - 1), Rgba.Black, 1.5f);
+            b.Line(new(x + W - 3, y + H - 4), new(x + W - 7, y + H - 1), Rgba.Black, 1.5f);
+        }
+        else NatoSymbol(b, x + 1, y + 1, W - 2, H - 2, Formations.FunctionOf(type));
+    }
+
+    private static void Ellipse(Batch2D b, Vector2 centre, float rx, float ry, Rgba color, float thickness, int segments = 16)
+    {
+        for (int i = 0; i < segments; i++)
+        {
+            float a0 = MathF.Tau * i / segments, a1 = MathF.Tau * (i + 1) / segments;
+            b.Line(centre + new Vector2(MathF.Cos(a0) * rx, MathF.Sin(a0) * ry),
+                   centre + new Vector2(MathF.Cos(a1) * rx, MathF.Sin(a1) * ry), color, thickness);
+        }
     }
 
     /// <summary>The capital's tower: a slim keep with battlements and a golden pennant above the houses.</summary>

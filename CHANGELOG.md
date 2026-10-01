@@ -2,6 +2,13 @@
 
 Todos los cambios del juego, del más reciente al más antiguo. Cada versión es un commit cuyo título es su número.
 
+## [1.50.0] - 2026-10-01
+
+### Cambiado
+- **Bordes suaves**: líneas, fichas, iconos y botones se dibujan con antialiasing (si la tarjeta gráfica lo admite), sin dientes de sierra.
+- **Mapa político en pergamino**: los colores tiran al crema del papel viejo, con manchas suaves y los bordes de la pantalla tostados.
+- **Fichas OTAN junto a las tropas**: los botones para entrenar batallones, la lista de batallones de una unidad y las plantillas muestran el símbolo de cada tropa.
+
 ## [1.49.0] - 2026-10-01
 
 ### Cambiado

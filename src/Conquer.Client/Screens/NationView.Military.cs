@@ -176,7 +176,8 @@ public sealed partial class NationView
             if (i < template.Battalions.Count)
             {
                 var info = template.Battalions[i].Info();
-                ui.Text(slot.X + 10, slot.Y + 6, Formations.BattalionName(info), Theme.Text);
+                MapIcons.Battalion(ui.Batch, slot.X + 8, slot.Y + 9, template.Battalions[i]);
+                ui.Text(slot.X + 36, slot.Y + 6, Formations.BattalionName(info), Theme.Text);
                 string stats = $"A {info.Attack:0.#} · D {info.Defense:0.#} · {info.Men} h";
                 ui.Text(slot.Right - 90 - ui.Font.Measure(stats, FontSize.Small), slot.Y + 9, stats, Theme.TextDim, FontSize.Small);
                 if (ui.Button(new Rect(slot.Right - 80, slot.Y + 4, 74, 24), "Quitar", template.Battalions.Count > 1, size: FontSize.Small))
@@ -197,8 +198,9 @@ public sealed partial class NationView
             var type = known[i];
             var can = _session.CanAddToTemplate(_player, template, type);
             var button = new Rect(x + i % 3 * (bw + 6), y + i / 3 * 34, bw, 30);
-            if (ui.Button(button, "+ " + type.Info().Name, can.Ok, tooltip: can.Ok ? Formations.BattalionName(type.Info()) : can.Message, size: FontSize.Small))
+            if (ui.Button(button, "     + " + type.Info().Name, can.Ok, tooltip: can.Ok ? Formations.BattalionName(type.Info()) : can.Message, size: FontSize.Small))
                 _show(_session.AddToTemplate(_player.Id, template.Id, type));
+            MapIcons.Battalion(ui.Batch, button.X + 7, button.Y + 8, type);
         }
 
         // What a regiment of this design is like.

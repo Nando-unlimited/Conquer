@@ -66,7 +66,7 @@ public sealed partial class GameScreen
             Batch.Rect(r.X - 2, r.Y - 2, r.W + 4, r.H + 4, selected ? Theme.Accent : Rgba.Black);
             Batch.Rect(r.X, r.Y, r.W, r.H, color.Scale(0.55f).WithAlpha(1));
             Batch.Rect(r.X + 2, r.Y + 2, r.W - 4, r.H - 4, color);
-            if (unit.IsMilitary) DrawFunction(new Rect(r.X + 2, r.Y + 2, r.W - 4, r.H - 4), unit.Function);
+            if (unit.IsMilitary) MapIcons.NatoSymbol(Batch, r.X + 2, r.Y + 2, r.W - 4, r.H - 4, unit.Function);
             else if (unit.IsFleet)
             {
                 // A hull under the ship letter; a dot for every unit aboard.
@@ -85,64 +85,6 @@ public sealed partial class GameScreen
             else if (scale > 0.7f) Ui.TextCentered(r, unit.IsHeadquarters ? "HQ" : unit.Symbol, Rgba.Black, FontSize.Small, bold: true);
             if (unit.Echelon.Length > 0) DrawEchelon(r, unit.Echelon, scale);
             _unitHitBoxes.Add((unit.Id, r));
-        }
-    }
-
-    /// <summary>The NATO symbol of a unit's arm, inside the frame <paramref name="r"/>.</summary>
-    private void DrawFunction(Rect r, UnitFunction function)
-    {
-        var ink = Rgba.Black;
-        const float t = 1.5f;
-        var centre = new Vector2(r.X + r.W / 2, r.Y + r.H / 2);
-        void Cross()
-        {
-            Batch.Line(new(r.X, r.Bottom), new(r.Right, r.Y), ink, t);
-            Batch.Line(new(r.X, r.Y), new(r.Right, r.Bottom), ink, t);
-        }
-        switch (function)
-        {
-            case UnitFunction.Infantry:
-                Cross();
-                break;
-            case UnitFunction.MotorisedInfantry:
-                Cross();
-                Batch.Line(new(centre.X, r.Y), new(centre.X, r.Bottom), ink, t);
-                break;
-            case UnitFunction.Mechanised:
-                Cross();
-                Ellipse(centre, r.W * 0.32f, r.H * 0.3f, ink, t);
-                break;
-            case UnitFunction.Cavalry:
-                Batch.Line(new(r.X, r.Bottom), new(r.Right, r.Y), ink, t);
-                break;
-            case UnitFunction.Armour:
-                Ellipse(centre, r.W * 0.32f, r.H * 0.3f, ink, t);
-                break;
-            case UnitFunction.Artillery:
-                Batch.Circle(centre, Math.Min(r.W, r.H) * 0.22f, ink);
-                break;
-            case UnitFunction.Engineers:
-            {
-                float left = r.X + r.W * 0.25f, right = r.Right - r.W * 0.25f, top = r.Y + r.H * 0.35f, bottom = r.Y + r.H * 0.7f;
-                Batch.Line(new(left, top), new(right, top), ink, t);
-                foreach (float x in new[] { left, centre.X, right }) Batch.Line(new(x, top), new(x, bottom), ink, t);
-                break;
-            }
-            case UnitFunction.Air:
-                // Fixed wing: two loops meeting in the middle.
-                Ellipse(centre - new Vector2(r.W * 0.16f, 0), r.W * 0.16f, r.H * 0.22f, ink, t);
-                Ellipse(centre + new Vector2(r.W * 0.16f, 0), r.W * 0.16f, r.H * 0.22f, ink, t);
-                break;
-        }
-    }
-
-    private void Ellipse(Vector2 centre, float rx, float ry, Rgba color, float thickness, int segments = 16)
-    {
-        for (int i = 0; i < segments; i++)
-        {
-            float a0 = MathF.Tau * i / segments, a1 = MathF.Tau * (i + 1) / segments;
-            Batch.Line(centre + new Vector2(MathF.Cos(a0) * rx, MathF.Sin(a0) * ry),
-                       centre + new Vector2(MathF.Cos(a1) * rx, MathF.Sin(a1) * ry), color, thickness);
         }
     }
 
@@ -429,7 +371,8 @@ public sealed partial class GameScreen
 
         foreach (var b in unit.Battalions)
         {
-            Ui.Text(x, y, Formations.BattalionName(b.Info), Theme.Text, FontSize.Small, bold: true);
+            MapIcons.Battalion(Batch, x, y + 1, b.Type);
+            Ui.Text(x + 26, y, Formations.BattalionName(b.Info), Theme.Text, FontSize.Small, bold: true);
             string men = $"{b.Strength:0}/{b.Info.Men}";
             Ui.Text(x + w - Ui.Font.Measure(men, FontSize.Small), y, men, Theme.TextDim, FontSize.Small);
             var row = new Rect(x, y, w, 30);
@@ -574,6 +517,7 @@ public sealed partial class GameScreen
                          $"\nCoste: {info.Cost}. {NationView.TrainingDaysText(days, info.TrainingDays)} Mantenimiento: {NationView.UpkeepText([info.Cost])}." + (can.Ok ? "" : "\n" + can.Message);
             if (Ui.Button(new Rect(x, y, w, 28), $"{info.Name}  ·  {info.Cost}  ·  {days} d", can.Ok, tooltip: tip, size: FontSize.Small))
                 Show(_session.Train(Human.Id, p.Id, type));
+            MapIcons.Battalion(Batch, x + 7, y + 7, type);
             y += 32;
         }
 

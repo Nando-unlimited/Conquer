@@ -56,7 +56,7 @@ public sealed class ConquerApp
             Title = $"Conquer {Version}",
             API = new GraphicsAPI(ContextAPI.OpenGL, ContextProfile.Core, ContextFlags.ForwardCompatible, new APIVersion(3, 3)),
             VSync = true,
-            Samples = 0,
+            Samples = GlSupport.Samples,
         };
         _window = Window.Create(windowOptions);
         _window.Load += OnLoad;
