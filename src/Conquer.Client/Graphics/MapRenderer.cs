@@ -51,6 +51,15 @@ public sealed class MapRenderer : IDisposable
         uniform float uSmoothZoom;
         uniform sampler2D uDetail;
         uniform float uTime;
+        // Per province: its owner's colour (alpha: owned) and, if occupied, the occupier's (alpha: occupied).
+        uniform sampler2D uNation;
+        uniform sampler2D uOccupier;
+        // How strongly the nation's colour bands its border (0: a shadow instead), and how dark that colour is.
+        uniform float uNationBand;
+        uniform float uBandShade;
+        // Each map pixel's distance to the nearest land border between owners (BorderStep per map pixel; 255 far away).
+        uniform sampler2D uBorderDistance;
+        const float BORDER_STEP = 40.0;
         // TerrainColors.MaxHeight: the metres the detail texture's height channel spans.
         const float MAX_HEIGHT = 9000.0;
 
@@ -207,6 +216,40 @@ public sealed class MapRenderer : IDisposable
             terrain = sum / max(total, 1e-4);
         }
 
+        // ---- national borders
+
+        // Zoomed out, the distance in screen pixels to the nearest land of another owner, looking up to 6 pixels away
+        // (1e6 beyond), so the borders and their bands are smooth there too.
+        float ownerDistanceNear(vec2 m, int owner) {
+            for (int k = 1; k <= 6; k++) {
+                float off = float(k) / uZoom;
+                if (ownerOf(idAt(m + vec2(off, 0.0))) != owner || ownerOf(idAt(m - vec2(off, 0.0))) != owner
+                    || ownerOf(idAt(m + vec2(0.0, off))) != owner || ownerOf(idAt(m - vec2(0.0, off))) != owner)
+                    return float(k) - 0.5;
+            }
+            return 1e6;
+        }
+
+        // The border of a nation: a dark line, and inside it a band of the nation's colour that fades inwards, so each
+        // country reads as a shape (on maps without nation colours, a shadow instead). Occupied provinces are striped
+        // with the occupier's colour.
+        vec3 nationBorder(vec3 col, int id, bool sea, float ownerDistance, vec2 m) {
+            vec4 nation = texelFetch(uNation, slot(id), 0);
+            if (nation.a > 0.5) {
+                // The band is about a map pixel and a half wide, kept between 6 and 16 screen pixels.
+                float mapDistance = texture(uBorderDistance, m / uMapSize).r * 255.0 / BORDER_STEP + 0.5;
+                float band = 1.0 - smoothstep(0.0, clamp(1.6 * uZoom, 6.0, 16.0), mapDistance * uZoom);
+                col = uNationBand > 0.0 ? mix(col, nation.rgb * uBandShade, band * uNationBand) : col * (1.0 - 0.22 * band);
+                vec4 occupier = texelFetch(uOccupier, slot(id), 0);
+                if (occupier.a > 0.5 && !sea) {
+                    // Stripes a constant width on screen, fixed to the map so they don't swim as it pans.
+                    float stripe = smoothstep(0.4, 0.6, abs(fract((m.x + m.y) * uZoom / 14.0) * 2.0 - 1.0));
+                    col = mix(col, occupier.rgb, stripe * 0.65);
+                }
+            }
+            return mix(col, vec3(0.05, 0.03, 0.02), lineCoverage(ownerDistance, uZoom >= uSmoothZoom ? 1.4 : 0.6) * 0.9);
+        }
+
         void main() {
             vec2 frag = vec2(gl_FragCoord.x, uScreen.y * uPixelScale - gl_FragCoord.y) / uPixelScale;
             vec2 m = uCenter + (frag - uScreen * 0.5) / uZoom;
@@ -214,16 +257,12 @@ public sealed class MapRenderer : IDisposable
 
             vec3 col = texture(uTerrain, m / uMapSize).rgb;
             int id;
-            float provinceLine, countryLine;
-            // Land near a national border is shaded, so each country reads as a shape.
-            float edgeShade = 0.0;
+            float provinceLine, ownerDistance;
             bool sea;
             if (uZoom >= uSmoothZoom) {
-                float provinceDistance, ownerDistance, coastDistance;
+                float provinceDistance, coastDistance;
                 smoothRegions(m, id, provinceDistance, ownerDistance, col, sea, coastDistance);
                 provinceLine = lineCoverage(provinceDistance, 0.6);
-                countryLine = lineCoverage(ownerDistance, 2.0);
-                if (ownerOf(id) > 0) edgeShade = 1.0 - smoothstep(0.0, 8.0, ownerDistance);
                 // Shallows along the coast, about a map pixel wide, follow the smooth coastline.
                 if (sea) col *= 1.0 + 0.22 * (1.0 - smoothstep(0.0, 1.2 * uZoom, coastDistance));
             } else {
@@ -232,9 +271,8 @@ public sealed class MapRenderer : IDisposable
                 float px = 1.0 / uZoom;
                 int idR = idAt(m + vec2(px, 0.0));
                 int idD = idAt(m + vec2(0.0, px));
-                int own = ownerOf(id);
                 provinceLine = (id != idR || id != idD) ? 1.0 : 0.0;
-                countryLine = (own != ownerOf(idR) || own != ownerOf(idD)) ? 1.0 : 0.0;
+                ownerDistance = ownerDistanceNear(m, ownerOf(id));
                 sea = isWater(id);
                 if (sea && (!isWater(idR) || !isWater(idD))) col *= 1.22;
             }
@@ -243,8 +281,7 @@ public sealed class MapRenderer : IDisposable
             vec4 pc = texelFetch(uProvColor, slot(id), 0);
             col = mix(col, pc.rgb, pc.a);
             col = mix(col, vec3(0.08, 0.08, 0.08), provinceLine * uProvinceBorders);
-            col *= 1.0 - 0.22 * edgeShade;
-            col = mix(col, vec3(0.05, 0.03, 0.02), countryLine * 0.9);
+            col = nationBorder(col, id, sea, ownerDistance, m);
 
             if (id == uSelected) col = mix(col, vec3(1.0, 1.0, 0.85), 0.35);
             else if (id == uHover) col = mix(col, vec3(1.0), 0.12);
@@ -259,9 +296,14 @@ public sealed class MapRenderer : IDisposable
     private readonly Shader _shader;
     private readonly uint _vao, _vbo;
     private readonly WorldMap _map;
-    private readonly Texture _ids, _terrain, _detail, _provColor, _provOwner;
+    private readonly Texture _ids, _terrain, _detail, _provColor, _provOwner, _nation, _occupier, _borderDistance;
     private readonly byte[] _colorData = new byte[SlotsX * SlotsY * 4];
     private readonly byte[] _ownerData = new byte[SlotsX * SlotsY * 4];
+    private readonly byte[] _nationData = new byte[SlotsX * SlotsY * 4];
+    private readonly byte[] _occupierData = new byte[SlotsX * SlotsY * 4];
+    private readonly byte[] _borderData;
+    /// <summary>Each province's owner when the border distances were last worked out.</summary>
+    private int[] _bordersFor = [];
 
     public MapMode Mode { get; set; } = MapMode.Terrain;
     /// <summary>In resources mode, the only resource shown; null shows each province's main deposit.</summary>
@@ -285,6 +327,10 @@ public sealed class MapRenderer : IDisposable
         _detail = new Texture(gl, map.Width, map.Height, prepared.Detail, smooth: true, mipmaps: true, repeatX: true);
         _provColor = new Texture(gl, SlotsX, SlotsY, _colorData, smooth: false);
         _provOwner = new Texture(gl, SlotsX, SlotsY, _ownerData, smooth: false);
+        _nation = new Texture(gl, SlotsX, SlotsY, _nationData, smooth: false);
+        _occupier = new Texture(gl, SlotsX, SlotsY, _occupierData, smooth: false);
+        _borderData = new byte[map.Width * map.Height];
+        _borderDistance = new Texture(gl, map.Width, map.Height, _borderData, smooth: true, repeatX: true, singleChannel: true);
 
         float[] quad = [-1, -1, 1, -1, 1, 1, -1, -1, 1, 1, -1, 1];
         _vao = gl.GenVertexArray();
@@ -354,17 +400,19 @@ public sealed class MapRenderer : IDisposable
             _ownerData[o] = (byte)(p.OwnerId + 1);
             _ownerData[o + 1] = p.IsWater ? (byte)255 : (byte)0; // for the coastline
             _ownerData[o + 3] = 255;
+            // The owner's colour bands its borders; occupied land is striped with the occupier's (see the shader).
+            SetColor(_nationData, o, p.IsOwned ? new Rgba(players[p.OwnerId].Color) : new Rgba(0));
+            SetColor(_occupierData, o, p.IsOccupied ? new Rgba(players[p.ControllerId].Color) : new Rgba(0));
 
-            // Colour by who holds the province, so occupied land shows the occupier inside the owner's borders.
-            int holder = p.IsOwned ? p.ControllerId : -1;
             Rgba color = new(0);
             switch (Mode)
             {
                 case MapMode.Terrain:
-                    if (p.IsOwned) color = new Rgba(players[holder].Color).WithAlpha(0.35f);
+                    // A light tint: the band along the border tells the nations apart, so the land shows through.
+                    if (p.IsOwned) color = new Rgba(players[p.OwnerId].Color).WithAlpha(0.2f);
                     break;
                 case MapMode.Political:
-                    if (p.IsOwned) color = new Rgba(players[holder].Color).WithAlpha(p.IsOccupied ? 0.6f : 0.85f);
+                    if (p.IsOwned) color = new Rgba(players[p.OwnerId].Color).WithAlpha(0.85f);
                     else if (p.IsClaimable) color = new Rgba(0xFFD9D0B4).WithAlpha(0.6f);
                     break;
                 case MapMode.Population:
@@ -386,13 +434,72 @@ public sealed class MapRenderer : IDisposable
                     if (p.IsClaimable) color = DepositColor(p);
                     break;
             }
-            _colorData[o] = color.R;
-            _colorData[o + 1] = color.G;
-            _colorData[o + 2] = color.B;
-            _colorData[o + 3] = color.A;
+            SetColor(_colorData, o, color);
         }
         _provColor.Update(_colorData);
         _provOwner.Update(_ownerData);
+        _nation.Update(_nationData);
+        _occupier.Update(_occupierData);
+        var owners = _map.Provinces.Select(p => p.IsWater ? Water : p.OwnerId).ToArray();
+        if (!owners.SequenceEqual(_bordersFor))
+        {
+            _bordersFor = owners;
+            BuildBorderDistances(owners);
+            _borderDistance.Update(_borderData);
+        }
+    }
+
+    /// <summary>Steps in the border distance texture per map pixel (as BORDER_STEP in the shader).</summary>
+    private const int BorderStep = 40;
+
+    /// <summary>Owner given to water when working out border distances: coasts are not borders.</summary>
+    private const int Water = int.MinValue;
+
+    /// <summary>
+    /// Works out each map pixel's distance to the nearest border between land of different owners, in whole map
+    /// pixels up to 5 (<see cref="BorderStep"/> per pixel, 255 beyond), for the bands of colour along national borders.
+    /// Coasts are not borders. Grows outwards a pixel at a time from the pixels on a border.
+    /// </summary>
+    /// <param name="owners">Each province's owner (-1 for nobody), <see cref="Water"/> for the sea and lakes.</param>
+    private void BuildBorderDistances(int[] owners)
+    {
+        int w = _map.Width, h = _map.Height;
+        var ids = _map.ProvinceIds;
+        var d = _borderData;
+        Parallel.For(0, h, y =>
+        {
+            for (int x = 0; x < w; x++)
+            {
+                int i = y * w + x, own = owners[ids[i]];
+                bool Differs(int j) => owners[ids[j]] is var other && other != Water && other != own;
+                bool edge = own != Water && (Differs(y * w + (x + 1) % w) || Differs(y * w + (x + w - 1) % w)
+                                         || (y > 0 && Differs(i - w)) || (y < h - 1 && Differs(i + w)));
+                d[i] = edge ? (byte)0 : (byte)255;
+            }
+        });
+        for (int layer = 1; layer <= 5; layer++)
+        {
+            byte previous = (byte)((layer - 1) * BorderStep), current = (byte)(layer * BorderStep);
+            Parallel.For(0, h, y =>
+            {
+                for (int x = 0; x < w; x++)
+                {
+                    int i = y * w + x;
+                    if (d[i] != 255) continue;
+                    bool next = d[y * w + (x + 1) % w] == previous || d[y * w + (x + w - 1) % w] == previous
+                                || (y > 0 && d[i - w] == previous) || (y < h - 1 && d[i + w] == previous);
+                    if (next) d[i] = current;
+                }
+            });
+        }
+    }
+
+    private static void SetColor(byte[] data, int offset, Rgba color)
+    {
+        data[offset] = color.R;
+        data[offset + 1] = color.G;
+        data[offset + 2] = color.B;
+        data[offset + 3] = color.A;
     }
 
     /// <summary>Yellow for sparse, deep red for dense (log scale, 0.01 to 100 citizens per km²).</summary>
@@ -485,6 +592,22 @@ public sealed class MapRenderer : IDisposable
         _detail.Bind(4);
         _shader.Set("uDetail", 4);
         _shader.Set("uTime", (float)(time % 10000));
+        _nation.Bind(5);
+        _shader.Set("uNation", 5);
+        _occupier.Bind(6);
+        _shader.Set("uOccupier", 6);
+        _borderDistance.Bind(7);
+        _shader.Set("uBorderDistance", 7);
+        // Nations' colours band their borders on the terrain and political maps (darker there, over the filled
+        // colour); the data maps keep a plain shadow so their own colours read true.
+        var (band, shade) = Mode switch
+        {
+            MapMode.Terrain => (0.6f, 1f),
+            MapMode.Political => (0.8f, 0.5f),
+            _ => (0f, 1f),
+        };
+        _shader.Set("uNationBand", band);
+        _shader.Set("uBandShade", shade);
         _gl.BindVertexArray(_vao);
         _gl.DrawArrays(PrimitiveType.Triangles, 0, 6);
         _gl.ActiveTexture(TextureUnit.Texture0);
@@ -498,6 +621,9 @@ public sealed class MapRenderer : IDisposable
         _detail.Dispose();
         _provColor.Dispose();
         _provOwner.Dispose();
+        _nation.Dispose();
+        _occupier.Dispose();
+        _borderDistance.Dispose();
         _gl.DeleteBuffer(_vbo);
         _gl.DeleteVertexArray(_vao);
     }

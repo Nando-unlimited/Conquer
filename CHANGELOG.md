@@ -2,6 +2,14 @@
 
 Todos los cambios del juego, del más reciente al más antiguo. Cada versión es un commit cuyo título es su número.
 
+## [1.47.0] - 2026-10-01
+
+### Cambiado
+- **Fronteras con el color de cada nación**: por dentro de cada frontera hay una franja de su color que se desvanece hacia el interior, como en los mapas de gran estrategia. En el mapa político la franja es más oscura que el relleno.
+- En el mapa de terreno el tinte de las naciones es más suave, para que se vea el paisaje; las franjas las distinguen.
+- **Provincias ocupadas a rayas**: llevan rayas del color del ocupante sobre el del dueño, en lugar de cambiar de color.
+- Con el mapa alejado, las fronteras nacionales también se ven suaves y continuas.
+
 ## [1.46.0] - 2026-10-01
 
 ### Cambiado

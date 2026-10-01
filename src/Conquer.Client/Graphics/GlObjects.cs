@@ -55,16 +55,20 @@ public sealed class Texture : IDisposable
     public int Width { get; }
     public int Height { get; }
 
-    /// <param name="rgba">Width*Height*4 bytes, row 0 at the top.</param>
-    public Texture(GL gl, int width, int height, ReadOnlySpan<byte> rgba, bool smooth, bool mipmaps = false, bool repeatX = false)
+    private readonly PixelFormat _format;
+
+    /// <param name="rgba">Width*Height*4 bytes, row 0 at the top (one byte per pixel with <paramref name="singleChannel"/>).</param>
+    /// <param name="singleChannel">One byte per pixel, read as the red channel.</param>
+    public Texture(GL gl, int width, int height, ReadOnlySpan<byte> rgba, bool smooth, bool mipmaps = false, bool repeatX = false, bool singleChannel = false)
     {
         _gl = gl;
         Width = width;
         Height = height;
+        _format = singleChannel ? PixelFormat.Red : PixelFormat.Rgba;
         Handle = gl.GenTexture();
         gl.BindTexture(TextureTarget.Texture2D, Handle);
         gl.PixelStore(PixelStoreParameter.UnpackAlignment, 1);
-        gl.TexImage2D(TextureTarget.Texture2D, 0, InternalFormat.Rgba8, (uint)width, (uint)height, 0, PixelFormat.Rgba, PixelType.UnsignedByte, rgba);
+        gl.TexImage2D(TextureTarget.Texture2D, 0, singleChannel ? InternalFormat.R8 : InternalFormat.Rgba8, (uint)width, (uint)height, 0, _format, PixelType.UnsignedByte, rgba);
         var min = smooth ? (mipmaps ? TextureMinFilter.LinearMipmapLinear : TextureMinFilter.Linear) : TextureMinFilter.Nearest;
         gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int)min);
         gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)(smooth ? TextureMagFilter.Linear : TextureMagFilter.Nearest));
@@ -77,7 +81,7 @@ public sealed class Texture : IDisposable
     {
         _gl.BindTexture(TextureTarget.Texture2D, Handle);
         _gl.PixelStore(PixelStoreParameter.UnpackAlignment, 1);
-        _gl.TexSubImage2D(TextureTarget.Texture2D, 0, 0, 0, (uint)Width, (uint)Height, PixelFormat.Rgba, PixelType.UnsignedByte, rgba);
+        _gl.TexSubImage2D(TextureTarget.Texture2D, 0, 0, 0, (uint)Width, (uint)Height, _format, PixelType.UnsignedByte, rgba);
     }
 
     public void Bind(int unit)
