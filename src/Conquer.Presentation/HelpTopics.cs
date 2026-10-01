@@ -38,7 +38,8 @@ public static class HelpTopics
         ]),
         ("Población y moral",
         [
-            "Cada provincia tiene habitantes, moral (0 a 100) y fertilidad. Cada una tiene sus propios nacimientos según su fertilidad, sus habitantes y la tierra que tiene, mientras haya comida y sitio; las ciudades crecen el doble de rápido.",
+            "Cada provincia tiene habitantes, moral (0 a 100) y fertilidad. Cada una tiene sus propios nacimientos según su fertilidad, sus habitantes y la tierra que tiene, mientras haya comida y sitio; las ciudades crecen el doble de rápido. La población crece despacio (unos pocos por ciento al año), y cada era la tierra alimenta a más gente: el doble en la Medieval, ocho veces más en la Moderna.",
+            $"La comida almacenada se estropea: cada día se pierde el {GameRules.FoodSpoilage:P0} de lo guardado.",
             "## Moral",
             $"- Sube con la ciudad (+{GameRules.CityMood:0}), la capital (+{GameRules.CapitalMood:0}), las reservas de comida, las fiestas (+{GameRules.FestivalMood:0} durante {GameRules.FestivalDays} días), templos, anfiteatros y avances.",
             $"- Baja con la distancia a la capital (hasta -{GameRules.MaxDistanceMoodPenalty:0}), el hacinamiento, el hambre ({GameRules.StarvingMood:0}), la ocupación enemiga y la cultura extranjera.",

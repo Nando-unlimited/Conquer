@@ -2,6 +2,20 @@
 
 Todos los cambios del juego, del más reciente al más antiguo. Cada versión es un commit cuyo título es su número.
 
+## [1.63.0] - 2026-10-01
+
+### Cambiado
+- **Población realista.** Hasta ahora la población crecía un 55 % al año y la tierra admitía casi 900 millones de personas desde el 4000 a. C. Una nación pasaba de 3.000 a 125 millones de habitantes en 10 años, el oro y la comida se contaban por miles de millones y todos los avances se descubrían en 3 años. Ahora:
+  - **La gente crece despacio**: un 1,5 % al año con fertilidad normal, el doble en las ciudades y más con buena moral y avances. En la práctica, unos pocos por ciento al año.
+  - **La tierra alimenta al principio la décima parte que antes**, unas decenas de millones en todo el mundo, y **cada era alimenta a más gente**: ×1,5 en la Clásica, ×2 en la Medieval, ×3 en el Renacimiento, ×5 en la Industrial y ×8 en la Moderna.
+  - **La tierra vacía ya no se llena sola**: los nacimientos de base son pocos y fijos por provincia, no proporcionales a lo que la tierra podría alimentar.
+  - **Las ciudades envían menos emigrantes** (un 0,01 % al día en lugar del 0,15 %), para no vaciarse.
+  - **La comida almacenada se estropea**: cada día se pierde el 1 % de lo guardado.
+- **Las eras duran generaciones**: cada avance cuesta el triple y la ciencia fija de cada ciudad baja de 0,5 a 0,25 puntos al día. En una partida de prueba, un rival llega a la era Clásica hacia el año 5, al Renacimiento hacia el 20, a la Industrial hacia el 30 y a la Moderna hacia el 50.
+- Con todo ello, **los soldados salen caros en gente y el oro vuelve a importar**: hacia el año 30 una nación tiene unas 50.000 personas y gana unos 200 de oro al día.
+- Los rivales levantan el cuartel antes que la granja y el granero, para tener ejército desde el principio.
+- **Partidas anteriores**: al cargarlas, cada provincia se queda con la gente que su tierra alimenta.
+
 ## [1.62.0] - 2026-10-01
 
 ### Añadido

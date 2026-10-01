@@ -29,7 +29,7 @@ internal sealed partial class AiPlayer
     private const double BigCityPopulation = 2000;
     private static readonly BuildingType[] BuildOrder =
     [
-        BuildingType.Farm, BuildingType.Granary, BuildingType.Barracks, BuildingType.Workshop, BuildingType.Temple, BuildingType.Library, BuildingType.Market,
+        BuildingType.Barracks, BuildingType.Farm, BuildingType.Granary, BuildingType.Workshop, BuildingType.Temple, BuildingType.Library, BuildingType.Market,
         BuildingType.Mine, BuildingType.Sawmill, BuildingType.Aqueduct, BuildingType.HerbalistHut, BuildingType.Amphitheatre,
         BuildingType.Walls, BuildingType.University, BuildingType.Bank, BuildingType.Castle,
         BuildingType.Factory, BuildingType.Hospital, BuildingType.PowerPlant, BuildingType.Port, BuildingType.DryDock,

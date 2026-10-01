@@ -34,6 +34,11 @@ public sealed record SaveGame
     /// </summary>
     public bool ExtraDeposits { get; init; }
     /// <summary>
+    /// Written since the land feeds far fewer people (1.63.0). Older saves hold millions where the land now feeds
+    /// thousands, so loading one sends the surplus away: each province keeps what it can feed.
+    /// </summary>
+    public bool RealisticPopulation { get; init; }
+    /// <summary>
     /// Written since HQs have three levels (corps, army, army group; 1.30.0). Older saves had five (brigade and
     /// division below corps); loading one moves each HQ to the nearest new level.
     /// </summary>

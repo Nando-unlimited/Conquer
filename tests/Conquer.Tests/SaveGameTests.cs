@@ -62,6 +62,21 @@ public class SaveGameTests(WorldFixture world)
         Assert.Contains(loaded.Cities, c => c.OwnerId != loaded.Human.Id);
     }
 
+    [Fact]
+    public void OlderSavesKeepOnlyThePeopleTheLandFeeds()
+    {
+        var s = GameSession.Create(_map, 2, seed: 7);
+        s.FoundCity(s.Human.Id, s.Units.First(u => u.OwnerId == s.Human.Id).Id);
+        var capital = _map.Provinces[s.CityById(s.Human.CapitalCityId!.Value)!.ProvinceId];
+        capital.Population = 50_000_000;
+        var save = s.ToSave("test");
+
+        var loaded = GameSession.Load(_map, save);
+        Assert.Equal(50_000_000, capital.Population);
+        loaded = GameSession.Load(_map, save with { RealisticPopulation = false });
+        Assert.Equal(loaded.CapacityOf(capital), capital.Population, 6);
+    }
+
     [Theory]
     [InlineData(true)]
     [InlineData(false)]

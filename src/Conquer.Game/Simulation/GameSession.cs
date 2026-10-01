@@ -126,9 +126,10 @@ public sealed partial class GameSession
     public City? CityById(int id) => Cities.FirstOrDefault(c => c.Id == id);
     public City? CityIn(Province p) => p.CityId is int id ? CityById(id) : null;
 
-    /// <summary>Citizens a province's land can feed, including the bonus of a city.</summary>
+    /// <summary>Citizens a province's land can feed, including the bonus of a city and its owner's age and advances.</summary>
     public double CapacityOf(Province p) =>
-        p.Capacity * (p.CityId.HasValue ? GameRules.CityCapacityMultiplier : 1) * (1 + BonusesOf(p).Capacity);
+        p.Capacity * (p.CityId.HasValue ? GameRules.CityCapacityMultiplier : 1) * (1 + BonusesOf(p).Capacity)
+        * (p.OwnerId >= 0 ? GameRules.EraCapacity(Players[p.OwnerId].Era) : 1);
 
     /// <summary>What improves a province: its owner's advances plus its own buildings.</summary>
     public Modifiers BonusesOf(Province p) => p.OwnerId >= 0 ? Players[p.OwnerId].Bonuses + p.BuildingBonuses : p.BuildingBonuses;
@@ -288,6 +289,8 @@ public sealed partial class GameSession
                         + Units.Where(u => u.OwnerId == player.Id).Sum(u => u.Citizens)
                         + Migrations.Where(m => m.OwnerId == player.Id).Sum(m => m.People);
         net[(int)ResourceType.Food] -= GameRules.FoodPerCitizen * eaters;
+        // Part of what is stored rots, so a surplus does not pile up for ever.
+        net[(int)ResourceType.Food] -= Math.Max(0, player.Stockpile[ResourceType.Food]) * GameRules.FoodSpoilage;
         var upkeep = Upkeep(player);
         for (int i = 0; i < net.Length; i++) net[i] -= upkeep[i];
 
@@ -330,7 +333,7 @@ public sealed partial class GameSession
     }
 
     /// <summary>
-    /// Citizens born in a populated province each day: a share of its people plus a base set by its land,
+    /// Citizens born in a populated province each day: a share of its people plus a small base,
     /// both scaled by the province's own fertility and damped as it fills up. Nobody is born while the nation starves.
     /// </summary>
     public double DailyBirths(Province p, bool starving)
@@ -338,7 +341,7 @@ public sealed partial class GameSession
         double capacity = CapacityOf(p);
         if (starving || p.Population <= 0 || p.Population >= capacity) return 0;
         double perCitizen = GameRules.GrowthRate * (p.CityId.HasValue ? GameRules.CityGrowthMultiplier : 1);
-        return (p.Population * perCitizen + capacity * GameRules.BaseBirthsPerCapacity) * p.Fertility * (1 - p.Population / capacity);
+        return (p.Population * perCitizen + GameRules.BaseBirthsPerProvince) * p.Fertility * (1 - p.Population / capacity);
     }
 
     /// <summary>Fertility a populated province tends to, with its owner's advances.</summary>
@@ -451,7 +454,7 @@ public sealed partial class GameSession
     {
         neighbours ??= NeighbourNations(player);
         int knowers = Math.Min(GameRules.MaxNeighbourDiscounts, neighbours.Count(id => Players[id].Techs.Contains(tech)));
-        return tech.Info().Cost * (1 - GameRules.NeighbourResearchDiscount * knowers) * EraCostMultiplier(player, tech.Info().Era);
+        return tech.Info().Cost * GameRules.ResearchCostMultiplier * (1 - GameRules.NeighbourResearchDiscount * knowers) * EraCostMultiplier(player, tech.Info().Era);
     }
 
     /// <summary>How much of the nation's science a branch gets, relative to the other two.</summary>

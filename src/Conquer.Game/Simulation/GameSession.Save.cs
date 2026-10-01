@@ -19,6 +19,7 @@ public sealed partial class GameSession
         World = Map.Settings ?? new WorldSettings(Map.Kind, Map.Seed),
         MapFingerprint = Fingerprint(Map),
         ExtraDeposits = true,
+        RealisticPopulation = true,
         ThreeCommandLevels = true,
         Barracks = true,
         Workshops = true,
@@ -252,6 +253,8 @@ public sealed partial class GameSession
         }
         // Saves from before provinces were named on claiming: those with an owner get their name now.
         foreach (var p in map.Provinces.Where(p => p.IsOwned && p.Name.Length == 0)) session.NameProvince(p);
+        if (!save.RealisticPopulation)
+            foreach (var p in map.Provinces.Where(p => p.Population > 0)) p.Population = Math.Min(p.Population, session.CapacityOf(p));
         return session;
     }
 

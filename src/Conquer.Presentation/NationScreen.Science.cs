@@ -16,7 +16,7 @@ public sealed partial class NationScreen
     {
         double perDay = Session.SciencePerDay(Player);
         string points = $"Ciencia: {perDay:0.##} puntos al día" + (Player.SpareScience >= 1 ? $" · {Player.SpareScience:0} guardados" : "");
-        string pointsTip = $"Cada ciudad aporta {GameRules.ScienceBasePerCity:0.#} puntos más {GameRules.SciencePerCityCitizen * 1000:0.#} por cada mil habitantes, " +
+        string pointsTip = $"Cada ciudad aporta {GameRules.ScienceBasePerCity:0.##} puntos más {GameRules.SciencePerCityCitizen * 1000:0.#} por cada mil habitantes, " +
                            $"multiplicado por su moral." + (Player.Bonuses.Science > 0 ? $"\nAvances: +{Player.Bonuses.Science:P0}." : "") +
                            "\nSe reparte entre las ramas según su prioridad. Si una rama no investiga nada, su parte va a las demás." +
                            $"\nCada vecino que ya conoce un avance te lo abarata un {GameRules.NeighbourResearchDiscount:P0} (hasta {GameRules.MaxNeighbourDiscounts})." +

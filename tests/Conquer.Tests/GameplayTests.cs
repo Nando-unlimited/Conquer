@@ -194,7 +194,7 @@ public class GameplayTests(WorldFixture world)
         var (a, b) = GrasslandPair();
         var settlers = s.AddUnit(0, UnitType.Settlers, a.Id, 300);
         Assert.True(s.FoundCity(0, settlers.Id).Ok);
-        a.Population = 5000;
+        a.Population = 20000; // enough for a few emigrants a day
         var scouts = s.AddRegiment(0, b.Id, BattalionType.Scouts);
         Assert.True(s.Claim(0, scouts.Id).Ok);
 
@@ -236,7 +236,7 @@ public class GameplayTests(WorldFixture world)
     {
         var s = NewSession();
         RunHours(s, 24);
-        Assert.Equal(GameRules.StartingFood - GameRules.StartingCitizens * GameRules.FoodPerCitizen, s.Human.Stockpile[ResourceType.Food], 6);
+        Assert.Equal(GameRules.StartingFood * (1 - GameRules.FoodSpoilage) - GameRules.StartingCitizens * GameRules.FoodPerCitizen, s.Human.Stockpile[ResourceType.Food], 6);
     }
 
     [Fact]
@@ -452,7 +452,7 @@ public class GameplayTests(WorldFixture world)
         Assert.True(s.SciencePerDay(s.Human) > GameRules.ScienceBasePerCity);
 
         Assert.True(s.Research(0, Tech.Agriculture).Ok);
-        for (int day = 0; day < 365 && !s.Human.Techs.Contains(Tech.Agriculture); day++) RunHours(s, 24);
+        for (int day = 0; day < 365 * 3 && !s.Human.Techs.Contains(Tech.Agriculture); day++) RunHours(s, 24);
 
         Assert.Contains(Tech.Agriculture, s.Human.Techs);
         Assert.Null(s.Human.Researching[(int)TechBranch.Economy]);
@@ -515,7 +515,7 @@ public class GameplayTests(WorldFixture world)
         var s = GameSession.Create(_map, 2, seed: 7, computerRivals: false);
         var (a, b) = GrasslandPair();
         s.FoundCity(0, s.AddUnit(0, UnitType.Settlers, a.Id, 300).Id);
-        double cost = Tech.Agriculture.Info().Cost;
+        double cost = Tech.Agriculture.Info().Cost * GameRules.ResearchCostMultiplier;
         Assert.Equal(cost, s.ResearchCost(s.Human, Tech.Agriculture));
 
         s.Claim(1, s.AddRegiment(1, b.Id, BattalionType.Scouts).Id);
@@ -523,7 +523,34 @@ public class GameplayTests(WorldFixture world)
 
         Assert.Contains(1, s.NeighbourNations(s.Human));
         Assert.Equal(cost * (1 - GameRules.NeighbourResearchDiscount), s.ResearchCost(s.Human, Tech.Agriculture), 6);
-        Assert.Equal(Tech.Carpentry.Info().Cost, s.ResearchCost(s.Human, Tech.Carpentry)); // the neighbour does not know it
+        Assert.Equal(Tech.Carpentry.Info().Cost * GameRules.ResearchCostMultiplier, s.ResearchCost(s.Human, Tech.Carpentry)); // the neighbour does not know it
+    }
+
+    [Fact]
+    public void TheLandFeedsMorePeopleInEachAge()
+    {
+        var s = NewSession();
+        var (a, _) = GrasslandPair();
+        s.FoundCity(0, s.AddUnit(0, UnitType.Settlers, a.Id, 300).Id);
+        double ancient = s.CapacityOf(a);
+        Assert.Equal(a.Capacity * GameRules.CityCapacityMultiplier, ancient, 6);
+
+        var medieval = Techs.All.First(t => t.Info().Era == Era.Medieval && t.Info().Effects.Capacity == 0);
+        s.Human.Learn(medieval);
+        Assert.Equal(Era.Medieval, s.Human.Era);
+        Assert.Equal(ancient * GameRules.EraCapacity(Era.Medieval), s.CapacityOf(a), 6);
+    }
+
+    [Fact]
+    public void EmptyLandDoesNotFillByItself()
+    {
+        var s = NewSession();
+        var (a, b) = GrasslandPair();
+        s.FoundCity(0, s.AddUnit(0, UnitType.Settlers, a.Id, 300).Id);
+        s.Claim(0, s.AddRegiment(0, b.Id, BattalionType.Scouts).Id);
+        b.Population = 10;
+        // Births in a village do not depend on how much land it has: a handful of people grow slowly.
+        Assert.InRange(s.DailyBirths(b, starving: false), 0, (10 * GameRules.GrowthRate + GameRules.BaseBirthsPerProvince) * b.Fertility);
     }
 
     [Fact]
@@ -536,8 +563,9 @@ public class GameplayTests(WorldFixture world)
             s.FoundCity(0, s.AddUnit(0, UnitType.Settlers, a.Id, 300).Id);
             foreach (var t in techs) s.Human.Learn(t);
             RunHours(s, 24);
-            // Harvest = balance + what was eaten: 300 in the city and the starting settlers still waiting.
-            return (s.Human.LastDayNet[(int)ResourceType.Food] + GameRules.FoodPerCitizen * (300 + GameRules.StartingCitizens), s.CapacityOf(a));
+            // Harvest = balance + what was eaten (300 in the city and the starting settlers still waiting) + what spoiled.
+            return (s.Human.LastDayNet[(int)ResourceType.Food] + GameRules.FoodPerCitizen * (300 + GameRules.StartingCitizens)
+                    + GameRules.StartingFood * GameRules.FoodSpoilage, s.CapacityOf(a));
         }
 
         var plain = OneDay();

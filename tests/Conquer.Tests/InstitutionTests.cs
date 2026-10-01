@@ -128,7 +128,7 @@ public class InstitutionTests(WorldFixture world)
     {
         var s = GameSession.Create(_map, 1, seed: 7, computerRivals: false);
         foreach (var tech in Techs.All.Where(t => t.Info().Era == Era.Ancient)) s.Human.Learn(tech);
-        double cost = Tech.Trade.Info().Cost;
+        double cost = Tech.Trade.Info().Cost * GameRules.ResearchCostMultiplier;
 
         Assert.Equal(Era.Classical, Tech.Trade.Info().Era);
         Assert.Equal(cost * (1 + GameRules.InstitutionPenalty), s.ResearchCost(s.Human, Tech.Trade), 6);

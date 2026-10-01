@@ -48,9 +48,9 @@ public class EraTests(WorldFixture world)
         var tech = Techs.All.First(t => t.Info().Era == era);
         var institution = Institutions.All.Single(i => i.Info().Opens == era);
 
-        Assert.Equal(tech.Info().Cost * (1 + GameRules.InstitutionPenalty), s.ResearchCost(s.Human, tech), 6);
+        Assert.Equal(tech.Info().Cost * GameRules.ResearchCostMultiplier * (1 + GameRules.InstitutionPenalty), s.ResearchCost(s.Human, tech), 6);
         s.Human.Adopt(institution);
-        Assert.Equal(tech.Info().Cost, s.ResearchCost(s.Human, tech), 6);
+        Assert.Equal(tech.Info().Cost * GameRules.ResearchCostMultiplier, s.ResearchCost(s.Human, tech), 6);
     }
 
     [Theory]

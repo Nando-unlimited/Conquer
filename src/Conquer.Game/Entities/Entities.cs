@@ -59,10 +59,14 @@ public sealed class Player
     /// <summary>Institutions the nation has adopted.</summary>
     public HashSet<Institution> Institutions { get; } = [];
 
+    /// <summary>The latest age of any advance it knows.</summary>
+    public Era Era { get; private set; } = Era.Ancient;
+
     public void Learn(Tech tech)
     {
         if (!Techs.Add(tech)) return;
         Bonuses += tech.Info().Effects;
+        if (tech.Info().Era > Era) Era = tech.Info().Era;
         KnownResources.UnionWith(tech.Info().Reveals);
     }
 

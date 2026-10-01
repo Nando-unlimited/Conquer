@@ -1,4 +1,5 @@
 using Conquer.Game.Economy;
+using Conquer.Game.Science;
 
 namespace Conquer.Game.Rules;
 
@@ -28,16 +29,35 @@ public static class GameRules
     public const double FoodPerCitizen = 0.1;
     /// <summary>Food a worker grows per day on land of yield 1; most farmland feeds more people than work it.</summary>
     public const double FoodPerWorker = 0.13;
-    /// <summary>Daily growth of a fed province (about +55% a year), damped as it fills up.</summary>
-    public const double GrowthRate = 0.0012;
+    /// <summary>Daily growth of a fed province (about +1.5 % a year at normal fertility), damped as it fills up.</summary>
+    public const double GrowthRate = 0.00004;
     /// <summary>
-    /// Daily births in every populated province per citizen its land can feed, on top of <see cref="GrowthRate"/>,
-    /// so the countryside grows by its own fertility and not only through migrants.
+    /// Daily births in every populated province, on top of <see cref="GrowthRate"/>, so a handful of settlers still
+    /// grows into a village; it does not grow with the land, or empty land would fill by itself.
     /// </summary>
-    public const double BaseBirthsPerCapacity = 0.00002;
+    public const double BaseBirthsPerProvince = 0.02;
+    /// <summary>Share of the stored food that spoils each day, so stores settle at about 100 days of surplus.</summary>
+    public const double FoodSpoilage = 0.01;
     public const double StarvationRate = 0.01;
     /// <summary>A city feeds this many times the citizens of the surrounding land.</summary>
     public const double CityCapacityMultiplier = 2.5;
+    /// <summary>
+    /// Scales the citizens per km² each biome feeds at the start of history, so the whole world holds tens of millions
+    /// and not hundreds; each age then raises it (<see cref="EraCapacity"/>).
+    /// </summary>
+    public const double LandCarryingScale = 0.1;
+
+    /// <summary>How many times more people the land feeds in each age than in the Ancient one: better farming, trade and medicine.</summary>
+    public static double EraCapacity(Era era) => era switch
+    {
+        Era.Ancient => 1,
+        Era.Classical => 1.5,
+        Era.Medieval => 2,
+        Era.Renaissance => 3,
+        Era.Industrial => 5,
+        _ => 8,
+    };
+
     /// <summary>Cities grow this many times faster than the countryside.</summary>
     public const double CityGrowthMultiplier = 2;
 
@@ -66,9 +86,11 @@ public static class GameRules
 
     // Science
     /// <summary>Science points every city produces per day on top of its citizens'.</summary>
-    public const double ScienceBasePerCity = 0.5;
+    public const double ScienceBasePerCity = 0.25;
     /// <summary>Science points each city dweller produces per day.</summary>
     public const double SciencePerCityCitizen = 0.001;
+    /// <summary>Every advance costs this many times its listed points, so the ages last generations and not a few years.</summary>
+    public const double ResearchCostMultiplier = 3;
     /// <summary>Each branch's priority goes from 0 to this; its share of science is its priority over the sum of all three.</summary>
     public const int MaxResearchPriority = 10;
     public const int DefaultResearchPriority = 1;
@@ -98,7 +120,7 @@ public static class GameRules
 
     // Migration
     /// <summary>Share of a city's population that may leave for new territories each day.</summary>
-    public const double DailyEmigrationShare = 0.0015;
+    public const double DailyEmigrationShare = 0.0001;
     /// <summary>Cities stop sending migrants below this population.</summary>
     public const int MinEmigrationCityPopulation = 200;
     /// <summary>A province counts as settled once this many citizens live there; until then it draws migrants first.</summary>

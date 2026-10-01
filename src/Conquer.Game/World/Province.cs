@@ -106,8 +106,8 @@ public sealed class Province
     /// <summary>Food a worker grows here compared with average land: its biome's, more on a river's floodplain.</summary>
     public double FoodYield => Info.FoodYield * (HasRiver ? GameRules.RiverFertility : 1);
 
-    /// <summary>Citizens the province's land can feed; rivers make it feed more.</summary>
-    public double Capacity => AreaKm2 * Info.Carrying * (HasRiver ? GameRules.RiverFertility : 1);
+    /// <summary>Citizens the province's land can feed at the start of history; rivers make it feed more.</summary>
+    public double Capacity => AreaKm2 * Info.Carrying * GameRules.LandCarryingScale * (HasRiver ? GameRules.RiverFertility : 1);
 
     /// <summary>The province has this deposit and it is not yet exhausted.</summary>
     public bool HasDeposit(ResourceType r) => Deposits[(int)r] > 0 && Reserves[(int)r] > 0;
