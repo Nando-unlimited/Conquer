@@ -58,6 +58,8 @@ public sealed record SaveGame
     public required List<MigrationSave> Migrations { get; init; }
     public required List<BattleSave> Battles { get; init; }
     public required List<WarSave> Wars { get; init; }
+    /// <summary>Truces still running; missing in saves from before 1.62.0.</summary>
+    public List<TruceSave>? Truces { get; init; }
     public required List<Notification> Notifications { get; init; }
     public required List<AiSave> Ais { get; init; }
     public required Dictionary<int, double> EmigrationCarry { get; init; }
@@ -150,6 +152,8 @@ public sealed record BattleSave(
     int ProvinceId, int AttackerId, int DefenderId, long StartHours, List<int> Attackers, double AttackerLosses = 0, double DefenderLosses = 0);
 
 public sealed record WarSave(int A, int B, long StartHours, int VictoriesA = 0, int VictoriesB = 0);
+
+public sealed record TruceSave(int A, int B, long UntilHours);
 
 public sealed record RoadLinkSave(int A, int B, RoadKind Kind);
 

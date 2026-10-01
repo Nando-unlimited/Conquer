@@ -2,6 +2,18 @@
 
 Todos los cambios del juego, del más reciente al más antiguo. Cada versión es un commit cuyo título es su número.
 
+## [1.62.0] - 2026-10-01
+
+### Añadido
+- **Treguas**: tras cada paz, las dos naciones no pueden volver a declararse la guerra durante 2 años. La pestaña Diplomacia muestra los días que faltan y desactiva el botón de declarar la guerra.
+
+### Cambiado
+- **Rivales más belicosos**. Hasta ahora solo atacaban a un vecino con menos del 60 % de su poder, y casi nunca había guerras. Ahora:
+  - Cada rival tiene su carácter: los hay que atacan a vecinos con el 80 % de su poder y los hay que se atreven con uno del 110 %.
+  - Se atreven con vecinos más fuertes (un 30 % más) si ya no les queda tierra libre que reclamar, si el vecino ya está en otra guerra, y un 20 % más si el vecino gobierna gente de su cultura.
+  - Se lo piensan más a menudo: una vez cada 60 días de media, antes 90.
+- **Los ejércitos de los rivales crecen con su nación**: tienen al menos un batallón por cada 30 provincias, no solo 2 por ciudad. Una nación grande ya no se queda con 25 batallones.
+
 ## [1.61.1] - 2026-10-01
 
 ### Cambiado

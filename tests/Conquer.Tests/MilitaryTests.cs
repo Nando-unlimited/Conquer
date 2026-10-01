@@ -452,6 +452,32 @@ public class MilitaryTests(WorldFixture world)
     }
 
     [Fact]
+    public void PeaceStartsATruceThatOutlastsASave()
+    {
+        var (s, _, _) = TwoNations();
+        s.DeclareWar(0, 1);
+        s.MakePeace(0, 1);
+        Assert.Equal(GameRules.TruceDays, s.TruceDaysLeft(1, 0), 6);
+        Assert.False(s.CanDeclareWar(1, 0).Ok);
+
+        RunHours(s, 24 * 10);
+        var loaded = GameSession.Load(_map, s.ToSave("test"));
+        Assert.Equal(GameRules.TruceDays - 10, loaded.TruceDaysLeft(0, 1), 6);
+        Assert.False(loaded.CanDeclareWar(0, 1).Ok);
+    }
+
+    [Fact]
+    public void TheTruceEnds()
+    {
+        var (s, _, _) = TwoNations();
+        s.DeclareWar(0, 1);
+        s.MakePeace(0, 1);
+        RunHours(s, 24 * GameRules.TruceDays);
+        Assert.Equal(0, s.TruceDaysLeft(0, 1));
+        Assert.True(s.CanDeclareWar(0, 1).Ok);
+    }
+
+    [Fact]
     public void TreatyKeepsTheOccupiedLandWithItsCity()
     {
         var (s, a, b) = TwoNations();

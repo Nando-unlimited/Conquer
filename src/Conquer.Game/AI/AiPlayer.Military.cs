@@ -24,6 +24,8 @@ internal sealed partial class AiPlayer
     private const int BattalionsPerUnit = 6;
     /// <summary>The highest HQ level it raises: corps and armies.</summary>
     private const int HighestHeadquarters = 2;
+    /// <summary>A big nation keeps a battalion for this many provinces, even with few cities.</summary>
+    private const int ProvincesPerBattalion = 30;
 
     /// <summary>Lone scouts (or warriors, in older games) that claim free land; every other regiment but the engineers belongs to the army.</summary>
     private readonly HashSet<int> _claimers = [];
@@ -60,7 +62,8 @@ internal sealed partial class AiPlayer
     }
 
     /// <summary>
-    /// Until the army reaches 2 battalions per city (4 at war), trains whole regiments from its template
+    /// Until the army reaches 2 battalions per city or one per <see cref="ProvincesPerBattalion"/> provinces, whichever
+    /// is more (twice that at war), trains whole regiments from its template
     /// when it can afford one, and otherwise the best single battalion it can, in its biggest city with barracks.
     /// </summary>
     private void BuildArmy()
@@ -69,7 +72,7 @@ internal sealed partial class AiPlayer
         if (_player.LastDayNet[(int)ResourceType.Gold] < 0) return;
         var cities = _session.Cities.Where(c => c.OwnerId == _player.Id).ToList();
         if (cities.Count == 0 || _session.Date.Days < 180) return;
-        int target = cities.Count * (_session.EnemiesOf(_player.Id).Any() ? 4 : 2);
+        int target = Math.Max(cities.Count * 2, _player.Provinces.Count / ProvincesPerBattalion) * (_session.EnemiesOf(_player.Id).Any() ? 2 : 1);
         int battalions = Army.Sum(u => u.Battalions.Count)
             + cities.Sum(c => Map.Provinces[c.ProvinceId].Training.Sum(o => o.TemplateBattalions.Count + (o.Battalion is BattalionType t && !Auxiliary(t) ? 1 : 0)));
         if (battalions >= target) return;
@@ -275,9 +278,9 @@ internal sealed partial class AiPlayer
     }
 
     /// <summary>
-    /// After the peaceful years, now and then declares war on a much weaker neighbour. In a war with another rival it
-    /// demands the land it occupies once the war score pays for it, and offers white peace when a war drags on and
-    /// goes badly.
+    /// After the peaceful years, now and then declares war on a neighbour it can beat (see <see cref="WarAppetite"/>).
+    /// In a war with another rival it demands the land it occupies once the war score pays for it, and offers white
+    /// peace when a war drags on and goes badly.
     /// </summary>
     private void Diplomacy()
     {
@@ -292,12 +295,38 @@ internal sealed partial class AiPlayer
         }
 
         if (_session.EnemiesOf(_player.Id).Any() || _session.Date.Days < PeacefulDays || Army.Sum(u => u.Battalions.Count) < 4) return;
-        if (_random.Next(90) != 0) return;
+        if (_random.Next(WarChanceDays) != 0) return;
         double power = _session.MilitaryPower(_player.Id);
-        var victim = Neighbours().Where(n => _session.MilitaryPower(n) < power * 0.6)
-            .OrderBy(_session.MilitaryPower).Select(n => (int?)n).FirstOrDefault();
+        if (power <= 0) return;
+        var victim = Neighbours()
+            .Where(n => _session.CanDeclareWar(_player.Id, n).Ok)
+            .Select(n => (Id: n, Odds: _session.MilitaryPower(n) / power / WarAppetite(n)))
+            .Where(t => t.Odds < 1)
+            .OrderBy(t => t.Odds).Select(t => (int?)t.Id).FirstOrDefault();
         if (victim is int target) _session.DeclareWar(_player.Id, target);
     }
+
+    /// <summary>On average, a rival at peace weighs a war this often (in days).</summary>
+    private const int WarChanceDays = 60;
+
+    /// <summary>
+    /// How strong a neighbour may be, against its own army, for it to attack: its temperament (80 to 110 %), more if
+    /// it has no free land left to claim, if the neighbour is already fighting someone else or if it rules people of
+    /// its culture.
+    /// </summary>
+    private double WarAppetite(int neighbourId)
+    {
+        double appetite = _aggression;
+        if (!HasFreeLandNearby()) appetite += 0.3;
+        if (_session.EnemiesOf(neighbourId).Any()) appetite += 0.3;
+        if (_session.Players[neighbourId].Provinces.Any(id => Map.Provinces[id].CultureId == _player.Id && Map.Provinces[id].Population >= 1))
+            appetite += 0.2;
+        return appetite;
+    }
+
+    /// <summary>Whether any free land borders its own, so it can still grow without a war.</summary>
+    private bool HasFreeLandNearby() =>
+        _player.Provinces.Any(id => Map.Provinces[id].Neighbors.Any(n => Map.Provinces[n].IsClaimable && !Map.Provinces[n].IsOwned));
 
     /// <summary>Days a war must last before a rival demands the land it occupies.</summary>
     private const int TreatyDays = 60;

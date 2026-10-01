@@ -140,6 +140,8 @@ public static class HelpTopics
             "- Paz blanca: las provincias ocupadas vuelven a sus dueños. Los rivales la aceptan si la guerra les va mal o se alarga.",
             "- Exigir: te quedas con lo que ocupas, si la puntuación lo paga. Si te quedas con todo, la nación desaparece.",
             "- Ceder: entregas lo que te ocupan para acabar una guerra perdida.",
+            $"- Tras cada paz hay una tregua de {GameRules.TruceDays} días: ninguno de los dos puede declarar la guerra al otro.",
+            "- Los rivales atacan a vecinos que creen poder vencer, más aún si se han quedado sin tierra libre, si el vecino ya está en otra guerra o si gobierna gente de su cultura.",
         ]),
         ("Mapa",
         [

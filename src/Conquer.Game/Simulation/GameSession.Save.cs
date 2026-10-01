@@ -46,6 +46,7 @@ public sealed partial class GameSession
         Battles = _battles.Select(b => new BattleSave(b.ProvinceId, b.AttackerId, b.DefenderId, b.StartHours, [.. b.Attackers], b.AttackerLosses, b.DefenderLosses)).ToList(),
         Wars = _wars.Select(w => new WarSave(w.Key.Item1, w.Key.Item2, w.Value.StartHours,
             w.Value.Victories.GetValueOrDefault(w.Key.Item1), w.Value.Victories.GetValueOrDefault(w.Key.Item2))).ToList(),
+        Truces = _truces.Where(t => t.Value > Date.Hours).Select(t => new TruceSave(t.Key.Item1, t.Key.Item2, t.Value)).ToList(),
         Notifications = [.. Notifications],
         Ais = _ais.Select(ai => ai.ToSave()).ToList(),
         EmigrationCarry = new Dictionary<int, double>(_emigrationCarry),
@@ -227,6 +228,7 @@ public sealed partial class GameSession
             war.Victories[w.A] = w.VictoriesA;
             war.Victories[w.B] = w.VictoriesB;
         }
+        foreach (var t in save.Truces ?? []) session._truces[(t.A, t.B)] = t.UntilHours;
         session.Notifications.AddRange(save.Notifications);
         foreach (var (province, carry) in save.EmigrationCarry) session._emigrationCarry[province] = carry;
         foreach (var n in save.UnitNumbers)

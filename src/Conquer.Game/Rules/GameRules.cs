@@ -149,6 +149,8 @@ public static class GameRules
     public const double CapitalValue = 6;
     public const double WarScorePerVictory = 2;
     public const double MaxBattleWarScore = 25;
+    /// <summary>Days after a peace before the same two nations may go to war again.</summary>
+    public const int TruceDays = 730;
     /// <summary>Mood a province loses when a treaty hands it to another nation.</summary>
     public const double CededMoodPenalty = 20;
 

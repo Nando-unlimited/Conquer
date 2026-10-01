@@ -55,12 +55,16 @@ internal sealed partial class AiPlayer
     private readonly Random _random;
     /// <summary>Where each unit is heading and why; cleared when the plan fails.</summary>
     private readonly Dictionary<int, int> _targets = [];
+    /// <summary>Its temperament: how strong a neighbour may be, against its own army, for it to attack (0.8 to 1.1).</summary>
+    private readonly double _aggression;
 
     public AiPlayer(GameSession session, Player player, int seed)
     {
         _session = session;
         _player = player;
         _random = new Random(seed);
+        // Its own generator, so that the temperament does not change the rest of its decisions.
+        _aggression = 0.8 + 0.3 * new Random(seed ^ 0x5A5A).NextDouble();
     }
 
     private WorldMap Map => _session.Map;

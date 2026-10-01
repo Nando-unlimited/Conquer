@@ -81,6 +81,17 @@ public class NationScreenTests(WorldFixture world)
     }
 
     [Fact]
+    public void AfterPeaceTheTruceBlocksANewWar()
+    {
+        var game = Game(NationTab.Diplomacy, players: 2);
+        game.Session.DeclareWar(0, 1);
+        game.Session.MakePeace(0, 1);
+        var row = Assert.Single(((TablePage)game.Nation.Page()).Table.Rows);
+        Assert.False(FindButton(row, "Declarar la guerra").Enabled);
+        Assert.StartsWith("Tregua", Assert.IsType<TextCell>(row[1]).Text);
+    }
+
+    [Fact]
     public void ScienceShowsThreeBranchesAndResearchingPicksTheAdvance()
     {
         var game = Game(NationTab.Science);

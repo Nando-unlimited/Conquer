@@ -168,6 +168,7 @@ public sealed partial class NationScreen
         foreach (var other in Session.Players.Where(p => p.Id != Player.Id))
         {
             bool war = Session.AtWar(Player.Id, other.Id);
+            double truce = Session.TruceDaysLeft(Player.Id, other.Id);
             double theirs = Session.MilitaryPower(other.Id);
             string ratio = ours <= 0 && theirs <= 0 ? "igual" : theirs <= 0 ? "sin ejército" : ours / theirs >= 1.2 ? "más débil que tú" : ours / theirs <= 0.8 ? "más fuerte que tú" : "parecido al tuyo";
             int taken = Session.OccupiedBy(Player.Id, other.Id).Count;
@@ -175,14 +176,15 @@ public sealed partial class NationScreen
             rows.Add(
             [
                 new TextCell(other.Name, Bold: true, Swatch: other.Color),
-                new TextCell(war ? $"En guerra ({Session.WarDays(Player.Id, other.Id):0} d)" : "En paz", war ? Tone.Bad : Tone.Good),
+                new TextCell(war ? $"En guerra ({Session.WarDays(Player.Id, other.Id):0} d)" : truce > 0 ? $"Tregua ({Math.Ceiling(truce):0} d)" : "En paz", war ? Tone.Bad : Tone.Good,
+                    Tooltip: truce > 0 ? $"Tras la última paz, ninguno de los dos puede declarar la guerra al otro durante {GameRules.TruceDays} días." : null),
                 new TextCell($"{theirs:0} ({ratio})", theirs > ours * 1.2 ? Tone.Bad : Tone.Normal, TextSize.Small),
                 new TextCell($"{other.Provinces.Count:N0}", Tone.Dim),
                 new TextCell(war || taken + lost > 0 ? $"tomadas {taken} · perdidas {lost}" : "-", lost > taken ? Tone.Bad : Tone.Dim, TextSize.Small),
                 war ? WarScoreCell(other) : new TextCell("-", Tone.Dim),
                 new ButtonsCell(war ? PeaceButtons(other, taken, lost) :
                 [
-                    new Button("Declarar la guerra", () => Show(Session.DeclareWar(Player.Id, other.Id)),
+                    new Button("Declarar la guerra", () => Show(Session.DeclareWar(Player.Id, other.Id)), truce <= 0,
                         Tooltip: "Tus ejércitos podrán entrar en sus tierras, atacar sus tropas y ocupar sus provincias.", Size: TextSize.Small),
                 ]),
             ]);

@@ -385,7 +385,7 @@ Guerra, puntuación de guerra y tratados de paz.
 | `PeaceTerms` | Lo que firma quien propone la paz: `White` (paz blanca), `TakeOccupied` (se queda con las provincias enemigas que ocupa) o `CedeOccupied` (entrega las suyas que ocupa el enemigo). |
 | `War` | Una guerra: cuándo empezó y cuántas batallas ha ganado cada bando (`Victories`). Se guarda en `WarSave`. |
 | `AtWar(a, b)`, `EnemiesOf(jugador)`, `WarDays(a, b)`, `WarVictories(jugador, enemigo)` | Si dos naciones están en guerra, sus enemigos, cuánto dura la guerra y las batallas ganadas (en tierra y en el mar; las cuenta `RecordVictory`). |
-| `CanDeclareWar`/`DeclareWar` | Declara la guerra a otra nación. |
+| `CanDeclareWar`/`DeclareWar`, `TruceDaysLeft(a, b)` | Declara la guerra a otra nación, salvo durante la tregua: tras cada paz, 730 días (`GameRules.TruceDays`) sin guerra entre las dos. Las treguas se guardan en `TruceSave`. |
 | `ProvinceValue(provincia)` | Lo que vale en la mesa de paz: 1, más 1 por cada 2.000 habitantes (hasta 5), más 2 si tiene ciudad o 6 si es la capital (`GameRules`). |
 | `WarScore(jugador, enemigo)` | De -100 a 100: la parte del valor del enemigo que ocupa, menos la parte del suyo que le ocupan, más 2 por batalla ganada y menos 2 por perdida (hasta ±25). |
 | `OccupiedBy(ocupante, dueño)`, `PeaceCost(jugador, enemigo, términos)` | Las provincias de una nación que ocupa otra, y lo que cuesta quedárselas: la parte del valor del enemigo que suponen. |
@@ -484,7 +484,7 @@ El ejército de un rival.
 | Función | Qué hace |
 | --- | --- |
 | `ClassifyNewRegiments()`, `Auxiliary(tipo)` | Los regimientos nuevos de un solo batallón de exploradores cubren primero los puestos de «reclamadores» (uno por ciudad, más uno); el resto forma el ejército, también los reclamadores sin exploradores de partidas antiguas. |
-| `BuildArmy()`, `Spare(coste)` | Desde el día 180, hasta tener 2 batallones por ciudad (4 en guerra), entrena unidades enteras de su plantilla, del tamaño que su ciudad puede dar (hasta 6 batallones: infantería con dos de choque), o si no el mejor batallón suelto, en su ciudad más poblada con cuartel (la plantilla solo lleva máquinas de guerra si esa ciudad tiene taller); sin gastar la reserva ni entrenar si pierde oro cada día. |
+| `BuildArmy()`, `Spare(coste)` | Desde el día 180, hasta tener 2 batallones por ciudad o uno por cada 30 provincias, lo que sea más (el doble en guerra), entrena unidades enteras de su plantilla, del tamaño que su ciudad puede dar (hasta 6 batallones: infantería con dos de choque), o si no el mejor batallón suelto, en su ciudad más poblada con cuartel (la plantilla solo lleva máquinas de guerra si esa ciudad tiene taller); sin gastar la reserva ni entrenar si pierde oro cada día. |
 | `BuildNavy()` | Una flota de guerra por cada tres puertos: el barco de combate con más ataque que puede construir, en su puerto más poblado. Las flotas se quedan en puerto. |
 | `ArmyTemplate(tamaño)`, `CanSupply(tipo)` | Su plantilla (nunca con exploradores ni ingenieros, igual que `BuildArmy`): dos de su infantería más resistente, su tropa más ofensiva y otra de infantería, recortada al tamaño; solo con tropas cuyos materiales (cobre, hierro…) tiene o produce. |
 | `OrganiseArmy()`, `RaiseAndAttach(...)`, `HighestHeadquarters` | Une unidades pequeñas (hasta 6 batallones), forma cuarteles de cuerpo y ejército cuando hacen falta y asigna a todos. |
@@ -493,7 +493,7 @@ El ejército de un rival.
 | `GuideSoldier(unidad)` | En guerra: acude a sus ciudades atacadas, ataca la provincia enemiga vecina más débil (si supera 1,3 veces su defensa) o marcha hacia tierra enemiga que su suministro alcance; descansa si está desorganizada. |
 | `GoHomeIfCutOff(unidad)`, `IsEnemyLand(provincia)` | Un regimiento sin suministro vuelve a la capital. |
 | `KeepOrder()`, `GarrisonedRevoltRisk` | En paz, manda el regimiento libre más cercano de su ejército a cada provincia sin guarnición que pasa del 25 % de rebelión; los que ya guardan una provincia descontenta se quedan. |
-| `Diplomacy()`, `Neighbours()` | Tras dos años, a veces declara la guerra a un vecino con menos del 60 % de su poder. En guerra con otro rival, tras 60 días le exige lo que ocupa si la puntuación lo paga, y le propone la paz blanca cuando la guerra se alarga y va mal. |
+| `Diplomacy()`, `Neighbours()`, `WarAppetite(vecino)`, `HasFreeLandNearby()` | Tras dos años, cada día tiene una entre 60 de pensar en una guerra: ataca al vecino más débil (sin tregua) cuyo poder no pase de su apetito por el suyo. El apetito es su carácter (`_aggression`, de 0,8 a 1,1, fijo por semilla), +0,3 si ya no tiene tierra libre junto a la suya, +0,3 si el vecino ya está en guerra y +0,2 si gobierna gente de su cultura. En guerra con otro rival, tras 60 días le exige lo que ocupa si la puntuación lo paga, y le propone la paz blanca cuando la guerra se alarga y va mal. |
 | `WouldAcceptPeace(otro, términos)`, `Winning(otro)` | Acepta siempre que le entreguen tierras; cede lo que le ocupan si no va ganando o si la puntuación del enemigo pasa de 50; la paz blanca, tras 60 días si no va ganando (o tras un año). Va ganando si su ejército es mucho más fuerte y ocupa más de lo que ha perdido. |
 
 ### `World/Biome.cs`

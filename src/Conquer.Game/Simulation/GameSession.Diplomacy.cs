@@ -48,8 +48,17 @@ public sealed partial class GameSession
     {
         if (playerId == targetId || targetId < 0 || targetId >= Players.Count) return CommandResult.Fail("Nación no válida.");
         if (AtWar(playerId, targetId)) return CommandResult.Fail($"Ya estás en guerra con {Players[targetId].Name}.");
+        if (TruceDaysLeft(playerId, targetId) is var days and > 0)
+            return CommandResult.Fail($"Hay una tregua con {Players[targetId].Name}: faltan {Math.Ceiling(days):0} días.");
         return CommandResult.Success();
     }
+
+    /// <summary>Pairs of nations that made peace (lower id first), with the hour their truce ends.</summary>
+    private readonly Dictionary<(int, int), long> _truces = [];
+
+    /// <summary>Days until two nations may go to war again after their last peace (0 when they may).</summary>
+    public double TruceDaysLeft(int a, int b) =>
+        _truces.TryGetValue(WarKey(a, b), out long until) && until > Date.Hours ? (until - Date.Hours) / 24.0 : 0;
 
     public CommandResult DeclareWar(int playerId, int targetId)
     {
@@ -168,6 +177,7 @@ public sealed partial class GameSession
         int receiver = terms == PeaceTerms.TakeOccupied ? a : b;
         int giver = receiver == a ? b : a;
         _wars.Remove(WarKey(a, b));
+        _truces[WarKey(a, b)] = Date.Hours + GameRules.TruceDays * 24;
         foreach (var battle in _battles.Where(x => WarKey(x.AttackerId, x.DefenderId) == WarKey(a, b)).ToList())
         {
             foreach (var unit in battle.Attackers.Select(UnitById).OfType<Unit>()) unit.AttackingProvinceId = null;
