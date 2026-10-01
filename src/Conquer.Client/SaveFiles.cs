@@ -6,16 +6,44 @@ namespace Conquer.Client;
 public sealed record SaveFile(string Path, string Name, DateTime SavedAt);
 
 /// <summary>
-/// Saved games live in the user's data folder: ~/.local/share/Conquer/Partidas on Linux,
+/// Saved games live in a Partidas folder next to the game. If the game's folder cannot be written to, they go to the
+/// user's data folder instead, where they lived before 1.45.1: ~/.local/share/Conquer/Partidas on Linux,
 /// %LOCALAPPDATA%\Conquer\Partidas on Windows and ~/Library/Application Support/Conquer/Partidas on macOS.
 /// </summary>
 public static class SaveFiles
 {
     public const string Extension = ".conquer";
 
-    public static string Folder { get; } = System.IO.Path.Combine(
+    /// <summary>Where saved games went before 1.45.1, and where they still go if the game's folder is read-only.</summary>
+    private static readonly string UserFolder = System.IO.Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData, Environment.SpecialFolderOption.Create),
         "Conquer", "Partidas");
+
+    public static string Folder { get; } = ChooseFolder();
+
+    /// <summary>The Partidas folder next to the game if it can write there, bringing over the games saved in the user's folder.</summary>
+    private static string ChooseFolder()
+    {
+        string folder = System.IO.Path.Combine(AppContext.BaseDirectory, "Partidas");
+        try
+        {
+            Directory.CreateDirectory(folder);
+            string probe = System.IO.Path.Combine(folder, ".probe");
+            File.WriteAllText(probe, "");
+            File.Delete(probe);
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+        {
+            return UserFolder;
+        }
+        if (Directory.Exists(UserFolder))
+            foreach (var old in Directory.GetFiles(UserFolder, "*" + Extension))
+            {
+                string moved = System.IO.Path.Combine(folder, System.IO.Path.GetFileName(old));
+                if (!File.Exists(moved)) File.Move(old, moved);
+            }
+        return folder;
+    }
 
     /// <summary>Saved games, newest first.</summary>
     public static List<SaveFile> List()

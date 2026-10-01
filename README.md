@@ -29,8 +29,9 @@ dotnet publish src/Conquer.Client -c Release -r win-x64 --self-contained -p:Publ
 ## Partidas guardadas
 
 Desde el menú (Esc) → **Guardar partida**. La pantalla inicial permite continuar la última o cargar cualquier otra.
-Se guardan en `~/.local/share/Conquer/Partidas` (Linux), `%LOCALAPPDATA%\Conquer\Partidas` (Windows) o
-`~/Library/Application Support/Conquer/Partidas` (macOS).
+Se guardan en la carpeta `Partidas`, junto al ejecutable del juego. Si esa carpeta no se puede escribir, van a
+`~/.local/share/Conquer/Partidas` (Linux), `%LOCALAPPDATA%\Conquer\Partidas` (Windows) o
+`~/Library/Application Support/Conquer/Partidas` (macOS), donde se guardaban antes de la 1.45.1.
 
 ## Controles
 

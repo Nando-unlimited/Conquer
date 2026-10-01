@@ -2,6 +2,11 @@
 
 Todos los cambios del juego, del más reciente al más antiguo. Cada versión es un commit cuyo título es su número.
 
+## [1.45.1] - 2026-10-01
+
+### Cambiado
+- **Las partidas se guardan en la carpeta del juego**, en `Partidas` junto al ejecutable. Al arrancar, las que había en la carpeta de datos del usuario (`%LOCALAPPDATA%\Conquer\Partidas` en Windows) se mueven allí. Si la carpeta del juego no se puede escribir, se siguen guardando donde antes.
+
 ## [1.45.0] - 2026-10-01
 
 ### Añadido
