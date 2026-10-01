@@ -2,6 +2,11 @@
 
 Todos los cambios del juego, del más reciente al más antiguo. Cada versión es un commit cuyo título es su número.
 
+## [1.55.0] - 2026-10-01
+
+### Cambiado
+- **Código separado del motor gráfico** (cuarto paso): la pantalla de la nación (resumen, ciudades, provincias, ciencia, ejército, plantillas y diplomacia) se construye en Conquer.Presentation como tablas, tarjetas y listas de cifras; el cliente solo las dibuja. El juego se ve y funciona igual.
+
 ## [1.54.0] - 2026-10-01
 
 ### Cambiado

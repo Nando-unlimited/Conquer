@@ -86,6 +86,9 @@ public static class Theme
         Tone.Organisation => Organisation,
         Tone.Track => Rgba.Black.WithAlpha(0.7f),
         Tone.Groove => ButtonDisabled,
+        Tone.Border => PanelBorder,
+        Tone.Uneasy => new Rgba(0xFFE0A050),
+        Tone.Calm => new Rgba(0xFFB9C08A),
         _ => Text,
     };
 }

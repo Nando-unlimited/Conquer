@@ -51,6 +51,9 @@ public sealed partial class GameController
     public int MigrationAmount { get; set; } = 50;
 
     public CityNaming? Naming { get; private set; }
+
+    /// <summary>The nation screen (button «Nación» or key N).</summary>
+    public NationScreen Nation { get; }
     public string CityName { get; set; } = "";
 
     /// <param name="loaded">A saved game being carried on: it opens on the player's capital and does not repeat old messages.</param>
@@ -58,6 +61,7 @@ public sealed partial class GameController
     {
         Session = session;
         Camera = new Camera(session.Map.Width, session.Map.Height);
+        Nation = new NationScreen(this);
         if (loaded)
         {
             _seenNotifications = session.Notifications.Count;

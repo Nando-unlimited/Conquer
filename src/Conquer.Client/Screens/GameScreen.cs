@@ -49,7 +49,7 @@ public sealed partial class GameScreen : IScreen
         _rivers = new RiverLayer(session.Map);
         _roads = new RoadLayer(session.Map);
         session.OwnershipChanged += _ => _mapDirty = true;
-        _nation = new NationView(session, session.Human, _game.ViewProvince, _game.ViewUnit, _game.Show);
+        _nation = new NationView(_game.Nation);
         _renderer.IsResourceKnown = session.Human.Knows;
         _game.EditUnitRequested += OpenUnitEditor;
         _game.RoadRequested += OpenRoadWindow;
@@ -70,7 +70,7 @@ public sealed partial class GameScreen : IScreen
         if (options.At is { } at)
             _game.Camera.LookAt(new Vector2((at.Longitude + 180) / 360 * Map.Width, (90 - at.Latitude) / 180 * Map.Height));
         if (Enum.TryParse<MapMode>(options.Mode, ignoreCase: true, out var mode)) _game.Mode = mode;
-        if (Enum.TryParse<NationTab>(options.Nation, ignoreCase: true, out var tab)) { _nation.Tab = tab; _nation.Visible = true; }
+        if (Enum.TryParse<NationTab>(options.Nation, ignoreCase: true, out var tab)) { _game.Nation.Tab = tab; _game.Nation.Visible = true; }
         _game.ProvinceTab = options.Panel switch { "buildings" => ProvinceTab.Buildings, "army" => ProvinceTab.Army, _ => ProvinceTab.General };
         if (options.Panel is "regiment" or "march" or "edit" && Human.CapitalCityId is int capital) ShowSampleArmy(capital, march: options.Panel == "march");
         if (options.Panel == "edit" && _game.SelectedUnitId is int sample && _session.UnitById(sample) is { HasOfficer: true }) ShowSampleOfficers(sample);
@@ -135,7 +135,7 @@ public sealed partial class GameScreen : IScreen
         DrawBattles();
 
         DrawTopBar();
-        if (!_nation.Visible) DrawSidePanel();
+        if (!_game.Nation.Visible) DrawSidePanel();
         DrawBottomBar();
         _nation.Frame(Ui, NationRect);
         DrawMessages();
@@ -148,8 +148,8 @@ public sealed partial class GameScreen : IScreen
         _help.Frame(Ui, new Rect(Math.Max(8, _app.ScreenSize.X / 2 - 520), 70, Math.Min(1040, _app.ScreenSize.X - 16), _app.ScreenSize.Y - 140));
 
         bool modal = _menuOpen || _game.Naming.HasValue || _editingUnitId.HasValue || BattleWindowOpen || RoadWindowOpen;
-        if (!modal && !_changelog.Visible && !_help.Visible && !_nation.Visible) HandleMapMouse();
-        if (!Ui.MouseOverUi && !modal && !_help.Visible && !_nation.Visible && _game.HoverProvince >= 0 && !_dragging) HoverTooltip();
+        if (!modal && !_changelog.Visible && !_help.Visible && !_game.Nation.Visible) HandleMapMouse();
+        if (!Ui.MouseOverUi && !modal && !_help.Visible && !_game.Nation.Visible && _game.HoverProvince >= 0 && !_dragging) HoverTooltip();
     }
 
     // ------------------------------------------------------------------ input
@@ -180,7 +180,7 @@ public sealed partial class GameScreen : IScreen
                     else if (BattleWindowOpen) CloseBattle();
                     else if (RoadWindowOpen) CloseRoadWindow();
                     else if (_changelog.Visible) _changelog.Visible = false;
-                    else if (_nation.Visible) _nation.Visible = false;
+                    else if (_game.Nation.Visible) _game.Nation.Visible = false;
                     else if (_game.ChoosingMigrationTarget) _game.ChoosingMigrationTarget = false;
                     else if (_game.HasSelection) _game.ClearSelection();
                     else _menuOpen = !_menuOpen;
@@ -189,7 +189,7 @@ public sealed partial class GameScreen : IScreen
                 case >= Key.Number1 and <= Key.Number5: _game.Clock.SetSpeed(key - Key.Number1 + 1); break;
                 case Key.Tab: _game.CycleMode(); break;
                 case Key.Home: _game.CenterOnHome(); break;
-                case Key.N when !_menuOpen: _nation.Visible = !_nation.Visible; break;
+                case Key.N when !_menuOpen: _game.Nation.Visible = !_game.Nation.Visible; break;
                 case Key.F1 when !_menuOpen: _help.Visible = !_help.Visible; break;
                 case Key.KeypadAdd or Key.Equal: _game.Camera.ZoomAt(_game.Camera.Screen / 2, 1.25f); break;
                 case Key.KeypadSubtract or Key.Minus: _game.Camera.ZoomAt(_game.Camera.Screen / 2, 0.8f); break;
@@ -384,8 +384,8 @@ public sealed partial class GameScreen : IScreen
             if (x > s.X - 330) break;
         }
 
-        if (Ui.Button(new Rect(s.X - 190, 12, 92, 32), bar.NationButton, active: _nation.Visible, tooltip: bar.NationTooltip))
-            _nation.Visible = !_nation.Visible;
+        if (Ui.Button(new Rect(s.X - 190, 12, 92, 32), bar.NationButton, active: _game.Nation.Visible, tooltip: bar.NationTooltip))
+            _game.Nation.Visible = !_game.Nation.Visible;
         if (Ui.Button(new Rect(s.X - 230, 12, 34, 32), "?", active: _help.Visible, tooltip: "Ayuda (F1)")) _help.Visible = !_help.Visible;
         if (Ui.Button(new Rect(s.X - 90, 12, 78, 32), "Menú")) _menuOpen = true;
     }
@@ -426,7 +426,7 @@ public sealed partial class GameScreen : IScreen
         for (int i = 0; i < modes.Count; i++) DocumentView.Press(Ui, modes[i], new Rect(bar.X + 6 + i * 120, bar.Y + 6, 114, 32));
         DrawResourceFilter(bar);
         // With the nation screen open this strip shows the latest message instead (see DrawMessages).
-        if (_nation.Visible) return;
+        if (_game.Nation.Visible) return;
 
         var hints = _game.Hints();
         var items = hints.Items.ToList();
@@ -458,7 +458,7 @@ public sealed partial class GameScreen : IScreen
     {
         var messages = _game.Messages.Current(_game.Now);
         var s = _app.ScreenSize;
-        if (_nation.Visible)
+        if (_game.Nation.Visible)
         {
             if (messages.Count > 0) DrawLatestMessageInStrip(messages[0]);
             return;

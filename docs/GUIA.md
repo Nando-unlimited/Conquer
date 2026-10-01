@@ -587,7 +587,7 @@ Mapa de la Tierra real, generado por `tools/Conquer.EarthData`. Se incluye dentr
 ## 3. `src/Conquer.Presentation` — presentación sin motor
 
 Lo que ve y hace el jugador, sin nada de Silk.NET, OpenGL ni ningún otro motor (un test lo comprueba). El cliente solo lo dibuja,
-así que cambiar de motor no lo toca. Tiene las piezas que ya eran independientes, el estado de la partida en pantalla (`GameController`) y lo que muestran el panel lateral, las barras de arriba y abajo, el tooltip del mapa y el diálogo de ciudad, como documentos (`Document`); el resto de la lógica de las pantallas
+así que cambiar de motor no lo toca. Tiene las piezas que ya eran independientes, el estado de la partida en pantalla (`GameController`) y lo que muestran el panel lateral, las barras de arriba y abajo, el tooltip del mapa y el diálogo de ciudad, como documentos (`Document`), y la pantalla de la nación (`NationScreen`); el resto de la lógica de las pantallas
 irá llegando aquí poco a poco.
 
 ### `Camera.cs`
@@ -637,6 +637,7 @@ La partida en pantalla, sin pantalla: lo que se ve, lo seleccionado, los diálog
 | `Camera`, `Clock`, `Messages`, `Now`, `Mode`, `ResourceFilter` | La vista, el reloj de juego, los mensajes, los segundos reales desde que se abrió la partida (mensajes y animaciones), el modo de mapa y, en el de recursos, el único que se muestra. |
 | `Tick(dt, congelado)` | Un fotograma: pasa el tiempo real, simula las horas que da el reloj salvo si está congelado (una ventana que para el tiempo) y convierte los avisos nuevos de la partida en mensajes. |
 | `Show(resultado)` | Muestra el resultado de una orden. |
+| `Nation` | La pantalla de la nación (`NationScreen`). |
 | `Center`, `Between`, `CenterOnHome`, `CycleMode` | Centro de una provincia, punto entre dos cruzando el borde del mapa por el lado corto, centrar la vista en la capital y pasar al siguiente modo de mapa. |
 | `SelectedUnit`, `SelectedUnitId`, `SelectedProvince`, `HoverProvince`, `HasSelection` | Selección (una unidad o una provincia; la unidad que ya no existe se deselecciona sola) y provincia bajo el ratón. |
 | `SelectUnit`, `SelectProvince`, `ClearSelection`, `ViewUnit`, `ViewProvince` | Cambiar la selección; las dos últimas además centran la vista (desde la pantalla de la nación). |
@@ -678,13 +679,48 @@ El contenido de un panel como datos, de arriba abajo, para que cualquier cliente
 
 | Elemento | Qué es |
 | --- | --- |
-| `Tone`, `Ink`, `TextSize` | Qué significa un color (normal, tenue, desactivado, dorado, bueno, malo, río, batalla, hombres, organización y los fondos de las barras) o el color propio de una nación (`Ink.Nation`); `Ink.Mood` colorea un humor. Tres tamaños de letra. |
+| `Tone`, `Ink`, `TextSize` | Qué significa un color (normal, tenue, desactivado, dorado, bueno, malo, río, batalla, hombres, organización , los fondos de las barras, el borde de una tarjeta y los niveles intermedios de humor) o el color propio de una nación (`Ink.Nation`); `Ink.Mood` colorea un humor. Tres tamaños de letra. |
 | `Icon` (`ResourceIcon`, `BattalionIcon`) | Icono de un recurso o de un tipo de batallón. |
 | `Heading`, `Label`, `Paragraph` | Texto en negrita, una línea sin ajustar (con tooltip opcional) y un párrafo ajustado al ancho. |
 | `Info`, `Row` | Etiqueta y valor en dos columnas (con icono y tooltip opcionales); texto a la izquierda y a la derecha de una línea. |
 | `Button`, `ButtonRow`, `Stepper`, `LabelAndButton` | Un botón a todo el ancho con su acción, botones que se reparten una fila (pestañas), un número entre botones que lo bajan y suben, y una línea con un botón pequeño a la derecha. |
 | `Bar`, `Space` | Una barra de progreso y un hueco. |
+| `Pair`, `Columns`, `Distribution` | Etiqueta con su valor pegado al borde derecho; una etiqueta y textos en columnas a distancias fijas del borde derecho (cada uno con su tooltip); una barra repartida entre partes con su leyenda debajo (el humor por niveles). |
 | `Document` | La lista de elementos y, si tiene, la acción de su botón de cerrar. |
+
+### `NationScreen.cs`
+La pantalla de la nación (botón «Nación» o tecla N) como datos: `Visible`, la pestaña (`Tab`), el orden de cada tabla, la era que muestra la ciencia y la plantilla elegida. El tiempo sigue corriendo mientras está abierta. `Page()` da lo que muestra la pestaña actual (`NationPage`); «Ver» la cierra y centra el mapa en la provincia o la unidad.
+
+| Elemento | Qué es |
+| --- | --- |
+| `NationTab` | Pestañas: `Summary` (Resumen), `Cities` (Ciudades), `Provinces` (Provincias), `Science` (Ciencia), `Army` (Ejército), `Templates` (Plantillas) y `Diplomacy` (Diplomacia). |
+| `Summary(...)` | Resumen: población (total, asentada, en unidades, migrando), fertilidad media, humor medio con su reparto por niveles (`MoodDistribution`), territorio, ciencia por día y, por rama, su parte y el avance en curso, cada institución (adoptada, cuánto de tu población la tiene o sin nacer), comida con sus días de reserva y el resto de recursos conocidos con su almacén, balance diario y lo que queda en sus bolsas. |
+| `Cities(...)` | Tabla de ciudades: población / capacidad, humor, fertilidad, fiestas, enviar colonos o entrenar guerreros y «Ver». |
+| `Provinces(...)`, `Work(...)` | Tabla de todas las provincias: población, humor, fertilidad, terreno, migrantes en camino, lo que tiene en curso (la obra y lo que entrena su ciudad: la primera con sus días y su barra, cuántas más hay y todas en el tooltip) y «Ver». |
+| `ProvinceCells(...)` | Celdas de población, humor (con tooltip de causas) y fertilidad, comunes a las dos tablas. |
+| `SortableTable(...)`, `Sort(...)` | Tablas cuyas cuatro primeras columnas (nombre, población, humor, fertilidad) ordenan al pulsarlas; otra pulsación invierte el orden; los nombres van de la A a la Z y los números de mayor a menor. Los nombres se ordenan con `TextFormat.SpanishSortKey`. |
+
+### `NationScreen.Science.cs`
+| Función | Qué hace |
+| --- | --- |
+| `Science()`, `InstitutionBadge(...)`, `Branch(...)`, `TechCard(...)` | Pestaña Ciencia: puntos al día (con su desglose y los guardados), una segunda fila con un botón por era para ver sus niveles (`_scienceEra`; por defecto, la primera con avances por descubrir; «(+)» y su tooltip avisan del recargo si falta su institución), la institución que abre la era mostrada a la derecha, su estado con `InstitutionStatus` (adoptada, cuánto se ha extendido y el botón para adoptarla con oro, o sin nacer), y una columna por rama con su prioridad (− y +) y su parte, lo que investiga con barra y tiempo estimado (o un aviso para elegir), y sus niveles: cada uno con lo que hace falta para abrirlo y una tarjeta por avance con su estado, coste (con el descuento por vecinos o el recargo por institución), efecto, requisitos, los edificios y batallones que permite y el botón Investigar. |
+
+### `NationScreen.Military.cs`
+| Función | Qué hace |
+| --- | --- |
+| `Army()`, `UnitActivity(...)` | Orden de batalla, con el mantenimiento diario del ejército (en rojo si no se paga): cada cuartel con sus unidades en árbol, después las unidades sin cuartel y las flotas, con ubicación, hombres, organización, suministro, estado y «Ver». |
+| `Templates()` | Diseñador de unidades: tus plantillas a la izquierda (nueva, duplicar, borrar); a la derecha los batallones de la elegida (hasta 12, con «Quitar»), botones para añadir los que conoces y lo que cuesta, su mantenimiento y cómo lucha una unidad de ese diseño (con `TextFormat.UpkeepText` y `TextFormat.TrainingDaysText`). |
+| `Diplomacy()` | Cada nación: paz o guerra (y desde cuándo), su poder militar frente al tuyo, provincias, lo tomado y perdido, y los botones de declarar la guerra o proponer la paz. |
+
+### `NationPages.cs`
+Lo que muestra cada pestaña de la pantalla de la nación, para que el cliente lo dibuje.
+
+| Elemento | Qué es |
+| --- | --- |
+| `Table`, `Column`, `TextCell`, `ButtonsCell`, `CellBar` | Una tabla: columnas con su ancho, filas de celdas (texto con sufijo pequeño, tooltip, muestra del color de una nación o barra; o botones que se reparten la celda), las columnas que ordenan, el orden actual con la acción de cambiarlo y el texto que se ve si no hay filas. |
+| `TablePage`, `SummaryPage` | Una tabla, bajo una línea en negrita si la hay (Ciudades, Provincias, Ejército, Diplomacia); dos columnas de cifras (Resumen). |
+| `SciencePage`, `InstitutionBadge`, `BranchColumn`, `TechLevel`, `TechCard` | La ciencia: puntos al día, instituciones de la era mostrada, botones de era y, por rama, prioridad, estado, niveles y tarjetas de avance. |
+| `TemplatesPage`, `TemplateSlot` | El diseñador de unidades: plantillas y sus acciones, huecos de la elegida, batallones para añadir y sus cifras (un `Document`). |
 
 ---
 
@@ -787,31 +823,8 @@ La ventana para construir una carretera o un ferrocarril (botón de los ingenier
 | `OpenRoadWindow(desde, tipo)`, `CloseRoadWindow()`, `DrawRoadWindow()` | A la izquierda, para que se vea la ruta: tus otras ciudades y cuarteles, del más cercano al más lejano (el más cercano que lo necesita ya elegido); los ya unidos, apagados; tramos nuevos, coste, trabajo y ciudades que une por el camino; «Construir» y «Cancelar» (o Esc). |
 | `PlannedRoute` | La ruta elegida, que `RoadLayer` dibuja en el mapa. Los nombres de las ciudades y cuarteles salen de `GameController.HubName`. |
 
-### `Screens/NationView.Military.cs`
-Pestañas Ejército, Plantillas y Diplomacia de la pantalla de la nación.
-
-| Función | Qué hace |
-| --- | --- |
-| `Army(...)`, `UnitActivity(...)` | Orden de batalla, con el mantenimiento diario del ejército (en rojo si no se paga): cada cuartel con sus unidades en árbol, después las unidades sin cuartel y las flotas, con ubicación, hombres, organización, suministro, estado y «Ver». |
-| `Templates(...)` | Diseñador de unidades: tus plantillas a la izquierda (nueva, duplicar, borrar); a la derecha los batallones de la elegida (hasta 12, con «Quitar»), botones para añadir los que conoces y lo que cuesta, su mantenimiento y cómo lucha una unidad de ese diseño (con `TextFormat.UpkeepText` y `TextFormat.TrainingDaysText`). |
-| `Diplomacy(...)` | Cada nación: paz o guerra (y desde cuándo), su poder militar frente al tuyo, provincias, lo tomado y perdido, y los botones de declarar la guerra o proponer la paz. |
-
 ### `Screens/NationView.cs`
-Pantalla de la nación (botón «Nación» o tecla N). El tiempo sigue corriendo mientras está abierta.
-
-| Elemento | Qué es |
-| --- | --- |
-| `NationTab` | Pestañas: `Summary` (Resumen), `Cities` (Ciudades), `Provinces` (Provincias), `Science` (Ciencia), `Army` (Ejército), `Templates` (Plantillas) y `Diplomacy` (Diplomacia). |
-| `NationView(partida, jugador, verProvincia, verUnidad, mostrar)` | Recibe qué hacer al pulsar «Ver» (centrar el mapa en una provincia o una unidad) y cómo mostrar el resultado de las órdenes. |
-| `Frame(ui, área)` | Dibuja el panel opaco con las pestañas y el botón Cerrar. |
-| `Summary(...)` | Resumen: población (total, asentada, en unidades, migrando), fertilidad media, humor medio con su barra por niveles (`MoodBar`), territorio, ciencia por día y, por rama, su parte y el avance en curso, cada institución (adoptada, cuánto de tu población la tiene o sin nacer), comida con sus días de reserva y el resto de recursos conocidos con su almacén, balance diario y lo que queda en sus bolsas. |
-| `Cities(...)` | Tabla de ciudades: población / capacidad, humor, fertilidad, fiestas, enviar colonos o entrenar guerreros y «Ver». |
-| `Provinces(...)`, `Work(...)` | Tabla de todas las provincias: población, humor, fertilidad, terreno, migrantes en camino, lo que tiene en curso (la obra y lo que entrena su ciudad: la primera con sus días y su barra, cuántas más hay y todas en el tooltip) y «Ver». |
-| `ProvinceCells(...)` | Celdas de población, humor (con tooltip de causas) y fertilidad, comunes a las dos tablas. |
-| `Header(...)`, `Sort(...)` | Cabeceras que ordenan al pulsarlas (nombre, población, humor, fertilidad; otra pulsación invierte el orden). Los nombres se ordenan con `TextFormat.SpanishSortKey`. |
-| `Rows(...)` | Filas visibles con desplazamiento por la rueda del ratón y barra de desplazamiento. |
-| `Science(...)`, `Branch(...)`, `TechCard(...)`, `ProgressBar(...)` | Pestaña Ciencia: puntos al día (con su desglose y los guardados), una segunda fila con un botón por era para ver sus niveles (`_scienceEra`; por defecto, la primera con avances por descubrir; «(+)» y su tooltip avisan del recargo si falta su institución), la institución que abre la era mostrada a la derecha, su estado con `InstitutionStatus` (adoptada, cuánto se ha extendido y el botón para adoptarla con oro, o sin nacer), y una columna por rama con su prioridad (− y +) y su parte, lo que investiga con barra y tiempo estimado (o un aviso para elegir), y sus niveles: cada uno con lo que hace falta para abrirlo y una tarjeta por avance con su estado, coste (con el descuento por vecinos o el recargo por institución), efecto, requisitos, los edificios y batallones que permite y el botón Investigar. |
-| `Heading`, `Row`, `ViewButton`, `ProvinceName` | Ayudas de dibujo y formato. |
+`NationView`: dibuja la pantalla de la nación (`NationScreen`): el panel opaco con el nombre, las pestañas y «Cerrar», y la página de la pestaña. Las tablas (`TablePage`, `TextCell`, `Header`, `Rows`) llevan cabeceras que ordenan, filas alternas resaltadas bajo el ratón y desplazamiento con la rueda (guardado por pestaña); el resumen son dos `Document`; la ciencia (`Science`, `InstitutionBadge`, `Branch`, `TechCard`) coloca las tres ramas en columnas con sus tarjetas de 88 píxeles; el diseñador (`Templates`) pone la lista de plantillas a la izquierda, los huecos y los batallones para añadir en el centro y sus cifras a la derecha.
 
 ### `Graphics/MapRenderer.cs`
 Dibuja el mapa entero con un único shader.
@@ -899,7 +912,7 @@ Interfaz propia de "modo inmediato": los botones se declaran en cada fotograma y
 | `BeginFrame`, `EndFrame` | Empezar el fotograma / dibujar el tooltip al final. |
 
 ### `UI/DocumentView.cs`
-`DocumentView.Draw(ui, documento, x, y, ancho)`: dibuja un `Document` de Conquer.Presentation de arriba abajo con las piezas de `Ui` y ejecuta la acción de los botones pulsados. `Press(ui, botón, área)` dibuja un botón suelto del modelo (velocidades, modos de mapa, filtro de recursos) con su icono; `Size` traduce los tamaños de letra.
+`DocumentView.Draw(ui, documento, x, y, ancho)`: dibuja un `Document` (también `Pair`, `Columns` y `Distribution`) de Conquer.Presentation de arriba abajo con las piezas de `Ui` y ejecuta la acción de los botones pulsados. `Press(ui, botón, área)` dibuja un botón suelto del modelo (velocidades, modos de mapa, filtro de recursos) con su icono; `Size` traduce los tamaños de letra.
 
 ### `UI/ChangelogView.cs`
 `ChangelogView`: muestra el historial (`Changelog`) en un panel con desplazamiento. `Layout` ajusta cada línea al ancho y le da tamaño y color según sea título, sección, viñeta o párrafo.
@@ -945,6 +958,7 @@ Uso: ver el README.
 | `SaveGameTests.cs` | Cargar una partida y volver a guardarla da exactamente el mismo fichero; la partida cargada sigue jugándose; los mismos ajustes generan el mismo mapa; las partidas anteriores a la 1.13.0 reciben llenos los yacimientos nuevos; el mapa de los tests conserva su huella y cargan las partidas guardadas con la 1.30.1 y con la 1.31.0/1.32.0; las partidas anteriores a los talleres dan uno a cada cuartel cuyo dueño conoce la Maquinaria de asedio; se rechazan las partidas de otro mapa y las dañadas. |
 | `InterfaceTests.cs` | Los nombres se ordenan alfabéticamente en español (sin tildes, ñ tras n); el texto de la ayuda solo usa caracteres que la fuente sabe dibujar (Latin-1); `Conquer.Game` y `Conquer.Presentation` no dependen de ningún motor (ni Silk.NET, ni Stb, ni Godot, ni el cliente); el reloj reanuda a la velocidad que tenía; los mensajes salen del más nuevo al más antiguo y caducan; el historial empieza por la última versión, sin marcas de Markdown. Los tests no usan el cliente. |
 | `ControllerTests.cs` | La partida en pantalla sin pantalla: empieza con los colonos seleccionados y a la vista; seleccionar una provincia quita la unidad; el tiempo no corre congelado ni en pausa; nombrar una ciudad la funda con ese nombre y la selecciona, y un nombre no válido deja el diálogo abierto; el modo de mapa vuelve al terreno tras dar la vuelta; el panel de los colonos ofrece fundar la ciudad; las pestañas de la capital cambian y su botón de cerrar quita la selección; la migración forzada no pide más gente de la que puede salir; los botones de velocidad de la barra superior ponen el reloj. |
+| `NationScreenTests.cs` | La pantalla de la nación como datos: la tabla de ciudades lista la capital y su «Ver» la muestra en el mapa; pulsar un título de columna ordena por ella y pulsarlo otra vez lo invierte; el diseñador añade un batallón a una plantilla nueva; declarar la guerra cambia el botón a proponer la paz; la ciencia tiene tres ramas e «Investigar» elige el avance; el resumen muestra la capital. |
 | `ReleaseTests.cs` | La versión del `.csproj` coincide con la primera entrada del `CHANGELOG.md`. |
 
 ---

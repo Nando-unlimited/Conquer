@@ -21,6 +21,11 @@ public enum Tone
     Track,
     /// <summary>The groove of a progress bar inside a panel.</summary>
     Groove,
+    /// <summary>The border of a card or a row.</summary>
+    Border,
+    /// <summary>The two middle mood levels, between unrest (<see cref="Bad"/>) and content (<see cref="Good"/>).</summary>
+    Uneasy,
+    Calm,
 }
 
 public enum TextSize
@@ -85,6 +90,21 @@ public sealed record LabelAndButton(string Text, Ink Ink, Button Button, float B
 public sealed record Bar(double Fraction, Ink Fill, Ink Track, float Thickness, float Gap) : Element;
 
 public sealed record Space(float Height) : Element;
+
+/// <summary>A label on the left and its value against the right edge.</summary>
+public sealed record Pair(string Label, string Value, Ink Ink = default, string? Tooltip = null, float Indent = 0) : Element;
+
+/// <summary>One column of a <see cref="Columns"/> line, with its own tooltip.</summary>
+public sealed record ColumnText(string Text, Ink Ink = default, string? Tooltip = null);
+
+/// <summary>A label and texts in columns that start at fixed distances from the right edge (a small table).</summary>
+public sealed record Columns(string Label, IReadOnlyList<ColumnText> Values, IReadOnlyList<float> FromRight, TextSize Size = TextSize.Normal, float Height = 24) : Element;
+
+/// <summary>One part of a <see cref="Distribution"/>: its share of the bar, its colour, and its legend line.</summary>
+public sealed record Share(double Value, Ink Ink, string Label, string Amount);
+
+/// <summary>A bar split between the parts, then a legend line for each from the last part to the first.</summary>
+public sealed record Distribution(IReadOnlyList<Share> Parts) : Element;
 
 /// <summary>A panel's contents, top to bottom; <see cref="OnClose"/> (if any) is its close button.</summary>
 public sealed class Document

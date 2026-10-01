@@ -69,6 +69,19 @@ public static class DocumentView
                     ui.Batch.Rect(x, y, w * (float)Math.Clamp(bar.Fraction, 0, 1), bar.Thickness, Theme.Of(bar.Fill));
                     y += bar.Thickness + bar.Gap;
                     break;
+                case Pair pair:
+                    ui.Text(x + pair.Indent, y, pair.Label, Theme.TextDim);
+                    ui.Text(x + w - ui.Font.Measure(pair.Value, FontSize.Normal), y, pair.Value, Theme.Of(pair.Ink));
+                    if (pair.Tooltip != null && ui.Hover(new Rect(x, y, w, 24))) ui.Tooltip(pair.Tooltip);
+                    y += 24;
+                    break;
+                case Columns columns:
+                    ColumnsLine(ui, columns, x, y, w);
+                    y += columns.Height;
+                    break;
+                case Distribution distribution:
+                    DistributionBar(ui, distribution, x, ref y, w);
+                    break;
                 case Space space:
                     y += space.Height;
                     break;
@@ -114,6 +127,41 @@ public static class DocumentView
         ui.Text(left, y, r.Left, Theme.Of(r.LeftInk), FontSize.Small, r.Bold);
         if (r.Right.Length > 0) ui.Text(x + w - ui.Font.Measure(r.Right, FontSize.Small), y, r.Right, Theme.Of(r.RightInk), FontSize.Small);
         if (r.Tooltip != null && ui.Hover(new Rect(x, y, w, r.Height))) ui.Tooltip(r.Tooltip);
+    }
+
+    /// <summary>The label, then each value where its column starts; a value's tooltip covers its column.</summary>
+    private static void ColumnsLine(Ui ui, Columns c, float x, float y, float w)
+    {
+        if (c.Label.Length > 0) ui.Text(x, y, c.Label, Theme.TextDim, Size(c.Size));
+        for (int i = 0; i < c.Values.Count; i++)
+        {
+            var value = c.Values[i];
+            float left = x + w - c.FromRight[i], width = c.FromRight[i] - (i + 1 < c.FromRight.Count ? c.FromRight[i + 1] : 0);
+            ui.Text(left, y, value.Text, Theme.Of(value.Ink), Size(c.Size));
+            if (value.Tooltip != null && ui.Hover(new Rect(left, y, width, 20))) ui.Tooltip(value.Tooltip);
+        }
+    }
+
+    /// <summary>A bar split between the parts (a groove if all are empty), then a legend line for each, last part first.</summary>
+    private static void DistributionBar(Ui ui, Distribution d, float x, ref float y, float w)
+    {
+        double total = d.Parts.Sum(p => p.Value);
+        float bx = x;
+        foreach (var part in d.Parts.Where(_ => total > 0))
+        {
+            float bw = (float)(w * part.Value / total);
+            ui.Batch.Rect(bx, y, bw, 16, Theme.Of(part.Ink));
+            bx += bw;
+        }
+        if (total <= 0) ui.Batch.Rect(x, y, w, 16, Theme.ButtonDisabled);
+        y += 24;
+        foreach (var part in d.Parts.Reverse())
+        {
+            ui.Batch.Rect(x, y + 5, 12, 12, Theme.Of(part.Ink));
+            ui.Text(x + 20, y, part.Label, Theme.TextDim);
+            ui.Text(x + w - ui.Font.Measure(part.Amount, FontSize.Normal), y, part.Amount);
+            y += 24;
+        }
     }
 
     /// <summary>The buttons that lower the value, the value in an 80-pixel box, and those that raise it.</summary>
