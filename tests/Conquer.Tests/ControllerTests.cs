@@ -202,6 +202,37 @@ public class ControllerTests(WorldFixture world)
     }
 
     [Fact]
+    public void TheBattleWindowShowsBothSidesAndGoesToTheProvince()
+    {
+        var s = GameSession.Create(_map, 2, seed: 7, computerRivals: false);
+        var (a, b) = _map.Provinces
+            .Where(p => p.Biome == Biome.Grassland && p.Neighbors.Length > 3)
+            .SelectMany(p => p.Neighbors.Select(n => (A: p, B: _map.Provinces[n])))
+            .First(t => t.B.Biome == Biome.Grassland && t.B.Neighbors.Length > 3);
+        s.FoundCity(0, s.AddUnit(0, UnitType.Settlers, a.Id, 300).Id);
+        var claimer = s.AddRegiment(1, b.Id, BattalionType.Scouts);
+        s.Claim(1, claimer.Id);
+        s.AddRegiment(1, b.Id, BattalionType.Warriors, BattalionType.Warriors);
+        var attacker = s.AddRegiment(0, a.Id, BattalionType.Warriors, BattalionType.Warriors);
+        s.DeclareWar(0, 1);
+        s.MoveUnit(0, attacker.Id, b.Id);
+        for (int h = 0; h < 24 * 5 && (s.BattleIn(b.Id) is null || s.BattleIn(b.Id)!.History.Count < 3); h++) s.Step();
+
+        var game = new GameController(s);
+        game.OpenFirstBattle();
+        var window = game.BattleWindow()!;
+        Assert.Equal(2, window.Sides.Count);
+        Assert.Equal("Atacante", Assert.IsType<Banner>(window.Sides[0].Elements[0]).Right);
+        Assert.Contains(window.Sides[0].Elements, e => e is UnitEntry entry && entry.Name == attacker.Name);
+        Assert.NotNull(window.Fire);
+        Assert.NotNull(window.Chart);
+        Assert.Contains("Ahora", window.Chart!.Describe(window.Chart.Points.Count - 1));
+        window.GoTo.OnClick!();
+        Assert.False(game.BattleWindowOpen);
+        Assert.Equal(game.Center(b.Id), game.Camera.Center);
+    }
+
+    [Fact]
     public void TheMapModeCyclesBackToTerrain()
     {
         var game = NewGame();

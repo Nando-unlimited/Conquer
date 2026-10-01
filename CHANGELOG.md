@@ -2,6 +2,11 @@
 
 Todos los cambios del juego, del más reciente al más antiguo. Cada versión es un commit cuyo título es su número.
 
+## [1.57.0] - 2026-10-01
+
+### Cambiado
+- **Código separado del motor gráfico** (sexto paso): la ventana de las batallas, en tierra y en el mar, se construye en Conquer.Presentation (bandos, fuego, unidades y gráfico de organización); el cliente solo la dibuja. El juego se ve y funciona igual.
+
 ## [1.56.0] - 2026-10-01
 
 ### Cambiado

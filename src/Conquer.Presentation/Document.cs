@@ -86,13 +86,13 @@ public sealed record Stepper(string Value, IReadOnlyList<Button> Less, IReadOnly
 /// <summary>A line of small text with a small button at its right end.</summary>
 public sealed record LabelAndButton(string Text, Ink Ink, Button Button, float ButtonWidth = 60) : Element;
 
-/// <summary>A bar filled to <paramref name="Fraction"/> (0 to 1), followed by <paramref name="Gap"/> pixels.</summary>
-public sealed record Bar(double Fraction, Ink Fill, Ink Track, float Thickness, float Gap) : Element;
+/// <summary>A bar filled to <paramref name="Fraction"/> (0 to 1), followed by <paramref name="Gap"/> pixels; <paramref name="Mark"/> (0 to 1) draws a red notch, such as the point where units break.</summary>
+public sealed record Bar(double Fraction, Ink Fill, Ink Track, float Thickness, float Gap, double? Mark = null) : Element;
 
 public sealed record Space(float Height) : Element;
 
 /// <summary>A label on the left and its value against the right edge.</summary>
-public sealed record Pair(string Label, string Value, Ink Ink = default, string? Tooltip = null, float Indent = 0) : Element;
+public sealed record Pair(string Label, string Value, Ink Ink = default, string? Tooltip = null, float Indent = 0, TextSize Size = TextSize.Normal, float Height = 24) : Element;
 
 /// <summary>One column of a <see cref="Columns"/> line, with its own tooltip.</summary>
 public sealed record ColumnText(string Text, Ink Ink = default, string? Tooltip = null);
@@ -106,11 +106,23 @@ public sealed record Share(double Value, Ink Ink, string Label, string Amount);
 /// <summary>A bar split between the parts, then a legend line for each from the last part to the first.</summary>
 public sealed record Distribution(IReadOnlyList<Share> Parts) : Element;
 
+/// <summary>A nation's name in bold after a square of its colour (0xAARRGGBB), with a small note on the right.</summary>
+public sealed record Banner(string Text, uint Color, string Right = "") : Element;
+
+/// <summary>
+/// A unit in a list: its name and a note on the right, a line about it, and its strength and organisation bars side
+/// by side. With a tooltip, the row lights up under the mouse. Rows that do not fit above the bottom become «y N más».
+/// </summary>
+public sealed record UnitEntry(string Name, Ink NameInk, string Right, Ink RightInk, string Line, Ink LineInk, double Strength, double Organisation,
+    string? Tooltip = null) : Element;
+
 /// <summary>A panel's contents, top to bottom; <see cref="OnClose"/> (if any) is its close button.</summary>
 public sealed class Document
 {
     public List<Element> Elements { get; } = [];
     public Action? OnClose { get; init; }
+    /// <summary>What replaces the <see cref="UnitEntry"/> rows that do not fit ("{0}" is how many).</summary>
+    public string Hidden { get; init; } = "y {0} más";
 
     public void Add(Element element) => Elements.Add(element);
 }

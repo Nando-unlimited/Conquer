@@ -14,12 +14,15 @@ public static class DocumentView
         _ => FontSize.Normal,
     };
 
-    /// <summary>Lays the document out from (<paramref name="x"/>, <paramref name="y"/>) in a column <paramref name="w"/> wide.</summary>
-    public static void Draw(Ui ui, Document doc, float x, ref float y, float w)
+    /// <summary>
+    /// Lays the document out from (<paramref name="x"/>, <paramref name="y"/>) in a column <paramref name="w"/> wide. The
+    /// <see cref="UnitEntry"/> rows that would go below <paramref name="bottom"/> are left out and counted instead.
+    /// </summary>
+    public static void Draw(Ui ui, Document doc, float x, ref float y, float w, float bottom = float.MaxValue)
     {
-        foreach (var element in doc.Elements)
+        for (int index = 0; index < doc.Elements.Count; index++)
         {
-            switch (element)
+            switch (doc.Elements[index])
             {
                 case Heading h:
                     ui.Text(x, y, h.Text, Theme.Of(h.Ink), Size(h.Size), bold: true);
@@ -67,13 +70,30 @@ public static class DocumentView
                 case Bar bar:
                     ui.Batch.Rect(x, y, w, bar.Thickness, Theme.Of(bar.Track));
                     ui.Batch.Rect(x, y, w * (float)Math.Clamp(bar.Fraction, 0, 1), bar.Thickness, Theme.Of(bar.Fill));
+                    if (bar.Mark is double mark) ui.Batch.Rect(x + w * (float)mark, y - 2, 1, 10, Theme.Bad);
                     y += bar.Thickness + bar.Gap;
                     break;
                 case Pair pair:
-                    ui.Text(x + pair.Indent, y, pair.Label, Theme.TextDim);
-                    ui.Text(x + w - ui.Font.Measure(pair.Value, FontSize.Normal), y, pair.Value, Theme.Of(pair.Ink));
-                    if (pair.Tooltip != null && ui.Hover(new Rect(x, y, w, 24))) ui.Tooltip(pair.Tooltip);
-                    y += 24;
+                    var size = Size(pair.Size);
+                    ui.Text(x + pair.Indent, y, pair.Label, Theme.TextDim, size);
+                    ui.Text(x + w - ui.Font.Measure(pair.Value, size), y, pair.Value, Theme.Of(pair.Ink), size);
+                    if (pair.Tooltip != null && ui.Hover(new Rect(x, y, w, pair.Height))) ui.Tooltip(pair.Tooltip);
+                    y += pair.Height;
+                    break;
+                case Banner banner:
+                    ui.Batch.Rect(x, y + 3, 12, 12, new Rgba(banner.Color));
+                    ui.Text(x + 18, y, banner.Text, Theme.Text, bold: true);
+                    if (banner.Right.Length > 0) ui.Text(x + w - ui.Font.Measure(banner.Right, FontSize.Small), y + 2, banner.Right, Theme.TextDim, FontSize.Small);
+                    y += 26;
+                    break;
+                case UnitEntry entry:
+                    if (y + 44 > bottom)
+                    {
+                        int left = doc.Elements.Skip(index).OfType<UnitEntry>().Count();
+                        ui.Text(x, y, string.Format(doc.Hidden, left), Theme.TextDim, FontSize.Small);
+                        return;
+                    }
+                    Entry(ui, entry, x, ref y, w);
                     break;
                 case Columns columns:
                     ColumnsLine(ui, columns, x, y, w);
@@ -87,6 +107,30 @@ public static class DocumentView
                     break;
             }
         }
+    }
+
+    /// <summary>A unit's name and note, a line about it, and its strength and organisation bars side by side; lit under the mouse when it has a tooltip.</summary>
+    private static void Entry(Ui ui, UnitEntry e, float x, ref float y, float w)
+    {
+        var row = new Rect(x, y, w, 40);
+        bool hover = e.Tooltip != null && ui.Hover(row);
+        if (hover) ui.Batch.Rect(row.X - 4, row.Y - 2, row.W + 8, row.H + 2, Theme.Highlight);
+        ui.Text(x, y, e.Name, Theme.Of(e.NameInk), FontSize.Small, bold: true);
+        if (e.Right.Length > 0) ui.Text(x + w - ui.Font.Measure(e.Right, FontSize.Small), y, e.Right, Theme.Of(e.RightInk), FontSize.Small);
+        y += 18;
+        ui.Text(x, y, e.Line, Theme.Of(e.LineInk), FontSize.Small);
+        y += 17;
+        float half = (w - 6) / 2;
+        Meter(ui, new Rect(x, y, half, 4), e.Strength, Theme.Strength);
+        Meter(ui, new Rect(x + half + 6, y, half, 4), e.Organisation, Theme.Organisation);
+        y += 10;
+        if (hover) ui.Tooltip(e.Tooltip!);
+    }
+
+    private static void Meter(Ui ui, Rect r, double share, Rgba color)
+    {
+        ui.Batch.Rect(r.X, r.Y, r.W, r.H, Rgba.Black.WithAlpha(0.7f));
+        ui.Batch.Rect(r.X, r.Y, r.W * (float)Math.Clamp(share, 0, 1), r.H, color);
     }
 
     /// <summary>Draws the button and runs its action if it was pressed this frame.</summary>

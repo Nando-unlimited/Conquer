@@ -73,7 +73,7 @@ public sealed partial class GameScreen : IScreen
         if (options.Panel is "regiment" or "march" or "edit" && Human.CapitalCityId is int capital) ShowSampleArmy(capital, march: options.Panel == "march");
         if (options.Panel == "edit" && _game.SelectedUnitId is int sample && _session.UnitById(sample) is { HasOfficer: true }) ShowSampleOfficers(sample);
         if (options.Panel == "found" && _session.UnitById(settlers.Id) != null) _game.OpenCityNaming(settlers.Id, settlers.ProvinceId);
-        if (options.Panel == "battle") ShowFirstBattle();
+        if (options.Panel == "battle") _game.OpenFirstBattle();
     }
 
     /// <summary>
@@ -139,13 +139,13 @@ public sealed partial class GameScreen : IScreen
         DrawMessages();
         if (_game.Naming.HasValue) DrawCityNaming();
         if (_game.EditingUnitId.HasValue) DrawUnitEditor();
-        if (BattleWindowOpen) DrawBattleWindow();
+        if (_game.BattleWindowOpen) DrawBattleWindow();
         if (_game.RoadWindowOpen) DrawRoadWindow();
         if (_menuOpen) DrawPauseMenu();
         _changelog.Frame(Ui, new Rect(_app.ScreenSize.X / 2 - 380, 70, 760, _app.ScreenSize.Y - 140));
         _help.Frame(Ui, new Rect(Math.Max(8, _app.ScreenSize.X / 2 - 520), 70, Math.Min(1040, _app.ScreenSize.X - 16), _app.ScreenSize.Y - 140));
 
-        bool modal = _menuOpen || _game.Naming.HasValue || _game.EditingUnitId.HasValue || BattleWindowOpen || _game.RoadWindowOpen;
+        bool modal = _menuOpen || _game.Naming.HasValue || _game.EditingUnitId.HasValue || _game.BattleWindowOpen || _game.RoadWindowOpen;
         if (!modal && !_changelog.Visible && !_help.Visible && !_game.Nation.Visible) HandleMapMouse();
         if (!Ui.MouseOverUi && !modal && !_help.Visible && !_game.Nation.Visible && _game.HoverProvince >= 0 && !_dragging) HoverTooltip();
     }
@@ -175,7 +175,7 @@ public sealed partial class GameScreen : IScreen
             {
                 case Key.Escape:
                     if (_help.Visible) _help.Visible = false;
-                    else if (BattleWindowOpen) CloseBattle();
+                    else if (_game.BattleWindowOpen) _game.CloseBattle();
                     else if (_game.RoadWindowOpen) _game.CloseRoadWindow();
                     else if (_changelog.Visible) _changelog.Visible = false;
                     else if (_game.Nation.Visible) _game.Nation.Visible = false;
@@ -239,7 +239,7 @@ public sealed partial class GameScreen : IScreen
             var battle = _battleHitBoxes.LastOrDefault(h => h.Bounds.Contains(Ui.Input.Mouse));
             if (battle.Bounds.W > 0)
             {
-                OpenBattle(battle.ProvinceId, battle.Battle);
+                _game.OpenBattle(battle.ProvinceId, battle.Battle);
                 return;
             }
             var hit = _unitHitBoxes.LastOrDefault(h => h.Bounds.Contains(Ui.Input.Mouse));
