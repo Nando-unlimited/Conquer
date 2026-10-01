@@ -82,7 +82,8 @@ public sealed partial class GameScreen
                 Bar(new Rect(r.X - 2, r.Bottom + 3, r.W + 4, 3), unit.StrengthShare, StrengthColor);
                 Bar(new Rect(r.X - 2, r.Bottom + 7, r.W + 4, 3), unit.OrganisationShare, OrganisationColor);
             }
-            else if (scale > 0.7f) Ui.TextCentered(r, unit.IsHeadquarters ? "HQ" : unit.Symbol, Rgba.Black, FontSize.Small, bold: true);
+            else if (unit.IsHeadquarters) { if (scale > 0.7f) Ui.TextCentered(r, "HQ", Rgba.Black, FontSize.Small, bold: true); }
+            else MapIcons.Settlers(Batch, r.X + 2, r.Y + 2, r.W - 4, r.H - 4);
             if (unit.Echelon.Length > 0) DrawEchelon(r, unit.Echelon, scale);
             _unitHitBoxes.Add((unit.Id, r));
         }

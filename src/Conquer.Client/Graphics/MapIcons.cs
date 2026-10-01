@@ -104,6 +104,35 @@ public static class MapIcons
         }
     }
 
+    /// <summary>
+    /// Settlers: a covered wagon in black inside the frame at (<paramref name="x"/>, <paramref name="y"/>): a tall arched canvas,
+    /// the bed under it, the draught pole reaching forward and two wheels.
+    /// </summary>
+    public static void Settlers(Batch2D b, float x, float y, float w, float h)
+    {
+        var ink = Rgba.Black;
+        float bed = y + h * 0.62f, cx = x + w * 0.56f, rx = w * 0.24f, ry = h * 0.52f;
+        // The canvas: the upper half of an ellipse standing on the bed, with ribs.
+        const int Segments = 10;
+        for (int i = 0; i < Segments; i++)
+        {
+            float a0 = MathF.PI + MathF.PI * i / Segments, a1 = MathF.PI + MathF.PI * (i + 1) / Segments;
+            b.Line(new(cx + MathF.Cos(a0) * rx, bed + MathF.Sin(a0) * ry), new(cx + MathF.Cos(a1) * rx, bed + MathF.Sin(a1) * ry), ink, 1.4f);
+        }
+        b.Line(new(cx - rx * 0.4f, bed - ry * 0.9f), new(cx - rx * 0.4f, bed), ink, 1);
+        b.Line(new(cx + rx * 0.4f, bed - ry * 0.9f), new(cx + rx * 0.4f, bed), ink, 1);
+        b.Line(new(cx - rx * 1.15f, bed), new(cx + rx * 1.15f, bed), ink, 1.8f);
+        b.Line(new(cx - rx * 1.15f, bed), new(x + w * 0.04f, bed + h * 0.16f), ink, 1.2f);
+        // Wheels: rings with a hub.
+        float wheel = Math.Max(2f, h * 0.22f);
+        foreach (float wx in new[] { cx - rx * 0.6f, cx + rx * 0.6f })
+        {
+            var hub = new Vector2(wx, bed + wheel * 0.75f);
+            b.Circle(hub, wheel, ink, inner: wheel - 1.3f);
+            b.Circle(hub, 0.8f, ink);
+        }
+    }
+
     /// <summary>A small NATO counter (20×14) for a battalion, as the lists of troops show it: its arm's symbol on a pale field.</summary>
     public static void Battalion(Batch2D b, float x, float y, BattalionType type)
     {

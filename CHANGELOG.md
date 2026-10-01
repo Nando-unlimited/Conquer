@@ -2,6 +2,12 @@
 
 Todos los cambios del juego, del más reciente al más antiguo. Cada versión es un commit cuyo título es su número.
 
+## [1.51.0] - 2026-10-01
+
+### Cambiado
+- **Símbolo para los colonos**: su ficha muestra un carromato en lugar de la letra «C», y se ve a cualquier zoom.
+- Se quitan los picos y los árboles dibujados sobre el mapa de terreno.
+
 ## [1.50.0] - 2026-10-01
 
 ### Cambiado
