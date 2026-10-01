@@ -2,6 +2,12 @@
 
 Todos los cambios del juego, del más reciente al más antiguo. Cada versión es un commit cuyo título es su número.
 
+## [1.48.0] - 2026-10-01
+
+### Cambiado
+- **Agua según su profundidad**: el mar pasa suavemente del turquesa de los bajíos al azul marino de las fosas, sin los escalones de antes entre mar costero, océano y océano profundo.
+- **Espuma en la costa**: con el mapa cerca, las olas rompen en una franja blanca que se mueve a lo largo de la orilla.
+
 ## [1.47.0] - 2026-10-01
 
 ### Cambiado

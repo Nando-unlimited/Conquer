@@ -118,8 +118,18 @@ public sealed class MapRenderer : IDisposable
             return col * (1.0 + 0.06 * grain + 0.14 * ground.g * crowns(m) + 0.05 * ground.b * dunes);
         }
 
-        // Slow ripples drifting across open water.
-        vec3 waterDetail(vec2 m, vec3 col) {
+        // Water coloured by its depth, smoothly from turquoise shallows to navy deeps; lighter shallows about a map pixel
+        // wide along the coast, surf breaking on it when zoomed in, and slow ripples drifting across.
+        // coastDistance: screen pixels to the coast.
+        vec3 waterDetail(vec2 m, float coastDistance) {
+            float depth = texture(uDetail, m / uMapSize).r;
+            vec3 col = depth < 0.35 ? mix(vec3(0.27, 0.52, 0.72), vec3(0.15, 0.34, 0.58), depth / 0.35)
+                                    : mix(vec3(0.15, 0.34, 0.58), vec3(0.07, 0.16, 0.34), (depth - 0.35) / 0.65);
+            col *= 1.0 + 0.22 * (1.0 - smoothstep(0.0, 1.2 * uZoom, coastDistance));
+            if (uZoom >= uSmoothZoom) {
+                float surf = 0.55 + 0.45 * sin(uTime * 1.3 + dot(m, vec2(2.1, 1.7)) + 3.0 * octave(m, 1.0));
+                col = mix(col, vec3(0.86, 0.93, 0.96), (1.0 - smoothstep(1.0, 7.0, coastDistance)) * surf * 0.45);
+            }
             float t = uTime * 0.04;
             float ripple = octave(m + vec2(t, 0.6 * t), 2.5) + 0.6 * octave(m - vec2(0.7 * t, -0.4 * t), 7.0);
             return col * (1.0 + 0.07 * ripple);
@@ -257,14 +267,12 @@ public sealed class MapRenderer : IDisposable
 
             vec3 col = texture(uTerrain, m / uMapSize).rgb;
             int id;
-            float provinceLine, ownerDistance;
+            float provinceLine, ownerDistance, coastDistance;
             bool sea;
             if (uZoom >= uSmoothZoom) {
-                float provinceDistance, coastDistance;
+                float provinceDistance;
                 smoothRegions(m, id, provinceDistance, ownerDistance, col, sea, coastDistance);
                 provinceLine = lineCoverage(provinceDistance, 0.6);
-                // Shallows along the coast, about a map pixel wide, follow the smooth coastline.
-                if (sea) col *= 1.0 + 0.22 * (1.0 - smoothstep(0.0, 1.2 * uZoom, coastDistance));
             } else {
                 // Zoomed out a map pixel is smaller than a screen pixel: compare with the next screen pixel.
                 id = idAt(m);
@@ -274,9 +282,9 @@ public sealed class MapRenderer : IDisposable
                 provinceLine = (id != idR || id != idD) ? 1.0 : 0.0;
                 ownerDistance = ownerDistanceNear(m, ownerOf(id));
                 sea = isWater(id);
-                if (sea && (!isWater(idR) || !isWater(idD))) col *= 1.22;
+                coastDistance = sea && (!isWater(idR) || !isWater(idD)) ? 0.5 : 1e6;
             }
-            col = sea ? waterDetail(m, col) : landDetail(m, col);
+            col = sea ? waterDetail(m, coastDistance) : landDetail(m, col);
 
             vec4 pc = texelFetch(uProvColor, slot(id), 0);
             col = mix(col, pc.rgb, pc.a);

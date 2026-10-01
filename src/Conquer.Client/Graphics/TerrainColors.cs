@@ -3,8 +3,8 @@ using Conquer.Game.World;
 namespace Conquer.Client.Graphics;
 
 /// <summary>
-/// The textures the map shader paints the land with: biome colours (heights a little paler, deeper water darker) and,
-/// per map pixel, the height and what the ground is made of. The shader lights the relief and adds detail from them;
+/// The textures the map shader paints the land with: biome colours (heights a little paler) and,
+/// per map pixel, the height (or depth) and what the ground is made of. The shader lights the relief, colours the water and adds detail from them;
 /// the shallows along the coast follow the smooth coastline it draws.
 /// </summary>
 public static class TerrainColors
@@ -25,14 +25,8 @@ public static class TerrainColors
                 float r = c.R, g = c.G, b = c.B;
                 short e = elevation[i];
 
-                if (biome.Info().IsWater && biome != Biome.Lake)
-                {
-                    // Deeper water is darker (the lighter shallows along the coast are drawn by the map shader).
-                    float depth = Math.Clamp(-e / 6000f, 0, 1);
-                    float f = 1.15f - depth * 0.45f;
-                    r *= f; g *= f; b *= f;
-                }
-                else if (!biome.Info().IsWater)
+                // Water is coloured by the map shader, from its depth in the detail texture.
+                if (!biome.Info().IsWater)
                 {
                     // High ground fades a little towards grey-white, like thinner vegetation.
                     float height = Math.Clamp(e / 4000f, 0, 1) * 0.25f;
@@ -53,8 +47,12 @@ public static class TerrainColors
     /// <summary>Metres of land height the detail texture's red channel spans (square-root scale, finer low down).</summary>
     public const float MaxHeight = 9000;
 
+    /// <summary>Metres of depth the detail texture's red channel spans at sea (square-root scale).</summary>
+    public const float MaxDepth = 7000;
+
     /// <summary>
-    /// Per map pixel: land height (red, square-root scale up to <see cref="MaxHeight"/>; 0 at sea) and how much of the
+    /// Per map pixel: land height (red, square-root scale up to <see cref="MaxHeight"/>; at sea, the depth up to
+    /// <see cref="MaxDepth"/>, which colours the water) and how much of the
     /// ground is forest (green), sand (blue) and bare rock (alpha). Filtered smoothly, neighbouring biomes blend.
     /// </summary>
     public static byte[] BuildDetail(WorldMap map)
@@ -71,7 +69,8 @@ public static class TerrainColors
                 var biome = map.Biomes[i];
                 bool water = biome.Info().IsWater;
                 var (forest, sand, rock) = Ground(biome);
-                data[i * 4] = water ? (byte)0 : (byte)(MathF.Sqrt(Math.Clamp(elevation[i] / MaxHeight, 0, 1)) * 255);
+                float height = water ? -elevation[i] / MaxDepth : elevation[i] / MaxHeight;
+                data[i * 4] = (byte)(MathF.Sqrt(Math.Clamp(height, 0, 1)) * 255);
                 data[i * 4 + 1] = forest;
                 data[i * 4 + 2] = sand;
                 data[i * 4 + 3] = rock;
