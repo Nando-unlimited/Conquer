@@ -77,7 +77,14 @@ public sealed record Row(string Left, string Right, Ink LeftInk, Ink RightInk, b
 
 /// <summary>A button across the width, followed by <paramref name="Gap"/> pixels; <paramref name="OnClick"/> runs when it is pressed.</summary>
 public sealed record Button(string Text, Action? OnClick, bool Enabled = true, bool Active = false, string? Tooltip = null,
-    TextSize Size = TextSize.Normal, float Height = 32, float Gap = 6, Icon? Icon = null) : Element;
+    TextSize Size = TextSize.Normal, float Height = 32, float Gap = 6, Icon? Icon = null) : Element
+{
+    /// <summary>Runs the button's action, unless it is disabled.</summary>
+    public void Press()
+    {
+        if (Enabled) OnClick?.Invoke();
+    }
+}
 
 /// <summary>Buttons sharing a line in equal parts (tabs, for example); their own heights and gaps are ignored.</summary>
 public sealed record ButtonRow(IReadOnlyList<Button> Buttons, float Height = 32, float Gap = 8, float Spacing = 6) : Element;

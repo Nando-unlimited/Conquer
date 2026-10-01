@@ -10,15 +10,12 @@ public sealed class ChangelogView
     private float _scroll;
     private float _wrappedFor = -1;
 
-    public bool Visible { get; set; }
-
-    /// <summary>Draws the panel while it is visible; its Close button hides it.</summary>
-    public void Frame(Ui ui, Rect area)
+    /// <summary>Draws the panel; true when its Close button was pressed.</summary>
+    public bool Frame(Ui ui, Rect area)
     {
-        if (!Visible) return;
         ui.Panel(area);
         ui.Text(area.X + 20, area.Y + 14, "Historial de versiones", Theme.Accent, FontSize.Large, bold: true);
-        if (ui.Button(new Rect(area.Right - 120, area.Y + 12, 100, 32), "Cerrar")) Visible = false;
+        bool closed = ui.Button(new Rect(area.Right - 120, area.Y + 12, 100, 32), "Cerrar");
 
         var content = new Rect(area.X + 20, area.Y + 60, area.W - 40, area.H - 76);
         if (_wrappedFor != content.W) Layout(ui.Font, content.W);
@@ -35,6 +32,7 @@ public sealed class ChangelogView
                 ui.Text(content.X + indent, y + (size == FontSize.Large ? 8 : 0), text, color, size, bold);
             y += h;
         }
+        return closed;
     }
 
     private void Layout(Font font, float width)

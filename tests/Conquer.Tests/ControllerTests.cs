@@ -102,7 +102,7 @@ public class ControllerTests(WorldFixture world)
         var game = NewGame();
         var doc = game.SidePanel()!;
         Assert.Equal(game.SelectedUnit!.Name, Assert.IsType<Heading>(doc.Elements[0]).Text);
-        Button(doc, "Fundar ciudad").OnClick!();
+        Button(doc, "Fundar ciudad").Press();
         Assert.NotNull(game.Naming);
     }
 
@@ -112,7 +112,7 @@ public class ControllerTests(WorldFixture world)
         var game = GameWithCapital();
         var doc = game.SidePanel()!;
         Assert.Contains(doc.Elements, e => e is Button { Text: var t } && t.StartsWith("Celebrar fiestas"));
-        Button(doc, "Edificios").OnClick!();
+        Button(doc, "Edificios").Press();
         Assert.Equal(ProvinceTab.Buildings, game.ProvinceTab);
         Assert.Contains(game.SidePanel()!.Elements, e => e is Heading { Text: "Construir" });
         game.SidePanel()!.OnClose!();
@@ -124,10 +124,10 @@ public class ControllerTests(WorldFixture world)
     {
         var game = GameWithCapital();
         var stepper = game.SidePanel()!.Elements.OfType<Stepper>().Single();
-        for (int i = 0; i < 1000; i++) stepper.More[^1].OnClick!();
+        for (int i = 0; i < 1000; i++) stepper.More[^1].Press();
         int keep = GameRules.MinCityPopulation;
         Assert.Equal((int)game.Map.Provinces[game.SelectedProvince].Population - keep, game.MigrationAmount);
-        for (int i = 0; i < 1000; i++) stepper.Less[0].OnClick!();
+        for (int i = 0; i < 1000; i++) stepper.Less[0].Press();
         Assert.Equal(1, game.MigrationAmount);
     }
 
@@ -137,7 +137,7 @@ public class ControllerTests(WorldFixture world)
         var game = NewGame();
         var bar = game.TopBar();
         Assert.Equal(6, bar.Speeds.Count);
-        bar.Speeds[4].OnClick!();
+        bar.Speeds[4].Press();
         Assert.Equal(4, game.Clock.Speed);
         Assert.True(game.TopBar().Speeds[4].Active);
     }
@@ -165,12 +165,12 @@ public class ControllerTests(WorldFixture world)
     {
         var game = GameWithRegiment(out var regiment);
         game.SelectUnit(regiment.Id);
-        Button(game.SidePanel()!, "Editar unidad").OnClick!();
+        Button(game.SidePanel()!, "Editar unidad").Press();
         var editor = game.UnitEditor()!;
         Assert.Equal(2, editor.Battalions.Count);
         Assert.False(editor.Split!.Enabled);
-        editor.Battalions[1].OnClick!();
-        game.UnitEditor()!.Split!.OnClick!();
+        editor.Battalions[1].Press();
+        game.UnitEditor()!.Split!.Press();
         Assert.Single(regiment.Battalions);
         Assert.Equal(2, game.Session.Units.Count(u => u.OwnerId == game.Human.Id && u.IsMilitary));
     }
@@ -181,9 +181,9 @@ public class ControllerTests(WorldFixture world)
         var game = GameWithRegiment(out var regiment);
         game.OpenUnitEditor(regiment);
         game.UnitName = "Los Valientes";
-        game.UnitEditor()!.Rename.OnClick!();
+        game.UnitEditor()!.Rename.Press();
         Assert.Equal("Los Valientes", regiment.Name);
-        game.UnitEditor()!.AutomaticName!.OnClick!();
+        game.UnitEditor()!.AutomaticName!.Press();
         Assert.Null(regiment.CustomName);
         game.CloseUnitEditor();
         Assert.Null(game.UnitEditor());
@@ -197,7 +197,7 @@ public class ControllerTests(WorldFixture world)
         var window = game.RoadWindow()!;
         Assert.NotNull(window.None);
         Assert.False(window.Build.Enabled);
-        window.Cancel.OnClick!();
+        window.Cancel.Press();
         Assert.False(game.RoadWindowOpen);
     }
 
@@ -227,7 +227,7 @@ public class ControllerTests(WorldFixture world)
         Assert.NotNull(window.Fire);
         Assert.NotNull(window.Chart);
         Assert.Contains("Ahora", window.Chart!.Describe(window.Chart.Points.Count - 1));
-        window.GoTo.OnClick!();
+        window.GoTo.Press();
         Assert.False(game.BattleWindowOpen);
         Assert.Equal(game.Center(b.Id), game.Camera.Center);
     }

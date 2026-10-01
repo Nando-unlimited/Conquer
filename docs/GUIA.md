@@ -586,9 +586,10 @@ Mapa de la Tierra real, generado por `tools/Conquer.EarthData`. Se incluye dentr
 
 ## 3. `src/Conquer.Presentation` — presentación sin motor
 
-Lo que ve y hace el jugador, sin nada de Silk.NET, OpenGL ni ningún otro motor (un test lo comprueba). El cliente solo lo dibuja,
-así que cambiar de motor no lo toca. Tiene las piezas que ya eran independientes, el estado de la partida en pantalla (`GameController`) y lo que muestran el panel lateral, las barras de arriba y abajo, el tooltip del mapa y el diálogo de ciudad, como documentos (`Document`), , la pantalla de la nación (`NationScreen`), las ventanas de edición, carreteras y batallas, y los marcadores del mapa; el resto de la lógica de las pantallas
-irá llegando aquí poco a poco.
+Lo que ve y hace el jugador, sin nada de Silk.NET, OpenGL ni ningún otro motor (un test lo comprueba): el estado de la partida en pantalla
+(`GameController`), el contenido de cada panel, barra, ventana, pantalla y menú como datos (`Document`, tablas, tarjetas...), los
+marcadores del mapa ya en posiciones de pantalla, y las órdenes que dan sus botones. El cliente solo dibuja todo eso y convierte el ratón
+y el teclado en llamadas aquí, así que cambiar de motor (por ejemplo, a Godot) no toca ni esta librería ni `Conquer.Game`.
 
 ### `Camera.cs`
 | Función | Qué hace |
@@ -683,7 +684,7 @@ El contenido de un panel como datos, de arriba abajo, para que cualquier cliente
 | `Icon` (`ResourceIcon`, `BattalionIcon`) | Icono de un recurso o de un tipo de batallón. |
 | `Heading`, `Label`, `Paragraph` | Texto en negrita, una línea sin ajustar (con tooltip opcional) y un párrafo ajustado al ancho. |
 | `Info`, `Row` | Etiqueta y valor en dos columnas (con icono y tooltip opcionales); texto a la izquierda y a la derecha de una línea. |
-| `Button`, `ButtonRow`, `Stepper`, `LabelAndButton` | Un botón a todo el ancho con su acción, botones que se reparten una fila (pestañas), un número entre botones que lo bajan y suben, y una línea con un botón pequeño a la derecha. |
+| `Button`, `ButtonRow`, `Stepper`, `LabelAndButton` | Un botón a todo el ancho con su acción (`Press()` la ejecuta solo si está activo), botones que se reparten una fila (pestañas), un número entre botones que lo bajan y suben, y una línea con un botón pequeño a la derecha. |
 | `Bar`, `Space` | Una barra de progreso (con una muesca roja opcional, como el punto donde se rompen las unidades) y un hueco. |
 | `Banner`, `UnitEntry` | El nombre de una nación tras un cuadro de su color, con una nota a la derecha; una unidad en una lista (nombre, nota, una línea y sus barras de hombres y organización), y las que no caben se cuentan con `Document.Hidden` («y N más»). |
 | `Pair`, `Columns`, `Distribution` | Etiqueta con su valor pegado al borde derecho (en dos tamaños); una etiqueta y textos en columnas a distancias fijas del borde derecho (cada uno con su tooltip); una barra repartida entre partes con su leyenda debajo (el humor por niveles). |
@@ -759,6 +760,23 @@ Lo que se dibuja sobre las provincias, ya en posiciones de pantalla (con la cám
 | `Counters()`, `CounterKind`, `UnitCounter` | Cada unidad que no va embarcada: dónde está (a mitad de camino si marcha; varias en una provincia se escalonan), su color, si está seleccionada, su tipo (combate, flota, cuartel o colonos), su arma (`Unit.Function`), su letra, cuántas van a bordo, sus marcas de tamaño (`Unit.Echelon`), sus barras y, con ella, su ruta (`Route`: entera para la seleccionada y para tus demás unidades en marcha si hay zoom, cruzando el borde del mapa por el lado corto), la línea a su cuartel (si está seleccionada) y la flecha de su ataque. Se encogen con el zoom lejano. |
 | `Battles()`, `BattleMarker`, `BattleSummary(...)`, `NavalBattleSummary(...)` | Espadas cruzadas sobre cada batalla, en tierra o en el mar; su tooltip (los dos bandos, su organización y el terreno) solo se calcula al pasar el ratón. |
 
+### `Menus.cs`
+Los menús fuera de la partida como datos. Para cambiar de pantalla piden a un `IMenuNavigator` (lo pone el cliente) que muestre el menú principal, el de nueva partida o el de cargar, que empiece o cargue una partida o que salga.
+
+| Elemento | Qué es |
+| --- | --- |
+| `MainMenu` | Pantalla inicial: "Continuar" (carga la última partida guardada), "Nueva partida", "Cargar partida", historial de versiones y salir. |
+| `NewGameMenu`, `OptionRow` | Nueva partida, fila a fila: tipo de mapa, tamaño (solo en el aleatorio), semilla, número de jugadores, dificultad (con su descripción y los recursos con los que empiezas), "Comenzar" y "Volver". |
+| `LoadGameMenu`, `SaveRow` | Lista de partidas guardadas, de la más reciente a la más antigua, para cargar o borrar (pide confirmación). |
+| `LoadingJob` | Genera el mundo en segundo plano para una partida nueva o una guardada, diciendo qué hace en cada momento; lo que el cliente necesita para dibujar el mapa lo prepara en el mismo hilo (una función que recibe). Da la partida al terminar, o el error. |
+
+### `GameController.Menus.cs`
+| Elemento | Qué es |
+| --- | --- |
+| `MenuOpen`, `HelpOpen`, `ChangelogOpen`, `TimeStopped` | El menú de pausa, la ayuda y el historial, y si hay abierta alguna ventana que para el tiempo (esas tres, el diálogo de la ciudad, el editor de unidades o la ventana de carreteras; las batallas no lo paran). |
+| `Escape()` | Esc cierra la ayuda, la batalla, la ventana de carreteras, el historial o la pantalla de la nación, por ese orden; si no, cancela la elección del destino de una migración o quita la selección, y si no hay nada, abre o cierra el menú. |
+| `PauseMenu(navegador, versión)` | Los botones del menú de pausa: continuar, guardar la partida, ayuda, historial de versiones, menú principal y salir. |
+
 ---
 
 ## 4. `src/Conquer.Client` — ventana, gráficos e interfaz
@@ -786,10 +804,9 @@ Punto de entrada. Comprueba OpenGL 3.3 (`GlSupport.Ensure`), pone el formato de 
 ### `Screens/MenuScreens.cs`
 | Elemento | Qué es |
 | --- | --- |
-| `MainMenuScreen` | Pantalla inicial sobre el fondo del mapa (`MenuBackground`), con el título con sombra y los botones en un panel: "Continuar" (carga la última partida guardada), "Nueva partida", "Cargar partida", historial de versiones y salir. |
-| `NewGameScreen` | Nueva partida: tipo de mapa, tamaño (solo en el aleatorio), semilla, número de jugadores, dificultad (con su descripción y los recursos con los que empiezas), "Comenzar" y "Volver". |
-| `LoadGameScreen` | Lista de partidas guardadas, de la más reciente a la más antigua, para cargar o borrar (pide confirmación). |
-| `LoadingScreen` | Genera el mundo en segundo plano y muestra el progreso, para una partida nueva o una guardada; al terminar abre `GameScreen`. |
+| `MenuNavigator` | El `IMenuNavigator` del cliente: cambia de pantalla o cierra el juego. |
+| `MainMenuScreen`, `NewGameScreen`, `LoadGameScreen` | Dibujan `MainMenu`, `NewGameMenu` y `LoadGameMenu` sobre el fondo del mapa (`MenuBackground`); la lista de partidas guardadas se desplaza con la rueda. Esc cierra el historial o vuelve al menú principal. |
+| `LoadingScreen` | Muestra cómo va un `LoadingJob` (con `MapRenderer.Prepare` para los píxeles del mapa) y, al terminar, abre `GameScreen`; si falla, dice por qué. |
 
 ### `Screens/GameScreen.cs`
 La pantalla de juego. Clase parcial: el ejército en pantalla está en `GameScreen.Army.cs`, la ventana de edición de unidades en `GameScreen.UnitEditor.cs` la de cada batalla en `GameScreen.Battle.cs` y la de las carreteras nuevas en `GameScreen.Roads.cs`.
@@ -800,7 +817,7 @@ La pantalla de juego. Clase parcial: el ejército en pantalla está en `GameScre
 | `ApplyTestOptions(...)`, `ShowSampleArmy(...)` | Aplican `--days`, `--zoom`, `--at`, `--mode`, `--nation` y `--panel` (con `regiment`, entrena y selecciona una unidad de muestra bajo un cuerpo; con `march`, además la pone en marcha para ver su ruta; con `edit`, recluta oficiales y abre su ventana de edición, `ShowSampleOfficers`; con `found`, abre el diálogo para nombrar la ciudad de los colonos). |
 | `Frame(dt)` | Fotograma: teclas, tiempo, refresco del mapa, dibujo del mapa, marcadores, paneles e interacción. |
 | `Frame(dt)` (tiempo) | Llama a `GameController.Tick`, congelado con el menú, la ayuda, el historial o una ventana abierta, y pasa al renderizador el modo de mapa y el filtro de recursos cuando cambian. |
-| `HandleKeys` | Teclado (Espacio, 1-5, Tab, Inicio, N, F1, +/-, WASD, Esc). Mientras la ayuda (`HelpView`) está abierta el tiempo se para y el mapa no responde; con la ventana de edición de una unidad abierta, las teclas van a su nombre (Intro renombra, Esc cierra). |
+| `HandleKeys` | Teclado (Espacio, 1-5, Tab, Inicio, N, F1, +/-, WASD, Esc, que llama a `GameController.Escape`). Mientras la ayuda (`HelpView`) está abierta el tiempo se para y el mapa no responde; con la ventana de edición de una unidad abierta, las teclas van a su nombre (Intro renombra, Esc cierra). |
 | `HandleMapMouse()` | Rueda para el zoom, arrastrar para mover el mapa, clics. |
 | `LeftClick()` | Abre la batalla o selecciona la unidad bajo el ratón; si no hay ninguna (o se elige el destino de una migración), `GameController.ClickProvince`. |
 | `RightClick()` | `GameController.OrderMove`: mueve la unidad seleccionada (o ataca, si el destino es enemigo). |
@@ -814,7 +831,7 @@ La pantalla de juego. Clase parcial: el ejército en pantalla está en `GameScre
 | `DrawBottomBar()`, `ModeBarWidth` | Modos de mapa (`GameController.ModeButtons`, un botón de 120 píxeles por modo) y pistas de controles (`GameController.Hints`; si no caben, quita las del medio y deja siempre «F1: ayuda» al final; se ocultan con la pantalla de la nación abierta). |
 | `DrawResourceFilter(barra)` | En el modo recursos, la fila de `GameController.ResourceFilterButtons` sobre los modos de mapa. |
 | `DrawMessages()`, `HoverTooltip()` | Mensajes (`MessageLog`) en tiras redondeadas con una marca dorada (roja si algo falló) (más arriba si está abierto el filtro de recursos; con la pantalla de la nación abierta, solo el último, en la franja junto a los modos de mapa, con `DrawLatestMessageInStrip`) y tooltip de la provincia bajo el ratón (`GameController.MapTooltip`). |
-| `DrawPauseMenu()` | Menú de pausa (Esc): continuar, guardar la partida (`GameController.Save`), ayuda, historial de versiones, volver a la pantalla inicial o salir. |
+| `DrawPauseMenu()` | Dibuja el menú de pausa (`GameController.PauseMenu`) con la versión del juego. |
 
 ### `Screens/GameScreen.Markers.cs`
 Dibuja los marcadores de `GameController.Markers`.
@@ -927,10 +944,10 @@ Interfaz propia de "modo inmediato": los botones se declaran en cada fotograma y
 `DocumentView.Draw(ui, documento, x, y, ancho)`: dibuja un `Document` (también `Pair`, `Columns` y `Distribution`) de Conquer.Presentation de arriba abajo con las piezas de `Ui` y ejecuta la acción de los botones pulsados. `Press(ui, botón, área)` dibuja un botón suelto del modelo (velocidades, modos de mapa, filtro de recursos) con su icono; `Size` traduce los tamaños de letra.
 
 ### `UI/ChangelogView.cs`
-`ChangelogView`: muestra el historial (`Changelog`) en un panel con desplazamiento. `Layout` ajusta cada línea al ancho y le da tamaño y color según sea título, sección, viñeta o párrafo.
+`ChangelogView`: muestra el historial (`Changelog`) en un panel con desplazamiento; `Frame` dice si se pulsó «Cerrar» (quien lo abre guarda si está abierto). `Layout` ajusta cada línea al ancho y le da tamaño y color según sea título, sección, viñeta o párrafo.
 
 ### `Screens/HelpView.cs`
-`HelpView`: la ayuda durante la partida (F1, el botón «?» de la barra superior o el menú de pausa). Temas a la izquierda y el texto del elegido a la derecha, con desplazamiento. El texto está en `HelpTopics` (Conquer.Presentation); `Layout` ajusta el tema al ancho.
+`HelpView`: la ayuda durante la partida (F1, el botón «?» de la barra superior o el menú de pausa; abierta según `GameController.HelpOpen`, y `Frame` dice si se pulsó «Cerrar»). Temas a la izquierda y el texto del elegido a la derecha, con desplazamiento. El texto está en `HelpTopics` (Conquer.Presentation); `Layout` ajusta el tema al ancho.
 
 ### `Assets/`
 Fuentes Fira Sans (normal y negrita) y Cinzel (variable; se usa su peso por defecto), de Google Fonts, con sus licencias `OFL-FiraSans.txt` y `OFL-Cinzel.txt`.
@@ -971,6 +988,7 @@ Uso: ver el README.
 | `InterfaceTests.cs` | Los nombres se ordenan alfabéticamente en español (sin tildes, ñ tras n); el texto de la ayuda solo usa caracteres que la fuente sabe dibujar (Latin-1); `Conquer.Game` y `Conquer.Presentation` no dependen de ningún motor (ni Silk.NET, ni Stb, ni Godot, ni el cliente); el reloj reanuda a la velocidad que tenía; los mensajes salen del más nuevo al más antiguo y caducan; el historial empieza por la última versión, sin marcas de Markdown. Los tests no usan el cliente. |
 | `ControllerTests.cs` | La partida en pantalla sin pantalla: empieza con los colonos seleccionados y a la vista; seleccionar una provincia quita la unidad; el tiempo no corre congelado ni en pausa; nombrar una ciudad la funda con ese nombre y la selecciona, y un nombre no válido deja el diálogo abierto; el modo de mapa vuelve al terreno tras dar la vuelta; el panel de los colonos ofrece fundar la ciudad; las pestañas de la capital cambian y su botón de cerrar quita la selección; la migración forzada no pide más gente de la que puede salir; los botones de velocidad de la barra superior ponen el reloj; el editor de unidades separa los batallones marcados en una unidad nueva, renombra y recupera el nombre automático; la ventana de carreteras sin destinos lo dice y se cancela; la ventana de una batalla muestra los dos bandos, el fuego y el gráfico, y «Ir a la provincia» centra el mapa en ella; el mapa muestra la ficha de los colonos seleccionados y, una vez fundada, su ciudad con su nombre. |
 | `NationScreenTests.cs` | La pantalla de la nación como datos: la tabla de ciudades lista la capital y su «Ver» la muestra en el mapa; pulsar un título de columna ordena por ella y pulsarlo otra vez lo invierte; el diseñador añade un batallón a una plantilla nueva; declarar la guerra cambia el botón a proponer la paz; la ciencia tiene tres ramas e «Investigar» elige el avance; el resumen muestra la capital. |
+| `MenuTests.cs` | Los menús como datos, con un navegador falso: la nueva partida empieza con lo elegido (la Tierra no deja elegir semilla ni tamaño, y no hay menos de un jugador); el menú principal no hace nada más con el historial abierto; una partida guardada se carga y se borra tras confirmar; Esc cierra lo de arriba y después abre el menú de pausa, cuyos botones abren la ayuda y salen. |
 | `ReleaseTests.cs` | La versión del `.csproj` coincide con la primera entrada del `CHANGELOG.md`. |
 
 ---

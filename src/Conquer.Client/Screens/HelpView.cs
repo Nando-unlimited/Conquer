@@ -12,14 +12,12 @@ public sealed class HelpView
     private float _scroll;
     private float _wrappedFor = -1;
 
-    public bool Visible { get; set; }
-
-    public void Frame(Ui ui, Rect area)
+    /// <summary>Draws the help; true when its Close button was pressed.</summary>
+    public bool Frame(Ui ui, Rect area)
     {
-        if (!Visible) return;
         ui.Panel(area, opaque: true);
         ui.Text(area.X + 20, area.Y + 14, "Ayuda", Theme.Accent, FontSize.Large, bold: true);
-        if (ui.Button(new Rect(area.Right - 120, area.Y + 12, 100, 32), "Cerrar", tooltip: "Cerrar (F1 o Esc)")) Visible = false;
+        bool closed = ui.Button(new Rect(area.Right - 120, area.Y + 12, 100, 32), "Cerrar", tooltip: "Cerrar (F1 o Esc)");
 
         // Topics down the left.
         float ty = area.Y + 60;
@@ -48,6 +46,7 @@ public sealed class HelpView
                 ui.Text(content.X + line.Indent, y + (line.Heading ? 8 : 0), line.Text, line.Heading ? Theme.Accent : Theme.Text, FontSize.Normal, line.Heading);
             y += h;
         }
+        return closed;
     }
 
     /// <summary>Wraps the chosen topic to the panel's width.</summary>

@@ -30,7 +30,7 @@ public sealed partial class GameScreen : IScreen
     private readonly NationView _nation;
     private readonly List<(int UnitId, Rect Bounds)> _unitHitBoxes = [];
 
-    private bool _mapDirty = true, _menuOpen, _dragging;
+    private bool _mapDirty = true, _dragging;
     private long _lastRefreshDay = -1;
 
     private Ui Ui => _app.Ui;
@@ -105,8 +105,7 @@ public sealed partial class GameScreen : IScreen
     {
         _game.Camera.Screen = _app.ScreenSize;
         HandleKeys(dt);
-        // The menu, the help, the changelog and the dialogs stop time.
-        _game.Tick(dt, frozen: _menuOpen || _changelog.Visible || _help.Visible || _game.Naming.HasValue || _game.EditingUnitId.HasValue || _game.RoadWindowOpen);
+        _game.Tick(dt, _game.TimeStopped);
 
         if (_renderer.Mode != _game.Mode || _renderer.ResourceFilter != _game.ResourceFilter)
         {
@@ -138,13 +137,13 @@ public sealed partial class GameScreen : IScreen
         if (_game.EditingUnitId.HasValue) DrawUnitEditor();
         if (_game.BattleWindowOpen) DrawBattleWindow();
         if (_game.RoadWindowOpen) DrawRoadWindow();
-        if (_menuOpen) DrawPauseMenu();
-        _changelog.Frame(Ui, new Rect(_app.ScreenSize.X / 2 - 380, 70, 760, _app.ScreenSize.Y - 140));
-        _help.Frame(Ui, new Rect(Math.Max(8, _app.ScreenSize.X / 2 - 520), 70, Math.Min(1040, _app.ScreenSize.X - 16), _app.ScreenSize.Y - 140));
+        if (_game.MenuOpen) DrawPauseMenu();
+        if (_game.ChangelogOpen && _changelog.Frame(Ui, new Rect(_app.ScreenSize.X / 2 - 380, 70, 760, _app.ScreenSize.Y - 140))) _game.ChangelogOpen = false;
+        if (_game.HelpOpen && _help.Frame(Ui, new Rect(Math.Max(8, _app.ScreenSize.X / 2 - 520), 70, Math.Min(1040, _app.ScreenSize.X - 16), _app.ScreenSize.Y - 140))) _game.HelpOpen = false;
 
-        bool modal = _menuOpen || _game.Naming.HasValue || _game.EditingUnitId.HasValue || _game.BattleWindowOpen || _game.RoadWindowOpen;
-        if (!modal && !_changelog.Visible && !_help.Visible && !_game.Nation.Visible) HandleMapMouse();
-        if (!Ui.MouseOverUi && !modal && !_help.Visible && !_game.Nation.Visible && _game.HoverProvince >= 0 && !_dragging) HoverTooltip();
+        bool modal = _game.MenuOpen || _game.Naming.HasValue || _game.EditingUnitId.HasValue || _game.BattleWindowOpen || _game.RoadWindowOpen;
+        if (!modal && !_game.ChangelogOpen && !_game.HelpOpen && !_game.Nation.Visible) HandleMapMouse();
+        if (!Ui.MouseOverUi && !modal && !_game.HelpOpen && !_game.Nation.Visible && _game.HoverProvince >= 0 && !_dragging) HoverTooltip();
     }
 
     // ------------------------------------------------------------------ input
@@ -170,28 +169,19 @@ public sealed partial class GameScreen : IScreen
         {
             switch (key)
             {
-                case Key.Escape:
-                    if (_help.Visible) _help.Visible = false;
-                    else if (_game.BattleWindowOpen) _game.CloseBattle();
-                    else if (_game.RoadWindowOpen) _game.CloseRoadWindow();
-                    else if (_changelog.Visible) _changelog.Visible = false;
-                    else if (_game.Nation.Visible) _game.Nation.Visible = false;
-                    else if (_game.ChoosingMigrationTarget) _game.ChoosingMigrationTarget = false;
-                    else if (_game.HasSelection) _game.ClearSelection();
-                    else _menuOpen = !_menuOpen;
-                    break;
+                case Key.Escape: _game.Escape(); break;
                 case Key.Space: _game.Clock.TogglePause(); break;
                 case >= Key.Number1 and <= Key.Number5: _game.Clock.SetSpeed(key - Key.Number1 + 1); break;
                 case Key.Tab: _game.CycleMode(); break;
                 case Key.Home: _game.CenterOnHome(); break;
-                case Key.N when !_menuOpen: _game.Nation.Visible = !_game.Nation.Visible; break;
-                case Key.F1 when !_menuOpen: _help.Visible = !_help.Visible; break;
+                case Key.N when !_game.MenuOpen: _game.Nation.Visible = !_game.Nation.Visible; break;
+                case Key.F1 when !_game.MenuOpen: _game.HelpOpen = !_game.HelpOpen; break;
                 case Key.KeypadAdd or Key.Equal: _game.Camera.ZoomAt(_game.Camera.Screen / 2, 1.25f); break;
                 case Key.KeypadSubtract or Key.Minus: _game.Camera.ZoomAt(_game.Camera.Screen / 2, 0.8f); break;
             }
         }
 
-        if (_menuOpen) return;
+        if (_game.MenuOpen) return;
         var pan = Vector2.Zero;
         if (input.KeysDown.Contains(Key.A) || input.KeysDown.Contains(Key.Left)) pan.X += 1;
         if (input.KeysDown.Contains(Key.D) || input.KeysDown.Contains(Key.Right)) pan.X -= 1;
@@ -293,8 +283,8 @@ public sealed partial class GameScreen : IScreen
 
         if (Ui.Button(new Rect(s.X - 190, 12, 92, 32), bar.NationButton, active: _game.Nation.Visible, tooltip: bar.NationTooltip))
             _game.Nation.Visible = !_game.Nation.Visible;
-        if (Ui.Button(new Rect(s.X - 230, 12, 34, 32), "?", active: _help.Visible, tooltip: "Ayuda (F1)")) _help.Visible = !_help.Visible;
-        if (Ui.Button(new Rect(s.X - 90, 12, 78, 32), "Menú")) _menuOpen = true;
+        if (Ui.Button(new Rect(s.X - 230, 12, 34, 32), "?", active: _game.HelpOpen, tooltip: "Ayuda (F1)")) _game.HelpOpen = !_game.HelpOpen;
+        if (Ui.Button(new Rect(s.X - 90, 12, 78, 32), "Menú")) _game.MenuOpen = true;
     }
 
     private void DrawSidePanel()
@@ -420,12 +410,11 @@ public sealed partial class GameScreen : IScreen
         Ui.Panel(panel);
         Ui.TextCentered(new Rect(panel.X, panel.Y + 10, panel.W, 36), "Pausa", Theme.Accent, FontSize.Large, bold: true);
         float x = panel.X + 30, y = panel.Y + 60, w = panel.W - 60;
-        if (Ui.Button(new Rect(x, y, w, 40), "Continuar")) _menuOpen = false;
-        if (Ui.Button(new Rect(x, y + 50, w, 40), "Guardar partida", tooltip: $"Se guarda en {SaveFiles.Folder}") && _game.Save(ConquerApp.Version)) _menuOpen = false;
-        if (Ui.Button(new Rect(x, y + 100, w, 40), "Ayuda")) { _help.Visible = true; _menuOpen = false; }
-        if (Ui.Button(new Rect(x, y + 150, w, 40), "Historial de versiones")) { _changelog.Visible = true; _menuOpen = false; }
-        if (Ui.Button(new Rect(x, y + 200, w, 40), "Menú principal")) _app.Show(new MainMenuScreen(_app));
-        if (Ui.Button(new Rect(x, y + 250, w, 40), "Salir del juego")) _app.Quit();
+        foreach (var button in _game.PauseMenu(new MenuNavigator(_app), ConquerApp.Version))
+        {
+            DocumentView.Press(Ui, button, new Rect(x, y, w, 40));
+            y += 50;
+        }
         Ui.TextCentered(new Rect(panel.X, panel.Bottom - 30, panel.W, 24), $"Conquer {ConquerApp.Version}", Theme.TextDim, FontSize.Small);
     }
 

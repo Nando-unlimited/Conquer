@@ -33,7 +33,7 @@ public class NationScreenTests(WorldFixture world)
         var row = Assert.Single(table.Rows);
         var capital = game.Session.Cities.Single();
         Assert.Equal(capital.Name, Assert.IsType<TextCell>(row[0]).Text);
-        FindButton(row, "Ver").OnClick!();
+        FindButton(row, "Ver").Press();
         Assert.False(game.Nation.Visible);
         Assert.Equal(capital.ProvinceId, game.SelectedProvince);
     }
@@ -58,12 +58,12 @@ public class NationScreenTests(WorldFixture world)
         var game = Game(NationTab.Templates);
         var page = Assert.IsType<TemplatesPage>(game.Nation.Page());
         int templates = game.Human.Templates.Count;
-        page.Actions.First(b => b.Text == "Nueva plantilla").OnClick!();
+        page.Actions.First(b => b.Text == "Nueva plantilla").Press();
         Assert.Equal(templates + 1, game.Human.Templates.Count);
         page = (TemplatesPage)game.Nation.Page();
         Assert.Equal(game.Human.Templates[^1].Name, page.Name);
         int before = game.Human.Templates[^1].Battalions.Count;
-        page.Add.First(b => b.Enabled).OnClick!();
+        page.Add.First(b => b.Enabled).Press();
         Assert.Equal(before + 1, game.Human.Templates[^1].Battalions.Count);
     }
 
@@ -72,7 +72,7 @@ public class NationScreenTests(WorldFixture world)
     {
         var game = Game(NationTab.Diplomacy, players: 2);
         var row = Assert.Single(((TablePage)game.Nation.Page()).Table.Rows);
-        FindButton(row, "Declarar la guerra").OnClick!();
+        FindButton(row, "Declarar la guerra").Press();
         row = Assert.Single(((TablePage)game.Nation.Page()).Table.Rows);
         Assert.NotNull(FindButton(row, "Proponer la paz"));
     }
@@ -84,7 +84,7 @@ public class NationScreenTests(WorldFixture world)
         var page = Assert.IsType<SciencePage>(game.Nation.Page());
         Assert.Equal(3, page.Branches.Count);
         var card = page.Branches[0].Levels.SelectMany(l => l.Cards).First(c => c.Research is { Enabled: true });
-        card.Research!.OnClick!();
+        card.Research!.Press();
         var branch = ((SciencePage)game.Nation.Page()).Branches[0];
         Assert.NotNull(branch.Progress);
         Assert.Contains(card.Name, branch.Status);

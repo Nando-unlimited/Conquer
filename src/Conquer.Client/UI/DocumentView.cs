@@ -145,7 +145,7 @@ public static class DocumentView
             case ResourceIcon resource: Icons.Resource(ui.Batch, resource.Resource, new Vector2(r.X + 14, r.Y + 16), 16); break;
             case BattalionIcon battalion: MapIcons.Battalion(ui.Batch, r.X + 7, r.Y + 7, battalion.Battalion); break;
         }
-        if (pressed) b.OnClick?.Invoke();
+        if (pressed) b.Press();
     }
 
     private static void InfoLine(Ui ui, Info i, float x, float y, float w)
