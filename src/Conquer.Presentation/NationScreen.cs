@@ -93,8 +93,8 @@ public sealed partial class NationScreen
         left.Add(new Pair("Nacimientos al día", $"+{stats.DailyBirths:0.#}", Player.IsStarving ? Tone.Bad : Tone.Normal));
         left.Add(new Space(10));
 
-        left.Add(Title2("Humor"));
-        left.Add(new Pair("Humor medio", $"{stats.AverageMood:0} · {GameRules.MoodName(stats.AverageMood)}", Ink.Mood(stats.AverageMood, Tone.Normal)));
+        left.Add(Title2("Moral"));
+        left.Add(new Pair("Moral media", $"{stats.AverageMood:0} · {GameRules.MoodName(stats.AverageMood)}", Ink.Mood(stats.AverageMood, Tone.Normal)));
         left.Add(MoodDistribution(stats));
         left.Add(new Space(10));
 
@@ -127,7 +127,7 @@ public sealed partial class NationScreen
         right.Add(new Pair("Balance diario", $"{foodNet:+#,0.#;-#,0.#;0}", foodNet < 0 ? Tone.Bad : Tone.Good));
         right.Add(new Pair("Reservas", Player.IsStarving ? "¡Hambre!" : $"{Player.FoodReserveDays:N0} días",
             Player.FoodReserveDays >= GameRules.FoodReserveFullDays ? Tone.Good : Player.FoodReserveDays < 7 ? Tone.Bad : Tone.Normal,
-            $"Días que dura la comida al consumo actual. Con {GameRules.FoodReserveFullDays:0} días o más la población gana +{GameRules.FoodReserveMood:0} de humor."));
+            $"Días que dura la comida al consumo actual. Con {GameRules.FoodReserveFullDays:0} días o más la población gana +{GameRules.FoodReserveMood:0} de moral."));
         right.Add(new Space(10));
 
         right.Add(Title2("Recursos"));
@@ -161,7 +161,7 @@ public sealed partial class NationScreen
 
     private TablePage Cities()
     {
-        Column[] columns = [new("Ciudad", 190), new("Población", 150), new("Humor", 130), new("Fertilidad", 100), new("Fiestas", 170), new("Reclutar", 210), new("", 60)];
+        Column[] columns = [new("Ciudad", 190), new("Población", 150), new("Moral", 130), new("Fertilidad", 100), new("Fiestas", 170), new("Reclutar", 210), new("", 60)];
         var cities = Session.Cities.Where(c => c.OwnerId == Player.Id);
         var rows = new List<IReadOnlyList<Cell>>();
         foreach (var city in Sort(NationTab.Cities, cities, c => Map.Provinces[c.ProvinceId], c => c.Name))
@@ -175,7 +175,7 @@ public sealed partial class NationScreen
             string label = city.HasFestival(Session.Date.Hours)
                 ? $"Quedan {GameSession.FormatHours(city.FestivalUntilHours - Session.Date.Hours)}"
                 : $"Celebrar ({GameRules.FestivalCost(p.Population):N0} oro)";
-            string tip = $"+{GameRules.FestivalMood:0} al humor de la ciudad durante {GameRules.FestivalDays} días." + (festival.Ok ? "" : "\n" + festival.Message);
+            string tip = $"+{GameRules.FestivalMood:0} a la moral de la ciudad durante {GameRules.FestivalDays} días." + (festival.Ok ? "" : "\n" + festival.Message);
             cells.Add(new ButtonsCell([new Button(label, () => Show(Session.HoldFestival(Player.Id, city.Id)), festival.Ok, Tooltip: tip, Size: TextSize.Small)], Inset: 10));
 
             var settlers = Session.CanRecruitSettlers(city);
@@ -199,7 +199,7 @@ public sealed partial class NationScreen
 
     private TablePage Provinces()
     {
-        Column[] columns = [new("Provincia", 190), new("Población", 150), new("Humor", 130), new("Fertilidad", 90), new("Terreno", 130), new("En camino", 90), new("En curso", 190), new("", 60)];
+        Column[] columns = [new("Provincia", 190), new("Población", 150), new("Moral", 130), new("Fertilidad", 90), new("Terreno", 130), new("En camino", 90), new("En curso", 190), new("", 60)];
         var incoming = Session.Migrations.Where(m => m.OwnerId == Player.Id)
             .GroupBy(m => m.ToProvinceId).ToDictionary(g => g.Key, g => g.Sum(m => m.People));
         var provinces = Player.Provinces.Select(id => Map.Provinces[id]);

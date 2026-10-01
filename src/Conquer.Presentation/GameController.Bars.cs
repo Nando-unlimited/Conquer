@@ -24,7 +24,7 @@ public sealed record CityNamingDialog(string Title, string Detail, string? Error
 /// <summary>The bars around the map, the map's tooltip and the city naming dialog.</summary>
 public sealed partial class GameController
 {
-    public static readonly string[] ModeNames = ["Terreno", "Político", "Población", "Humor", "Fertilidad", "Recursos", "Instituciones", "Cultura"];
+    public static readonly string[] ModeNames = ["Terreno", "Político", "Población", "Moral", "Fertilidad", "Recursos", "Instituciones", "Cultura"];
 
     public TopBar TopBar()
     {
@@ -45,8 +45,8 @@ public sealed partial class GameController
         // A branch with nothing chosen hands its science to the others, or leaves it waiting when none is researching.
         bool idleScience = Human.CapitalCityId.HasValue && Techs.Branches.Any(b =>
             Human.Researching[(int)b] is null && Techs.InBranch(b).Any(t => GameSession.CanResearch(Human, t).Ok));
-        return new TopBar(Human.Name, Human.Color, $"{population:N0} hab. · humor {mood:0}", Ink.Mood(mood, Tone.Dim),
-            $"{population:N0} habitantes\nHumor medio: {mood:0} ({GameRules.MoodName(mood)})", Session.Date.ToString(), speeds, resources,
+        return new TopBar(Human.Name, Human.Color, $"{population:N0} hab. · moral {mood:0}", Ink.Mood(mood, Tone.Dim),
+            $"{population:N0} habitantes\nMoral media: {mood:0} ({GameRules.MoodName(mood)})", Session.Date.ToString(), speeds, resources,
             idleScience ? "Nación !" : "Nación",
             idleScience ? "Gestionar el país (N)\nHay ramas de la ciencia sin investigación." : "Gestionar el país (N)");
     }
@@ -84,7 +84,7 @@ public sealed partial class GameController
             + (p.Name.Length > 0 ? $"  ·  {p.Info.Name.ToLowerInvariant()}" : "") + $"  ·  {owner}";
         if (p.HasRiver) text += "  ·  gran río";
         if (p.IsOwned) text += $"\n{p.Population:N0} habitantes";
-        if (p.IsOwned && p.Population >= 1) text += $"\nHumor {p.Mood:0} ({GameRules.MoodName(p.Mood)})  ·  Fertilidad {p.Fertility:P0}";
+        if (p.IsOwned && p.Population >= 1) text += $"\nMoral {p.Mood:0} ({GameRules.MoodName(p.Mood)})  ·  Fertilidad {p.Fertility:P0}";
         if (Mode == MapMode.Resources)
             foreach (var r in Resources.Deposits.Where(r => p.Deposits[(int)r] > 0 && Human.Knows(r)))
                 text += p.HasDeposit(r) ? $"\n{r.Name()}: {p.Deposits[(int)r]:0.0}/día, quedan {TextFormat.Compact(p.Reserves[(int)r])}" : $"\n{r.Name()}: agotado";

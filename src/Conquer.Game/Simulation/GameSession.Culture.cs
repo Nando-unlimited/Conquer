@@ -74,7 +74,7 @@ public sealed partial class GameSession
                 double before = p.RevoltProgress;
                 p.RevoltProgress += 1 + (GameRules.UnrestMood - p.Mood) / GameRules.UnrestMood;
                 if (player.Id == HumanPlayerId && before < GameRules.RevoltDays / 2 && p.RevoltProgress >= GameRules.RevoltDays / 2)
-                    Notify(player.Id, $"{PlaceName(p)} está al borde de la rebelión. Sube su humor o envía tropas.");
+                    Notify(player.Id, $"{PlaceName(p)} está al borde de la rebelión. Sube su moral o envía tropas.");
                 if (p.RevoltProgress >= GameRules.RevoltDays) Revolt(p);
             }
         }

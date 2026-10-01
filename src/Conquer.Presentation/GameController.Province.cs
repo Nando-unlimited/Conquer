@@ -29,7 +29,7 @@ public sealed partial class GameController
     public string MoodTooltip(Province p)
     {
         var factors = Session.MoodFactors(p).Select(f => $"{f.Points:+0;-0;0}  {f.Reason}");
-        string text = $"Humor {p.Mood:0}; tiende a {Session.TargetMood(p):0}.\n" + string.Join("\n", factors) +
+        string text = $"Moral {p.Mood:0}; tiende a {Session.TargetMood(p):0}.\n" + string.Join("\n", factors) +
                       $"\nProducción ×{GameRules.MoodProductivity(p.Mood):0.00}";
         if (p.Mood < GameRules.UnrestMood) text += "\nDescontento: no paga impuestos.";
         return text;
@@ -45,8 +45,8 @@ public sealed partial class GameController
         {
             double years = (1 - p.Assimilation) / GameSession.DailyAssimilation(p) / 365;
             doc.Add(new Info("Cultura", $"{culture.Name} · {p.Assimilation:P0} asimilada", Ink.Nation(culture.Color),
-                $"Su gente es de cultura de {culture.Name}: pierde {-GameSession.ForeignCultureMood(p):0} de humor, menos cuanto más se asimila.\n" +
-                $"Al ritmo actual adoptará la de {Session.Players[p.OwnerId].Name} en unos {years:0} años; va más deprisa con buen humor.\n" +
+                $"Su gente es de cultura de {culture.Name}: pierde {-GameSession.ForeignCultureMood(p):0} de moral, menos cuanto más se asimila.\n" +
+                $"Al ritmo actual adoptará la de {Session.Players[p.OwnerId].Name} en unos {years:0} años; va más deprisa con moral alta.\n" +
                 "Los migrantes de tus otras provincias que se instalan aquí la aceleran."));
         }
         else
@@ -57,9 +57,9 @@ public sealed partial class GameController
         string outcome = Session.WouldSecede(p)
             ? $"se sublevará y se unirá a {culture.Name}"
             : $"estallará una revuelta: morirá el {GameRules.RevoltDeaths:P0} de su gente y arderá uno de sus edificios";
-        string tip = $"Con el humor por debajo de {GameRules.UnrestMood:0} y sin tropas de su dueño dentro, la provincia se acerca a la rebelión, " +
-                     $"más deprisa cuanto peor es el humor. Al llegar al 100 % {outcome}.\n" +
-                     "Una guarnición (un regimiento en la provincia) la detiene; con buen humor se calma poco a poco." +
+        string tip = $"Con la moral por debajo de {GameRules.UnrestMood:0} y sin tropas de su dueño dentro, la provincia se acerca a la rebelión, " +
+                     $"más deprisa cuanto peor es la moral. Al llegar al 100 % {outcome}.\n" +
+                     "Una guarnición (un regimiento en la provincia) la detiene; con moral alta se calma poco a poco." +
                      (garrison ? "\nAhora hay guarnición: no avanza." : "");
         doc.Add(new Info("Rebelión", $"{GameSession.RevoltRisk(p):P0}" + (garrison ? " · guarnición" : ""), garrison ? Tone.Normal : Tone.Bad, tip));
     }
@@ -121,9 +121,9 @@ public sealed partial class GameController
             doc.Add(new Info("Población", $"{p.Population:N0} / {Session.CapacityOf(p):N0}"));
             if (p.Population >= 1)
             {
-                doc.Add(new Info("Humor", $"{p.Mood:0} · {GameRules.MoodName(p.Mood)}", Ink.Mood(p.Mood, Tone.Normal), MoodTooltip(p)));
+                doc.Add(new Info("Moral", $"{p.Mood:0} · {GameRules.MoodName(p.Mood)}", Ink.Mood(p.Mood, Tone.Normal), MoodTooltip(p)));
                 doc.Add(new Info("Fertilidad", $"{p.Fertility:P0}", p.Fertility < 0.75 ? Tone.Bad : p.Fertility >= 1.15 ? Tone.Good : Tone.Normal,
-                    "Nacimientos respecto a lo normal. Sube con el buen humor, cae con el hambre y cambia despacio.\n" +
+                    "Nacimientos respecto a lo normal. Sube con la moral alta, cae con el hambre y cambia despacio.\n" +
                     $"Tiende a {Session.TargetFertility(p, owner, owner.IsStarving):P0}."));
                 doc.Add(new Info("Nacimientos", $"+{Session.DailyBirths(p, owner.IsStarving):0.##} al día", owner.IsStarving ? Tone.Bad : Tone.Normal));
                 AddCultureAndRevolt(doc, p);
@@ -168,7 +168,7 @@ public sealed partial class GameController
             string festivalLabel = city.HasFestival(Session.Date.Hours)
                 ? $"De fiesta: quedan {GameSession.FormatHours(city.FestivalUntilHours - Session.Date.Hours)}"
                 : $"Celebrar fiestas ({GameRules.FestivalCost(p.Population):N0} oro)";
-            string festivalTip = $"+{GameRules.FestivalMood:0} al humor de la ciudad durante {GameRules.FestivalDays} días." +
+            string festivalTip = $"+{GameRules.FestivalMood:0} a la moral de la ciudad durante {GameRules.FestivalDays} días." +
                                  (festival.Ok ? "" : "\n" + festival.Message);
             doc.Add(new Button(festivalLabel, () => Show(Session.HoldFestival(Human.Id, city.Id)), festival.Ok, Tooltip: festivalTip, Height: 34));
 

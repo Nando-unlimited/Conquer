@@ -2,6 +2,11 @@
 
 Todos los cambios del juego, del más reciente al más antiguo. Cada versión es un commit cuyo título es su número.
 
+## [1.61.1] - 2026-10-01
+
+### Cambiado
+- **El humor pasa a llamarse moral** en todo el juego: el panel de la provincia, la barra superior, el modo de mapa, las tablas de la nación, los edificios, los avances y la ayuda. Funciona igual.
+
 ## [1.61.0] - 2026-10-01
 
 ### Añadido
