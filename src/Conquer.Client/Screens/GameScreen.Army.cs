@@ -268,6 +268,19 @@ public sealed partial class GameScreen
             if (Ui.Button(new Rect(x, y, w, 32), "Reclamar provincia", can.Ok, tooltip: can.Ok ? "Esta provincia libre pasará a ser tuya." : can.Message))
                 Show(_session.Claim(Human.Id, unit.Id));
             y += 38;
+            if (unit.IsScouting)
+            {
+                string label = unit.AutoClaim ? "Dejar de explorar" : "Explorar y reclamar";
+                string tip = unit.AutoClaim ? "Se detiene donde está y vuelve a esperar órdenes."
+                    : "Va sola a la mejor provincia libre junto a tus fronteras, la reclama y sigue con la siguiente, sin entrar en tierras ajenas. " +
+                      "Darle una orden de movimiento la detiene.";
+                if (Ui.Button(new Rect(x, y, w, 32), label, active: unit.AutoClaim, tooltip: tip))
+                {
+                    if (unit.AutoClaim) _session.MoveUnit(Human.Id, unit.Id, unit.ProvinceId);
+                    Show(_session.SetAutoClaim(Human.Id, unit.Id, !unit.AutoClaim));
+                }
+                y += 38;
+            }
             EngineerButtons(unit, here, x, ref y, w);
         }
         bool canSettle = here.OwnerId == Human.Id && !here.IsOccupied;
@@ -278,8 +291,11 @@ public sealed partial class GameScreen
             _selectedProvince = here.Id;
             return;
         }
-        if (Ui.Button(new Rect(x + half + 6, y, half, 32), "Detener", unit.IsMoving || unit.AttackingProvinceId.HasValue, size: FontSize.Small))
+        if (Ui.Button(new Rect(x + half + 6, y, half, 32), "Detener", unit.IsMoving || unit.AttackingProvinceId.HasValue || unit.AutoClaim, size: FontSize.Small))
+        {
+            if (unit.AutoClaim) _session.SetAutoClaim(Human.Id, unit.Id, false);
             _session.MoveUnit(Human.Id, unit.Id, unit.ProvinceId);
+        }
         y += 40;
         Paragraph(x, ref y, w, unit.IsFleet
             ? "Clic derecho para navegar: por mares costeros con Navegación a vela y por el océano con Cartografía; atraca en tus ciudades con costa. Las flotas enemigas que se encuentran combaten."
@@ -363,9 +379,9 @@ public sealed partial class GameScreen
             double hours = unit.HoursToNext;
             for (int i = 0; i + 1 < unit.Path.Count; i++) hours += _session.Pathfinder.StepHours(unit.Path[i], unit.Path[i + 1]) / unit.Speed;
             var p = Map.Provinces[dest];
-            return $"Hacia {_session.PlaceName(p)} ({GameSession.FormatHours(hours)})";
+            return (unit.AutoClaim ? "Explorando hacia " : "Hacia ") + $"{_session.PlaceName(p)} ({GameSession.FormatHours(hours)})";
         }
-        return "Esperando órdenes";
+        return unit.AutoClaim ? "Explorando" : "Esperando órdenes";
     }
 
     /// <summary>A regiment's battalions, or a fleet's ships and cargo (split and merged in the unit editor).</summary>

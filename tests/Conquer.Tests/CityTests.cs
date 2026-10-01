@@ -26,7 +26,7 @@ public class CityTests(WorldFixture world)
         var near = capital.Neighbors.Append(capital.Id).ToHashSet();
         var site = _map.Provinces.First(p => p.Biome == Biome.Grassland && !near.Contains(p.Id) && p.Neighbors.All(n => !near.Contains(n)));
         s.FoundCity(0, s.AddUnit(0, UnitType.Settlers, capital.Id, 300).Id, "Roma");
-        s.Claim(0, s.AddRegiment(0, site.Id, BattalionType.Warriors).Id);
+        s.Claim(0, s.AddRegiment(0, site.Id, BattalionType.Scouts).Id);
         site.Population = people;
         s.Human.Stockpile[ResourceType.Wood] = s.Human.Stockpile[ResourceType.Gold] = 1000;
         return (s, capital, site);
@@ -131,7 +131,7 @@ public class CityTests(WorldFixture world)
         Assert.All(_map.Provinces, p => Assert.Equal(p.Info.Name, p.DisplayName));
 
         var sites = _map.Provinces.Where(p => p.IsClaimable && p.Neighbors.Length > 3).Take(40).ToList();
-        foreach (var p in sites) s.Claim(0, s.AddRegiment(0, p.Id, BattalionType.Warriors).Id);
+        foreach (var p in sites) s.Claim(0, s.AddRegiment(0, p.Id, BattalionType.Scouts).Id);
         var claimed = sites.Where(p => p.OwnerId == 0).ToList();
         Assert.NotEmpty(claimed);
         Assert.All(claimed, p => Assert.NotEqual("", p.Name));

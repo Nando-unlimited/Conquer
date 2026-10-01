@@ -210,6 +210,7 @@ public sealed partial class GameSession
         ResolveBattles();
         ResolveNavalBattles();
         ArriveMigrations();
+        AutoClaimUnits();
         if (Date.Hour == 0)
         {
             foreach (var player in Players) DailyEconomy(player);
@@ -743,10 +744,11 @@ public sealed partial class GameSession
         if (!p.IsClaimable) return CommandResult.Fail(p.IsWater ? "El océano no se puede reclamar." : p.Biome == Biome.Peaks ? "Las cumbres no se pueden reclamar." : "Los polos no se pueden reclamar.");
         if (p.OwnerId == unit.OwnerId) return CommandResult.Fail("Ya es tuya.");
         if (p.OwnerId >= 0) return CommandResult.Fail("Esta provincia tiene dueño.");
+        if (!unit.HasScouts) return CommandResult.Fail("Solo reclaman territorio las unidades con exploradores.");
         return CommandResult.Success();
     }
 
-    /// <summary>A military unit takes the unowned province it stands in.</summary>
+    /// <summary>A military unit with scouts takes the unowned province it stands in.</summary>
     public CommandResult Claim(int playerId, int unitId)
     {
         if (UnitById(unitId) is not { } unit || unit.OwnerId != playerId) return CommandResult.Fail("Unidad no válida.");

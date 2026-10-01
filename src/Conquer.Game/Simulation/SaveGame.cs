@@ -123,7 +123,7 @@ public sealed record TrainingSave(
 public sealed record UnitSave(
     int Id, int OwnerId, UnitType Type, int ProvinceId, int Citizens, int Number, int HeadquartersLevel,
     List<BattalionSave> Battalions, int? CommanderId, int? AttackingProvinceId, List<int> Path, double HoursToNext, double StepHours,
-    int? CarrierId = null, GeneralSave? General = null, OfficerSave? Officer = null, string? CustomName = null);
+    int? CarrierId = null, GeneralSave? General = null, OfficerSave? Officer = null, string? CustomName = null, bool AutoClaim = false);
 
 public sealed record BattalionSave(BattalionType Type, double Strength, double Organisation, double Experience = 0);
 

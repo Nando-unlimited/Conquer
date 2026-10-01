@@ -56,7 +56,7 @@ public class InstitutionTests(WorldFixture world)
     {
         var (a, b) = GrasslandPair();
         var s = WithBigCapital(_map, a);
-        s.Claim(0, s.AddRegiment(0, b.Id, BattalionType.Warriors).Id);
+        s.Claim(0, s.AddRegiment(0, b.Id, BattalionType.Scouts).Id);
         b.Population = 100;
         var empty = a.Neighbors.Select(n => _map.Provinces[n]).First(p => p.IsClaimable && p.Id != b.Id && p.Population == 0);
 
@@ -98,7 +98,7 @@ public class InstitutionTests(WorldFixture world)
         RunDays(s, 1);
         Assert.StartsWith("Aún no ha llegado", s.CanAdopt(s.Human, Institution.Urbanism).Message);
 
-        s.Claim(0, s.AddRegiment(0, b.Id, BattalionType.Warriors).Id);
+        s.Claim(0, s.AddRegiment(0, b.Id, BattalionType.Scouts).Id);
         b.Population = 100;
         b.Institutions.Add(Institution.Urbanism);
         double cost = s.AdoptionCost(s.Human, Institution.Urbanism);

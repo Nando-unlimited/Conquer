@@ -70,7 +70,7 @@ public class ClassicalMechanicsTests(WorldFixture world)
         var (a, _) = GrasslandPair();
         var s = WithCapital(a);
         var far = _map.Provinces.First(p => p.IsClaimable && !p.IsOwned && _map.DistanceKm(a, p) > 600);
-        s.Claim(0, s.AddRegiment(0, far.Id, Conquer.Game.Military.BattalionType.Warriors).Id);
+        s.Claim(0, s.AddRegiment(0, far.Id, Conquer.Game.Military.BattalionType.Scouts).Id);
         double Distance() => s.MoodFactors(far).Single(f => f.Reason == "Lejos de la capital").Points;
         double before = Distance();
 

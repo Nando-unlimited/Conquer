@@ -29,7 +29,7 @@ public class MilitaryTests(WorldFixture world)
         var s = GameSession.Create(_map, 2, seed: 7, computerRivals: false);
         var (a, b) = Pair();
         s.FoundCity(0, s.AddUnit(0, UnitType.Settlers, a.Id, 300).Id);
-        var claimer = s.AddRegiment(1, b.Id, BattalionType.Warriors);
+        var claimer = s.AddRegiment(1, b.Id, BattalionType.Scouts);
         s.Claim(1, claimer.Id);
         s.Disband(1, claimer.Id);
         return (s, a, b);
@@ -418,7 +418,7 @@ public class MilitaryTests(WorldFixture world)
         var (s, a, b) = TwoNations();
         // Player 0 holds every land neighbour of B, so there is nowhere to retreat to.
         foreach (int n in b.Neighbors.Where(n => !_map.Provinces[n].IsWater && !_map.Provinces[n].IsOwned))
-            s.Claim(0, s.AddRegiment(0, n, BattalionType.Warriors).Id);
+            s.Claim(0, s.AddRegiment(0, n, BattalionType.Scouts).Id);
         var defender = s.AddRegiment(1, b.Id, BattalionType.Warriors);
         s.DeclareWar(0, 1);
         foreach (int n in b.Neighbors.Where(n => _map.Provinces[n].ControllerId == 0 && !_map.Provinces[n].IsOccupied))

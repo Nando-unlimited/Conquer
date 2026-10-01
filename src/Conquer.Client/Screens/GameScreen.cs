@@ -301,6 +301,8 @@ public sealed partial class GameScreen : IScreen
     {
         if (_selectedUnitId is not int id || _session.UnitById(id) is not { } unit || unit.OwnerId != Human.Id || _hoverProvince < 0) return;
         var result = _session.MoveUnit(Human.Id, unit.Id, _hoverProvince);
+        // An order of the player's own takes over from exploring.
+        if (result.Ok && unit.AutoClaim) _session.SetAutoClaim(Human.Id, unit.Id, false);
         Show(result);
     }
 

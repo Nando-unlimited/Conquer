@@ -132,7 +132,7 @@ public class GameplayTests(WorldFixture world)
         var settlers = s.AddUnit(0, UnitType.Settlers, a.Id, 300);
         s.FoundCity(0, settlers.Id);
         a.Population = 5000;
-        s.Claim(0, s.AddRegiment(0, b.Id, BattalionType.Warriors).Id);
+        s.Claim(0, s.AddRegiment(0, b.Id, BattalionType.Scouts).Id);
 
         Assert.Null(s.Pathfinder.FindPath(a.Id, b.Id));
         Assert.False(s.ForceMigration(0, a.Id, b.Id, 100).Ok);
@@ -151,17 +151,23 @@ public class GameplayTests(WorldFixture world)
     }
 
     [Fact]
-    public void OnlyMilitaryUnitsClaimFreeLand()
+    public void OnlyUnitsWithScoutsClaimFreeLand()
     {
         var s = NewSession();
         var (a, _) = GrasslandPair();
         var settlers = s.AddUnit(0, UnitType.Settlers, a.Id, 300);
-        var warriors = s.AddRegiment(0, a.Id, BattalionType.Warriors);
+        var warriors = s.AddRegiment(0, a.Id, BattalionType.Warriors, BattalionType.Warriors);
+        var mixed = s.AddRegiment(0, a.Id, BattalionType.Warriors, BattalionType.Scouts);
 
         Assert.False(s.Claim(0, settlers.Id).Ok);
-        Assert.True(s.Claim(0, warriors.Id).Ok);
+        var refused = s.Claim(0, warriors.Id);
+        Assert.False(refused.Ok);
+        Assert.Equal("Solo reclaman territorio las unidades con exploradores.", refused.Message);
+        Assert.False(a.IsOwned);
+
+        Assert.True(s.Claim(0, mixed.Id).Ok);
         Assert.Equal(0, a.OwnerId);
-        Assert.False(s.Claim(0, warriors.Id).Ok);
+        Assert.False(s.Claim(0, mixed.Id).Ok);
     }
 
     [Fact]
@@ -189,8 +195,8 @@ public class GameplayTests(WorldFixture world)
         var settlers = s.AddUnit(0, UnitType.Settlers, a.Id, 300);
         Assert.True(s.FoundCity(0, settlers.Id).Ok);
         a.Population = 5000;
-        var warriors = s.AddRegiment(0, b.Id, BattalionType.Warriors);
-        Assert.True(s.Claim(0, warriors.Id).Ok);
+        var scouts = s.AddRegiment(0, b.Id, BattalionType.Scouts);
+        Assert.True(s.Claim(0, scouts.Id).Ok);
 
         RunHours(s, 24); // reaches midnight: the day's migrants leave
         var migration = Assert.Single(s.Migrations);
@@ -210,7 +216,7 @@ public class GameplayTests(WorldFixture world)
         var (a, b) = GrasslandPair();
         var settlers = s.AddUnit(0, UnitType.Settlers, a.Id, 300);
         s.FoundCity(0, settlers.Id);
-        s.Claim(0, s.AddRegiment(0, b.Id, BattalionType.Warriors).Id);
+        s.Claim(0, s.AddRegiment(0, b.Id, BattalionType.Scouts).Id);
         double gold = s.Human.Stockpile[ResourceType.Gold];
 
         Assert.False(s.ForceMigration(0, a.Id, b.Id, 250).Ok); // the city must keep 100 people
@@ -306,7 +312,7 @@ public class GameplayTests(WorldFixture world)
         var s = NewSession();
         var (a, b) = GrasslandPair();
         s.FoundCity(0, s.AddUnit(0, UnitType.Settlers, a.Id, 300).Id);
-        s.Claim(0, s.AddRegiment(0, b.Id, BattalionType.Warriors).Id);
+        s.Claim(0, s.AddRegiment(0, b.Id, BattalionType.Scouts).Id);
         double originMood = a.Mood;
 
         Assert.True(s.ForceMigration(0, a.Id, b.Id, 150).Ok);
@@ -372,7 +378,7 @@ public class GameplayTests(WorldFixture world)
         var s = NewSession();
         var (a, b) = GrasslandPair();
         s.FoundCity(0, s.AddUnit(0, UnitType.Settlers, a.Id, 300).Id);
-        s.Claim(0, s.AddRegiment(0, b.Id, BattalionType.Warriors).Id);
+        s.Claim(0, s.AddRegiment(0, b.Id, BattalionType.Scouts).Id);
         a.Population = 1000;
         a.Mood = 80;
         b.Population = 500;
@@ -381,9 +387,9 @@ public class GameplayTests(WorldFixture world)
 
         var stats = s.Stats(s.Human);
         Assert.Equal(1400, stats.Settled);
-        Assert.Equal(GameRules.StartingCitizens + 100, stats.InUnits); // the starting settlers are still waiting, plus the warriors
+        Assert.Equal(GameRules.StartingCitizens + 50, stats.InUnits); // the starting settlers are still waiting, plus the scouts
         Assert.Equal(100, stats.Migrating);
-        Assert.Equal(1400 + GameRules.StartingCitizens + 100 + 100, stats.Total);
+        Assert.Equal(1400 + GameRules.StartingCitizens + 50 + 100, stats.Total);
         Assert.Equal((2, 1, 2), (stats.Provinces, stats.Cities, stats.Units));
         Assert.Equal((900 * 80 + 500 * 20) / 1400.0, stats.AverageMood, 6);
         Assert.Equal(500, stats.PopulationByMood[0]); // unrest
@@ -512,7 +518,7 @@ public class GameplayTests(WorldFixture world)
         double cost = Tech.Agriculture.Info().Cost;
         Assert.Equal(cost, s.ResearchCost(s.Human, Tech.Agriculture));
 
-        s.Claim(1, s.AddRegiment(1, b.Id, BattalionType.Warriors).Id);
+        s.Claim(1, s.AddRegiment(1, b.Id, BattalionType.Scouts).Id);
         s.Players[1].Learn(Tech.Agriculture);
 
         Assert.Contains(1, s.NeighbourNations(s.Human));
@@ -568,7 +574,7 @@ public class GameplayTests(WorldFixture world)
         var s = NewSession();
         var (a, b) = GrasslandPair();
         s.FoundCity(0, s.AddUnit(0, UnitType.Settlers, a.Id, 300).Id);
-        s.Claim(0, s.AddRegiment(0, b.Id, BattalionType.Warriors).Id);
+        s.Claim(0, s.AddRegiment(0, b.Id, BattalionType.Scouts).Id);
         s.Human.Stockpile[ResourceType.Wood] = s.Human.Stockpile[ResourceType.Gold] = 1000;
 
         Assert.False(s.Build(0, a.Id, BuildingType.Library).Ok); // needs writing
@@ -579,7 +585,7 @@ public class GameplayTests(WorldFixture world)
 
         s.Human.Learn(Tech.Mining);
         var bare = _map.Provinces.First(p => p.IsClaimable && !p.IsOwned && !Resources.Deposits.Any(p.HasDeposit));
-        s.Claim(0, s.AddRegiment(0, bare.Id, BattalionType.Warriors).Id);
+        s.Claim(0, s.AddRegiment(0, bare.Id, BattalionType.Scouts).Id);
         Assert.False(s.IsBuildingAvailable(bare, BuildingType.Mine).Ok); // no deposit to mine
     }
 

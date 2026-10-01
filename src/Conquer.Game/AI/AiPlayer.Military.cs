@@ -44,15 +44,16 @@ internal sealed partial class AiPlayer
     private static bool Auxiliary(BattalionType type) => type is BattalionType.Scouts or BattalionType.Engineers;
 
     /// <summary>
-    /// New regiments fill the claimer slots first if they are lone scouts or warriors (one per city, plus one);
-    /// the rest join the army.
+    /// New regiments fill the claimer slots first if they are lone scouts (one per city, plus one), since only
+    /// scouts claim land; the rest join the army.
     /// </summary>
     private void ClassifyNewRegiments()
     {
-        _claimers.RemoveWhere(id => _session.UnitById(id) is null);
+        // Gone, or without scouts (claimers from saves before only scouts claimed): they join the army.
+        _claimers.RemoveWhere(id => _session.UnitById(id) is not { HasScouts: true });
         int wanted = 1 + _session.Cities.Count(c => c.OwnerId == _player.Id);
         foreach (var unit in _session.Units.Where(u => u.OwnerId == _player.Id && u.IsMilitary && _knownRegiments.Add(u.Id)))
-            if (_claimers.Count < wanted && unit.Battalions.Count == 1 && unit.Battalions[0].Type is BattalionType.Scouts or BattalionType.Warriors)
+            if (_claimers.Count < wanted && unit.Battalions.Count == 1 && unit.Battalions[0].Type == BattalionType.Scouts)
                 _claimers.Add(unit.Id);
     }
 

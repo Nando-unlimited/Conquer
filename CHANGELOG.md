@@ -2,6 +2,18 @@
 
 Todos los cambios del juego, del más reciente al más antiguo. Cada versión es un commit cuyo título es su número.
 
+## [1.43.0] - 2026-10-01
+
+### Añadido
+- **Exploradores que van solos**: las unidades formadas solo por exploradores tienen el botón **«Explorar y reclamar»**. Con él van por su cuenta a la mejor provincia libre junto a tus fronteras (la de mejor tierra para lo lejos que está), la reclaman y siguen con la siguiente.
+  - Nunca pasan por tierras de otras naciones, y si hay varias explorando no van a la misma provincia.
+  - Avisan de cada provincia que reclaman, y cuando no les queda tierra libre a su alcance dejan de explorar y lo dicen.
+  - Su estado dice «Explorando». «Dejar de explorar», «Detener» o una orden de movimiento les devuelven el mando. La opción se guarda con la partida.
+
+### Cambiado
+- **Solo los exploradores reclaman territorio**: una unidad solo puede reclamar una provincia libre si lleva al menos un batallón de exploradores. Las unidades mixtas (por ejemplo, guerreros con exploradores) también pueden.
+- La IA solo usa exploradores para reclamar tierra. En las partidas guardadas, los guerreros que tenía con esa tarea pasan a su ejército.
+
 ## [1.42.0] - 2026-10-01
 
 ### Cambiado
