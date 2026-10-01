@@ -243,7 +243,7 @@ public sealed partial class NationView
             var warriors = BattalionType.Warriors.Info();
             var train = _session.CanTrain(city, BattalionType.Warriors);
             string trainTip = $"Entrena {Formations.BattalionName(warriors).ToLowerInvariant()} ({warriors.Men} hombres). Coste: {warriors.Cost}. " +
-                              $"Tarda {warriors.TrainingDays} días." + (city.Training.Count > 0 ? $"\nEn instrucción: {city.Training.Count}." : "") +
+                              TrainingDaysText(GameSession.TrainingDays(_player, BattalionType.Warriors), warriors.TrainingDays) + (city.Training.Count > 0 ? $"\nEn instrucción: {city.Training.Count}." : "") +
                               (train.Ok ? "" : "\n" + train.Message);
             if (ui.Button(new Rect(x, rowY + 3, bw, RowHeight - 6), warriors.Name, train.Ok, tooltip: trainTip, size: FontSize.Small))
                 _show(_session.Train(_player.Id, city.Id, BattalionType.Warriors));

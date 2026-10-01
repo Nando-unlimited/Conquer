@@ -1,3 +1,4 @@
+using Conquer.Game.Buildings;
 using Conquer.Game.Economy;
 using Conquer.Game.Entities;
 using Conquer.Game.Military;
@@ -59,7 +60,7 @@ internal sealed partial class AiPlayer
 
     /// <summary>
     /// Until the army reaches 2 battalions per city (4 at war), trains whole regiments from its template
-    /// when it can afford one, and otherwise the best single battalion it can.
+    /// when it can afford one, and otherwise the best single battalion it can, in its biggest city with barracks.
     /// </summary>
     private void BuildArmy()
     {
@@ -72,8 +73,10 @@ internal sealed partial class AiPlayer
             + cities.Sum(c => c.Training.Sum(o => o.TemplateBattalions.Count + (o.Battalion is BattalionType t && !Auxiliary(t) ? 1 : 0)));
         if (battalions >= target) return;
 
-        var city = cities.OrderByDescending(c => Map.Provinces[c.ProvinceId].Population).First();
-        if (Map.Provinces[city.ProvinceId].Population < 400) return;
+        // Only cities with barracks train troops.
+        var city = cities.Where(c => Map.Provinces[c.ProvinceId].Buildings.Contains(BuildingType.Barracks))
+            .OrderByDescending(c => Map.Provinces[c.ProvinceId].Population).FirstOrDefault();
+        if (city == null || Map.Provinces[city.ProvinceId].Population < 400) return;
         // A unit as big as the city can spare (keeping 100 people beyond the minimum), from 2 to 6 battalions.
         int size = Math.Clamp((int)((Map.Provinces[city.ProvinceId].Population - GameRules.MinCityPopulation - 100) / 100), 0, BattalionsPerUnit);
         if (size >= 2 && ArmyTemplate(size) is var template && Spare(template.Cost)

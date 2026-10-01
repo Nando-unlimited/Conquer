@@ -38,6 +38,11 @@ public sealed record SaveGame
     /// division below corps); loading one moves each HQ to the nearest new level.
     /// </summary>
     public bool ThreeCommandLevels { get; init; }
+    /// <summary>
+    /// Written since only cities with barracks train combat troops (1.44.0). Loading an older save gives every city
+    /// one, as every city trained troops before.
+    /// </summary>
+    public bool Barracks { get; init; }
     public required long Hours { get; init; }
     public required bool ComputerRivals { get; init; }
 

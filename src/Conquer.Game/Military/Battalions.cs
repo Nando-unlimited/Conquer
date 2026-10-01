@@ -136,6 +136,9 @@ public static class Battalions
 
     public static BattalionInfo Info(this BattalionType type) => Table[type];
 
+    /// <summary>Combat troops train only in a city with barracks; scouts and engineers anywhere, and ships in ports.</summary>
+    public static bool NeedsBarracks(this BattalionType type) => !type.Info().Naval && type is not (BattalionType.Scouts or BattalionType.Engineers);
+
     private static readonly HashSet<BattalionType> Artillery =
         [BattalionType.Catapults, BattalionType.Cannons, BattalionType.FieldArtillery, BattalionType.HeavyArtillery];
 

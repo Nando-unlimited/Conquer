@@ -213,16 +213,20 @@ public sealed partial class GameSession
         if (type.Info().Naval && !IsPort(p, city.OwnerId)) return CommandResult.Fail("Los barcos solo se construyen en ciudades con puerto.");
         if (type.Info().Shipyard is BuildingType yard && !p.Buildings.Contains(yard))
             return CommandResult.Fail($"Requiere {yard.Info().Name.ToLowerInvariant()} en la ciudad.");
-        return CanRaiseTroops(city, type.Info().Men, type.Info().Cost, type.Info().Requires);
+        return CanRaiseTroops(city, type.Info().Men, type.Info().Cost, type.Info().Requires, type.NeedsBarracks());
     }
 
-    /// <summary>Whether a city can raise troops: the advances are known, it is free, has the men to spare and the nation can pay.</summary>
-    private CommandResult CanRaiseTroops(City city, int men, Economy.ResourceCost cost, IEnumerable<Tech> requires)
+    /// <summary>
+    /// Whether a city can raise troops: the advances are known, it has barracks if they are combat troops
+    /// (<paramref name="needsBarracks"/>), it is free, has the men to spare and the nation can pay.
+    /// </summary>
+    private CommandResult CanRaiseTroops(City city, int men, Economy.ResourceCost cost, IEnumerable<Tech> requires, bool needsBarracks)
     {
         var player = Players[city.OwnerId];
         var p = Map.Provinces[city.ProvinceId];
         var missing = requires.Where(t => !player.Techs.Contains(t)).ToList();
         if (missing.Count > 0) return CommandResult.Fail("Requiere " + string.Join(" y ", missing.Select(t => t.Info().Name.ToLowerInvariant())) + ".");
+        if (needsBarracks && !p.Buildings.Contains(BuildingType.Barracks)) return CommandResult.Fail("Requiere un cuartel en la ciudad.");
         if (p.IsOccupied) return CommandResult.Fail("La ciudad está ocupada por el enemigo.");
         if (p.Population - men < GameRules.MinCityPopulation) return CommandResult.Fail($"Hacen falta {men + GameRules.MinCityPopulation} habitantes.");
         if (!player.Stockpile.Has(cost)) return CommandResult.Fail($"Cuesta {cost}.");
@@ -238,9 +242,22 @@ public sealed partial class GameSession
         var info = type.Info();
         Players[playerId].Stockpile.TrySpend(info.Cost);
         Map.Provinces[city.ProvinceId].Population -= info.Men;
-        city.Training.Add(new TrainingOrder(type));
-        return CommandResult.Success($"{info.Name} en instrucción: {info.TrainingDays} días.");
+        int days = TrainingDays(Players[playerId], type);
+        city.Training.Add(new TrainingOrder(type, days));
+        return CommandResult.Success($"{info.Name} en instrucción: {days} días.");
     }
+
+    /// <summary>How much faster the player trains a battalion: <see cref="MilitaryRules.TechTrainingSpeed"/> for each advance it knows that studies it.</summary>
+    public static double TrainingSpeed(Player player, BattalionType type) =>
+        MilitaryRules.TechTrainingSpeed * player.Techs.Count(t => t.Info().FasterTraining.Contains(type));
+
+    /// <summary>Days a battalion takes the player to train: its normal days, fewer with the advances that study it.</summary>
+    public static int TrainingDays(Player player, BattalionType type) =>
+        (int)Math.Ceiling(type.Info().TrainingDays / (1 + TrainingSpeed(player, type)));
+
+    /// <summary>Days a regiment of the template takes the player: its battalions train side by side, so the slowest sets the time.</summary>
+    public static int TrainingDays(Player player, RegimentTemplate template) =>
+        template.Battalions.Count == 0 ? 0 : template.Battalions.Max(b => TrainingDays(player, b));
 
     public CommandResult CanRaiseHeadquarters(City city, int level)
     {
@@ -348,7 +365,7 @@ public sealed partial class GameSession
     }
 
     public CommandResult CanTrainTemplate(City city, RegimentTemplate template) =>
-        CanRaiseTroops(city, template.Men, template.Cost, template.Requires);
+        CanRaiseTroops(city, template.Men, template.Cost, template.Requires, template.NeedsBarracks);
 
     /// <summary>Pays for every battalion of a template at once; they train side by side and form one regiment.</summary>
     public CommandResult TrainTemplate(int playerId, int cityId, int templateId)
@@ -359,8 +376,9 @@ public sealed partial class GameSession
         if (!check.Ok) return check;
         Players[playerId].Stockpile.TrySpend(template.Cost);
         Map.Provinces[city.ProvinceId].Population -= template.Men;
-        city.Training.Add(new TrainingOrder(template));
-        return CommandResult.Success($"{Formations.CombatName(template.Battalions.Count)} de la {template.Name} en instrucción: {template.TrainingDays} días.");
+        int days = TrainingDays(Players[playerId], template);
+        city.Training.Add(new TrainingOrder(template, days));
+        return CommandResult.Success($"{Formations.CombatName(template.Battalions.Count)} de la {template.Name} en instrucción: {days} días.");
     }
 
     // ------------------------------------------------------------------ organisation

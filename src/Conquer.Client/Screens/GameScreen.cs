@@ -728,6 +728,20 @@ public sealed partial class GameScreen : IScreen
         }
     }
 
+    /// <summary>The battalions the owner's military advances have its barracks train faster, and how much.</summary>
+    private void BarracksImprovements(Player owner, float x, ref float y, float w)
+    {
+        var faster = Battalions.All.Where(t => t.NeedsBarracks() && t.Info().Requires.All(owner.Techs.Contains) && GameSession.TrainingSpeed(owner, t) > 0)
+            .Select(t => $"{t.Info().Name} -{1 - 1 / (1 + GameSession.TrainingSpeed(owner, t)):P0}").ToList();
+        if (faster.Count == 0) return;
+        foreach (var line in Ui.Font.Wrap("Instrucción más corta: " + string.Join(", ", faster) + ".", w, FontSize.Small))
+        {
+            Ui.Text(x, y, line, Theme.Good, FontSize.Small);
+            y += Ui.Font.LineHeight(FontSize.Small);
+        }
+        y += 6;
+    }
+
     /// <summary>
     /// The province's buildings: the one under construction, the finished ones and, in your own
     /// provinces, a button for each building you can put up; the rest say what they are missing.
@@ -763,6 +777,7 @@ public sealed partial class GameScreen : IScreen
             y += 22;
             Ui.Text(x + 10, y, built.Info().Description, Theme.TextDim, FontSize.Small);
             y += 24;
+            if (built == BuildingType.Barracks && p.OwnerId >= 0) BarracksImprovements(_session.Players[p.OwnerId], x + 10, ref y, w - 10);
         }
 
         if (p.OwnerId != Human.Id) return;

@@ -29,7 +29,7 @@ internal sealed partial class AiPlayer
     private const double BigCityPopulation = 2000;
     private static readonly BuildingType[] BuildOrder =
     [
-        BuildingType.Farm, BuildingType.Granary, BuildingType.Temple, BuildingType.Library, BuildingType.Market,
+        BuildingType.Farm, BuildingType.Granary, BuildingType.Barracks, BuildingType.Temple, BuildingType.Library, BuildingType.Market,
         BuildingType.Mine, BuildingType.Sawmill, BuildingType.Aqueduct, BuildingType.HerbalistHut, BuildingType.Amphitheatre,
         BuildingType.Walls, BuildingType.University, BuildingType.Bank, BuildingType.Castle,
         BuildingType.Factory, BuildingType.Hospital, BuildingType.PowerPlant, BuildingType.Port, BuildingType.DryDock,
@@ -39,15 +39,16 @@ internal sealed partial class AiPlayer
     [
         Tech.Agriculture, Tech.Writing, Tech.Archery, Tech.Carpentry, Tech.Mythology, Tech.HorsebackRiding, Tech.Irrigation,
         Tech.Mining, Tech.Pottery, Tech.Medicine, Tech.BronzeWorking, Tech.TheWheel, Tech.Currency, Tech.CodeOfLaws, Tech.IronWorking,
+        Tech.ImprovedBows, Tech.HorseBreeding,
         Tech.Mathematics, Tech.MilitaryTactics, Tech.Trade, Tech.Philosophy, Tech.Construction, Tech.Engineering, Tech.SiegeEngines,
-        Tech.Administration, Tech.DramaAndPoetry, Tech.Fortifications, Tech.HeavyCavalry, Tech.Navigation,
-        Tech.CropRotation, Tech.Education, Tech.Machinery, Tech.Guilds, Tech.Theology, Tech.Stirrup, Tech.Banking, Tech.Astronomy,
-        Tech.Castles, Tech.PrintingPress, Tech.Gunpowder, Tech.Economics, Tech.Anatomy, Tech.DeepMining, Tech.Metallurgy,
-        Tech.ScientificMethod, Tech.MilitaryScience, Tech.Cartography,
+        Tech.Administration, Tech.DramaAndPoetry, Tech.Drill, Tech.Fortifications, Tech.HeavyCavalry, Tech.Navigation,
+        Tech.CropRotation, Tech.Education, Tech.Machinery, Tech.Guilds, Tech.Theology, Tech.Stirrup, Tech.SiegeWorkshops, Tech.Banking, Tech.Astronomy,
+        Tech.Castles, Tech.Armouries, Tech.PrintingPress, Tech.Gunpowder, Tech.Economics, Tech.Anatomy, Tech.DeepMining, Tech.Metallurgy,
+        Tech.ScientificMethod, Tech.MilitaryScience, Tech.InterchangeableParts, Tech.Cartography,
         Tech.Rifling, Tech.SteamEngine, Tech.PublicEducation, Tech.Industrialization, Tech.Sanitation, Tech.Chemistry, Tech.Steel,
-        Tech.Railroad, Tech.MachineGuns,
+        Tech.Railroad, Tech.MachineGuns, Tech.Conscription, Tech.ArtilleryFoundries,
         Tech.Electricity, Tech.Fertilizers, Tech.OilRefining, Tech.Combustion, Tech.Antibiotics, Tech.HeavyArtillery, Tech.Electronics,
-        Tech.Armour, Tech.AssemblyLine, Tech.Aviation, Tech.NavalEngineering,
+        Tech.Armour, Tech.AssemblyLine, Tech.Aviation, Tech.WarProduction, Tech.NavalEngineering,
     ];
     private readonly GameSession _session;
     private readonly Player _player;
@@ -151,6 +152,8 @@ internal sealed partial class AiPlayer
         BuildingType.Aqueduct => p.Population > 0.6 * _session.CapacityOf(p),
         // Walls around the big cities.
         BuildingType.Walls or BuildingType.Castle => p.Population >= BigCityPopulation,
+        // Barracks in the capital, where it trains its army, and in the big cities.
+        BuildingType.Barracks => p.CityId == _player.CapitalCityId || p.Population >= BigCityPopulation,
         _ => true,
     };
 

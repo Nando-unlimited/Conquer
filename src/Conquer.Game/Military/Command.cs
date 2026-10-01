@@ -41,17 +41,18 @@ public sealed class TrainingOrder
     public int DaysLeft { get; set; }
     public int TotalDays { get; }
 
-    public TrainingOrder(BattalionType battalion)
+    /// <param name="days">Days it takes the nation (see <see cref="Simulation.GameSession.TrainingDays(Entities.Player, BattalionType)"/>).</param>
+    public TrainingOrder(BattalionType battalion, int days)
     {
         Battalion = battalion;
-        DaysLeft = TotalDays = battalion.Info().TrainingDays;
+        DaysLeft = TotalDays = days;
     }
 
-    public TrainingOrder(RegimentTemplate template)
+    public TrainingOrder(RegimentTemplate template, int days)
     {
         TemplateName = template.Name;
         TemplateBattalions = [.. template.Battalions];
-        DaysLeft = TotalDays = template.TrainingDays;
+        DaysLeft = TotalDays = days;
     }
 
     public TrainingOrder(int headquartersLevel)

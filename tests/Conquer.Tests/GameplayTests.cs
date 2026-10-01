@@ -654,4 +654,20 @@ public class GameplayTests(WorldFixture world)
             Assert.True(ai.Techs.Count > 0 || ai.ResearchProgress.Any(p => p > 0), $"{ai.Name} is not researching");
         }
     }
+
+    [Fact]
+    public void ComputerRivalsBuildBarracksToTrainTheirArmy()
+    {
+        var s = NewSession(players: 3);
+        RunHours(s, 24 * 365);
+
+        foreach (var ai in s.Players.Where(p => !p.IsHuman))
+        {
+            var capital = _map.Provinces[s.CityById(ai.CapitalCityId!.Value)!.ProvinceId];
+            Assert.Contains(BuildingType.Barracks, capital.Buildings);
+            var combat = s.Units.Where(u => u.OwnerId == ai.Id && u.IsMilitary).SelectMany(u => u.Battalions).Count(b => b.Type.NeedsBarracks())
+                         + s.Cities.Where(c => c.OwnerId == ai.Id).Sum(c => c.Training.Count(o => o.TemplateBattalions.Count > 0 || o.Battalion is { } t && t.NeedsBarracks()));
+            Assert.True(combat > 0, $"{ai.Name} has no combat troops");
+        }
+    }
 }

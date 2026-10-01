@@ -105,6 +105,10 @@ public sealed partial class NationView
         return parts.Count == 0 ? "nada" : string.Join(", ", parts) + "/día";
     }
 
+    /// <summary>"Tarda 16 días (20 sin tus avances militares)." or, with none that speed it up, "Tarda 20 días."</summary>
+    public static string TrainingDaysText(int days, int baseDays) =>
+        days < baseDays ? $"Tarda {days} días ({baseDays} sin tus avances militares)." : $"Tarda {days} días.";
+
     private string UnitActivity(Unit unit)
     {
         if (unit.CarrierId is int carrier && _session.UnitById(carrier) is { } fleet) return $"A bordo de {fleet.Name}";
@@ -203,7 +207,7 @@ public sealed partial class NationView
         ui.Text(sx, sy, Formations.CombatName(template.Battalions.Count), Theme.Accent, bold: true);
         sy += 28;
         Row(ui, sx, ref sy, sw, "Hombres", $"{template.Men:N0}");
-        Row(ui, sx, ref sy, sw, "Instrucción", $"{template.TrainingDays} días");
+        Row(ui, sx, ref sy, sw, "Instrucción", $"{GameSession.TrainingDays(_player, template)} días");
         Row(ui, sx, ref sy, sw, "Ataque", $"{template.Attack:0.#}");
         Row(ui, sx, ref sy, sw, "Defensa", $"{template.Defense:0.#}");
         Row(ui, sx, ref sy, sw, "Organización", $"{template.MaxOrganisation:0}");

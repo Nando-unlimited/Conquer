@@ -28,8 +28,10 @@ public sealed class RegimentTemplate
     /// <summary>What all its battalions cost together.</summary>
     public ResourceCost Cost => new(Battalions.SelectMany(b => b.Info().Cost.Items)
         .GroupBy(i => i.Type).Select(g => (g.Key, g.Sum(i => i.Amount))).OrderBy(i => i.Key).ToArray());
-    /// <summary>Its battalions train side by side, so the slowest sets the time.</summary>
+    /// <summary>Its battalions train side by side, so the slowest sets the time; before advances (see <see cref="Simulation.GameSession.TrainingDays(Entities.Player, RegimentTemplate)"/>).</summary>
     public int TrainingDays => Battalions.Count == 0 ? 0 : Battalions.Max(b => b.Info().TrainingDays);
+    /// <summary>Whether any of its battalions trains only in barracks.</summary>
+    public bool NeedsBarracks => Battalions.Any(b => b.NeedsBarracks());
     /// <summary>Every advance any of its battalions needs.</summary>
     public IEnumerable<Tech> Requires => Battalions.SelectMany(b => b.Info().Requires).Distinct();
     public double Attack => Battalions.Sum(b => b.Info().Attack);

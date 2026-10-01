@@ -1,4 +1,5 @@
 using Conquer.Game.Economy;
+using Conquer.Game.Military;
 using Conquer.Game.Rules;
 
 namespace Conquer.Game.Science;
@@ -93,17 +94,28 @@ public enum Tech
     Navigation,
     Aviation,
     NavalEngineering,
+    ImprovedBows,
+    HorseBreeding,
+    Drill,
+    SiegeWorkshops,
+    Armouries,
+    InterchangeableParts,
+    Conscription,
+    ArtilleryFoundries,
+    WarProduction,
 }
 
 /// <param name="Level">Its level in its branch, from 1; a level opens once enough of the one below is known (<see cref="GameRules.LevelUnlockShare"/>).</param>
 /// <param name="Requires">Advances it also needs, from its own branch or another.</param>
 /// <param name="Reveals">Resources its owner can see and mine from then on.</param>
 /// <param name="Era">The age it belongs to; it costs more until the nation adopts that age's institution.</param>
+/// <param name="FasterTraining">Battalions its owner's barracks train faster from then on (<see cref="MilitaryRules.TechTrainingSpeed"/>).</param>
 public sealed record TechInfo(string Name, TechBranch Branch, int Level, string Description, Modifiers Effects,
-    Tech[]? Requires = null, ResourceType[]? Reveals = null, Era Era = Era.Ancient)
+    Tech[]? Requires = null, ResourceType[]? Reveals = null, Era Era = Era.Ancient, BattalionType[]? FasterTraining = null)
 {
     public Tech[] Requires { get; } = Requires ?? [];
     public ResourceType[] Reveals { get; } = Reveals ?? [];
+    public BattalionType[] FasterTraining { get; } = FasterTraining ?? [];
     /// <summary>Science points needed to discover it, before any discount; the same for every branch at a level.</summary>
     public double Cost => Techs.LevelCost(Level);
 }
@@ -205,6 +217,33 @@ public static class Techs
         [Tech.Armour] = new("Blindados", TechBranch.Military, 13, "Carros de combate.", Modifiers.None, [Tech.Combustion, Tech.Steel], Era: Era.Modern),
         [Tech.Aviation] = new("Aviación", TechBranch.Military, 13, "Bombarderos que vuelan sobre cualquier terreno y sobre el mar.", Modifiers.None,
             [Tech.Combustion, Tech.Electricity], Era: Era.Modern),
+
+        // Better weapons and drill: the barracks train the battalions they study faster.
+        [Tech.ImprovedBows] = new("Arcos mejorados", TechBranch.Military, 3, "Arcos compuestos: arqueros, carros de arqueros y ballesteros se instruyen un 25 % antes.",
+            Modifiers.None, [Tech.Archery], FasterTraining: [BattalionType.Archers, BattalionType.ChariotArchers, BattalionType.Crossbowmen]),
+        [Tech.HorseBreeding] = new("Cría caballar", TechBranch.Military, 3, "Yeguadas: jinetes, carros, catafractos y caballeros se instruyen un 25 % antes.",
+            Modifiers.None, [Tech.HorsebackRiding],
+            FasterTraining: [BattalionType.Horsemen, BattalionType.Chariots, BattalionType.ChariotArchers, BattalionType.Cataphracts, BattalionType.Knights]),
+        [Tech.Drill] = new("Instrucción militar", TechBranch.Military, 5, "Guerreros, lanceros, infantería de hierro y legionarios se instruyen un 25 % antes.",
+            Modifiers.None, [Tech.MilitaryTactics], Era: Era.Classical,
+            FasterTraining: [BattalionType.Warriors, BattalionType.BronzeSpearmen, BattalionType.IronInfantry, BattalionType.Legionaries]),
+        [Tech.SiegeWorkshops] = new("Talleres de asedio", TechBranch.Military, 6, "Catapultas y cañones se instruyen un 25 % antes.",
+            Modifiers.None, [Tech.SiegeEngines], Era: Era.Medieval, FasterTraining: [BattalionType.Catapults, BattalionType.Cannons]),
+        [Tech.Armouries] = new("Armerías", TechBranch.Military, 7, "Corazas en serie: infantería de hierro, legionarios, catafractos y caballeros se instruyen un 25 % antes.",
+            Modifiers.None, [Tech.IronWorking], Era: Era.Medieval,
+            FasterTraining: [BattalionType.IronInfantry, BattalionType.Legionaries, BattalionType.Cataphracts, BattalionType.Knights]),
+        [Tech.InterchangeableParts] = new("Piezas intercambiables", TechBranch.Military, 9, "Arcabuceros, mosqueteros, fusileros y ametralladoras se instruyen un 25 % antes.",
+            Modifiers.None, [Tech.Gunpowder], Era: Era.Renaissance,
+            FasterTraining: [BattalionType.Arquebusiers, BattalionType.Musketeers, BattalionType.Riflemen, BattalionType.MachineGunners]),
+        [Tech.Conscription] = new("Servicio militar obligatorio", TechBranch.Military, 11, "Mosqueteros, fusileros, ametralladoras e infantería motorizada se instruyen un 25 % antes.",
+            Modifiers.None, [Tech.MilitaryScience], Era: Era.Industrial,
+            FasterTraining: [BattalionType.Musketeers, BattalionType.Riflemen, BattalionType.MachineGunners, BattalionType.MotorisedInfantry]),
+        [Tech.ArtilleryFoundries] = new("Fundiciones de artillería", TechBranch.Military, 11, "Cañones, artillería de campaña y artillería pesada se instruyen un 25 % antes.",
+            Modifiers.None, [Tech.Steel], Era: Era.Industrial,
+            FasterTraining: [BattalionType.Cannons, BattalionType.FieldArtillery, BattalionType.HeavyArtillery]),
+        [Tech.WarProduction] = new("Producción bélica", TechBranch.Military, 13, "Infantería motorizada, tanques y bombarderos se instruyen un 25 % antes.",
+            Modifiers.None, [Tech.Combustion], Era: Era.Modern,
+            FasterTraining: [BattalionType.MotorisedInfantry, BattalionType.Tanks, BattalionType.Bombers]),
     };
 
     public static TechInfo Info(this Tech tech) => Table[tech];

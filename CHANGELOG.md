@@ -2,6 +2,28 @@
 
 Todos los cambios del juego, del más reciente al más antiguo. Cada versión es un commit cuyo título es su número.
 
+## [1.44.0] - 2026-10-01
+
+### Añadido
+- **Cuartel**: un edificio nuevo para las ciudades (60 de madera y 30 de oro, 30 días, sin avance). **Solo las ciudades con cuartel entrenan tropas de combate**, sueltas o con plantillas.
+  - Exploradores, ingenieros, colonos y cuarteles generales se siguen formando en cualquier ciudad, y los barcos en los puertos.
+  - La pestaña Ejército de una ciudad sin cuartel lo avisa, y cada tropa dice «Requiere un cuartel en la ciudad».
+- **Avances militares que mejoran el cuartel**: cada uno hace que el cuartel entrene un 25 % antes solo las tropas que estudia, y se suman.
+  - Arcos mejorados: arqueros, carros de arqueros y ballesteros.
+  - Cría caballar: jinetes, carros, catafractos y caballeros.
+  - Instrucción militar: guerreros, lanceros, infantería de hierro y legionarios.
+  - Talleres de asedio: catapultas y cañones.
+  - Armerías: infantería de hierro, legionarios, catafractos y caballeros.
+  - Piezas intercambiables: arcabuceros, mosqueteros, fusileros y ametralladoras.
+  - Servicio militar obligatorio: mosqueteros, fusileros, ametralladoras e infantería motorizada.
+  - Fundiciones de artillería: cañones, artillería de campaña y artillería pesada.
+  - Producción bélica: infantería motorizada, tanques y bombarderos.
+  - Los botones de entrenar muestran los días que tardas tú, y al pasar el ratón cuántos serían sin tus avances. El panel del cuartel lista las tropas que entrena más rápido.
+
+### Cambiado
+- La IA construye un cuartel en su capital (y en sus ciudades grandes) y entrena allí su ejército. También investiga los nuevos avances.
+- Al cargar una partida guardada de una versión anterior, todas sus ciudades reciben un cuartel, porque hasta ahora todas entrenaban tropas.
+
 ## [1.43.0] - 2026-10-01
 
 ### Añadido

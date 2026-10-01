@@ -1,3 +1,4 @@
+using Conquer.Game.Buildings;
 using Conquer.Game.Economy;
 using Conquer.Game.Rules;
 using Conquer.Game.Science;
@@ -76,6 +77,22 @@ public class SaveGameTests(WorldFixture world)
         // A current save keeps the pocket exhausted; an older one never had it, so it starts full.
         Assert.Equal(extraDeposits ? 0 : p.DepositSizes[(int)ResourceType.Iron] * GameRules.DepositSizeMultiplier,
             p.Reserves[(int)ResourceType.Iron]);
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void OlderSavesGiveEveryCityBarracks(bool barracks)
+    {
+        var s = PlayedGame();
+        var save = s.ToSave("test") with { Barracks = barracks };
+
+        var loaded = GameSession.Load(_map, save);
+
+        // Every city trained troops before barracks, so in an older save each gets one; a current save keeps what it had.
+        var withBarracks = loaded.Cities.Where(c => _map.Provinces[c.ProvinceId].Buildings.Contains(BuildingType.Barracks));
+        if (barracks) Assert.Equal(save.Provinces.Count(p => p.Buildings.Contains(BuildingType.Barracks)), withBarracks.Count());
+        else Assert.Equal(loaded.Cities.Count, withBarracks.Count());
     }
 
     [Fact]

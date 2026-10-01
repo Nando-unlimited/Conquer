@@ -20,6 +20,7 @@ public sealed partial class GameSession
         MapFingerprint = Fingerprint(Map),
         ExtraDeposits = true,
         ThreeCommandLevels = true,
+        Barracks = true,
         Hours = Date.Hours,
         ComputerRivals = _computerRivals,
         Players = Players.Select(p => new PlayerSave(
@@ -159,6 +160,8 @@ public sealed partial class GameSession
                 city.Training.Add(new TrainingOrder(o.Battalion, o.TemplateName, o.TemplateBattalions, Level(o.HeadquartersLevel), o.DaysLeft, o.TotalDays));
             session.Cities.Add(city);
             session._usedCityNames.Add(c.Name);
+            // Before barracks every city trained troops: in an older save each keeps doing so with one.
+            if (!save.Barracks) map.Provinces[c.ProvinceId].AddBuilding(BuildingType.Barracks);
         }
 
         foreach (var u in save.Units)

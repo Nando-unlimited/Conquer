@@ -21,7 +21,7 @@ public class MilitaryTests(WorldFixture world)
             .First(t => t.B.Biome == Biome.Grassland && t.B.Neighbors.Length > 3);
 
     /// <summary>
-    /// Player 0 (human) has its capital in A; player 1 owns the neighbouring B. No computer rivals, so
+    /// Player 0 (human) has its capital in A, with barracks; player 1 owns the neighbouring B. No computer rivals, so
     /// only the test moves units.
     /// </summary>
     private (GameSession S, Province A, Province B) TwoNations()
@@ -29,6 +29,7 @@ public class MilitaryTests(WorldFixture world)
         var s = GameSession.Create(_map, 2, seed: 7, computerRivals: false);
         var (a, b) = Pair();
         s.FoundCity(0, s.AddUnit(0, UnitType.Settlers, a.Id, 300).Id);
+        a.AddBuilding(BuildingType.Barracks);
         var claimer = s.AddRegiment(1, b.Id, BattalionType.Scouts);
         s.Claim(1, claimer.Id);
         s.Disband(1, claimer.Id);
@@ -572,6 +573,82 @@ public class MilitaryTests(WorldFixture world)
         var regiment = Assert.Single(s.Units, u => u.IsMilitary && u.OwnerId == 0);
         Assert.Equal([BattalionType.Warriors, BattalionType.Warriors, BattalionType.Archers], regiment.Battalions.Select(b => b.Type));
         Assert.Equal(300, regiment.Citizens);
+    }
+
+    [Fact]
+    public void OnlyCitiesWithBarracksTrainCombatTroops()
+    {
+        var (s, a, b) = TwoNations();
+        var city = s.CityIn(a)!;
+        a.ClearBuildings();
+        a.Population = 3000;
+        foreach (var r in Resources.All) s.Human.Stockpile[r] = 5000;
+        s.Human.Learn(Tech.Engineering);
+        s.Human.Learn(Tech.Navigation);
+
+        Assert.Equal("Requiere un cuartel en la ciudad.", s.CanTrain(city, BattalionType.Warriors).Message);
+        Assert.False(s.CanTrainTemplate(city, s.Human.Templates[0]).Ok);
+        // Scouts, engineers and HQs need no barracks; ships need a port instead.
+        Assert.True(s.Train(0, city.Id, BattalionType.Scouts).Ok);
+        Assert.True(s.Train(0, city.Id, BattalionType.Engineers).Ok);
+        Assert.True(s.RaiseHeadquarters(0, city.Id, 1).Ok);
+        var scoutsOnly = s.AddTemplate(s.Human, [BattalionType.Scouts, BattalionType.Engineers]);
+        Assert.True(s.CanTrainTemplate(city, scoutsOnly).Ok);
+        Assert.False(BattalionType.Trireme.NeedsBarracks());
+
+        // Barracks go only in cities, need no advance, and once built the city trains combat troops.
+        Assert.Equal("Solo en provincias con ciudad.", s.IsBuildingAvailable(b, BuildingType.Barracks).Message);
+        Assert.True(s.Build(0, a.Id, BuildingType.Barracks).Ok);
+        Assert.False(s.CanTrain(city, BattalionType.Warriors).Ok); // still under construction
+        RunHours(s, 24 * BuildingType.Barracks.Info().Days);
+        Assert.Contains(BuildingType.Barracks, a.Buildings);
+        Assert.True(s.Train(0, city.Id, BattalionType.Warriors).Ok);
+        Assert.True(s.TrainTemplate(0, city.Id, s.Human.Templates[0].Id).Ok);
+    }
+
+    [Fact]
+    public void MilitaryAdvancesTrainTheBattalionsTheyStudyFaster()
+    {
+        var (s, a, _) = TwoNations();
+        var city = s.CityIn(a)!;
+        a.Population = 3000;
+        foreach (var r in Resources.All) s.Human.Stockpile[r] = 5000;
+        s.Human.Learn(Tech.Archery);
+        Assert.Equal(20, GameSession.TrainingDays(s.Human, BattalionType.Archers));
+
+        // Improved bows speed up the archers only.
+        s.Human.Learn(Tech.ImprovedBows);
+        Assert.Equal(16, GameSession.TrainingDays(s.Human, BattalionType.Archers)); // 20 / 1.25
+        Assert.Equal(15, GameSession.TrainingDays(s.Human, BattalionType.Warriors));
+        Assert.True(s.Train(0, city.Id, BattalionType.Archers).Ok);
+        Assert.Equal(16, city.Training[^1].TotalDays);
+
+        // A template waits for its slowest battalion, each at its own pace.
+        var template = s.AddTemplate(s.Human, [BattalionType.Warriors, BattalionType.Archers]);
+        Assert.Equal(20, template.TrainingDays);
+        Assert.Equal(16, GameSession.TrainingDays(s.Human, template));
+        s.Human.Learn(Tech.Drill);
+        Assert.Equal(12, GameSession.TrainingDays(s.Human, BattalionType.Warriors)); // 15 / 1.25
+        Assert.Equal(16, GameSession.TrainingDays(s.Human, template));
+
+        // Advances add up: knights are studied by horse breeding and armouries.
+        s.Human.Learn(Tech.HorseBreeding);
+        s.Human.Learn(Tech.Armouries);
+        Assert.Equal(30, GameSession.TrainingDays(s.Human, BattalionType.Knights)); // 45 / 1.5
+    }
+
+    [Fact]
+    public void AdvancesThatSpeedUpTrainingAreMilitaryAndStudyCombatTroops()
+    {
+        var faster = Techs.All.Where(t => t.Info().FasterTraining.Length > 0).ToList();
+        Assert.Equal(9, faster.Count);
+        foreach (var tech in faster)
+        {
+            Assert.Equal(TechBranch.Military, tech.Info().Branch);
+            Assert.All(tech.Info().FasterTraining, type => Assert.True(type.NeedsBarracks()));
+        }
+        // Every combat battalion has some advance that speeds it up.
+        Assert.All(Battalions.All.Where(t => t.NeedsBarracks()), type => Assert.Contains(faster, t => t.Info().FasterTraining.Contains(type)));
     }
 
     [Fact]
