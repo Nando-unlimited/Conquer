@@ -659,8 +659,8 @@ La partida en pantalla, sin pantalla: lo que se ve, lo seleccionado, los diálog
 ### `GameController.Unit.cs`
 | Función | Qué hace |
 | --- | --- |
-| `UnitPanel` | Panel de la unidad: tipo, nación, ubicación, estado (`UnitState`: «A bordo de…», «Combatiendo en el mar», «Hacia… (tiempo)», «Explorando»…) y, si es tuya, sus botones: «Editar unidad» (en unidades de combate, cuarteles y flotas; lanza `EditUnitRequested`), embarcar en una flota cercana con sitio (`EmbarkButtons`), fundar, reclamar, «Explorar y reclamar» en las de exploradores (una orden de movimiento o «Detener» lo quitan), licenciar o asentarse y detener. Una unidad embarcada explica cómo desembarcar. |
-| `EngineerButtons` | Con ingenieros: construir una carretera o un ferrocarril desde una ciudad o cuartel tuyo (lanza `RoadRequested`) y las obras que pasan por aquí, con «Cancelar obra». |
+| `UnitPanel` | Panel de la unidad: tipo, nación, ubicación, estado (`UnitState`: «A bordo de…», «Combatiendo en el mar», «Hacia… (tiempo)», «Explorando»…) y, si es tuya, sus botones: «Editar unidad» (en unidades de combate, cuarteles y flotas; abre el editor), embarcar en una flota cercana con sitio (`EmbarkButtons`), fundar, reclamar, «Explorar y reclamar» en las de exploradores (una orden de movimiento o «Detener» lo quitan), licenciar o asentarse y detener. Una unidad embarcada explica cómo desembarcar. |
+| `EngineerButtons` | Con ingenieros: construir una carretera o un ferrocarril desde una ciudad o cuartel tuyo (abre la ventana de carreteras) y las obras que pasan por aquí, con «Cancelar obra». |
 | `RegimentDetails` | Suministro, velocidad, mando, oficial propio, general de su cuartel y experiencia media (en una flota: velocidad en el mar, si está en puerto y su carga), y cada batallón con sus barras de hombres y organización y, al pasar el ratón, su ataque, defensa, papel y experiencia. |
 | `HeadquartersDetails`, `CommandLine`, `OfficerLine`, `AttachButtons` | Alcance, general y subordinados de un cuartel (en rojo los que están fuera de alcance), de quién depende la unidad y botones para asignarla a uno de los tres cuarteles más cercanos del nivel de arriba o quitarla. |
 | `OfficerTooltip(oficial)`, `HubName(provincia)` | Los rasgos y estrellas de un oficial; el nombre de la ciudad o de los cuarteles de una provincia, para las carreteras. |
@@ -721,6 +721,19 @@ Lo que muestra cada pestaña de la pantalla de la nación, para que el cliente l
 | `TablePage`, `SummaryPage` | Una tabla, bajo una línea en negrita si la hay (Ciudades, Provincias, Ejército, Diplomacia); dos columnas de cifras (Resumen). |
 | `SciencePage`, `InstitutionBadge`, `BranchColumn`, `TechLevel`, `TechCard` | La ciencia: puntos al día, instituciones de la era mostrada, botones de era y, por rama, prioridad, estado, niveles y tarjetas de avance. |
 | `TemplatesPage`, `TemplateSlot` | El diseñador de unidades: plantillas y sus acciones, huecos de la elegida, batallones para añadir y sus cifras (un `Document`). |
+
+### `GameController.Dialogs.cs`
+La ventana para editar una unidad tuya (botón «Editar unidad» de su panel) y la de construir una carretera o un ferrocarril (botón de los ingenieros en una ciudad o cuartel): su estado, lo que muestran y sus órdenes. El tiempo se para mientras alguna está abierta.
+
+| Elemento | Qué es |
+| --- | --- |
+| `EditingUnitId`, `OpenUnitEditor(unidad)`, `CloseUnitEditor()`, `UnitEditor()`, `UnitEditorWindow` | Abre y cierra la ventana y da su contenido: a la izquierda el nombre, las tropas y las uniones; a la derecha, en unidades de combate y cuarteles, el oficial. Se cierra sola si la unidad desaparece. |
+| `UnitName`, `RenameEditedUnit()` | El nombre que se escribe, «Renombrar» (o Intro) y «Volver al nombre automático». |
+| Batallones | Cada batallón o barco es un botón que se marca; «Separar los marcados» los saca juntos en una unidad nueva. |
+| Uniones | Botones para unir las demás unidades tuyas de la provincia, diciendo qué pasa con su oficial. |
+| `OfficerColumn`, `OfficerCard`, `ReserveOfficer` | El oficial al mando con sus rasgos (virtudes en verde, defectos en rojo) y «Relevar del mando»; la reserva, con «Asignar» y «Retirar» para cada oficial; y «Reclutar oficial». |
+| `RoadWindowOpen`, `OpenRoadWindow(desde, tipo)`, `CloseRoadWindow()`, `RoadWindow()` | Tus otras ciudades y cuarteles, del más cercano al más lejano (el más cercano que lo necesita ya elegido); los ya unidos, apagados; tramos nuevos, coste, trabajo y ciudades que une por el camino; «Construir» y «Cancelar» (o Esc). |
+| `PlannedRoute` | La ruta elegida, que `RoadLayer` dibuja en el mapa. |
 
 ---
 
@@ -791,16 +804,7 @@ El ejército en el mapa: fichas de las unidades y batallas. El panel de la unida
 | `DrawBattles()`, `DrawBattleMark(...)`, `BattleSummary(...)`, `NavalBattleSummary(...)` | Espadas cruzadas sobre cada batalla, en tierra o en el mar; al pasar el ratón, los dos bandos, su organización y el terreno; al hacer clic, la ventana de la batalla. |
 
 ### `Screens/GameScreen.UnitEditor.cs`
-La ventana para editar una unidad tuya (botón «Editar unidad» de su panel). El tiempo se para mientras está abierta.
-
-| Función | Qué hace |
-| --- | --- |
-| `OpenUnitEditor(unidad)`, `CloseUnitEditor()`, `DrawUnitEditor()` | Abre, cierra y dibuja la ventana: a la izquierda el nombre, las tropas y las uniones; a la derecha, en unidades de combate y cuarteles, el oficial. Se cierra sola si la unidad desaparece. |
-| `NameSection(...)`, `RenameEditedUnit()` | Caja de texto con el nombre, «Renombrar» (o Intro) y «Volver al nombre automático». |
-| `BattalionSection(...)` | Cada batallón o barco es un botón que se marca; «Separar los marcados» los saca juntos en una unidad nueva. |
-| `MergeSection(...)` | Botones para unir las demás unidades tuyas de la provincia, diciendo qué pasa con su oficial. |
-| `OfficerSection(...)`, `OfficerCard(...)` | El oficial al mando con sus rasgos (virtudes en verde, defectos en rojo) y «Relevar del mando»; la reserva, con «Asignar» y «Retirar» para cada oficial; y «Reclutar oficial». Los rasgos al pasar el ratón salen de `GameController.OfficerTooltip`. |
-| `ShowSampleOfficers(unidad)` | Para `--panel edit`: recluta cuatro oficiales, pone el primero al mando y abre la ventana. |
+Dibuja la ventana de `GameController.UnitEditor`: a la izquierda el nombre (`NameSection`, con la caja de texto), los batallones o barcos (`BattalionSection`) y las uniones (`MergeSection`); a la derecha, en unidades con oficial, el oficial y la reserva (`OfficerSection`, `OfficerCard`). Las listas se cortan donde acaba la ventana. `ShowSampleOfficers(unidad)`, para `--panel edit`, recluta cuatro oficiales, pone el primero al mando y abre la ventana.
 
 ### `Screens/GameScreen.Battle.cs`
 La ventana de una batalla (clic en sus espadas). Se actualiza en directo y el tiempo sigue corriendo (Espacio lo para).
@@ -816,12 +820,7 @@ La ventana de una batalla (clic en sus espadas). Se actualiza en directo y el ti
 | `ShowFirstBattle()` | Para `--panel battle`: abre la primera batalla en curso. |
 
 ### `Screens/GameScreen.Roads.cs`
-La ventana para construir una carretera o un ferrocarril (botón de los ingenieros en una ciudad o cuartel). El tiempo se para mientras está abierta.
-
-| Función | Qué hace |
-| --- | --- |
-| `OpenRoadWindow(desde, tipo)`, `CloseRoadWindow()`, `DrawRoadWindow()` | A la izquierda, para que se vea la ruta: tus otras ciudades y cuarteles, del más cercano al más lejano (el más cercano que lo necesita ya elegido); los ya unidos, apagados; tramos nuevos, coste, trabajo y ciudades que une por el camino; «Construir» y «Cancelar» (o Esc). |
-| `PlannedRoute` | La ruta elegida, que `RoadLayer` dibuja en el mapa. Los nombres de las ciudades y cuarteles salen de `GameController.HubName`. |
+`DrawRoadWindow()`: dibuja la ventana de `GameController.RoadWindow` a la izquierda, para que se vea la ruta en el mapa: los destinos que caben (y cuántos más hay), y debajo lo que cuesta y une el elegido, con «Construir» y «Cancelar».
 
 ### `Screens/NationView.cs`
 `NationView`: dibuja la pantalla de la nación (`NationScreen`): el panel opaco con el nombre, las pestañas y «Cerrar», y la página de la pestaña. Las tablas (`TablePage`, `TextCell`, `Header`, `Rows`) llevan cabeceras que ordenan, filas alternas resaltadas bajo el ratón y desplazamiento con la rueda (guardado por pestaña); el resumen son dos `Document`; la ciencia (`Science`, `InstitutionBadge`, `Branch`, `TechCard`) coloca las tres ramas en columnas con sus tarjetas de 88 píxeles; el diseñador (`Templates`) pone la lista de plantillas a la izquierda, los huecos y los batallones para añadir en el centro y sus cifras a la derecha.
@@ -957,7 +956,7 @@ Uso: ver el README.
 | `DifficultyTests.cs` | En Muy difícil hay menos yacimientos, los mismos de la primera tirada y con la mitad de bolsa; el humano empieza con los recursos de su dificultad y los rivales con los normales; los rivales producen más ciencia en dificultades altas; la dificultad se guarda con la partida. `VeryHardWorldFixture` genera el mismo mundo en Muy difícil. |
 | `SaveGameTests.cs` | Cargar una partida y volver a guardarla da exactamente el mismo fichero; la partida cargada sigue jugándose; los mismos ajustes generan el mismo mapa; las partidas anteriores a la 1.13.0 reciben llenos los yacimientos nuevos; el mapa de los tests conserva su huella y cargan las partidas guardadas con la 1.30.1 y con la 1.31.0/1.32.0; las partidas anteriores a los talleres dan uno a cada cuartel cuyo dueño conoce la Maquinaria de asedio; se rechazan las partidas de otro mapa y las dañadas. |
 | `InterfaceTests.cs` | Los nombres se ordenan alfabéticamente en español (sin tildes, ñ tras n); el texto de la ayuda solo usa caracteres que la fuente sabe dibujar (Latin-1); `Conquer.Game` y `Conquer.Presentation` no dependen de ningún motor (ni Silk.NET, ni Stb, ni Godot, ni el cliente); el reloj reanuda a la velocidad que tenía; los mensajes salen del más nuevo al más antiguo y caducan; el historial empieza por la última versión, sin marcas de Markdown. Los tests no usan el cliente. |
-| `ControllerTests.cs` | La partida en pantalla sin pantalla: empieza con los colonos seleccionados y a la vista; seleccionar una provincia quita la unidad; el tiempo no corre congelado ni en pausa; nombrar una ciudad la funda con ese nombre y la selecciona, y un nombre no válido deja el diálogo abierto; el modo de mapa vuelve al terreno tras dar la vuelta; el panel de los colonos ofrece fundar la ciudad; las pestañas de la capital cambian y su botón de cerrar quita la selección; la migración forzada no pide más gente de la que puede salir; los botones de velocidad de la barra superior ponen el reloj. |
+| `ControllerTests.cs` | La partida en pantalla sin pantalla: empieza con los colonos seleccionados y a la vista; seleccionar una provincia quita la unidad; el tiempo no corre congelado ni en pausa; nombrar una ciudad la funda con ese nombre y la selecciona, y un nombre no válido deja el diálogo abierto; el modo de mapa vuelve al terreno tras dar la vuelta; el panel de los colonos ofrece fundar la ciudad; las pestañas de la capital cambian y su botón de cerrar quita la selección; la migración forzada no pide más gente de la que puede salir; los botones de velocidad de la barra superior ponen el reloj; el editor de unidades separa los batallones marcados en una unidad nueva, renombra y recupera el nombre automático; la ventana de carreteras sin destinos lo dice y se cancela. |
 | `NationScreenTests.cs` | La pantalla de la nación como datos: la tabla de ciudades lista la capital y su «Ver» la muestra en el mapa; pulsar un título de columna ordena por ella y pulsarlo otra vez lo invierte; el diseñador añade un batallón a una plantilla nueva; declarar la guerra cambia el botón a proponer la paz; la ciencia tiene tres ramas e «Investigar» elige el avance; el resumen muestra la capital. |
 | `ReleaseTests.cs` | La versión del `.csproj` coincide con la primera entrada del `CHANGELOG.md`. |
 

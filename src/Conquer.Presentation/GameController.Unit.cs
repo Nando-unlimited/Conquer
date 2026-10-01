@@ -9,11 +9,6 @@ namespace Conquer.Presentation;
 /// <summary>The unit panel: what the selected unit is and does, its battalions or ships, its command and its orders.</summary>
 public sealed partial class GameController
 {
-    /// <summary>"Editar unidad" was pressed; the client opens the unit editor (until it moves here too).</summary>
-    public event Action<Unit>? EditUnitRequested;
-    /// <summary>A road was asked for from this province; the client opens the window to choose where it goes.</summary>
-    public event Action<int, RoadKind>? RoadRequested;
-
     public static string OfficerTooltip(Officer officer) =>
         $"{officer.Title}\n{officer.TraitsDescription}\n" +
         $"{officer.Skill} de {Officer.MaxSkill} estrellas, {officer.Victories} victorias (una estrella más cada {Officer.VictoriesPerStar}); las virtudes mejoran con cada estrella.";
@@ -55,7 +50,7 @@ public sealed partial class GameController
             return;
         }
         if (unit.IsMilitary || unit.IsFleet || unit.IsHeadquarters)
-            doc.Add(new Button("Editar unidad", () => EditUnitRequested?.Invoke(unit), Tooltip: "Renombrar, separar y unir tropas, y elegir su oficial."));
+            doc.Add(new Button("Editar unidad", () => OpenUnitEditor(unit), Tooltip: "Renombrar, separar y unir tropas, y elegir su oficial."));
         EmbarkButtons(doc, unit);
         if (unit.CanFoundCity)
         {
@@ -119,7 +114,7 @@ public sealed partial class GameController
             string tip = !hub ? "Solo desde una provincia con una ciudad o un cuartel general tuyos."
                 : unit.IsMoving ? "La unidad está en marcha."
                 : $"Elige la ciudad o el cuartel general que quieres unir con {(info.Feminine ? "una" : "un")} {info.Name.ToLowerInvariant()}.";
-            doc.Add(new Button($"Construir {info.Name.ToLowerInvariant()}...", () => RoadRequested?.Invoke(here.Id, kind), can, Tooltip: tip, Size: TextSize.Small));
+            doc.Add(new Button($"Construir {info.Name.ToLowerInvariant()}...", () => OpenRoadWindow(here.Id, kind), can, Tooltip: tip, Size: TextSize.Small));
         }
         foreach (var work in Session.RoadProjects.Where(r => r.OwnerId == Human.Id && r.Route.Contains(here.Id)).ToList())
         {

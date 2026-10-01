@@ -2,6 +2,11 @@
 
 Todos los cambios del juego, del más reciente al más antiguo. Cada versión es un commit cuyo título es su número.
 
+## [1.56.0] - 2026-10-01
+
+### Cambiado
+- **Código separado del motor gráfico** (quinto paso): la ventana para editar unidades y la de construir carreteras y ferrocarriles guardan su estado y construyen su contenido en Conquer.Presentation; el cliente solo las dibuja. El juego se ve y funciona igual.
+
 ## [1.55.0] - 2026-10-01
 
 ### Cambiado

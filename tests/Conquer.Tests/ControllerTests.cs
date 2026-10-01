@@ -1,3 +1,7 @@
+using Conquer.Game.Buildings;
+using Conquer.Game.Economy;
+using Conquer.Game.Entities;
+using Conquer.Game.Military;
 using Conquer.Game.Rules;
 using Conquer.Game.Simulation;
 using Conquer.Game.World;
@@ -136,6 +140,65 @@ public class ControllerTests(WorldFixture world)
         bar.Speeds[4].OnClick!();
         Assert.Equal(4, game.Clock.Speed);
         Assert.True(game.TopBar().Speeds[4].Active);
+    }
+
+    /// <summary>A game with a two-battalion regiment of the player's in the capital.</summary>
+    private GameController GameWithRegiment(out Unit regiment)
+    {
+        var game = GameWithCapital();
+        var s = game.Session;
+        var p = _map.Provinces[game.SelectedProvince];
+        p.Population += 1000;
+        p.AddBuilding(BuildingType.Barracks);
+        foreach (var r in new[] { ResourceType.Wood, ResourceType.Gold }) game.Human.Stockpile[r] += 1000;
+        s.Train(game.Human.Id, p.Id, BattalionType.Warriors);
+        s.Train(game.Human.Id, p.Id, BattalionType.Warriors);
+        for (int h = 0; h < 24 * 25; h++) s.Step();
+        var units = s.Units.Where(u => u.OwnerId == game.Human.Id && u.IsMilitary).ToList();
+        s.Merge(game.Human.Id, units[0].Id, units[1].Id);
+        regiment = units[0];
+        return game;
+    }
+
+    [Fact]
+    public void TheUnitEditorSplitsTheMarkedBattalionsIntoANewUnit()
+    {
+        var game = GameWithRegiment(out var regiment);
+        game.SelectUnit(regiment.Id);
+        Button(game.SidePanel()!, "Editar unidad").OnClick!();
+        var editor = game.UnitEditor()!;
+        Assert.Equal(2, editor.Battalions.Count);
+        Assert.False(editor.Split!.Enabled);
+        editor.Battalions[1].OnClick!();
+        game.UnitEditor()!.Split!.OnClick!();
+        Assert.Single(regiment.Battalions);
+        Assert.Equal(2, game.Session.Units.Count(u => u.OwnerId == game.Human.Id && u.IsMilitary));
+    }
+
+    [Fact]
+    public void TheUnitEditorRenamesAndTheAutomaticNameComesBack()
+    {
+        var game = GameWithRegiment(out var regiment);
+        game.OpenUnitEditor(regiment);
+        game.UnitName = "Los Valientes";
+        game.UnitEditor()!.Rename.OnClick!();
+        Assert.Equal("Los Valientes", regiment.Name);
+        game.UnitEditor()!.AutomaticName!.OnClick!();
+        Assert.Null(regiment.CustomName);
+        game.CloseUnitEditor();
+        Assert.Null(game.UnitEditor());
+    }
+
+    [Fact]
+    public void TheRoadWindowWithNowhereToGoSaysSoAndCancels()
+    {
+        var game = GameWithCapital();
+        game.OpenRoadWindow(game.SelectedProvince, RoadKinds.All[0]);
+        var window = game.RoadWindow()!;
+        Assert.NotNull(window.None);
+        Assert.False(window.Build.Enabled);
+        window.Cancel.OnClick!();
+        Assert.False(game.RoadWindowOpen);
     }
 
     [Fact]

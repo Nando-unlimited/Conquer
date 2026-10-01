@@ -51,8 +51,6 @@ public sealed partial class GameScreen : IScreen
         session.OwnershipChanged += _ => _mapDirty = true;
         _nation = new NationView(_game.Nation);
         _renderer.IsResourceKnown = session.Human.Knows;
-        _game.EditUnitRequested += OpenUnitEditor;
-        _game.RoadRequested += OpenRoadWindow;
         if (!loaded) ApplyTestOptions(app.Options, _game.SelectedUnit!);
     }
 
@@ -108,7 +106,7 @@ public sealed partial class GameScreen : IScreen
         _game.Camera.Screen = _app.ScreenSize;
         HandleKeys(dt);
         // The menu, the help, the changelog and the dialogs stop time.
-        _game.Tick(dt, frozen: _menuOpen || _changelog.Visible || _help.Visible || _game.Naming.HasValue || _editingUnitId.HasValue || RoadWindowOpen);
+        _game.Tick(dt, frozen: _menuOpen || _changelog.Visible || _help.Visible || _game.Naming.HasValue || _game.EditingUnitId.HasValue || _game.RoadWindowOpen);
 
         if (_renderer.Mode != _game.Mode || _renderer.ResourceFilter != _game.ResourceFilter)
         {
@@ -128,7 +126,7 @@ public sealed partial class GameScreen : IScreen
 
         _renderer.Draw(_game.Camera, _game.SelectedProvince, _game.HoverProvince, _app.PixelScale, _game.Now);
         DrawRivers();
-        _roads.Draw(Batch, _game.Camera, _session.Roads, _session.RoadProjects.Where(r => r.OwnerId == Human.Id), PlannedRoute);
+        _roads.Draw(Batch, _game.Camera, _session.Roads, _session.RoadProjects.Where(r => r.OwnerId == Human.Id), _game.PlannedRoute);
         DrawCities();
         DrawNationNames();
         DrawUnits();
@@ -140,14 +138,14 @@ public sealed partial class GameScreen : IScreen
         _nation.Frame(Ui, NationRect);
         DrawMessages();
         if (_game.Naming.HasValue) DrawCityNaming();
-        if (_editingUnitId.HasValue) DrawUnitEditor();
+        if (_game.EditingUnitId.HasValue) DrawUnitEditor();
         if (BattleWindowOpen) DrawBattleWindow();
-        if (RoadWindowOpen) DrawRoadWindow();
+        if (_game.RoadWindowOpen) DrawRoadWindow();
         if (_menuOpen) DrawPauseMenu();
         _changelog.Frame(Ui, new Rect(_app.ScreenSize.X / 2 - 380, 70, 760, _app.ScreenSize.Y - 140));
         _help.Frame(Ui, new Rect(Math.Max(8, _app.ScreenSize.X / 2 - 520), 70, Math.Min(1040, _app.ScreenSize.X - 16), _app.ScreenSize.Y - 140));
 
-        bool modal = _menuOpen || _game.Naming.HasValue || _editingUnitId.HasValue || BattleWindowOpen || RoadWindowOpen;
+        bool modal = _menuOpen || _game.Naming.HasValue || _game.EditingUnitId.HasValue || BattleWindowOpen || _game.RoadWindowOpen;
         if (!modal && !_changelog.Visible && !_help.Visible && !_game.Nation.Visible) HandleMapMouse();
         if (!Ui.MouseOverUi && !modal && !_help.Visible && !_game.Nation.Visible && _game.HoverProvince >= 0 && !_dragging) HoverTooltip();
     }
@@ -164,11 +162,11 @@ public sealed partial class GameScreen : IScreen
             else if (input.KeysPressed.Contains(Key.Enter) || input.KeysPressed.Contains(Key.KeypadEnter)) _game.ConfirmCityName();
             return;
         }
-        if (_editingUnitId.HasValue)
+        if (_game.EditingUnitId.HasValue)
         {
             // Likewise while a unit is being edited: typing goes to its name.
-            if (input.KeysPressed.Contains(Key.Escape)) CloseUnitEditor();
-            else if (input.KeysPressed.Contains(Key.Enter) || input.KeysPressed.Contains(Key.KeypadEnter)) RenameEditedUnit();
+            if (input.KeysPressed.Contains(Key.Escape)) _game.CloseUnitEditor();
+            else if (input.KeysPressed.Contains(Key.Enter) || input.KeysPressed.Contains(Key.KeypadEnter)) _game.RenameEditedUnit();
             return;
         }
         foreach (var key in input.KeysPressed)
@@ -178,7 +176,7 @@ public sealed partial class GameScreen : IScreen
                 case Key.Escape:
                     if (_help.Visible) _help.Visible = false;
                     else if (BattleWindowOpen) CloseBattle();
-                    else if (RoadWindowOpen) CloseRoadWindow();
+                    else if (_game.RoadWindowOpen) _game.CloseRoadWindow();
                     else if (_changelog.Visible) _changelog.Visible = false;
                     else if (_game.Nation.Visible) _game.Nation.Visible = false;
                     else if (_game.ChoosingMigrationTarget) _game.ChoosingMigrationTarget = false;
