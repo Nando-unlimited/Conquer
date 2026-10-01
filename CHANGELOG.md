@@ -2,6 +2,12 @@
 
 Todos los cambios del juego, del más reciente al más antiguo. Cada versión es un commit cuyo título es su número.
 
+## [1.42.0] - 2026-10-01
+
+### Cambiado
+- La pestaña **Provincias** de la pantalla de la nación tiene una columna **«En curso»** con lo que hace cada provincia: el edificio o la ciudad en obras y lo que entrena su ciudad. Muestra lo primero con los días que faltan y su barra de progreso, y cuántas tareas más hay; al pasar el ratón aparecen todas.
+- El mapa ya no dibuja un punto por cada grupo de migrantes en camino: con muchos, ralentizaban el juego. Los migrantes se siguen viendo en el panel de la provincia y en la columna «En camino».
+
 ## [1.41.1] - 2026-09-30
 
 ### Cambiado

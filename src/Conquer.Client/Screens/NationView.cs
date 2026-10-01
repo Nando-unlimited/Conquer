@@ -257,7 +257,7 @@ public sealed partial class NationView
     private void Provinces(Ui ui, Rect r)
     {
         (string Title, float Width)[] columns =
-            [("Provincia", 190), ("Población", 150), ("Humor", 130), ("Fertilidad", 100), ("Terreno", 150), ("En camino", 110), ("", 60)];
+            [("Provincia", 190), ("Población", 150), ("Humor", 130), ("Fertilidad", 90), ("Terreno", 130), ("En camino", 90), ("En curso", 190), ("", 60)];
         var incoming = _session.Migrations.Where(m => m.OwnerId == _player.Id)
             .GroupBy(m => m.ToProvinceId).ToDictionary(g => g.Key, g => g.Sum(m => m.People));
         var provinces = _player.Provinces.Select(id => Map.Provinces[id]);
@@ -275,8 +275,39 @@ public sealed partial class NationView
             int people = incoming.GetValueOrDefault(p.Id);
             ui.Text(x, rowY + 6, people > 0 ? $"{people:N0}" : "-", people > 0 ? Theme.Text : Theme.TextDim);
             x += columns[5].Width;
-            ViewButton(ui, x, rowY, columns[6].Width, p.Id);
+            Work(ui, x, rowY, columns[6].Width - 14, p);
+            x += columns[6].Width;
+            ViewButton(ui, x, rowY, columns[7].Width, p.Id);
         }
+    }
+
+    /// <summary>
+    /// What the province is building and its city is training: the first job with its days left, a bar with its
+    /// progress and how many more there are, with all of them in the tooltip; a dash when nothing.
+    /// </summary>
+    private void Work(Ui ui, float x, float rowY, float w, Province p)
+    {
+        var jobs = new List<(string Kind, string Name, int DaysLeft, int TotalDays)>();
+        if (p.Constructing is BuildingType building)
+            jobs.Add(("Obras", building.Info().Name, p.ConstructionDaysLeft, building.Info().Days));
+        else if (p.PlannedCityName != null)
+            jobs.Add(("Obras", $"Ciudad de {p.PlannedCityName}", p.ConstructionDaysLeft, GameRules.CityBuildingDays));
+        if (_session.CityIn(p) is { } city)
+            jobs.AddRange(city.Training.Select(o => ("Instrucción", o.Name, o.DaysLeft, o.TotalDays)));
+        if (jobs.Count == 0)
+        {
+            ui.Text(x, rowY + 6, "-", Theme.TextDim);
+            return;
+        }
+
+        var first = jobs[0];
+        string left = $" · {first.DaysLeft} d" + (jobs.Count > 1 ? $" (+{jobs.Count - 1})" : "");
+        string shown = ui.Font.Wrap(first.Name, w - ui.Font.Measure(left, FontSize.Small), FontSize.Normal).First();
+        ui.Text(x, rowY + 4, shown, Theme.Accent);
+        ui.Text(x + ui.Font.Measure(shown, FontSize.Normal), rowY + 6, left, Theme.TextDim, FontSize.Small);
+        ProgressBar(ui, new Rect(x, rowY + RowHeight - 8, w, 3), 1 - first.DaysLeft / (double)first.TotalDays, Theme.Accent);
+        if (ui.Hover(new Rect(x, rowY, w, RowHeight)))
+            ui.Tooltip(string.Join("\n", jobs.Select(j => $"{j.Kind}: {j.Name}, quedan {j.DaysLeft} de {j.TotalDays} días.")));
     }
 
     /// <summary>A city's name, or the province's terrain and number for the countryside.</summary>

@@ -149,7 +149,6 @@ public sealed partial class GameScreen : IScreen
         DrawRivers();
         _roads.Draw(Batch, _camera, _session.Roads, _session.RoadProjects.Where(r => r.OwnerId == Human.Id), PlannedRoute);
         DrawCities();
-        DrawMigrations();
         DrawNationNames();
         DrawUnits();
         DrawBattles();
@@ -427,19 +426,6 @@ public sealed partial class GameScreen : IScreen
                 Ui.Text(s.X - w / 2 + 1, s.Y + size / 2 + 3, city.Name, Rgba.Black, FontSize.Small, bold: true);
                 Ui.Text(s.X - w / 2, s.Y + size / 2 + 2, city.Name, Rgba.White, FontSize.Small, bold: true);
             }
-        }
-    }
-
-    private void DrawMigrations()
-    {
-        if (_camera.Zoom < 1.5f) return;
-        foreach (var m in _session.Migrations)
-        {
-            var s = _camera.MapToScreen(Between(m.FromProvinceId, m.ToProvinceId, m.Progress(_session.Date.Hours)));
-            if (!OnScreen(s)) continue;
-            var color = new Rgba(_session.Players[m.OwnerId].Color);
-            Batch.Rect(s.X - 3, s.Y - 3, 6, 6, Rgba.Black.WithAlpha(0.7f));
-            Batch.Rect(s.X - 2, s.Y - 2, 4, 4, m.Forced ? Theme.Accent : color);
         }
     }
 

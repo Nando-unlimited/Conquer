@@ -258,9 +258,6 @@ public sealed class Migration
         Forced = forced;
         Mood = mood;
     }
-
-    public double Progress(long nowHours) =>
-        ArriveHours <= DepartHours ? 1 : Math.Clamp((nowHours - DepartHours) / (double)(ArriveHours - DepartHours), 0, 1);
 }
 
 public readonly record struct Notification(long Hours, int PlayerId, string Text);
