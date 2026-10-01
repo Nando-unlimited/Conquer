@@ -145,7 +145,7 @@ public sealed partial class GameScreen : IScreen
         var mouseMap = _camera.ScreenToMap(Ui.Input.Mouse);
         _hoverProvince = MapRenderer.ProvinceAt(Map, mouseMap, _camera.Zoom);
 
-        _renderer.Draw(_camera, _selectedProvince, _hoverProvince, _app.PixelScale);
+        _renderer.Draw(_camera, _selectedProvince, _hoverProvince, _app.PixelScale, _realTime);
         DrawRivers();
         _roads.Draw(Batch, _camera, _session.Roads, _session.RoadProjects.Where(r => r.OwnerId == Human.Id), PlannedRoute);
         DrawCities();

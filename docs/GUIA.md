@@ -730,8 +730,8 @@ Dibuja el mapa entero con un único shader.
 | `MapMode` | Terreno, político, población, humor, fertilidad, recursos e instituciones. |
 | `ResourceFilter` | En el modo recursos, el único recurso que se muestra (o `null` para todos). |
 | `IsResourceKnown` | Qué recursos conoce quien mira; los demás no se dibujan. |
-| Shader de fragmentos | Para cada píxel de pantalla calcula el punto del mapa, busca la provincia en la textura de ids y la colorea según su dueño o su población. Con zoom alto mezcla las 3×3 celdas vecinas con pesos B-spline cuadráticos (`smoothRegions`, `strongest`) para trazar fronteras y costa como curvas suaves, sin escalones; el color del terreno sale solo de las celdas del mismo lado de la costa (`isWater`, en el canal verde de la textura de dueños) y la franja clara del agua sigue la distancia a la costa. Con zoom lejano compara con el píxel vecino. Oscurece la tierra junto a las fronteras nacionales (más gruesas), resalta la provincia seleccionada y la que está bajo el ratón, y aplica una viñeta suave hacia los bordes de la pantalla. |
-| `Prepare(mapa)` | Prepara (fuera del hilo principal) los píxeles de ids y colores del terreno. |
+| Shader de fragmentos | Para cada píxel de pantalla calcula el punto del mapa, busca la provincia en la textura de ids y la colorea según su dueño o su población. Con zoom alto mezcla las 3×3 celdas vecinas con pesos B-spline cuadráticos (`smoothRegions`, `strongest`) para trazar fronteras y costa como curvas suaves, sin escalones; el color del terreno sale solo de las celdas del mismo lado de la costa (`isWater`, en el canal verde de la textura de dueños) y la franja clara del agua sigue la distancia a la costa. Con zoom lejano compara con el píxel vecino. Ilumina el relieve desde el noroeste con la altura interpolada de la textura de detalle (`landDetail`, `relief`; baches finos sobre todo en la roca) y añade textura procedural según el suelo (`octave`, `noise`, `crowns`: moteado, copas de árboles, dunas), cada capa solo cuando es lo bastante grande en pantalla (`detailFade`); el agua lleva ondas lentas (`waterDetail`, `uTime`). Oscurece la tierra junto a las fronteras nacionales (más gruesas), resalta la provincia seleccionada y la que está bajo el ratón, y aplica una viñeta suave hacia los bordes de la pantalla. |
+| `Prepare(mapa)` | Prepara (fuera del hilo principal) los píxeles de ids, colores del terreno y detalle. |
 | `ProvinceAt(mapa, punto, zoom)` | Provincia que se ve en un punto, con la misma regla que el shader (para los clics). |
 | `SmoothZoom` | Zoom a partir del cual las fronteras se suavizan. |
 | `Refresh(partida)` | Recalcula el color de cada provincia (según quién la controla: lo ocupado toma el color del ocupante dentro de las fronteras del dueño) y su dueño (texturas pequeñas de 256×128). |
@@ -740,10 +740,10 @@ Dibuja el mapa entero con un único shader.
 | `DepositColor(provincia)` | Color del modo recursos: el del yacimiento principal que queda de los conocidos, o con filtro ese recurso más intenso cuanto más queda. Gris si no hay nada. |
 | `ResourceColor(recurso)` | Color de cada recurso en el mapa y en la leyenda. |
 | `InstitutionColor(provincia)` | Color del modo instituciones: el de la institución más reciente que ha llegado (más fuerte en las ciudades); gris si ninguna. |
-| `Draw(cámara, ...)` | Pasa los parámetros al shader y dibuja; en el modo terreno las líneas entre provincias son más tenues, para que destaque el terreno. |
+| `Draw(cámara, ..., tiempo)` | Pasa los parámetros al shader (el tiempo mueve las ondas del agua) y dibuja; en el modo terreno las líneas entre provincias son más tenues, para que destaque el terreno. |
 
 ### `Graphics/TerrainColors.cs`
-`Build(mapa)`: color de cada píxel según el bioma; en tierra, relieve iluminado desde el noroeste (medido sobre dos píxeles) y alturas algo más pálidas; en el mar, más oscuro cuanto más hondo. La franja clara de la costa la dibuja el shader del mapa.
+`Build(mapa)`: color de cada píxel según el bioma; en tierra, alturas algo más pálidas (el relieve lo ilumina el shader); en el mar, más oscuro cuanto más hondo. La franja clara de la costa la dibuja el shader del mapa. `BuildDetail(mapa)`: textura de detalle con la altura de la tierra (canal rojo, en escala de raíz cuadrada hasta `MaxHeight`) y cuánto suelo es bosque, arena y roca (`Ground`); al filtrarse, los biomas vecinos se funden.
 
 ### `Graphics/Camera.cs`
 | Función | Qué hace |

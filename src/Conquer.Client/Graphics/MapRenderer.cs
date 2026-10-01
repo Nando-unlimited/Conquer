@@ -49,6 +49,72 @@ public sealed class MapRenderer : IDisposable
         uniform int uHover;
         uniform float uProvinceBorders;
         uniform float uSmoothZoom;
+        uniform sampler2D uDetail;
+        uniform float uTime;
+        // TerrainColors.MaxHeight: the metres the detail texture's height channel spans.
+        const float MAX_HEIGHT = 9000.0;
+
+        // ---- terrain detail: relief lit from the north-west and procedural texture for each kind of ground
+
+        float hash(vec2 p) {
+            vec3 q = fract(vec3(p.xyx) * 0.1031);
+            q += dot(q, q.yzx + 33.33);
+            return fract((q.x + q.y) * q.z);
+        }
+
+        // Smooth value noise; it repeats every `period` cells across, so it wraps with the map.
+        float noise(vec2 p, float period) {
+            vec2 i = floor(p), f = fract(p);
+            vec2 u = f * f * (3.0 - 2.0 * f);
+            float x0 = mod(i.x, period), x1 = mod(i.x + 1.0, period);
+            float a = hash(vec2(x0, i.y)), b = hash(vec2(x1, i.y));
+            float c = hash(vec2(x0, i.y + 1.0)), d = hash(vec2(x1, i.y + 1.0));
+            return mix(mix(a, b, u.x), mix(c, d, u.x), u.y);
+        }
+
+        // One octave of noise, `freq` cells per map pixel, centred on 0. It fades out before its cells get smaller
+        // than a few screen pixels, so detail appears as the map is zoomed in and never flickers.
+        float detailFade(float freq) { return smoothstep(3.0, 9.0, uZoom / freq); }
+
+        float octave(vec2 m, float freq) {
+            float fade = detailFade(freq);
+            return fade <= 0.0 ? 0.0 : (noise(m * freq, uMapSize.x * freq) - 0.5) * fade;
+        }
+
+        // Clumps of tree crowns: noise pushed towards round blobs, -0.5 (clearing) to 0.5 (canopy).
+        float crowns(vec2 m) {
+            float fade = detailFade(2.5);
+            if (fade <= 0.0) return 0.0;
+            float n = 0.7 * noise(m * 2.5, uMapSize.x * 2.5) + 0.3 * noise(m * 5.5 + 17.0, uMapSize.x * 5.5);
+            return (smoothstep(0.2, 0.8, n) - 0.5) * fade;
+        }
+
+        // Land height in metres: the map's, smoothly interpolated, plus small bumps (bigger on rock) that show up close in.
+        float relief(vec2 m, float rock) {
+            float h = texture(uDetail, m / uMapSize).r;
+            float bumps = (octave(m, 1.5) / 1.5 + octave(m, 4.0) / 4.0 + octave(m, 10.0) / 10.0) * (8.0 + 200.0 * rock);
+            return h * h * MAX_HEIGHT + bumps;
+        }
+
+        // Lights the land and gives it texture: mottled fields, tree crowns in forests, ripples in sand.
+        vec3 landDetail(vec2 m, vec3 col) {
+            vec4 ground = texture(uDetail, m / uMapSize);
+            float d = max(0.35, 0.75 / uZoom);
+            float gx = (relief(m + vec2(d, 0.0), ground.a) - relief(m - vec2(d, 0.0), ground.a)) / (2.0 * d);
+            float gy = (relief(m + vec2(0.0, d), ground.a) - relief(m - vec2(0.0, d), ground.a)) / (2.0 * d);
+            col *= clamp(1.0 + (gx + gy) * 0.0022, 0.55, 1.4);
+
+            float grain = octave(m, 0.8);
+            float dunes = sin(dot(m, vec2(2.4, 0.9)) * 4.0 + octave(m, 1.0) * 10.0) * detailFade(3.0);
+            return col * (1.0 + 0.06 * grain + 0.14 * ground.g * crowns(m) + 0.05 * ground.b * dunes);
+        }
+
+        // Slow ripples drifting across open water.
+        vec3 waterDetail(vec2 m, vec3 col) {
+            float t = uTime * 0.04;
+            float ripple = octave(m + vec2(t, 0.6 * t), 2.5) + 0.6 * octave(m - vec2(0.7 * t, -0.4 * t), 7.0);
+            return col * (1.0 + 0.07 * ripple);
+        }
 
         int idAt(vec2 m) {
             ivec2 p = ivec2(int(mod(floor(m.x), uMapSize.x)), clamp(int(floor(m.y)), 0, int(uMapSize.y) - 1));
@@ -151,9 +217,9 @@ public sealed class MapRenderer : IDisposable
             float provinceLine, countryLine;
             // Land near a national border is shaded, so each country reads as a shape.
             float edgeShade = 0.0;
+            bool sea;
             if (uZoom >= uSmoothZoom) {
                 float provinceDistance, ownerDistance, coastDistance;
-                bool sea;
                 smoothRegions(m, id, provinceDistance, ownerDistance, col, sea, coastDistance);
                 provinceLine = lineCoverage(provinceDistance, 0.6);
                 countryLine = lineCoverage(ownerDistance, 2.0);
@@ -169,9 +235,10 @@ public sealed class MapRenderer : IDisposable
                 int own = ownerOf(id);
                 provinceLine = (id != idR || id != idD) ? 1.0 : 0.0;
                 countryLine = (own != ownerOf(idR) || own != ownerOf(idD)) ? 1.0 : 0.0;
-                bool wet = isWater(id);
-                if (wet && (!isWater(idR) || !isWater(idD))) col *= 1.22;
+                sea = isWater(id);
+                if (sea && (!isWater(idR) || !isWater(idD))) col *= 1.22;
             }
+            col = sea ? waterDetail(m, col) : landDetail(m, col);
 
             vec4 pc = texelFetch(uProvColor, slot(id), 0);
             col = mix(col, pc.rgb, pc.a);
@@ -192,7 +259,7 @@ public sealed class MapRenderer : IDisposable
     private readonly Shader _shader;
     private readonly uint _vao, _vbo;
     private readonly WorldMap _map;
-    private readonly Texture _ids, _terrain, _provColor, _provOwner;
+    private readonly Texture _ids, _terrain, _detail, _provColor, _provOwner;
     private readonly byte[] _colorData = new byte[SlotsX * SlotsY * 4];
     private readonly byte[] _ownerData = new byte[SlotsX * SlotsY * 4];
 
@@ -203,9 +270,9 @@ public sealed class MapRenderer : IDisposable
     public Func<ResourceType, bool> IsResourceKnown { get; set; } = _ => true;
 
     /// <summary>Pixel data prepared off the main thread (it takes a moment for 6.5 million pixels).</summary>
-    public sealed record Prepared(byte[] Ids, byte[] Terrain);
+    public sealed record Prepared(byte[] Ids, byte[] Terrain, byte[] Detail);
 
-    public static Prepared Prepare(WorldMap map) => new(EncodeIds(map), TerrainColors.Build(map));
+    public static Prepared Prepare(WorldMap map) => new(EncodeIds(map), TerrainColors.Build(map), TerrainColors.BuildDetail(map));
 
     public unsafe MapRenderer(GL gl, WorldMap map, Prepared prepared)
     {
@@ -215,6 +282,7 @@ public sealed class MapRenderer : IDisposable
         _shader = new Shader(gl, VertexSource, FragmentSource);
         _ids = new Texture(gl, map.Width, map.Height, prepared.Ids, smooth: false);
         _terrain = new Texture(gl, map.Width, map.Height, prepared.Terrain, smooth: true, mipmaps: true, repeatX: true);
+        _detail = new Texture(gl, map.Width, map.Height, prepared.Detail, smooth: true, mipmaps: true, repeatX: true);
         _provColor = new Texture(gl, SlotsX, SlotsY, _colorData, smooth: false);
         _provOwner = new Texture(gl, SlotsX, SlotsY, _ownerData, smooth: false);
 
@@ -391,7 +459,8 @@ public sealed class MapRenderer : IDisposable
     }
 
     /// <param name="pixelScale">Framebuffer pixels per window pixel (high-DPI screens).</param>
-    public void Draw(Camera camera, int selectedProvince, int hoverProvince, float pixelScale)
+    /// <param name="time">Seconds of real time, to move the ripples on the water.</param>
+    public void Draw(Camera camera, int selectedProvince, int hoverProvince, float pixelScale, double time)
     {
         _gl.Disable(EnableCap.Blend);
         _shader.Use();
@@ -413,6 +482,9 @@ public sealed class MapRenderer : IDisposable
         _shader.Set("uProvColor", 2);
         _provOwner.Bind(3);
         _shader.Set("uProvOwner", 3);
+        _detail.Bind(4);
+        _shader.Set("uDetail", 4);
+        _shader.Set("uTime", (float)(time % 10000));
         _gl.BindVertexArray(_vao);
         _gl.DrawArrays(PrimitiveType.Triangles, 0, 6);
         _gl.ActiveTexture(TextureUnit.Texture0);
@@ -423,6 +495,7 @@ public sealed class MapRenderer : IDisposable
         _shader.Dispose();
         _ids.Dispose();
         _terrain.Dispose();
+        _detail.Dispose();
         _provColor.Dispose();
         _provOwner.Dispose();
         _gl.DeleteBuffer(_vbo);

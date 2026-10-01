@@ -2,6 +2,13 @@
 
 Todos los cambios del juego, del más reciente al más antiguo. Cada versión es un commit cuyo título es su número.
 
+## [1.46.0] - 2026-10-01
+
+### Cambiado
+- **Terreno con más detalle**: el relieve se ilumina en la tarjeta gráfica a partir de la altura, nítido a cualquier zoom; las montañas muestran crestas y rugosidad al acercarse.
+- Los biomas se funden entre sí en lugar de cortarse en escalera.
+- Al acercarse aparece textura según el suelo: un moteado suave en las praderas, copas de árboles en los bosques, dunas en la arena y ondas lentas en el agua. Solo surge cuando es lo bastante grande para no parpadear.
+
 ## [1.45.1] - 2026-10-01
 
 ### Cambiado

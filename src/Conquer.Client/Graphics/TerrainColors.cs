@@ -3,8 +3,9 @@ using Conquer.Game.World;
 namespace Conquer.Client.Graphics;
 
 /// <summary>
-/// Biome colours as RGBA bytes, with relief on land (lit from the north-west, heights a little paler) and,
-/// at sea, deeper water darker. The shallows along the coast are drawn by the map shader, along the smooth coastline.
+/// The textures the map shader paints the land with: biome colours (heights a little paler, deeper water darker) and,
+/// per map pixel, the height and what the ground is made of. The shader lights the relief and adds detail from them;
+/// the shallows along the coast follow the smooth coastline it draws.
 /// </summary>
 public static class TerrainColors
 {
@@ -33,16 +34,11 @@ public static class TerrainColors
                 }
                 else if (!biome.Info().IsWater)
                 {
-                    // Light from the north-west, measured over two pixels so the relief reads at every zoom.
-                    int west = elevation[y * w + (x + w - 2) % w];
-                    int north = y > 1 ? elevation[(y - 2) * w + x] : e;
-                    float slope = ((e - west) + (e - north)) / 500f;
-                    float shade = Math.Clamp(1f + slope * 0.55f, 0.55f, 1.4f);
                     // High ground fades a little towards grey-white, like thinner vegetation.
                     float height = Math.Clamp(e / 4000f, 0, 1) * 0.25f;
-                    r = (r + (225 - r) * height) * shade;
-                    g = (g + (222 - g) * height) * shade;
-                    b = (b + (215 - b) * height) * shade;
+                    r += (225 - r) * height;
+                    g += (222 - g) * height;
+                    b += (215 - b) * height;
                 }
 
                 data[i * 4] = (byte)Math.Clamp(r, 0, 255);
@@ -53,4 +49,50 @@ public static class TerrainColors
         });
         return data;
     }
+
+    /// <summary>Metres of land height the detail texture's red channel spans (square-root scale, finer low down).</summary>
+    public const float MaxHeight = 9000;
+
+    /// <summary>
+    /// Per map pixel: land height (red, square-root scale up to <see cref="MaxHeight"/>; 0 at sea) and how much of the
+    /// ground is forest (green), sand (blue) and bare rock (alpha). Filtered smoothly, neighbouring biomes blend.
+    /// </summary>
+    public static byte[] BuildDetail(WorldMap map)
+    {
+        int w = map.Width, h = map.Height;
+        var data = new byte[w * h * 4];
+        var elevation = map.Elevation;
+
+        Parallel.For(0, h, y =>
+        {
+            for (int x = 0; x < w; x++)
+            {
+                int i = y * w + x;
+                var biome = map.Biomes[i];
+                bool water = biome.Info().IsWater;
+                var (forest, sand, rock) = Ground(biome);
+                data[i * 4] = water ? (byte)0 : (byte)(MathF.Sqrt(Math.Clamp(elevation[i] / MaxHeight, 0, 1)) * 255);
+                data[i * 4 + 1] = forest;
+                data[i * 4 + 2] = sand;
+                data[i * 4 + 3] = rock;
+            }
+        });
+        return data;
+    }
+
+    /// <summary>How much of a biome's ground is forest, sand and bare rock (0 to 255 each).</summary>
+    private static (byte Forest, byte Sand, byte Rock) Ground(Biome biome) => biome switch
+    {
+        Biome.TemperateForest or Biome.TropicalForest => (255, 0, 0),
+        Biome.Taiga => (230, 0, 0),
+        Biome.Wetland => (120, 0, 0),
+        Biome.Savanna => (50, 80, 0),
+        Biome.Steppe => (0, 110, 0),
+        Biome.Desert => (0, 255, 0),
+        Biome.Tundra => (0, 40, 50),
+        Biome.Hills => (60, 0, 90),
+        Biome.Mountains => (0, 0, 200),
+        Biome.HighMountains or Biome.Peaks => (0, 0, 255),
+        _ => (0, 0, 0),
+    };
 }
