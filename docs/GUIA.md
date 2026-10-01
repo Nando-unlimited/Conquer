@@ -587,7 +587,7 @@ Mapa de la Tierra real, generado por `tools/Conquer.EarthData`. Se incluye dentr
 ## 3. `src/Conquer.Presentation` — presentación sin motor
 
 Lo que ve y hace el jugador, sin nada de Silk.NET, OpenGL ni ningún otro motor (un test lo comprueba). El cliente solo lo dibuja,
-así que cambiar de motor no lo toca. Por ahora tiene las piezas que ya eran independientes; el resto de la lógica de las pantallas
+así que cambiar de motor no lo toca. Tiene las piezas que ya eran independientes y el estado de la partida en pantalla (`GameController`); el resto de la lógica de las pantallas
 irá llegando aquí poco a poco.
 
 ### `Camera.cs`
@@ -627,6 +627,25 @@ irá llegando aquí poco a poco.
 ### `SaveFiles.cs`
 Partidas guardadas en disco, en la carpeta `Partidas` junto al ejecutable (`Folder`). Si no se puede escribir en ella, en la carpeta de datos del usuario, donde iban antes de la 1.45.1: `~/.local/share/Conquer/Partidas` en Linux, `%LOCALAPPDATA%\Conquer\Partidas` en Windows y `~/Library/Application Support/Conquer/Partidas` en macOS. Al arrancar, las partidas que quedan allí se mueven a la del juego (`ChooseFolder`). Cada una es un fichero `.conquer` que se llama como la nación y la fecha de juego ("Kartesia - 5 feb 3999 a.C. 00h"). `List()` las devuelve de la más reciente a la más antigua; `Save(partida, versión)` escribe primero un fichero temporal y luego lo renombra, para no dejar nunca una partida a medio escribir; `Read(ruta)` y `Delete(partida)`.
 
+### `GameController.cs`
+La partida en pantalla, sin pantalla: lo que se ve, lo seleccionado, los diálogos abiertos, el reloj, los mensajes y las órdenes del jugador. `GameScreen` lo dibuja y convierte clics y teclas en llamadas a él.
+
+| Elemento | Qué es |
+| --- | --- |
+| `ProvinceTab`, `CityNaming` | Pestañas del panel de provincia (General, Edificios y Ejército, esta solo donde se entrenan tropas) y la ciudad que se está nombrando (por unos colonos o por los habitantes de una provincia). |
+| `GameController(partida, cargada)` | Crea la cámara y centra la vista en tus colonos (seleccionados) o, en una partida cargada, en tu capital, sin repetir los avisos antiguos. |
+| `Camera`, `Clock`, `Messages`, `Now`, `Mode`, `ResourceFilter` | La vista, el reloj de juego, los mensajes, los segundos reales desde que se abrió la partida (mensajes y animaciones), el modo de mapa y, en el de recursos, el único que se muestra. |
+| `Tick(dt, congelado)` | Un fotograma: pasa el tiempo real, simula las horas que da el reloj salvo si está congelado (una ventana que para el tiempo) y convierte los avisos nuevos de la partida en mensajes. |
+| `Show(resultado)` | Muestra el resultado de una orden. |
+| `Center`, `Between`, `CenterOnHome`, `CycleMode` | Centro de una provincia, punto entre dos cruzando el borde del mapa por el lado corto, centrar la vista en la capital y pasar al siguiente modo de mapa. |
+| `SelectedUnit`, `SelectedUnitId`, `SelectedProvince`, `HoverProvince`, `HasSelection` | Selección (una unidad o una provincia; la unidad que ya no existe se deselecciona sola) y provincia bajo el ratón. |
+| `SelectUnit`, `SelectProvince`, `ClearSelection`, `ViewUnit`, `ViewProvince` | Cambiar la selección; las dos últimas además centran la vista (desde la pantalla de la nación). |
+| `ChoosingMigrationTarget`, `MigrationAmount` | Migración forzada: si el próximo clic elige el destino, y cuánta gente. |
+| `ClickProvince()` | Clic en el mapa sin marcador: envía la migración forzada si se estaba eligiendo destino, o selecciona la provincia. |
+| `OrderMove()` | Clic derecho: mueve la unidad seleccionada (o ataca); una orden propia detiene la exploración automática. |
+| `Save(versión)` | Guarda la partida y avisa de cómo fue. |
+| `Naming`, `CityName`, `OpenCityNaming`, `SuggestCityName`, `CancelCityNaming`, `ConfirmCityName` | Diálogo para nombrar una ciudad: propone un nombre, se puede cambiar o pedir otro, y al confirmar la funda o empieza la obra; si el nombre no vale, sigue abierto. |
+
 ---
 
 ## 4. `src/Conquer.Client` — ventana, gráficos e interfaz
@@ -664,39 +683,35 @@ La pantalla de juego. Clase parcial: el ejército en pantalla está en `GameScre
 
 | Función | Qué hace |
 | --- | --- |
-| `GameScreen(...)` | Crea el renderizador y la cámara y centra la vista en tus colonos o, en una partida cargada, en tu capital (sin repetir los avisos antiguos). |
+| `GameScreen(...)` | Crea el `GameController` de la partida (que centra la vista en tus colonos o, en una partida cargada, en tu capital) y el renderizador. |
 | `ApplyTestOptions(...)`, `ShowSampleArmy(...)` | Aplican `--days`, `--zoom`, `--at`, `--mode`, `--nation` y `--panel` (con `regiment`, entrena y selecciona una unidad de muestra bajo un cuerpo; con `march`, además la pone en marcha para ver su ruta; con `edit`, recluta oficiales y abre su ventana de edición, `ShowSampleOfficers`; con `found`, abre el diálogo para nombrar la ciudad de los colonos). |
 | `Frame(dt)` | Fotograma: teclas, tiempo, refresco del mapa, dibujo del mapa, marcadores, paneles e interacción. |
-| `AdvanceTime(dt)` | Simula las horas de juego que da el reloj (`GameClock.Advance`), salvo con el menú, la ayuda, el historial o una ventana abierta. |
+| `Frame(dt)` (tiempo) | Llama a `GameController.Tick`, congelado con el menú, la ayuda, el historial o una ventana abierta, y pasa al renderizador el modo de mapa y el filtro de recursos cuando cambian. |
 | `HandleKeys` | Teclado (Espacio, 1-5, Tab, Inicio, N, F1, +/-, WASD, Esc). Mientras la ayuda (`HelpView`) está abierta el tiempo se para y el mapa no responde; con la ventana de edición de una unidad abierta, las teclas van a su nombre (Intro renombra, Esc cierra). |
 | `HandleMapMouse()` | Rueda para el zoom, arrastrar para mover el mapa, clics. |
-| `LeftClick()` | Selecciona unidad o provincia, o elige el destino de una migración forzada. |
-| `RightClick()` | Da orden de mover la unidad seleccionada (o de atacar, si el destino es enemigo). |
-| `CenterOnHome()` | Centra la vista en la capital. |
-| `ViewUnit(unidad)` | Selecciona una unidad y centra la vista en ella (desde la pantalla de la nación). |
-| `NationRect`, `ViewProvince(provincia)` | Rectángulo de la pantalla de la nación, y seleccionar y centrar una provincia cuando se pide desde ella. |
-| `Show(resultado)`, `CollectNotifications()` | Mensajes temporales en pantalla. |
-| `Center`, `Between`, `OnScreen` | Posición de una provincia, punto intermedio entre dos (cruzando el borde del mapa por el lado corto) y si algo está en pantalla. |
+| `LeftClick()` | Abre la batalla o selecciona la unidad bajo el ratón; si no hay ninguna (o se elige el destino de una migración), `GameController.ClickProvince`. |
+| `RightClick()` | `GameController.OrderMove`: mueve la unidad seleccionada (o ataca, si el destino es enemigo). |
+| `NationRect` | Rectángulo de la pantalla de la nación. |
+| `Center`, `Between`, `OnScreen` | Atajos a `GameController.Center` y `Between`, y si algo está en pantalla. |
 | `DrawRivers()` | Dibuja los ríos con `RiverLayer` (con la vega verde solo en el modo terreno). Después, `RoadLayer` dibuja carreteras y ferrocarriles. |
 | `DrawCities()` | Cada ciudad como un grupo de casas con tejado del color de su nación (`MapIcons.City`: más casas cuanto más poblada, torre con bandera dorada en la capital), un poco más grandes con zoom, y su nombre debajo. |
 | `DrawPath(unidad, desde, seleccionada)` | Ruta como flecha verde (`PathArrow`) por el centro de cada provincia del camino, cruzando el borde del mapa por el lado corto: entera para la unidad seleccionada y más tenue para tus demás unidades en marcha. |
 | `DrawTopBar()` | Barra superior: nación, población y humor medio, fecha, velocidades, recursos conocidos (icono, cantidad y cambio del día; el nombre, en el tooltip) y botones «?» (ayuda), Nación (con «!» si alguna rama no investiga nada teniendo avances disponibles) y Menú (con números abreviados por `TextFormat.Compact`: 12,3k, 2,9M). |
 | `DrawSidePanel()`, `UnitPanel()`, `ProvincePanel()` | Panel derecho: datos y botones de la unidad o provincia seleccionada; el de provincia tiene pestañas General, Edificios y Ejército (humor y fertilidad, yacimientos con lo que les queda, fundar, fiestas, reclamar, asentarse, reclutar, migración forzada). |
 | `MoodTooltip(provincia)` | Tooltip del humor con sus causas y su efecto en la producción. |
-| `OpenCityNaming(...)`, `DrawCityNaming()`, `ConfirmCityName()` | Diálogo para nombrar una ciudad al fundarla con colonos o al construirla: propone un nombre, se puede escribir otro o pedir otro al azar, avisa si no vale y la funda o empieza la obra (Intro confirma, Esc cancela). Mientras está abierto el tiempo se para y las teclas van a la caja de texto. |
+| `DrawCityNaming()` | Dibuja el diálogo de `GameController.Naming` para nombrar una ciudad al fundarla con colonos o al construirla: propone un nombre, se puede escribir otro o pedir otro al azar, avisa si no vale y la funda o empieza la obra (Intro confirma, Esc cancela). Mientras está abierto el tiempo se para y las teclas van a la caja de texto. |
 | `BuildingsPanel(...)` | Pestaña Edificios: la obra en curso (edificio o ciudad) con su barra, el botón «Ciudad» en provincias sin ciudad, los edificios terminados y, en tus provincias, un botón por cada edificio que puedes levantar; los que solo necesitan ciudad o yacimiento dicen qué les falta, y los de avances sin descubrir no aparecen (`IsBuildingKnown`). Bajo el cuartel y el taller (o la fábrica), `TrainingImprovements` lista las tropas que tus avances instruyen más rápido allí. El taller deja de ofrecerse cuando ya se construyen fábricas. |
 | `Line()`, `ResourceLine()`, `Paragraph()` | Ayudas para escribir filas (también con el icono de un recurso) y párrafos en el panel. |
 | `DrawBottomBar()`, `ModeBarWidth` | Modos de mapa (un botón de 120 píxeles por modo) y ayuda de controles (si no cabe, quita atajos del medio y deja siempre «F1: ayuda» al final) (la ayuda se oculta con la pantalla de la nación abierta). |
 | `DrawResourceFilter(barra)` | En el modo recursos, fila de botones para ver todos los yacimientos o solo uno de los recursos que conoces; hace de leyenda con el color de cada recurso. |
 | `DrawMessages()`, `HoverTooltip()` | Mensajes (`MessageLog`) en tiras redondeadas con una marca dorada (roja si algo falló) (más arriba si está abierto el filtro de recursos; con la pantalla de la nación abierta, solo el último, en la franja junto a los modos de mapa, con `DrawLatestMessageInStrip`) y tooltip de la provincia bajo el ratón (con sus yacimientos en el modo recursos y sus instituciones en el modo instituciones). |
-| `DrawPauseMenu()`, `SaveCurrentGame()` | Menú de pausa (Esc): continuar, guardar la partida (`SaveFiles.Save`), ayuda, historial de versiones, volver a la pantalla inicial o salir. |
+| `DrawPauseMenu()` | Menú de pausa (Esc): continuar, guardar la partida (`GameController.Save`), ayuda, historial de versiones, volver a la pantalla inicial o salir. |
 
 ### `Screens/GameScreen.Army.cs`
 El ejército en pantalla.
 
 | Función | Qué hace |
 | --- | --- |
-| `ProvinceTab` | Pestañas del panel de provincia: General, Edificios y Ejército (esta solo en tus ciudades). |
 | `DrawNationNames()` | El nombre de cada nación sobre su tierra: en su centro (media circular de las longitudes), del tamaño que ocupa en pantalla, oculto si se ve muy pequeña y desvanecido al acercarse mucho. |
 | `DrawUnits()`, `DrawEchelon(...)`, `Bar(...)` (el símbolo, con `MapIcons.NatoSymbol`) | Fichas OTAN: dentro del marco, el símbolo de su arma (`Unit.Function`: aspa para infantería, aspa con raya vertical para la motorizada, aspa con óvalo para la mecanizada, barra diagonal para caballería y exploradores, óvalo para blindados, punto para artillería, puente para ingenieros y alas para aviación); encima, las marcas de tamaño (`Unit.Echelon`: III regimiento, X brigada, XX división, XXX cuerpo, XXXX ejército, XXXXX grupo de ejércitos); los cuarteles, con «HQ» dentro del marco; los colonos, un carromato (`MapIcons.Settlers`); las flotas llevan un casco bajo la letra de su barco y un punto por cada unidad a bordo, y las unidades embarcadas no se dibujan. Barras de hombres (verde) y organización (ámbar). Cada ficha lleva sombra, y el marco de la seleccionada late. Dibuja la ruta (`DrawPath`), la línea a su cuartel (verde si está a su alcance) y una flecha roja (`PathArrow`) al atacar. |
 | `DrawBattles()`, `DrawBattleMark(...)`, `BattleSummary(...)`, `NavalBattleSummary(...)` | Espadas cruzadas sobre cada batalla, en tierra o en el mar; al pasar el ratón, los dos bandos, su organización y el terreno; al hacer clic, la ventana de la batalla. |
@@ -892,6 +907,7 @@ Uso: ver el README.
 | `DifficultyTests.cs` | En Muy difícil hay menos yacimientos, los mismos de la primera tirada y con la mitad de bolsa; el humano empieza con los recursos de su dificultad y los rivales con los normales; los rivales producen más ciencia en dificultades altas; la dificultad se guarda con la partida. `VeryHardWorldFixture` genera el mismo mundo en Muy difícil. |
 | `SaveGameTests.cs` | Cargar una partida y volver a guardarla da exactamente el mismo fichero; la partida cargada sigue jugándose; los mismos ajustes generan el mismo mapa; las partidas anteriores a la 1.13.0 reciben llenos los yacimientos nuevos; el mapa de los tests conserva su huella y cargan las partidas guardadas con la 1.30.1 y con la 1.31.0/1.32.0; las partidas anteriores a los talleres dan uno a cada cuartel cuyo dueño conoce la Maquinaria de asedio; se rechazan las partidas de otro mapa y las dañadas. |
 | `InterfaceTests.cs` | Los nombres se ordenan alfabéticamente en español (sin tildes, ñ tras n); el texto de la ayuda solo usa caracteres que la fuente sabe dibujar (Latin-1); `Conquer.Game` y `Conquer.Presentation` no dependen de ningún motor (ni Silk.NET, ni Stb, ni Godot, ni el cliente); el reloj reanuda a la velocidad que tenía; los mensajes salen del más nuevo al más antiguo y caducan; el historial empieza por la última versión, sin marcas de Markdown. Los tests no usan el cliente. |
+| `ControllerTests.cs` | La partida en pantalla sin pantalla: empieza con los colonos seleccionados y a la vista; seleccionar una provincia quita la unidad; el tiempo no corre congelado ni en pausa; nombrar una ciudad la funda con ese nombre y la selecciona, y un nombre no válido deja el diálogo abierto; el modo de mapa vuelve al terreno tras dar la vuelta. |
 | `ReleaseTests.cs` | La versión del `.csproj` coincide con la primera entrada del `CHANGELOG.md`. |
 
 ---

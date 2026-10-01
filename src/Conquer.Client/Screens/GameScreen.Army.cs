@@ -12,13 +12,6 @@ using Conquer.Presentation;
 
 namespace Conquer.Client.Screens;
 
-public enum ProvinceTab
-{
-    General,
-    Buildings,
-    Army,
-}
-
 /// <summary>The army on screen: unit counters, battles, the unit panel and a city's Ejército tab.</summary>
 public sealed partial class GameScreen
 {
@@ -39,21 +32,21 @@ public sealed partial class GameScreen
         {
             if (unit.IsAboard) continue; // shown in its fleet's panel
             var pos =unit.IsMoving && !unit.AttackingProvinceId.HasValue ? Between(unit.ProvinceId, unit.Path[0], unit.StepProgress) : Center(unit.ProvinceId);
-            var s = _camera.MapToScreen(pos);
+            var s = _game.Camera.MapToScreen(pos);
             if (!OnScreen(s)) continue;
             int stack = stackIndex.GetValueOrDefault(unit.ProvinceId);
             stackIndex[unit.ProvinceId] = stack + 1;
             s += new Vector2(stack * 5, -stack * 7 - 14);
 
-            bool selected = unit.Id == _selectedUnitId;
-            if (selected || (unit.OwnerId == Human.Id && _camera.Zoom >= 1.5f)) DrawPath(unit, pos, selected);
+            bool selected = unit.Id == _game.SelectedUnitId;
+            if (selected || (unit.OwnerId == Human.Id && _game.Camera.Zoom >= 1.5f)) DrawPath(unit, pos, selected);
             if (selected && _session.CommanderOf(unit) is { } hq)
-                Batch.Line(s, _camera.MapToScreen(Center(hq.ProvinceId)), (_session.InCommandRange(unit) ? Theme.Good : Theme.Bad).WithAlpha(0.8f), 1.5f);
+                Batch.Line(s, _game.Camera.MapToScreen(Center(hq.ProvinceId)), (_session.InCommandRange(unit) ? Theme.Good : Theme.Bad).WithAlpha(0.8f), 1.5f);
             if (unit.AttackingProvinceId is int target)
-                PathArrow.Draw(Batch, [_camera.MapToScreen(pos), _camera.MapToScreen(Between(unit.ProvinceId, target, 1))], BattleColor, _realTime, 5);
+                PathArrow.Draw(Batch, [_game.Camera.MapToScreen(pos), _game.Camera.MapToScreen(Between(unit.ProvinceId, target, 1))], BattleColor, _game.Now, 5);
 
             // Counters shrink when zoomed out so they don't bury the map.
-            float scale = selected ? 1 : Math.Clamp(_camera.Zoom / 3, 0.45f, 1);
+            float scale = selected ? 1 : Math.Clamp(_game.Camera.Zoom / 3, 0.45f, 1);
             float W = 28 * scale, H = 19 * scale;
             var r = new Rect(s.X - W / 2, s.Y - H / 2, W, H);
             var color = new Rgba(_session.Players[unit.OwnerId].Color);
@@ -61,7 +54,7 @@ public sealed partial class GameScreen
             Batch.Shadow(r.X - 2, r.Y, r.W + 4, r.H + 4, 3, spread: 5, strength: 0.5f);
             if (selected)
             {
-                float pulse = 0.5f + 0.5f * MathF.Sin((float)_realTime * 5);
+                float pulse = 0.5f + 0.5f * MathF.Sin((float)_game.Now * 5);
                 Batch.Rect(r.X - 4, r.Y - 4, r.W + 8, r.H + 8, Theme.Accent.WithAlpha(0.25f + 0.35f * pulse));
             }
             Batch.Rect(r.X - 2, r.Y - 2, r.W + 4, r.H + 4, selected ? Theme.Accent : Rgba.Black);
@@ -121,9 +114,9 @@ public sealed partial class GameScreen
     /// <summary>The crossed swords: hovering shows a summary, clicking opens the battle's window.</summary>
     private void DrawBattleMark(int provinceId, Battle? battle, Func<string> summary)
     {
-        var s = _camera.MapToScreen(Center(provinceId));
+        var s = _game.Camera.MapToScreen(Center(provinceId));
         if (!OnScreen(s)) return;
-        float size = 9 + 2 * (float)Math.Sin(_realTime * 6);
+        float size = 9 + 2 * (float)Math.Sin(_game.Now * 6);
         Batch.Rect(s.X - size - 2, s.Y - size - 2, 2 * size + 4, 2 * size + 4, Rgba.Black.WithAlpha(0.6f));
         Batch.Line(new(s.X - size, s.Y - size), new(s.X + size, s.Y + size), BattleColor, 3);
         Batch.Line(new(s.X - size, s.Y + size), new(s.X + size, s.Y - size), BattleColor, 3);
@@ -210,14 +203,14 @@ public sealed partial class GameScreen
         {
             var can = _session.CanFoundCity(unit);
             if (Ui.Button(new Rect(x, y, w, 32), "Fundar ciudad", can.Ok, tooltip: can.Ok ? "Reclama esta provincia y funda una ciudad con estos colonos." : can.Message))
-                OpenCityNaming(unit.Id, unit.ProvinceId);
+                _game.OpenCityNaming(unit.Id, unit.ProvinceId);
             y += 38;
         }
         if (unit.IsMilitary)
         {
             var can = _session.CanClaim(unit);
             if (Ui.Button(new Rect(x, y, w, 32), "Reclamar provincia", can.Ok, tooltip: can.Ok ? "Esta provincia libre pasará a ser tuya." : can.Message))
-                Show(_session.Claim(Human.Id, unit.Id));
+                _game.Show(_session.Claim(Human.Id, unit.Id));
             y += 38;
             if (unit.IsScouting)
             {
@@ -228,7 +221,7 @@ public sealed partial class GameScreen
                 if (Ui.Button(new Rect(x, y, w, 32), label, active: unit.AutoClaim, tooltip: tip))
                 {
                     if (unit.AutoClaim) _session.MoveUnit(Human.Id, unit.Id, unit.ProvinceId);
-                    Show(_session.SetAutoClaim(Human.Id, unit.Id, !unit.AutoClaim));
+                    _game.Show(_session.SetAutoClaim(Human.Id, unit.Id, !unit.AutoClaim));
                 }
                 y += 38;
             }
@@ -238,8 +231,8 @@ public sealed partial class GameScreen
         if (Ui.Button(new Rect(x, y, half, 32), unit.CanFoundCity ? "Asentarse" : "Licenciar", canSettle,
                 tooltip: canSettle ? "Disuelve la unidad; sus ciudadanos se quedan a vivir en esta provincia." : "Solo en una provincia tuya.", size: FontSize.Small))
         {
-            Show(_session.Disband(Human.Id, unit.Id));
-            _selectedProvince = here.Id;
+            _game.Show(_session.Disband(Human.Id, unit.Id));
+            _game.SelectProvince(here.Id);
             return;
         }
         if (Ui.Button(new Rect(x + half + 6, y, half, 32), "Detener", unit.IsMoving || unit.AttackingProvinceId.HasValue || unit.AutoClaim, size: FontSize.Small))
@@ -283,7 +276,7 @@ public sealed partial class GameScreen
             Ui.Text(x, y, $"Quedan {_session.LinksLeft(work)} tramos · {Formations.BattalionCount(engineers)} de ingenieros en la ruta", Theme.TextDim, FontSize.Small);
             y += 20;
             if (Ui.Button(new Rect(x, y, w, 26), "Cancelar obra", size: FontSize.Small, tooltip: "Se devuelve lo que costaban los tramos sin hacer."))
-                Show(_session.CancelRoad(Human.Id, work.Id));
+                _game.Show(_session.CancelRoad(Human.Id, work.Id));
             y += 32;
         }
     }
@@ -300,7 +293,7 @@ public sealed partial class GameScreen
             var can = _session.CanEmbark(unit, fleet);
             int room = fleet.Capacity - _session.CargoMen(fleet);
             if (Ui.Button(new Rect(x, y, w, 28), $"Embarcar en {fleet.Name} (sitio para {room:N0})", can.Ok, tooltip: can.Ok ? null : can.Message, size: FontSize.Small))
-                Show(_session.Embark(Human.Id, unit.Id, fleet.Id));
+                _game.Show(_session.Embark(Human.Id, unit.Id, fleet.Id));
             y += 32;
         }
     }
@@ -455,11 +448,11 @@ public sealed partial class GameScreen
             var can = _session.CanAttach(unit, hq);
             double km = Map.DistanceKm(here, Map.Provinces[hq.ProvinceId]);
             if (Ui.Button(new Rect(x, y, w, 26), $"Bajo el mando de {hq.Name} ({km:N0} km)", can.Ok, tooltip: can.Ok ? null : can.Message, size: FontSize.Small))
-                Show(_session.Attach(Human.Id, unit.Id, hq.Id));
+                _game.Show(_session.Attach(Human.Id, unit.Id, hq.Id));
             y += 30;
         }
         if (unit.CommanderId.HasValue && Ui.Button(new Rect(x, y, w, 26), "Quitar del mando", size: FontSize.Small))
-            Show(_session.Detach(Human.Id, unit.Id));
+            _game.Show(_session.Detach(Human.Id, unit.Id));
         if (unit.CommanderId.HasValue) y += 30;
         if (hqs.Count == 0 && unit.CommanderId is null)
         {
@@ -498,7 +491,7 @@ public sealed partial class GameScreen
                          $"\nCoste: {template.Cost}. {TextFormat.TrainingDaysText(days, template.TrainingDays)}" + (can.Ok ? "" : "\n" + can.Message);
             if (Ui.Button(new Rect(x, y, w, 28), $"{template.Name}  ·  {Formations.BattalionCount(template.Battalions.Count)}  ·  {days} d",
                     can.Ok, tooltip: tip, size: FontSize.Small))
-                Show(_session.TrainTemplate(Human.Id, p.Id, template.Id));
+                _game.Show(_session.TrainTemplate(Human.Id, p.Id, template.Id));
             y += 32;
         }
         Ui.Text(x, y, Human.Templates.Count > 4 ? "Más plantillas en la pestaña Plantillas de la nación (N)." : "Diseña plantillas en la pestaña Plantillas de la nación (N).",
@@ -518,7 +511,7 @@ public sealed partial class GameScreen
                          (info.Mounted ? "\nMontada: ataca a la mitad en bosques, pantanos y montañas." : "") +
                          $"\nCoste: {info.Cost}. {TextFormat.TrainingDaysText(days, info.TrainingDays)} Mantenimiento: {TextFormat.UpkeepText([info.Cost])}." + (can.Ok ? "" : "\n" + can.Message);
             if (Ui.Button(new Rect(x, y, w, 28), $"{info.Name}  ·  {info.Cost}  ·  {days} d", can.Ok, tooltip: tip, size: FontSize.Small))
-                Show(_session.Train(Human.Id, p.Id, type));
+                _game.Show(_session.Train(Human.Id, p.Id, type));
             MapIcons.Battalion(Batch, x + 7, y + 7, type);
             y += 32;
         }
@@ -533,7 +526,7 @@ public sealed partial class GameScreen
                          $"+{MilitaryRules.CommandBonus:P0} en combate y recuperación (+{MilitaryRules.HigherCommandBonus:P0} por cada nivel superior enlazado)." +
                          $"\n{level.Staff} hombres de la provincia. Coste: {level.Cost}. Tarda {level.TrainingDays} días." + (can.Ok ? "" : "\n" + can.Message);
             if (Ui.Button(new Rect(x, y, w, 28), $"{Formations.LevelName(level.Level)}  ·  {level.Cost}  ·  {level.TrainingDays} d", can.Ok, tooltip: tip, size: FontSize.Small))
-                Show(_session.RaiseHeadquarters(Human.Id, p.Id, level.Level));
+                _game.Show(_session.RaiseHeadquarters(Human.Id, p.Id, level.Level));
             y += 32;
         }
 

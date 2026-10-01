@@ -58,7 +58,7 @@ public sealed partial class GameScreen
         var bottom = panel.Bottom - 52;
         if (Ui.Button(new Rect(panel.X + 24, bottom, 200, 36), "Ir a la provincia", tooltip: "Centra el mapa en la batalla y cierra la ventana."))
         {
-            _camera.LookAt(Center(provinceId));
+            _game.Camera.LookAt(Center(provinceId));
             CloseBattle();
         }
         if (Ui.Button(new Rect(panel.Right - 24 - 160, bottom, 160, 36), "Cerrar")) CloseBattle();

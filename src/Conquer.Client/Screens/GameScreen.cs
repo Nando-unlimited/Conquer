@@ -21,30 +21,17 @@ public sealed partial class GameScreen : IScreen
 
     private readonly ConquerApp _app;
     private readonly GameSession _session;
+    private readonly GameController _game;
     private readonly MapRenderer _renderer;
     private readonly RiverLayer _rivers;
     private readonly RoadLayer _roads;
-    private readonly Camera _camera;
     private readonly ChangelogView _changelog = new();
     private readonly HelpView _help = new();
     private readonly NationView _nation;
     private readonly List<(int UnitId, Rect Bounds)> _unitHitBoxes = [];
-    private readonly MessageLog _messages = new();
-    private readonly GameClock _clock = new();
 
-    private double _realTime;
     private bool _mapDirty = true, _menuOpen, _dragging;
     private long _lastRefreshDay = -1;
-    private int _seenNotifications;
-    /// <summary>The city being named: founded by settlers (UnitId) or built by a province's citizens; null when no dialog is open.</summary>
-    private (int? UnitId, int ProvinceId)? _naming;
-    private string _cityName = "";
-    private int? _selectedUnitId;
-    private int _selectedProvince = -1, _hoverProvince = -1;
-    private bool _choosingMigrationTarget;
-    private int _migrationAmount = 50;
-    /// <summary>Which tab the province panel shows.</summary>
-    private ProvinceTab _provinceTab;
 
     private Ui Ui => _app.Ui;
     private Batch2D Batch => _app.Batch;
@@ -56,26 +43,15 @@ public sealed partial class GameScreen : IScreen
     {
         _app = app;
         _session = session;
+        _game = new GameController(session, loaded);
+        _game.Camera.Screen = app.ScreenSize;
         _renderer = new MapRenderer(app.Gl, session.Map, pixels);
         _rivers = new RiverLayer(session.Map);
         _roads = new RoadLayer(session.Map);
-        _camera = new Camera(session.Map.Width, session.Map.Height) { Screen = app.ScreenSize };
         session.OwnershipChanged += _ => _mapDirty = true;
-        _nation = new NationView(session, session.Human, ViewProvince, ViewUnit, Show);
+        _nation = new NationView(session, session.Human, _game.ViewProvince, _game.ViewUnit, _game.Show);
         _renderer.IsResourceKnown = session.Human.Knows;
-
-        if (loaded)
-        {
-            _seenNotifications = session.Notifications.Count;
-            _camera.LookAt(_camera.Center, zoom: 8);
-            CenterOnHome();
-            _messages.Add("Partida cargada.", 0);
-            return;
-        }
-        var settlers = session.Units.First(u => u.OwnerId == GameSession.HumanPlayerId);
-        _selectedUnitId = settlers.Id;
-        _camera.LookAt(Center(settlers.ProvinceId), zoom: 8);
-        ApplyTestOptions(app.Options, settlers);
+        if (!loaded) ApplyTestOptions(app.Options, _game.SelectedUnit!);
     }
 
     /// <summary>Command-line shortcuts for testing: found the capital, fast-forward and set the view.</summary>
@@ -86,18 +62,17 @@ public sealed partial class GameScreen : IScreen
             int capitalProvince = settlers.ProvinceId;
             _session.FoundCity(Human.Id, settlers.Id);
             for (int h = 0; h < options.Days * 24; h++) _session.Step();
-            _selectedUnitId = null;
-            _selectedProvince = capitalProvince;
+            _game.SelectProvince(capitalProvince);
         }
-        if (options.Zoom is float zoom) _camera.LookAt(_camera.Center, zoom);
+        if (options.Zoom is float zoom) _game.Camera.LookAt(_game.Camera.Center, zoom);
         if (options.At is { } at)
-            _camera.LookAt(new Vector2((at.Longitude + 180) / 360 * Map.Width, (90 - at.Latitude) / 180 * Map.Height));
-        if (Enum.TryParse<MapMode>(options.Mode, ignoreCase: true, out var mode)) _renderer.Mode = mode;
+            _game.Camera.LookAt(new Vector2((at.Longitude + 180) / 360 * Map.Width, (90 - at.Latitude) / 180 * Map.Height));
+        if (Enum.TryParse<MapMode>(options.Mode, ignoreCase: true, out var mode)) _game.Mode = mode;
         if (Enum.TryParse<NationTab>(options.Nation, ignoreCase: true, out var tab)) { _nation.Tab = tab; _nation.Visible = true; }
-        _provinceTab = options.Panel switch { "buildings" => ProvinceTab.Buildings, "army" => ProvinceTab.Army, _ => ProvinceTab.General };
+        _game.ProvinceTab = options.Panel switch { "buildings" => ProvinceTab.Buildings, "army" => ProvinceTab.Army, _ => ProvinceTab.General };
         if (options.Panel is "regiment" or "march" or "edit" && Human.CapitalCityId is int capital) ShowSampleArmy(capital, march: options.Panel == "march");
-        if (options.Panel == "edit" && _selectedUnitId is int sample && _session.UnitById(sample) is { HasOfficer: true }) ShowSampleOfficers(sample);
-        if (options.Panel == "found" && _session.UnitById(settlers.Id) != null) OpenCityNaming(settlers.Id, settlers.ProvinceId);
+        if (options.Panel == "edit" && _game.SelectedUnitId is int sample && _session.UnitById(sample) is { HasOfficer: true }) ShowSampleOfficers(sample);
+        if (options.Panel == "found" && _session.UnitById(settlers.Id) != null) _game.OpenCityNaming(settlers.Id, settlers.ProvinceId);
         if (options.Panel == "battle") ShowFirstBattle();
     }
 
@@ -119,8 +94,7 @@ public sealed partial class GameScreen : IScreen
         var regiments = _session.Units.Where(u => u.OwnerId == Human.Id && u.IsMilitary).ToList();
         foreach (var other in regiments.Skip(1)) _session.Merge(Human.Id, regiments[0].Id, other.Id);
         if (_session.Units.FirstOrDefault(u => u.OwnerId == Human.Id && u.IsHeadquarters) is { } corps) _session.Attach(Human.Id, regiments[0].Id, corps.Id);
-        _selectedUnitId = regiments[0].Id;
-        _selectedProvince = -1;
+        _game.SelectUnit(regiments[0].Id);
         if (!march) return;
         var from = Center(city.ProvinceId);
         foreach (var p in Map.Provinces.Where(p => !p.IsWater).OrderBy(p => MathF.Abs(Vector2.Distance(Center(p.Id), from) - 30)))
@@ -129,25 +103,30 @@ public sealed partial class GameScreen : IScreen
 
     public void Frame(double dt)
     {
-        _realTime += dt;
-        _camera.Screen = _app.ScreenSize;
+        _game.Camera.Screen = _app.ScreenSize;
         HandleKeys(dt);
-        AdvanceTime(dt);
-        CollectNotifications();
+        // The menu, the help, the changelog and the dialogs stop time.
+        _game.Tick(dt, frozen: _menuOpen || _changelog.Visible || _help.Visible || _game.Naming.HasValue || _editingUnitId.HasValue || RoadWindowOpen);
 
-        if (_mapDirty || (_renderer.Mode >= MapMode.Population &&_session.Date.Days != _lastRefreshDay))
+        if (_renderer.Mode != _game.Mode || _renderer.ResourceFilter != _game.ResourceFilter)
+        {
+            _renderer.Mode = _game.Mode;
+            _renderer.ResourceFilter = _game.ResourceFilter;
+            _mapDirty = true;
+        }
+        if (_mapDirty || (_game.Mode >= MapMode.Population &&_session.Date.Days != _lastRefreshDay))
         {
             _renderer.Refresh(_session);
             _mapDirty = false;
             _lastRefreshDay = _session.Date.Days;
         }
 
-        var mouseMap = _camera.ScreenToMap(Ui.Input.Mouse);
-        _hoverProvince = MapRenderer.ProvinceAt(Map, mouseMap, _camera.Zoom);
+        var mouseMap = _game.Camera.ScreenToMap(Ui.Input.Mouse);
+        _game.HoverProvince = MapRenderer.ProvinceAt(Map, mouseMap, _game.Camera.Zoom);
 
-        _renderer.Draw(_camera, _selectedProvince, _hoverProvince, _app.PixelScale, _realTime);
+        _renderer.Draw(_game.Camera, _game.SelectedProvince, _game.HoverProvince, _app.PixelScale, _game.Now);
         DrawRivers();
-        _roads.Draw(Batch, _camera, _session.Roads, _session.RoadProjects.Where(r => r.OwnerId == Human.Id), PlannedRoute);
+        _roads.Draw(Batch, _game.Camera, _session.Roads, _session.RoadProjects.Where(r => r.OwnerId == Human.Id), PlannedRoute);
         DrawCities();
         DrawNationNames();
         DrawUnits();
@@ -158,7 +137,7 @@ public sealed partial class GameScreen : IScreen
         DrawBottomBar();
         _nation.Frame(Ui, NationRect);
         DrawMessages();
-        if (_naming.HasValue) DrawCityNaming();
+        if (_game.Naming.HasValue) DrawCityNaming();
         if (_editingUnitId.HasValue) DrawUnitEditor();
         if (BattleWindowOpen) DrawBattleWindow();
         if (RoadWindowOpen) DrawRoadWindow();
@@ -166,27 +145,21 @@ public sealed partial class GameScreen : IScreen
         _changelog.Frame(Ui, new Rect(_app.ScreenSize.X / 2 - 380, 70, 760, _app.ScreenSize.Y - 140));
         _help.Frame(Ui, new Rect(Math.Max(8, _app.ScreenSize.X / 2 - 520), 70, Math.Min(1040, _app.ScreenSize.X - 16), _app.ScreenSize.Y - 140));
 
-        bool modal = _menuOpen || _naming.HasValue || _editingUnitId.HasValue || BattleWindowOpen || RoadWindowOpen;
+        bool modal = _menuOpen || _game.Naming.HasValue || _editingUnitId.HasValue || BattleWindowOpen || RoadWindowOpen;
         if (!modal && !_changelog.Visible && !_help.Visible && !_nation.Visible) HandleMapMouse();
-        if (!Ui.MouseOverUi && !modal && !_help.Visible && !_nation.Visible && _hoverProvince >= 0 && !_dragging) HoverTooltip();
+        if (!Ui.MouseOverUi && !modal && !_help.Visible && !_nation.Visible && _game.HoverProvince >= 0 && !_dragging) HoverTooltip();
     }
 
-    // ------------------------------------------------------------------ time and input
-
-    private void AdvanceTime(double dt)
-    {
-        if (_menuOpen || _changelog.Visible || _help.Visible || _naming.HasValue || _editingUnitId.HasValue || RoadWindowOpen) return;
-        for (int i = _clock.Advance(dt); i > 0; i--) _session.Step();
-    }
+    // ------------------------------------------------------------------ input
 
     private void HandleKeys(double dt)
     {
         var input = Ui.Input;
-        if (_naming.HasValue)
+        if (_game.Naming.HasValue)
         {
             // While the city's name is being typed, keys belong to the text field.
-            if (input.KeysPressed.Contains(Key.Escape)) _naming = null;
-            else if (input.KeysPressed.Contains(Key.Enter) || input.KeysPressed.Contains(Key.KeypadEnter)) ConfirmCityName();
+            if (input.KeysPressed.Contains(Key.Escape)) _game.CancelCityNaming();
+            else if (input.KeysPressed.Contains(Key.Enter) || input.KeysPressed.Contains(Key.KeypadEnter)) _game.ConfirmCityName();
             return;
         }
         if (_editingUnitId.HasValue)
@@ -206,18 +179,18 @@ public sealed partial class GameScreen : IScreen
                     else if (RoadWindowOpen) CloseRoadWindow();
                     else if (_changelog.Visible) _changelog.Visible = false;
                     else if (_nation.Visible) _nation.Visible = false;
-                    else if (_choosingMigrationTarget) _choosingMigrationTarget = false;
-                    else if (_selectedUnitId.HasValue || _selectedProvince >= 0) { _selectedUnitId = null; _selectedProvince = -1; }
+                    else if (_game.ChoosingMigrationTarget) _game.ChoosingMigrationTarget = false;
+                    else if (_game.HasSelection) _game.ClearSelection();
                     else _menuOpen = !_menuOpen;
                     break;
-                case Key.Space: _clock.TogglePause(); break;
-                case >= Key.Number1 and <= Key.Number5: _clock.SetSpeed(key - Key.Number1 + 1); break;
-                case Key.Tab: _renderer.Mode = (MapMode)(((int)_renderer.Mode + 1) % Enum.GetValues<MapMode>().Length); _mapDirty = true; break;
-                case Key.Home: CenterOnHome(); break;
+                case Key.Space: _game.Clock.TogglePause(); break;
+                case >= Key.Number1 and <= Key.Number5: _game.Clock.SetSpeed(key - Key.Number1 + 1); break;
+                case Key.Tab: _game.CycleMode(); break;
+                case Key.Home: _game.CenterOnHome(); break;
                 case Key.N when !_menuOpen: _nation.Visible = !_nation.Visible; break;
                 case Key.F1 when !_menuOpen: _help.Visible = !_help.Visible; break;
-                case Key.KeypadAdd or Key.Equal: _camera.ZoomAt(_camera.Screen / 2, 1.25f); break;
-                case Key.KeypadSubtract or Key.Minus: _camera.ZoomAt(_camera.Screen / 2, 0.8f); break;
+                case Key.KeypadAdd or Key.Equal: _game.Camera.ZoomAt(_game.Camera.Screen / 2, 1.25f); break;
+                case Key.KeypadSubtract or Key.Minus: _game.Camera.ZoomAt(_game.Camera.Screen / 2, 0.8f); break;
             }
         }
 
@@ -227,7 +200,7 @@ public sealed partial class GameScreen : IScreen
         if (input.KeysDown.Contains(Key.D) || input.KeysDown.Contains(Key.Right)) pan.X -= 1;
         if (input.KeysDown.Contains(Key.W) || input.KeysDown.Contains(Key.Up)) pan.Y += 1;
         if (input.KeysDown.Contains(Key.S) || input.KeysDown.Contains(Key.Down)) pan.Y -= 1;
-        if (pan != Vector2.Zero) _camera.Pan(pan * (float)(900 * dt));
+        if (pan != Vector2.Zero) _game.Camera.Pan(pan * (float)(900 * dt));
     }
 
     private void HandleMapMouse()
@@ -235,12 +208,12 @@ public sealed partial class GameScreen : IScreen
         var input = Ui.Input;
         bool overUi = Ui.MouseOverUi;
 
-        if (!overUi && input.Scroll != 0) _camera.ZoomAt(input.Mouse, MathF.Pow(1.2f, input.Scroll));
+        if (!overUi && input.Scroll != 0) _game.Camera.ZoomAt(input.Mouse, MathF.Pow(1.2f, input.Scroll));
         if (input.LeftPressed) _pressStartedOnUi = overUi;
 
         if (input.LeftDown && !_pressStartedOnUi && (_dragging || Vector2.Distance(input.Mouse, input.LeftPressPosition) > 5))
         {
-            if (_dragging) _camera.Pan(input.Mouse - _lastMouse);
+            if (_dragging) _game.Camera.Pan(input.Mouse - _lastMouse);
             _dragging = true;
         }
         _lastMouse = input.Mouse;
@@ -261,87 +234,33 @@ public sealed partial class GameScreen : IScreen
 
     private void LeftClick()
     {
-        if (_choosingMigrationTarget)
+        if (!_game.ChoosingMigrationTarget)
         {
-            _choosingMigrationTarget = false;
-            if (_hoverProvince >= 0 && _selectedProvince >= 0)
-                Show(_session.ForceMigration(Human.Id, _selectedProvince, _hoverProvince, _migrationAmount));
-            return;
+            var battle = _battleHitBoxes.LastOrDefault(h => h.Bounds.Contains(Ui.Input.Mouse));
+            if (battle.Bounds.W > 0)
+            {
+                OpenBattle(battle.ProvinceId, battle.Battle);
+                return;
+            }
+            var hit = _unitHitBoxes.LastOrDefault(h => h.Bounds.Contains(Ui.Input.Mouse));
+            if (hit.Bounds.W > 0)
+            {
+                _game.SelectUnit(hit.UnitId);
+                return;
+            }
         }
-
-        var battle = _battleHitBoxes.LastOrDefault(h => h.Bounds.Contains(Ui.Input.Mouse));
-        if (battle.Bounds.W > 0)
-        {
-            OpenBattle(battle.ProvinceId, battle.Battle);
-            return;
-        }
-
-        var hit = _unitHitBoxes.LastOrDefault(h => h.Bounds.Contains(Ui.Input.Mouse));
-        if (hit.Bounds.W > 0)
-        {
-            _selectedUnitId = hit.UnitId;
-            _selectedProvince = -1;
-            return;
-        }
-        _selectedUnitId = null;
-        _selectedProvince = _hoverProvince;
+        _game.ClickProvince();
     }
 
-    private void RightClick()
-    {
-        if (_selectedUnitId is not int id || _session.UnitById(id) is not { } unit || unit.OwnerId != Human.Id || _hoverProvince < 0) return;
-        var result = _session.MoveUnit(Human.Id, unit.Id, _hoverProvince);
-        // An order of the player's own takes over from exploring.
-        if (result.Ok && unit.AutoClaim) _session.SetAutoClaim(Human.Id, unit.Id, false);
-        Show(result);
-    }
+    private void RightClick() => _game.OrderMove();
 
     private Rect NationRect => new(Math.Max(8, _app.ScreenSize.X / 2 - 540), TopBarHeight + 12, Math.Min(1080, _app.ScreenSize.X - 16), _app.ScreenSize.Y - TopBarHeight - 76);
-
-    /// <summary>Selects a province and centres the map on it (from the nation screen).</summary>
-    /// <summary>Selects a unit and centres the map on it (from the nation screen).</summary>
-    private void ViewUnit(int unitId)
-    {
-        if (_session.UnitById(unitId) is not { } unit) return;
-        _selectedUnitId = unit.Id;
-        _selectedProvince = -1;
-        _choosingMigrationTarget = false;
-        _camera.LookAt(Center(unit.ProvinceId));
-    }
-
-    private void ViewProvince(int provinceId)
-    {
-        _selectedUnitId = null;
-        _selectedProvince = provinceId;
-        _choosingMigrationTarget = false;
-        _camera.LookAt(Center(provinceId));
-    }
-
-    private void CenterOnHome()
-    {
-        if (Human.CapitalCityId is int capital && _session.CityById(capital) is { } city) _camera.LookAt(Center(city.ProvinceId));
-        else if (_session.Units.FirstOrDefault(u => u.OwnerId == Human.Id) is { } unit) _camera.LookAt(Center(unit.ProvinceId));
-    }
-
-    private void Show(CommandResult result)
-    {
-        _messages.Add(result.Message, _realTime, result.Ok);
-    }
-
-    private void CollectNotifications()
-    {
-        for (; _seenNotifications < _session.Notifications.Count; _seenNotifications++)
-        {
-            var n = _session.Notifications[_seenNotifications];
-            if (n.PlayerId == Human.Id || n.PlayerId < 0) _messages.Add(n.Text, _realTime);
-        }
-    }
 
     // ------------------------------------------------------------------ map markers
 
     private static readonly Rgba RiverColor = new(0xFF3F7FC8);
 
-    private void DrawRivers() => _rivers.Draw(Batch, _camera, _renderer.Mode == MapMode.Terrain);
+    private void DrawRivers() => _rivers.Draw(Batch, _game.Camera, _game.Mode == MapMode.Terrain);
 
     /// <summary>
     /// Each nation's name over its land: in its middle (a circular mean of longitudes, so a nation across
@@ -366,10 +285,10 @@ public sealed partial class GameScreen : IScreen
             }
             double mean = Math.Atan2(sin, cos);
             var centre = new Vector2((float)((mean < 0 ? mean + Math.Tau : mean) / Math.Tau * Map.Width), (float)(ySum / area));
-            var s = _camera.MapToScreen(centre);
+            var s = _game.Camera.MapToScreen(centre);
             if (!OnScreen(s)) continue;
 
-            float extent = (float)Math.Sqrt(area) / KmPerMapPixel * _camera.Zoom;
+            float extent = (float)Math.Sqrt(area) / KmPerMapPixel * _game.Camera.Zoom;
             if (extent < 45) continue;
             var size = extent > 280 ? FontSize.Title : extent > 150 ? FontSize.Large : extent > 80 ? FontSize.Normal : FontSize.Small;
             float alpha = Math.Clamp((1600 - extent) / 600, 0, 1) * 0.85f;
@@ -381,38 +300,26 @@ public sealed partial class GameScreen : IScreen
         }
     }
 
-    private Vector2 Center(int provinceId)
-    {
-        var p = Map.Provinces[provinceId];
-        return new Vector2(p.CenterX + 0.5f, p.CenterY + 0.5f);
-    }
+    private Vector2 Center(int provinceId) => _game.Center(provinceId);
 
-    /// <summary>Map position between two provinces, crossing the date line the short way.</summary>
-    private Vector2 Between(int from, int to, double t)
-    {
-        var a = Center(from);
-        var b = Center(to);
-        float dx = b.X - a.X;
-        dx -= Map.Width * MathF.Round(dx / Map.Width);
-        return new Vector2(a.X + dx * (float)t, a.Y + (b.Y - a.Y) * (float)t);
-    }
+    private Vector2 Between(int from, int to, double t) => _game.Between(from, to, t);
 
     private bool OnScreen(Vector2 p, float margin = 40) =>
-        p.X > -margin && p.Y > -margin && p.X < _camera.Screen.X + margin && p.Y < _camera.Screen.Y + margin;
+        p.X > -margin && p.Y > -margin && p.X < _game.Camera.Screen.X + margin && p.Y < _game.Camera.Screen.Y + margin;
 
     private void DrawCities()
     {
         foreach (var city in _session.Cities)
         {
-            var s = _camera.MapToScreen(Center(city.ProvinceId));
+            var s = _game.Camera.MapToScreen(Center(city.ProvinceId));
             if (!OnScreen(s)) continue;
             bool capital = _session.Players[city.OwnerId].CapitalCityId == city.Id;
             var color = new Rgba(_session.Players[city.OwnerId].Color);
             // Houses grow a little as the map is zoomed in; their bases stand on the province's centre.
-            float scale = Math.Clamp(_camera.Zoom / 4.5f, 0.6f, 1.5f);
+            float scale = Math.Clamp(_game.Camera.Zoom / 4.5f, 0.6f, 1.5f);
             int houses = MapIcons.Houses(Map.Provinces[city.ProvinceId].Population);
             float below = MapIcons.City(Batch, s + new Vector2(0, 5 * scale), color, houses, capital, scale);
-            if (_camera.Zoom >= 2.5f || (capital && _camera.Zoom >= 1))
+            if (_game.Camera.Zoom >= 2.5f || (capital && _game.Camera.Zoom >= 1))
             {
                 float w = Ui.Font.Measure(city.Name, FontSize.Small, true);
                 float ty = s.Y + 5 * scale + below;
@@ -431,7 +338,7 @@ public sealed partial class GameScreen : IScreen
     private void DrawPath(Unit unit, Vector2 from, bool selected)
     {
         if (unit.Path.Count == 0) return;
-        var origin = _camera.MapToScreen(from);
+        var origin = _game.Camera.MapToScreen(from);
         var points = new List<Vector2> { origin };
         var previous = from;
         foreach (int step in unit.Path)
@@ -440,9 +347,9 @@ public sealed partial class GameScreen : IScreen
             float dx = c.X - previous.X;
             dx -= Map.Width * MathF.Round(dx / Map.Width);
             previous = new Vector2(previous.X + dx, c.Y);
-            points.Add(origin + (previous - from) * _camera.Zoom);
+            points.Add(origin + (previous - from) * _game.Camera.Zoom);
         }
-        PathArrow.Draw(Batch, points, MoveColor, _realTime, selected ? 6 : 4, selected ? 1 : 0.55f);
+        PathArrow.Draw(Batch, points, MoveColor, _game.Now, selected ? 6 : 4, selected ? 1 : 0.55f);
     }
 
     // ------------------------------------------------------------------ panels
@@ -468,7 +375,7 @@ public sealed partial class GameScreen : IScreen
         for (int i = 0; i < labels.Length; i++)
         {
             string tip = i == 0 ? "Pausa (Espacio)" : $"Velocidad {i}: {GameSession.FormatHours(GameClock.HoursPerSecond[i])} por segundo (tecla {i})";
-            if (Ui.Button(new Rect(x + i * 29, 30, 26, 20), labels[i], active: _clock.Speed == i, tooltip: tip, size: FontSize.Small)) _clock.SetSpeed(i);
+            if (Ui.Button(new Rect(x + i * 29, 30, 26, 20), labels[i], active: _game.Clock.Speed == i, tooltip: tip, size: FontSize.Small)) _game.Clock.SetSpeed(i);
         }
         x += 200;
 
@@ -499,9 +406,8 @@ public sealed partial class GameScreen : IScreen
 
     private void DrawSidePanel()
     {
-        Unit? unit = _selectedUnitId is int uid ? _session.UnitById(uid) : null;
-        if (unit == null) _selectedUnitId = null;
-        if (unit == null && _selectedProvince < 0) return;
+        var unit = _game.SelectedUnit;
+        if (unit == null && _game.SelectedProvince < 0) return;
 
         var s = _app.ScreenSize;
         var panel = new Rect(s.X - SidePanelWidth - 8, TopBarHeight + 8, SidePanelWidth, s.Y - TopBarHeight - 70);
@@ -510,13 +416,12 @@ public sealed partial class GameScreen : IScreen
         float x = panel.X + 16, w = panel.W - 32;
         if (Ui.Button(new Rect(panel.Right - 34, panel.Y + 8, 26, 24), "x", size: FontSize.Small))
         {
-            _selectedUnitId = null;
-            _selectedProvince = -1;
+            _game.ClearSelection();
             return;
         }
 
         if (unit != null) UnitPanel(unit, x, ref y, w);
-        else ProvincePanel(Map.Provinces[_selectedProvince], x, ref y, w);
+        else ProvincePanel(Map.Provinces[_game.SelectedProvince], x, ref y, w);
     }
 
     private void Line(float x, ref float y, string label, string value, Rgba? valueColor = null)
@@ -562,18 +467,18 @@ public sealed partial class GameScreen : IScreen
             string buildings = p.Constructing.HasValue || p.PlannedCityName != null ? $"Edificios ({p.Buildings.Count}+1)" : $"Edificios ({p.Buildings.Count})";
             // Cities, barracks and workshops train troops; elsewhere the tab still shows what was left training.
             bool army = p.OwnerId == Human.Id && (city != null || p.Has(BuildingType.Barracks) || p.Has(BuildingType.Workshop) || p.Training.Count > 0);
-            if (!army && _provinceTab == ProvinceTab.Army) _provinceTab = ProvinceTab.General;
+            if (!army && _game.ProvinceTab == ProvinceTab.Army) _game.ProvinceTab = ProvinceTab.General;
             string[] tabs = army ? ["General", buildings, p.Training.Count > 0 ? $"Ejército ({p.Training.Count})" : "Ejército"] : ["General", buildings];
             float tw = (w - 6 * (tabs.Length - 1)) / tabs.Length;
             for (int i = 0; i < tabs.Length; i++)
-                if (Ui.Button(new Rect(x + i * (tw + 6), y, tw, 28), tabs[i], active: (int)_provinceTab == i, size: FontSize.Small)) _provinceTab = (ProvinceTab)i;
+                if (Ui.Button(new Rect(x + i * (tw + 6), y, tw, 28), tabs[i], active: (int)_game.ProvinceTab == i, size: FontSize.Small)) _game.ProvinceTab = (ProvinceTab)i;
             y += 38;
-            if (_provinceTab == ProvinceTab.Buildings)
+            if (_game.ProvinceTab == ProvinceTab.Buildings)
             {
                 BuildingsPanel(p, x, ref y, w);
                 return;
             }
-            if (_provinceTab == ProvinceTab.Army)
+            if (_game.ProvinceTab == ProvinceTab.Army)
             {
                 ArmyPanel(p, x, ref y, w);
                 return;
@@ -669,7 +574,7 @@ public sealed partial class GameScreen : IScreen
             string festivalTip = $"+{GameRules.FestivalMood:0} al humor de la ciudad durante {GameRules.FestivalDays} días." +
                                  (festival.Ok ? "" : "\n" + festival.Message);
             if (Ui.Button(new Rect(x, y, w, 34), festivalLabel, festival.Ok, tooltip: festivalTip))
-                Show(_session.HoldFestival(Human.Id, city.Id));
+                _game.Show(_session.HoldFestival(Human.Id, city.Id));
             y += 40;
 
             y += 10;
@@ -679,7 +584,7 @@ public sealed partial class GameScreen : IScreen
             string settlersTip = $"{GameRules.SettlerCitizens} ciudadanos salen de la ciudad para fundar otra. Coste: {GameRules.SettlersCost}." +
                                  (settlers.Ok ? "" : "\n" + settlers.Message);
             if (Ui.Button(new Rect(x, y, w, 34), $"Enviar colonos ({GameRules.SettlerCitizens} hab.)", settlers.Ok, tooltip: settlersTip))
-                Show(_session.RecruitSettlers(Human.Id, city.Id));
+                _game.Show(_session.RecruitSettlers(Human.Id, city.Id));
             y += 40;
         }
 
@@ -690,24 +595,24 @@ public sealed partial class GameScreen : IScreen
             y += 26;
             int keep = p.CityId.HasValue ? GameRules.MinCityPopulation : 0;
             int max = Math.Max(1, (int)p.Population - keep);
-            _migrationAmount = Math.Clamp(_migrationAmount, 1, max);
+            _game.MigrationAmount = Math.Clamp(_game.MigrationAmount, 1, max);
             float bw = (w - 80) / 4;
-            if (Ui.Button(new Rect(x, y, bw - 4, 28), "-100", size: FontSize.Small)) _migrationAmount -= 100;
-            if (Ui.Button(new Rect(x + bw, y, bw - 4, 28), "-10", size: FontSize.Small)) _migrationAmount -= 10;
-            Ui.TextCentered(new Rect(x + 2 * bw, y, 80, 28), _migrationAmount.ToString("N0"), Theme.Text, FontSize.Normal, bold: true);
-            if (Ui.Button(new Rect(x + 2 * bw + 80, y, bw - 4, 28), "+10", size: FontSize.Small)) _migrationAmount += 10;
-            if (Ui.Button(new Rect(x + 3 * bw + 80, y, bw - 4, 28), "+100", size: FontSize.Small)) _migrationAmount += 100;
-            _migrationAmount = Math.Clamp(_migrationAmount, 1, max);
+            if (Ui.Button(new Rect(x, y, bw - 4, 28), "-100", size: FontSize.Small)) _game.MigrationAmount -= 100;
+            if (Ui.Button(new Rect(x + bw, y, bw - 4, 28), "-10", size: FontSize.Small)) _game.MigrationAmount -= 10;
+            Ui.TextCentered(new Rect(x + 2 * bw, y, 80, 28), _game.MigrationAmount.ToString("N0"), Theme.Text, FontSize.Normal, bold: true);
+            if (Ui.Button(new Rect(x + 2 * bw + 80, y, bw - 4, 28), "+10", size: FontSize.Small)) _game.MigrationAmount += 10;
+            if (Ui.Button(new Rect(x + 3 * bw + 80, y, bw - 4, 28), "+100", size: FontSize.Small)) _game.MigrationAmount += 100;
+            _game.MigrationAmount = Math.Clamp(_game.MigrationAmount, 1, max);
             y += 34;
-            double cost = GameRules.ForcedMigrationCost(_migrationAmount);
+            double cost = GameRules.ForcedMigrationCost(_game.MigrationAmount);
             bool affordable = Human.Stockpile[ResourceType.Gold] >= cost;
             Ui.Text(x, y, $"Coste: {cost:N0} de oro", affordable ? Theme.TextDim : Theme.Bad, FontSize.Small);
-            if (Ui.Button(new Rect(x + w - 60, y - 2, 60, 22), "Máx.", size: FontSize.Small)) _migrationAmount = max;
+            if (Ui.Button(new Rect(x + w - 60, y - 2, 60, 22), "Máx.", size: FontSize.Small)) _game.MigrationAmount = max;
             y += 24;
-            string label = _choosingMigrationTarget ? "Elige el destino en el mapa..." : "Enviar a otra provincia";
-            if (Ui.Button(new Rect(x, y, w, 34), label, affordable && p.Population - keep >= 1, active: _choosingMigrationTarget,
+            string label = _game.ChoosingMigrationTarget ? "Elige el destino en el mapa..." : "Enviar a otra provincia";
+            if (Ui.Button(new Rect(x, y, w, 34), label, affordable && p.Population - keep >= 1, active: _game.ChoosingMigrationTarget,
                     tooltip: "Haz clic en una de tus provincias. Los ciudadanos viajan a 10 km/h."))
-                _choosingMigrationTarget = !_choosingMigrationTarget;
+                _game.ChoosingMigrationTarget = !_game.ChoosingMigrationTarget;
         }
     }
 
@@ -780,7 +685,7 @@ public sealed partial class GameScreen : IScreen
                 string tip = $"Los habitantes de la provincia levantan una ciudad con el nombre que elijas.\nCoste: {GameRules.CityCost}. Tarda {GameRules.CityBuildingDays} días."
                     + (can.Ok ? "" : "\n" + can.Message);
                 if (Ui.Button(new Rect(x, y, w, 30), $"Ciudad  ·  {GameRules.CityCost}  ·  {GameRules.CityBuildingDays} d", can.Ok, tooltip: tip, size: FontSize.Small))
-                    OpenCityNaming(null, p.Id);
+                    _game.OpenCityNaming(null, p.Id);
                 y += 34;
             }
         }
@@ -798,7 +703,7 @@ public sealed partial class GameScreen : IScreen
             var can = _session.CanBuild(Human.Id, p, type);
             string tip = $"{info.Description}\nCoste: {info.Cost}. Tarda {info.Days} días." + (can.Ok ? "" : "\n" + can.Message);
             if (Ui.Button(new Rect(x, y, w, 30), $"{info.Name}  ·  {info.Cost}  ·  {info.Days} d", can.Ok, tooltip: tip, size: FontSize.Small))
-                Show(_session.Build(Human.Id, p.Id, type));
+                _game.Show(_session.Build(Human.Id, p.Id, type));
             y += 34;
         }
         if (missing.Count == 0) return;
@@ -823,17 +728,16 @@ public sealed partial class GameScreen : IScreen
         string[] names = ["Terreno", "Político", "Población", "Humor", "Fertilidad", "Recursos", "Instituciones"];
         for (int i = 0; i < names.Length; i++)
         {
-            if (Ui.Button(new Rect(bar.X + 6 + i * 120, bar.Y + 6, 114, 32), names[i], active: (int)_renderer.Mode == i, tooltip: "Modo de mapa (Tab)"))
+            if (Ui.Button(new Rect(bar.X + 6 + i * 120, bar.Y + 6, 114, 32), names[i], active: (int)_game.Mode == i, tooltip: "Modo de mapa (Tab)"))
             {
-                _renderer.Mode = (MapMode)i;
-                _mapDirty = true;
+                _game.Mode = (MapMode)i;
             }
         }
-        if (_renderer.Mode == MapMode.Resources) DrawResourceFilter(bar);
+        if (_game.Mode == MapMode.Resources) DrawResourceFilter(bar);
         // With the nation screen open this strip shows the latest message instead (see DrawMessages).
         if (_nation.Visible) return;
 
-        List<string> hints = _choosingMigrationTarget
+        List<string> hints = _game.ChoosingMigrationTarget
             ? ["Clic izquierdo: elegir provincia de destino", "Esc: cancelar"]
             : ["Clic: seleccionar", "Arrastrar: mover mapa", "Clic dcho: mover unidad", "Rueda: zoom", "Espacio: pausa", "1-5: velocidad", "Inicio: tu capital", "F1: ayuda"];
         // On a narrow screen the hints before the last give way, so "F1: ayuda" always shows.
@@ -846,7 +750,7 @@ public sealed partial class GameScreen : IScreen
         }
         float hw = Ui.Font.Measure(help, FontSize.Small) + 20;
         Ui.Panel(new Rect(bar.Right + 6, s.Y - 44, hw, 30));
-        Ui.Text(bar.Right + 16, s.Y - 38, help, _choosingMigrationTarget ? Theme.Accent : Theme.TextDim, FontSize.Small);
+        Ui.Text(bar.Right + 16, s.Y - 38, help, _game.ChoosingMigrationTarget ? Theme.Accent : Theme.TextDim, FontSize.Small);
     }
 
     /// <summary>Row above the map modes that shows every deposit or only one resource; it doubles as the legend.</summary>
@@ -857,21 +761,19 @@ public sealed partial class GameScreen : IScreen
         var panel = new Rect(modes.X, modes.Y - 50, 12 + (known.Count + 1) * (Bw + 4) - 4, 44);
         Ui.Panel(panel);
         float x = panel.X + 6;
-        if (Ui.Button(new Rect(x, panel.Y + 6, Bw, 32), "Todos", active: _renderer.ResourceFilter is null,
+        if (Ui.Button(new Rect(x, panel.Y + 6, Bw, 32), "Todos", active: _game.ResourceFilter is null,
                 tooltip: "Color del yacimiento principal de cada provincia", size: FontSize.Small))
         {
-            _renderer.ResourceFilter = null;
-            _mapDirty = true;
+            _game.ResourceFilter = null;
         }
         foreach (var r in known)
         {
             x += Bw + 4;
             var rect = new Rect(x, panel.Y + 6, Bw, 32);
-            if (Ui.Button(rect, "     " + r.Name(), active: _renderer.ResourceFilter == r,
+            if (Ui.Button(rect, "     " + r.Name(), active: _game.ResourceFilter == r,
                     tooltip: $"Solo {r.Name().ToLowerInvariant()}: más intenso cuanto más queda en la bolsa", size: FontSize.Small))
             {
-                _renderer.ResourceFilter = _renderer.ResourceFilter == r ? null : r;
-                _mapDirty = true;
+                _game.ResourceFilter = _game.ResourceFilter == r ? null : r;
             }
             Icons.Resource(Batch, r, new System.Numerics.Vector2(rect.X + 14, rect.Y + 16), 16);
         }
@@ -879,18 +781,18 @@ public sealed partial class GameScreen : IScreen
 
     private void DrawMessages()
     {
-        var messages = _messages.Current(_realTime);
+        var messages = _game.Messages.Current(_game.Now);
         var s = _app.ScreenSize;
         if (_nation.Visible)
         {
             if (messages.Count > 0) DrawLatestMessageInStrip(messages[0]);
             return;
         }
-        float y = s.Y - (_renderer.Mode == MapMode.Resources ? 120 : 70); // above the resource filter when it is open
+        float y = s.Y - (_game.Mode == MapMode.Resources ? 120 : 70); // above the resource filter when it is open
         foreach (var message in messages.Take(5))
         {
             var (text, _, ok) = message;
-            float alpha = message.Opacity(_realTime);
+            float alpha = message.Opacity(_game.Now);
             float w = Ui.Font.Measure(text, FontSize.Normal) + 24;
             var r = new Rect(s.X / 2 - w / 2, y - 30, w, 28);
             // A rounded strip with an accent (red for failures) along its left edge.
@@ -915,7 +817,7 @@ public sealed partial class GameScreen : IScreen
             while (text.Length > 0 && Ui.Font.Measure(text + "...", FontSize.Small) + 20 > maxW) text = text[..^1];
             text = text.TrimEnd() + "...";
         }
-        float alpha = message.Opacity(_realTime);
+        float alpha = message.Opacity(_game.Now);
         var r = new Rect(x, s.Y - 44, Ui.Font.Measure(text, FontSize.Small) + 20, 30);
         Batch.RoundedRect(r.X, r.Y, r.W, r.H, Theme.ButtonRadius, Theme.PanelTop.WithAlpha(0.92f * alpha), Theme.PanelBottom.WithAlpha(0.92f * alpha));
         Batch.RoundedOutline(r.X, r.Y, r.W, r.H, Theme.ButtonRadius, Theme.PanelBorder.WithAlpha(alpha));
@@ -924,7 +826,7 @@ public sealed partial class GameScreen : IScreen
 
     private void HoverTooltip()
     {
-        var p = Map.Provinces[_hoverProvince];
+        var p = Map.Provinces[_game.HoverProvince];
         string owner = !p.IsClaimable ? "No reclamable" : p.IsOwned ? _session.Players[p.OwnerId].Name : "Sin dueño";
         var city = _session.CityIn(p);
         string text = (city != null ? $"{city.Name}  ·  {p.DisplayName}" : p.DisplayName)
@@ -932,13 +834,13 @@ public sealed partial class GameScreen : IScreen
         if (p.HasRiver) text += "  ·  gran río";
         if (p.IsOwned) text += $"\n{p.Population:N0} habitantes";
         if (p.IsOwned && p.Population >= 1) text += $"\nHumor {p.Mood:0} ({GameRules.MoodName(p.Mood)})  ·  Fertilidad {p.Fertility:P0}";
-        if (_renderer.Mode == MapMode.Resources)
+        if (_game.Mode == MapMode.Resources)
             foreach (var r in Resources.Deposits.Where(r => p.Deposits[(int)r] > 0 && Human.Knows(r)))
                 text += p.HasDeposit(r) ? $"\n{r.Name()}: {p.Deposits[(int)r]:0.0}/día, quedan {TextFormat.Compact(p.Reserves[(int)r])}" : $"\n{r.Name()}: agotado";
-        if (_renderer.Mode == MapMode.Institutions)
+        if (_game.Mode == MapMode.Institutions)
             text += p.Institutions.Count > 0 ? "\n" + string.Join(", ", Institutions.All.Where(p.Institutions.Contains).Select(i => i.Info().Name))
                 : Institutions.All.Any(_session.IsBorn) ? "\nSin instituciones" : "\nTodavía no ha nacido ninguna institución";
-        if (_choosingMigrationTarget) text += "\nClic para enviar aquí a los migrantes";
+        if (_game.ChoosingMigrationTarget) text += "\nClic para enviar aquí a los migrantes";
         Ui.Tooltip(text);
     }
 
@@ -952,7 +854,7 @@ public sealed partial class GameScreen : IScreen
         Ui.TextCentered(new Rect(panel.X, panel.Y + 10, panel.W, 36), "Pausa", Theme.Accent, FontSize.Large, bold: true);
         float x = panel.X + 30, y = panel.Y + 60, w = panel.W - 60;
         if (Ui.Button(new Rect(x, y, w, 40), "Continuar")) _menuOpen = false;
-        if (Ui.Button(new Rect(x, y + 50, w, 40), "Guardar partida", tooltip: $"Se guarda en {SaveFiles.Folder}")) SaveCurrentGame();
+        if (Ui.Button(new Rect(x, y + 50, w, 40), "Guardar partida", tooltip: $"Se guarda en {SaveFiles.Folder}") && _game.Save(ConquerApp.Version)) _menuOpen = false;
         if (Ui.Button(new Rect(x, y + 100, w, 40), "Ayuda")) { _help.Visible = true; _menuOpen = false; }
         if (Ui.Button(new Rect(x, y + 150, w, 40), "Historial de versiones")) { _changelog.Visible = true; _menuOpen = false; }
         if (Ui.Button(new Rect(x, y + 200, w, 40), "Menú principal")) _app.Show(new MainMenuScreen(_app));
@@ -960,31 +862,10 @@ public sealed partial class GameScreen : IScreen
         Ui.TextCentered(new Rect(panel.X, panel.Bottom - 30, panel.W, 24), $"Conquer {ConquerApp.Version}", Theme.TextDim, FontSize.Small);
     }
 
-    /// <summary>Opens the dialog to name a city founded by these settlers, or built by this province's citizens.</summary>
-    private void OpenCityNaming(int? unitId, int provinceId)
-    {
-        _naming = (unitId, provinceId);
-        _cityName = _session.SuggestCityName();
-    }
-
-    private void ConfirmCityName()
-    {
-        if (_naming is not var (unitId, provinceId)) return;
-        var result = unitId is int unit ? _session.FoundCity(Human.Id, unit, _cityName) : _session.BuildCity(Human.Id, provinceId, _cityName);
-        Show(result);
-        if (!result.Ok) return;
-        _naming = null;
-        if (unitId.HasValue)
-        {
-            _selectedUnitId = null;
-            _selectedProvince = provinceId;
-        }
-    }
-
     /// <summary>Modal dialog: the city's name, suggested and editable, and whether it is free.</summary>
     private void DrawCityNaming()
     {
-        var (unitId, provinceId) = _naming!.Value;
+        var (unitId, provinceId) = _game.Naming!.Value;
         var s = _app.ScreenSize;
         Batch.Rect(0, 0, s.X, s.Y, Rgba.Black.WithAlpha(0.45f));
         Ui.Block(new Rect(0, 0, s.X, s.Y));
@@ -1000,29 +881,15 @@ public sealed partial class GameScreen : IScreen
         y += 26;
         Ui.Text(x, y, "Nombre de la ciudad", Theme.Text);
         y += 24;
-        _cityName = Ui.TextField(new Rect(x, y, w - 130, 36), _cityName, GameRules.MaxCityNameLength);
-        if (Ui.Button(new Rect(x + w - 120, y, 120, 36), "Otro nombre", size: FontSize.Small)) _cityName = _session.SuggestCityName();
+        _game.CityName = Ui.TextField(new Rect(x, y, w - 130, 36), _game.CityName, GameRules.MaxCityNameLength);
+        if (Ui.Button(new Rect(x + w - 120, y, 120, 36), "Otro nombre", size: FontSize.Small)) _game.SuggestCityName();
         y += 42;
-        var check = _session.CheckCityName(_cityName);
+        var check = _session.CheckCityName(_game.CityName);
         if (!check.Ok) Ui.Text(x, y, check.Message, Theme.Bad, FontSize.Small);
 
         float by = panel.Bottom - 56, bw = (w - 12) / 2;
-        if (Ui.Button(new Rect(x, by, bw, 40), "Cancelar")) _naming = null;
-        if (Ui.Button(new Rect(x + bw + 12, by, bw, 40), unitId.HasValue ? "Fundar" : "Construir", check.Ok)) ConfirmCityName();
-    }
-
-    private void SaveCurrentGame()
-    {
-        try
-        {
-            string name = SaveFiles.Save(_session, ConquerApp.Version);
-            Show(CommandResult.Success($"Partida guardada: {name}."));
-            _menuOpen = false;
-        }
-        catch (Exception e) when (e is IOException or UnauthorizedAccessException)
-        {
-            Show(CommandResult.Fail($"No se pudo guardar la partida: {e.Message}"));
-        }
+        if (Ui.Button(new Rect(x, by, bw, 40), "Cancelar")) _game.CancelCityNaming();
+        if (Ui.Button(new Rect(x + bw + 12, by, bw, 40), unitId.HasValue ? "Fundar" : "Construir", check.Ok)) _game.ConfirmCityName();
     }
 
     public void Dispose() => _renderer.Dispose();

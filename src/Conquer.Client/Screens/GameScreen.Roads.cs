@@ -106,7 +106,7 @@ public sealed partial class GameScreen
         if (Ui.Button(new Rect(x, panel.Bottom - 52, half, 36), "Construir", can.Ok,
                 tooltip: can.Ok ? "Se paga ahora. Los ingenieros que estén en la ruta la construyen tramo a tramo desde aquí; si se van, la obra se para." : can.Message))
         {
-            Show(_session.BuildRoad(Human.Id, _roadFrom, _roadTarget, kind));
+            _game.Show(_session.BuildRoad(Human.Id, _roadFrom, _roadTarget, kind));
             CloseRoadWindow();
         }
         if (Ui.Button(new Rect(x + half + 8, panel.Bottom - 52, half, 36), "Cancelar")) CloseRoadWindow();

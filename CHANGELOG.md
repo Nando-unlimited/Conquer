@@ -2,6 +2,11 @@
 
 Todos los cambios del juego, del más reciente al más antiguo. Cada versión es un commit cuyo título es su número.
 
+## [1.53.0] - 2026-10-01
+
+### Cambiado
+- **Código separado del motor gráfico** (segundo paso): el estado de la partida en pantalla (selección, provincia bajo el ratón, pestañas, migración forzada, diálogo para nombrar ciudades, modo de mapa, cámara, reloj y mensajes) y las órdenes del jugador (seleccionar, mover, centrar la vista, guardar) pasan a Conquer.Presentation (GameController). El juego se ve y funciona igual.
+
 ## [1.52.0] - 2026-10-01
 
 ### Cambiado

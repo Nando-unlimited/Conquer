@@ -39,7 +39,7 @@ public sealed partial class GameScreen
     {
         if (_editingUnitId is not int id) return;
         var result = _session.RenameUnit(Human.Id, id, _unitName);
-        Show(result);
+        _game.Show(result);
         if (result.Ok && _session.UnitById(id) is { } unit) _unitName = unit.Name;
     }
 
@@ -124,7 +124,7 @@ public sealed partial class GameScreen
         if (Ui.Button(new Rect(x, y, w, 30), $"Separar los marcados ({_splitSelection.Count})", can.Ok, size: FontSize.Small,
                 tooltip: can.Ok ? "Salen juntos y forman una unidad nueva, sin oficial." : can.Message))
         {
-            Show(_session.Split(Human.Id, unit.Id, [.. _splitSelection]));
+            _game.Show(_session.Split(Human.Id, unit.Id, [.. _splitSelection]));
             _splitSelection.Clear();
         }
         y += 44;
@@ -147,7 +147,7 @@ public sealed partial class GameScreen
                 ? "Sus tropas pasan a esta unidad." + (other.Officer is { } o ? $" Su oficial, {o.Title}, " + (unit.Officer == null ? "toma el mando." : "vuelve a la reserva.") : "")
                 : can.Message;
             if (Ui.Button(new Rect(x, y, w, 26), $"Unir {other.Name} ({size})", can.Ok, tooltip: tip, size: FontSize.Small))
-                Show(_session.Merge(Human.Id, unit.Id, other.Id));
+                _game.Show(_session.Merge(Human.Id, unit.Id, other.Id));
             y += 30;
         }
     }
@@ -162,7 +162,7 @@ public sealed partial class GameScreen
         {
             OfficerCard(current, x, ref y, w);
             if (Ui.Button(new Rect(x, y, w, 28), "Relevar del mando", size: FontSize.Small, tooltip: "Vuelve a la reserva; la unidad se queda sin oficial."))
-                Show(_session.RelieveOfficer(Human.Id, unit.Id));
+                _game.Show(_session.RelieveOfficer(Human.Id, unit.Id));
             y += 36;
         }
         else
@@ -190,9 +190,9 @@ public sealed partial class GameScreen
             if (Ui.Hover(row)) Ui.Tooltip(OfficerTooltip(officer));
             if (Ui.Button(new Rect(x + w - 144, y + 2, 84, 26), "Asignar", size: FontSize.Small,
                     tooltip: officer.Rank < unit.RequiredRank ? $"Ascenderá a {Officer.RankName(unit.RequiredRank).ToLowerInvariant()}." : null))
-                Show(_session.AssignOfficer(Human.Id, unit.Id, officer.Id));
+                _game.Show(_session.AssignOfficer(Human.Id, unit.Id, officer.Id));
             if (Ui.Button(new Rect(x + w - 54, y + 2, 54, 26), "Retirar", size: FontSize.Small, tooltip: "Deja el ejército para siempre."))
-                Show(_session.RetireOfficer(Human.Id, officer.Id));
+                _game.Show(_session.RetireOfficer(Human.Id, officer.Id));
             y += 36;
         }
         if (shown < reserve.Count)
@@ -203,7 +203,7 @@ public sealed partial class GameScreen
         var can = _session.CanRecruitOfficer(Human);
         if (Ui.Button(new Rect(x, Math.Max(y, bottom - 36), w, 32), $"Reclutar oficial ({MilitaryRules.OfficerCost:0} de oro)", can.Ok, size: FontSize.Small,
                 tooltip: can.Ok ? "Se une a la reserva con rasgos al azar: una o dos virtudes, y a veces un defecto." : can.Message))
-            Show(_session.RecruitOfficer(Human.Id));
+            _game.Show(_session.RecruitOfficer(Human.Id));
     }
 
     /// <summary>An officer's title, stars and each trait on its own line, virtues in green and flaws in red.</summary>
