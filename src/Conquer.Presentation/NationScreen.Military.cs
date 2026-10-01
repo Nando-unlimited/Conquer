@@ -155,34 +155,74 @@ public sealed partial class NationScreen
     }
 
     // ------------------------------------------------------------------ diplomacy
-
-    /// <summary>Every other nation: at peace or at war, its army against ours, what each holds of the other, and war or peace.</summary>
+    /// <summary>
+    /// Every other nation: at peace or at war, its army against ours, what each holds of the other, the war score, and
+    /// war or the three kinds of peace.
+    /// </summary>
     private TablePage Diplomacy()
     {
         double ours = Session.MilitaryPower(Player.Id);
-        Column[] columns = [new("Nación", 230), new("Relación", 180), new("Poder militar", 170), new("Provincias", 110), new("Ocupación", 190), new("", 150)];
+        Column[] columns = [new("Nación", 170), new("Relación", 140), new("Poder militar", 150), new("Provincias", 90), new("Ocupación", 140),
+            new("Puntuación", 90), new("", 250)];
         var rows = new List<IReadOnlyList<Cell>>();
         foreach (var other in Session.Players.Where(p => p.Id != Player.Id))
         {
             bool war = Session.AtWar(Player.Id, other.Id);
             double theirs = Session.MilitaryPower(other.Id);
             string ratio = ours <= 0 && theirs <= 0 ? "igual" : theirs <= 0 ? "sin ejército" : ours / theirs >= 1.2 ? "más débil que tú" : ours / theirs <= 0.8 ? "más fuerte que tú" : "parecido al tuyo";
-            int taken = Map.Provinces.Count(p => p.OwnerId == other.Id && p.ControllerId == Player.Id);
-            int lost = Map.Provinces.Count(p => p.OwnerId == Player.Id && p.ControllerId == other.Id);
+            int taken = Session.OccupiedBy(Player.Id, other.Id).Count;
+            int lost = Session.OccupiedBy(other.Id, Player.Id).Count;
             rows.Add(
             [
                 new TextCell(other.Name, Bold: true, Swatch: other.Color),
-                new TextCell(war ? $"En guerra ({Session.WarDays(Player.Id, other.Id):0} días)" : "En paz", war ? Tone.Bad : Tone.Good),
-                new TextCell($"{theirs:0} ({ratio})", theirs > ours * 1.2 ? Tone.Bad : Tone.Normal),
+                new TextCell(war ? $"En guerra ({Session.WarDays(Player.Id, other.Id):0} d)" : "En paz", war ? Tone.Bad : Tone.Good),
+                new TextCell($"{theirs:0} ({ratio})", theirs > ours * 1.2 ? Tone.Bad : Tone.Normal, TextSize.Small),
                 new TextCell($"{other.Provinces.Count:N0}", Tone.Dim),
                 new TextCell(war || taken + lost > 0 ? $"tomadas {taken} · perdidas {lost}" : "-", lost > taken ? Tone.Bad : Tone.Dim, TextSize.Small),
-                new ButtonsCell([war
-                    ? new Button("Proponer la paz", () => Show(Session.ProposePeace(Player.Id, other.Id)),
-                        Tooltip: "Las provincias ocupadas vuelven a sus dueños y los ejércitos regresan a casa. La IA solo acepta si la guerra le va mal o se alarga.", Size: TextSize.Small)
-                    : new Button("Declarar la guerra", () => Show(Session.DeclareWar(Player.Id, other.Id)),
-                        Tooltip: "Tus ejércitos podrán entrar en sus tierras, atacar sus tropas y ocupar sus provincias.", Size: TextSize.Small)]),
+                war ? WarScoreCell(other) : new TextCell("-", Tone.Dim),
+                new ButtonsCell(war ? PeaceButtons(other, taken, lost) :
+                [
+                    new Button("Declarar la guerra", () => Show(Session.DeclareWar(Player.Id, other.Id)),
+                        Tooltip: "Tus ejércitos podrán entrar en sus tierras, atacar sus tropas y ocupar sus provincias.", Size: TextSize.Small),
+                ]),
             ]);
         }
         return new TablePage(new Table(columns, rows));
+    }
+
+    /// <summary>How the war goes for us, from -100 to 100, with what makes it up in the tooltip.</summary>
+    private TextCell WarScoreCell(Player other)
+    {
+        double score = Session.WarScore(Player.Id, other.Id);
+        int won = Session.WarVictories(Player.Id, other.Id), lost = Session.WarVictories(other.Id, Player.Id);
+        string tip = $"Puntuación de guerra: {score:+0;-0;0}. Suma la parte de su nación que ocupas (cuentan más las ciudades, la gente y "
+            + $"sobre todo la capital), resta la de la tuya que ocupan, y añade {GameRules.WarScorePerVictory:0} por cada batalla ganada y "
+            + $"quita otro tanto por cada perdida (hasta {GameRules.MaxBattleWarScore:0}). Batallas: {won} ganadas, {lost} perdidas.";
+        return new TextCell($"{score:+0;-0;0}", score > 0 ? Tone.Good : score < 0 ? Tone.Bad : Tone.Normal, Bold: true, Tooltip: tip);
+    }
+
+    /// <summary>White peace, keeping the land we occupy, or handing over the land they occupy.</summary>
+    private List<Button> PeaceButtons(Player other, int taken, int lost)
+    {
+        var take = Session.CanProposePeace(Player.Id, other.Id, PeaceTerms.TakeOccupied);
+        double cost = Session.PeaceCost(Player.Id, other.Id, PeaceTerms.TakeOccupied);
+        string takeTip = taken == 0
+            ? $"No ocupas ninguna provincia de {other.Name}."
+            : $"Te quedas con las {taken} provincias suyas que ocupas, con sus ciudades y edificios. Cuesta {cost:0} de puntuación de guerra "
+              + $"y tienes {Session.WarScore(Player.Id, other.Id):0}. La IA acepta si cree que va perdiendo o si la puntuación pasa de 50."
+              + (take.Ok ? "" : $"\n{take.Message}");
+        string cedeTip = lost == 0
+            ? $"{other.Name} no ocupa ninguna provincia tuya."
+            : $"Le entregas las {lost} provincias tuyas que ocupa, con sus ciudades y edificios. Lo acepta siempre.";
+        return
+        [
+            new Button("Paz blanca", () => Show(Session.ProposePeace(Player.Id, other.Id)),
+                Tooltip: "Las provincias ocupadas vuelven a sus dueños y los ejércitos regresan a casa. La IA solo acepta si la guerra le va mal o se alarga.",
+                Size: TextSize.Small),
+            new Button($"Exigir ({taken})", () => Show(Session.ProposePeace(Player.Id, other.Id, PeaceTerms.TakeOccupied)), take.Ok,
+                Tooltip: takeTip, Size: TextSize.Small),
+            new Button($"Ceder ({lost})", () => Show(Session.ProposePeace(Player.Id, other.Id, PeaceTerms.CedeOccupied)), lost > 0,
+                Tooltip: cedeTip, Size: TextSize.Small),
+        ];
     }
 }

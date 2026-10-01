@@ -899,6 +899,8 @@ public sealed partial class GameSession
         foreach (var unit in attackers.Where(u => !attackersWon)) unit.AttackingProvinceId = null;
         var winners = attackersWon ? attackers : EnemyRegimentsIn(battle.ProvinceId, battle.AttackerId).ToList();
         foreach (var officer in winners.Select(GeneralOf).Concat(winners.Select(u => u.Officer)).OfType<Officer>().Distinct()) officer.Victories++;
+        if (attackersWon) RecordVictory(battle.AttackerId, battle.DefenderId);
+        else RecordVictory(battle.DefenderId, battle.AttackerId);
 
         if (battle.AttackerId == HumanPlayerId) Notify(HumanPlayerId, attackersWon ? $"Victoria en {place}." : $"Nuestro ataque a {place} ha fracasado.");
         else if (battle.DefenderId == HumanPlayerId) Notify(HumanPlayerId, attackersWon ? $"Hemos perdido {place}." : $"Hemos resistido en {place}.");

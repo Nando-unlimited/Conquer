@@ -141,6 +141,17 @@ public static class GameRules
     /// <summary>Below this mood a province is in unrest and pays no taxes.</summary>
     public const double UnrestMood = 25;
 
+    // Peace treaties. A province's worth at the peace table is 1, plus 1 per PeoplePerValuePoint people (up to
+    // MaxPopulationValue), plus its city; the war score is the share of the enemy's worth occupied, plus battles won.
+    public const double PeoplePerValuePoint = 2000;
+    public const double MaxPopulationValue = 5;
+    public const double CityValue = 2;
+    public const double CapitalValue = 6;
+    public const double WarScorePerVictory = 2;
+    public const double MaxBattleWarScore = 25;
+    /// <summary>Mood a province loses when a treaty hands it to another nation.</summary>
+    public const double CededMoodPenalty = 20;
+
     // Fertility (birth-rate multiplier, 1 = normal). It follows mood and food, more slowly than mood.
     public const double FertilityChangePerDay = 0.03;
     /// <summary>Share of normal fertility left while the nation starves.</summary>

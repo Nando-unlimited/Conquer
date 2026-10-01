@@ -116,7 +116,12 @@ public sealed partial class GameSession
             var fire = fleets.GroupBy(f => f.OwnerId).ToDictionary(g => g.Key, g => g.Sum(NavalFire));
             foreach (var (owner, shots) in fire)
                 Damage([.. fleets.Where(f => AtWar(f.OwnerId, owner))], shots);
-            foreach (var fleet in fleets.Where(Broken)) FleeOrSink(fleet);
+            foreach (var fleet in fleets.Where(Broken))
+            {
+                foreach (int winner in fleets.Where(f => AtWar(f.OwnerId, fleet.OwnerId) && !Broken(f)).Select(f => f.OwnerId).Distinct())
+                    RecordVictory(winner, fleet.OwnerId);
+                FleeOrSink(fleet);
+            }
         }
     }
 

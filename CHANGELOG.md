@@ -2,6 +2,19 @@
 
 Todos los cambios del juego, del más reciente al más antiguo. Cada versión es un commit cuyo título es su número.
 
+## [1.60.0] - 2026-10-01
+
+### Añadido
+- **Tratados de paz: las guerras ya cambian el mapa.** En la pestaña Diplomacia, en guerra, hay tres botones:
+  - **Paz blanca**: como hasta ahora, las provincias ocupadas vuelven a sus dueños.
+  - **Exigir**: te quedas con las provincias suyas que ocupas, con sus ciudades y edificios. Hace falta bastante puntuación de guerra para pagarlas.
+  - **Ceder**: les entregas las provincias tuyas que ocupan, para salir de una guerra perdida. Lo aceptan siempre.
+- **Puntuación de guerra** (de -100 a +100), en su propia columna: la parte de la nación enemiga que ocupas, menos la de la tuya que te ocupan, más 2 puntos por cada batalla ganada en tierra o en el mar y menos 2 por cada perdida (hasta 25). Las ciudades, la gente y sobre todo la capital valen más. El tooltip da el desglose.
+  - Quedarte con lo ocupado cuesta la parte de su nación que supone. Si ocupas todo, cuesta 100 y la nación queda **anexionada**.
+  - La IA acepta tus exigencias si cree que va perdiendo o si tu puntuación pasa de 50.
+- **Las provincias cedidas** pierden 20 de humor, y lo que se entrenaba o construía en ellas se pierde. Si se cede la capital, la capital pasa a la ciudad más poblada que le quede a la nación.
+- **Los rivales también conquistan entre ellos**: tras 60 días de guerra, un rival exige a otro las provincias que le ocupa si la puntuación lo paga. Un aviso te cuenta quién cede qué.
+
 ## [1.59.0] - 2026-10-01
 
 ### Cambiado

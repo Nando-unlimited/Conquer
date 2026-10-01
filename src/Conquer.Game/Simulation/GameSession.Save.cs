@@ -44,7 +44,8 @@ public sealed partial class GameSession
         Migrations = Migrations.Select(m => new MigrationSave(m.Id, m.OwnerId, m.FromProvinceId, m.ToProvinceId, m.People,
             m.DepartHours, m.ArriveHours, m.Forced, m.Mood)).ToList(),
         Battles = _battles.Select(b => new BattleSave(b.ProvinceId, b.AttackerId, b.DefenderId, b.StartHours, [.. b.Attackers], b.AttackerLosses, b.DefenderLosses)).ToList(),
-        Wars = _wars.Select(w => new WarSave(w.Key.Item1, w.Key.Item2, w.Value)).ToList(),
+        Wars = _wars.Select(w => new WarSave(w.Key.Item1, w.Key.Item2, w.Value.StartHours,
+            w.Value.Victories.GetValueOrDefault(w.Key.Item1), w.Value.Victories.GetValueOrDefault(w.Key.Item2))).ToList(),
         Notifications = [.. Notifications],
         Ais = _ais.Select(ai => ai.ToSave()).ToList(),
         EmigrationCarry = new Dictionary<int, double>(_emigrationCarry),
@@ -216,7 +217,12 @@ public sealed partial class GameSession
             battle.Attackers.AddRange(b.Attackers);
             session._battles.Add(battle);
         }
-        foreach (var w in save.Wars) session._wars[(w.A, w.B)] = w.StartHours;
+        foreach (var w in save.Wars)
+        {
+            var war = session._wars[(w.A, w.B)] = new War(w.StartHours);
+            war.Victories[w.A] = w.VictoriesA;
+            war.Victories[w.B] = w.VictoriesB;
+        }
         session.Notifications.AddRange(save.Notifications);
         foreach (var (province, carry) in save.EmigrationCarry) session._emigrationCarry[province] = carry;
         foreach (var n in save.UnitNumbers)

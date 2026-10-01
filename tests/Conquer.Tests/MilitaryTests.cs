@@ -452,6 +452,76 @@ public class MilitaryTests(WorldFixture world)
     }
 
     [Fact]
+    public void TreatyKeepsTheOccupiedLandWithItsCity()
+    {
+        var (s, a, b) = TwoNations();
+        // The rival's capital one province beyond B, too far from ours to be "too close".
+        var c = b.Neighbors.Select(n => _map.Provinces[n])
+            .First(p => p.IsClaimable && !p.IsOwned && p.Neighbors.All(n => n != a.Id && !_map.Provinces[n].CityId.HasValue));
+        Assert.True(s.FoundCity(1, s.AddUnit(1, UnitType.Settlers, c.Id, 300).Id).Ok);
+        var city = s.CityIn(c)!;
+        var rival = s.Players[1];
+        Assert.Equal(city.Id, rival.CapitalCityId);
+        var regiment = s.AddRegiment(0, a.Id, BattalionType.Warriors);
+        s.DeclareWar(0, 1);
+        Assert.False(s.CanProposePeace(0, 1, PeaceTerms.TakeOccupied).Ok);
+        s.MoveUnit(0, regiment.Id, c.Id);
+        RunUntil(s, () => c.IsOccupied, 24 * 10);
+
+        // All their land, capital included: the whole of their nation.
+        Assert.True(b.IsOccupied && c.IsOccupied);
+        Assert.Equal(100, s.WarScore(0, 1), 6);
+        Assert.Equal(-100, s.WarScore(1, 0), 6);
+        Assert.Equal(100, s.PeaceCost(0, 1, PeaceTerms.TakeOccupied), 6);
+        Assert.True(s.CanProposePeace(0, 1, PeaceTerms.TakeOccupied).Ok);
+
+        Assert.Equal((2, 0), s.MakePeace(0, 1, PeaceTerms.TakeOccupied));
+        Assert.False(s.AtWar(0, 1));
+        Assert.Equal(0, c.OwnerId);
+        Assert.False(c.IsOccupied);
+        Assert.Contains(b.Id, s.Human.Provinces);
+        Assert.Empty(rival.Provinces);
+        Assert.Equal(0, city.OwnerId);
+        Assert.Null(rival.CapitalCityId);
+        Assert.Equal(c.Id, regiment.ProvinceId);
+    }
+
+    [Fact]
+    public void TreatyCanHandOverOurOccupiedLand()
+    {
+        var (s, a, b) = TwoNations();
+        b.Population = 500;
+        var regiment = s.AddRegiment(1, b.Id, BattalionType.Warriors);
+        s.DeclareWar(1, 0);
+        s.MoveUnit(1, regiment.Id, a.Id);
+        RunUntil(s, () => a.IsOccupied, 24 * 5);
+        Assert.True(a.IsOccupied);
+        double mood = a.Mood;
+
+        Assert.Equal((0, 1), s.MakePeace(0, 1, PeaceTerms.CedeOccupied));
+        Assert.Equal(1, a.OwnerId);
+        Assert.Equal(1, s.CityIn(a)!.OwnerId);
+        Assert.Null(s.Human.CapitalCityId);
+        Assert.Equal(s.CityIn(a)!.Id, s.Players[1].CapitalCityId);
+        Assert.Equal(mood - GameRules.CededMoodPenalty, a.Mood, 6);
+    }
+
+    [Fact]
+    public void BattlesWonAddToTheWarScore()
+    {
+        var (s, a, b) = TwoNations();
+        var attacker = s.AddRegiment(1, b.Id, BattalionType.Warriors);
+        s.AddRegiment(0, a.Id, [.. Enumerable.Repeat(BattalionType.Warriors, 6)]);
+        s.DeclareWar(1, 0);
+        s.MoveUnit(1, attacker.Id, a.Id);
+        RunUntil(s, () => s.WarVictories(0, 1) > 0, 24 * 10);
+
+        Assert.Equal(1, s.WarVictories(0, 1));
+        Assert.False(a.IsOccupied);
+        Assert.Equal(GameRules.WarScorePerVictory, s.WarScore(0, 1), 6);
+    }
+
+    [Fact]
     public void ComputerRivalsOnlyAcceptPeaceAfterAWhile()
     {
         var s = GameSession.Create(_map, 2, seed: 7);

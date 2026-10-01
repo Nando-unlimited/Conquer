@@ -132,7 +132,10 @@ public static class HelpTopics
         [
             "En la pestaña Diplomacia de la nación declaras la guerra y propones la paz.",
             "- Tus ejércitos solo entran en tierras de naciones con las que estás en guerra.",
-            "- Los rivales aceptan la paz si la guerra les va mal o se alarga. Con la paz, las provincias ocupadas vuelven a sus dueños.",
+            "- La puntuación de guerra (de -100 a 100) suma lo que ocupas del enemigo, resta lo que te ocupa y cuenta las batallas ganadas y perdidas. Las ciudades y la capital valen más.",
+            "- Paz blanca: las provincias ocupadas vuelven a sus dueños. Los rivales la aceptan si la guerra les va mal o se alarga.",
+            "- Exigir: te quedas con lo que ocupas, si la puntuación lo paga. Si te quedas con todo, la nación desaparece.",
+            "- Ceder: entregas lo que te ocupan para acabar una guerra perdida.",
         ]),
         ("Mapa",
         [

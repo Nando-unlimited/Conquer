@@ -254,14 +254,21 @@ internal sealed partial class AiPlayer
     }
 
     /// <summary>
-    /// After the peaceful years, now and then declares war on a much weaker neighbour; offers peace to
-    /// rivals when a war drags on and goes badly.
+    /// After the peaceful years, now and then declares war on a much weaker neighbour. In a war with another rival it
+    /// demands the land it occupies once the war score pays for it, and offers white peace when a war drags on and
+    /// goes badly.
     /// </summary>
     private void Diplomacy()
     {
         foreach (var enemy in _session.EnemiesOf(_player.Id).ToList())
-            if (_session.WarDays(_player.Id, enemy.Id) >= 120 && !enemy.IsHuman && !Winning(enemy.Id))
+        {
+            if (enemy.IsHuman) continue;
+            double days = _session.WarDays(_player.Id, enemy.Id);
+            if (days >= TreatyDays && _session.CanProposePeace(_player.Id, enemy.Id, PeaceTerms.TakeOccupied).Ok
+                && _session.ProposePeace(_player.Id, enemy.Id, PeaceTerms.TakeOccupied).Ok) continue;
+            if (days >= 120 && !Winning(enemy.Id))
                 _session.ProposePeace(_player.Id, enemy.Id);
+        }
 
         if (_session.EnemiesOf(_player.Id).Any() || _session.Date.Days < PeacefulDays || Army.Sum(u => u.Battalions.Count) < 4) return;
         if (_random.Next(90) != 0) return;
@@ -271,9 +278,24 @@ internal sealed partial class AiPlayer
         if (victim is int target) _session.DeclareWar(_player.Id, target);
     }
 
-    /// <summary>Accepts peace once a war has lasted a while and it is not clearly winning, or after a year regardless.</summary>
-    public bool WouldAcceptPeace(int otherId) =>
-        _session.WarDays(_player.Id, otherId) >= 60 && (!Winning(otherId) || _session.WarDays(_player.Id, otherId) >= 365);
+    /// <summary>Days a war must last before a rival demands the land it occupies.</summary>
+    private const int TreatyDays = 60;
+
+    /// <summary>
+    /// Whether it signs the peace another nation proposes. It takes any land handed to it; it gives up the land the
+    /// enemy occupies (when the war score pays for it) unless it still thinks it is winning, or once the score passes
+    /// half; and it accepts white peace once a war has lasted a while and it is not clearly winning, or after a year.
+    /// </summary>
+    public bool WouldAcceptPeace(int otherId, PeaceTerms terms = PeaceTerms.White)
+    {
+        double days = _session.WarDays(_player.Id, otherId);
+        return terms switch
+        {
+            PeaceTerms.CedeOccupied => true,
+            PeaceTerms.TakeOccupied => !Winning(otherId) || _session.WarScore(otherId, _player.Id) >= 50,
+            _ => days >= 60 && (!Winning(otherId) || days >= 365),
+        };
+    }
 
     /// <summary>Stronger army, and holding more of the enemy's land than it holds of ours.</summary>
     private bool Winning(int otherId)

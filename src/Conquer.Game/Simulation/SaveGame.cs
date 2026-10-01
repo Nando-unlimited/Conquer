@@ -148,7 +148,7 @@ public sealed record MigrationSave(int Id, int OwnerId, int From, int To, int Pe
 public sealed record BattleSave(
     int ProvinceId, int AttackerId, int DefenderId, long StartHours, List<int> Attackers, double AttackerLosses = 0, double DefenderLosses = 0);
 
-public sealed record WarSave(int A, int B, long StartHours);
+public sealed record WarSave(int A, int B, long StartHours, int VictoriesA = 0, int VictoriesB = 0);
 
 public sealed record RoadLinkSave(int A, int B, RoadKind Kind);
 

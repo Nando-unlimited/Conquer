@@ -378,14 +378,20 @@ Guardar y cargar partidas.
 `SaveGame`: la partida guardada como datos, escrita en JSON comprimido con gzip. El mapa no se guarda: se vuelve a generar a partir de `World`. `Write(flujo)` la escribe; `Read(flujo)` la lee y lanza `InvalidDataException` si está dañada o su formato (`Format`) es de otra versión. `InstitutionBirths` guarda dónde y cuándo nació cada institución (vacío en partidas anteriores). `Roads` (`RoadLinkSave`), `RoadProjects` (`RoadProjectSave`) y `NextRoadProjectId` guardan la red y sus obras; si falta `Roads` (antes de la 1.36.0), al cargar se unen las provincias vecinas que tenían los dos el edificio calzada o ferrocarril (`LoadRoads`). `ExtraDeposits` marca las partidas guardadas desde la 1.13.0: al cargar una anterior, los yacimientos que su generador no ponía empiezan llenos. `Barracks` marca las guardadas desde la 1.44.0: al cargar una anterior, cada ciudad recibe un cuartel, porque antes todas entrenaban tropas. `Workshops` marca las guardadas desde la 1.45.0: al cargar una anterior, cada provincia con cuartel cuyo dueño conoce la Maquinaria de asedio recibe un taller (una fábrica si ya conoce la Industrialización), porque antes el cuartel construía las máquinas de guerra. Desde la 1.44.1 lo que se entrena va en `ProvinceSave.Training`; el de `CitySave.Training` de partidas anteriores pasa a la provincia de la ciudad. Los registros `PlayerSave`, `ProvinceSave`, `CitySave`, `UnitSave` (con la flota que lleva a cada unidad, `CarrierId`, su oficial, `OfficerSave`, y el nombre que le dio el jugador), etc. son sus partes. Los oficiales en reserva van en `PlayerSave` y el siguiente número de oficial en `NextOfficerId`; `GeneralSave` es el general de las partidas anteriores a los oficiales (un solo rasgo), que al cargar pasa a ser un oficial del rango de su cuartel.
 
 ### `Simulation/GameSession.Diplomacy.cs`
-Guerra y paz.
+Guerra, puntuación de guerra y tratados de paz.
 
-| Función | Qué hace |
+| Elemento | Qué hace |
 | --- | --- |
-| `AtWar(a, b)`, `EnemiesOf(jugador)`, `WarDays(a, b)` | Si dos naciones están en guerra, sus enemigos y cuánto dura la guerra. |
+| `PeaceTerms` | Lo que firma quien propone la paz: `White` (paz blanca), `TakeOccupied` (se queda con las provincias enemigas que ocupa) o `CedeOccupied` (entrega las suyas que ocupa el enemigo). |
+| `War` | Una guerra: cuándo empezó y cuántas batallas ha ganado cada bando (`Victories`). Se guarda en `WarSave`. |
+| `AtWar(a, b)`, `EnemiesOf(jugador)`, `WarDays(a, b)`, `WarVictories(jugador, enemigo)` | Si dos naciones están en guerra, sus enemigos, cuánto dura la guerra y las batallas ganadas (en tierra y en el mar; las cuenta `RecordVictory`). |
 | `CanDeclareWar`/`DeclareWar` | Declara la guerra a otra nación. |
-| `ProposePeace(jugador, otro)` | Propone la paz; la IA acepta si la guerra le va mal o se alarga (`AiPlayer.WouldAcceptPeace`). |
-| `MakePeace(a, b)` | Firma la paz: terminan las batallas, las provincias ocupadas vuelven a sus dueños y los ejércitos regresan a su provincia más cercana. |
+| `ProvinceValue(provincia)` | Lo que vale en la mesa de paz: 1, más 1 por cada 2.000 habitantes (hasta 5), más 2 si tiene ciudad o 6 si es la capital (`GameRules`). |
+| `WarScore(jugador, enemigo)` | De -100 a 100: la parte del valor del enemigo que ocupa, menos la parte del suyo que le ocupan, más 2 por batalla ganada y menos 2 por perdida (hasta ±25). |
+| `OccupiedBy(ocupante, dueño)`, `PeaceCost(jugador, enemigo, términos)` | Las provincias de una nación que ocupa otra, y lo que cuesta quedárselas: la parte del valor del enemigo que suponen. |
+| `CanProposePeace`/`ProposePeace(jugador, otro, términos)` | Propone la paz. Quedarse con lo ocupado pide puntuación suficiente. La IA decide con `AiPlayer.WouldAcceptPeace`; a un humano no se le impone nunca. |
+| `MakePeace(a, b, términos)` | Firma la paz: terminan las batallas, las provincias del tratado cambian de dueño (`Cede`), las demás ocupadas vuelven a sus dueños y los ejércitos regresan a su provincia más cercana. Avisa si una nación se queda sin tierras (anexionada). |
+| `Cede(provincia, receptor)` | Pasa una provincia con su ciudad y edificios: se pierde lo que se entrenaba o construía allí, su humor baja 20 y, si era la capital, el antiguo dueño pasa la capital a su ciudad más poblada. |
 
 ### `Simulation/RoadNetwork.cs`
 Carreteras y ferrocarriles.
@@ -474,8 +480,8 @@ El ejército de un rival.
 | `FollowTroops(cuartel)` | El cuartel va adonde están sus unidades si alguna queda fuera de alcance. |
 | `GuideSoldier(unidad)` | En guerra: acude a sus ciudades atacadas, ataca la provincia enemiga vecina más débil (si supera 1,3 veces su defensa) o marcha hacia tierra enemiga que su suministro alcance; descansa si está desorganizada. |
 | `GoHomeIfCutOff(unidad)`, `IsEnemyLand(provincia)` | Un regimiento sin suministro vuelve a la capital. |
-| `Diplomacy()`, `Neighbours()` | Tras dos años, a veces declara la guerra a un vecino con menos del 60 % de su poder; propone la paz a otros rivales cuando una guerra se alarga y va mal. |
-| `WouldAcceptPeace(otro)`, `Winning(otro)` | Acepta la paz tras 60 días si no va ganando (o tras un año); va ganando si su ejército es mucho más fuerte y ocupa más de lo que ha perdido. |
+| `Diplomacy()`, `Neighbours()` | Tras dos años, a veces declara la guerra a un vecino con menos del 60 % de su poder. En guerra con otro rival, tras 60 días le exige lo que ocupa si la puntuación lo paga, y le propone la paz blanca cuando la guerra se alarga y va mal. |
+| `WouldAcceptPeace(otro, términos)`, `Winning(otro)` | Acepta siempre que le entreguen tierras; cede lo que le ocupan si no va ganando o si la puntuación del enemigo pasa de 50; la paz blanca, tras 60 días si no va ganando (o tras un año). Va ganando si su ejército es mucho más fuerte y ocupa más de lo que ha perdido. |
 
 ### `World/Biome.cs`
 | Elemento | Qué es |
@@ -712,7 +718,7 @@ La pantalla de la nación (botón «Nación» o tecla N) como datos: `Visible`, 
 | --- | --- |
 | `Army()`, `UnitActivity(...)` | Orden de batalla, con el mantenimiento diario del ejército (en rojo si no se paga): cada cuartel con sus unidades en árbol, después las unidades sin cuartel y las flotas, con ubicación, hombres, organización, suministro, estado y «Ver». |
 | `Templates()` | Diseñador de unidades: tus plantillas a la izquierda (nueva, duplicar, borrar); a la derecha los batallones de la elegida (hasta 12, con «Quitar»), botones para añadir los que conoces y lo que cuesta, su mantenimiento y cómo lucha una unidad de ese diseño (con `TextFormat.UpkeepText` y `TextFormat.TrainingDaysText`). |
-| `Diplomacy()` | Cada nación: paz o guerra (y desde cuándo), su poder militar frente al tuyo, provincias, lo tomado y perdido, y los botones de declarar la guerra o proponer la paz. |
+| `Diplomacy()`, `WarScoreCell`, `PeaceButtons` | Cada nación: paz o guerra (y desde cuándo), su poder militar frente al tuyo, provincias, lo tomado y perdido, la puntuación de guerra (con su desglose en el tooltip) y los botones de declarar la guerra o de paz blanca, exigir lo ocupado y ceder lo ocupado. |
 
 ### `NationPages.cs`
 Lo que muestra cada pestaña de la pantalla de la nación, para que el cliente lo dibuje.
