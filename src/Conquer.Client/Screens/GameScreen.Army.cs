@@ -516,12 +516,12 @@ public sealed partial class GameScreen
         }
     }
 
-    // ------------------------------------------------------------------ city: Ejército tab
+    // ------------------------------------------------------------------ province: Ejército tab
 
-    /// <summary>Battalions the city can train (those of undiscovered advances are not listed), HQs, and what is in training.</summary>
-    private void ArmyPanel(City city, float x, ref float y, float w)
+    /// <summary>Battalions the province (its city or its barracks) can train (those of undiscovered advances are not listed), HQs, and what is in training.</summary>
+    private void ArmyPanel(Province p, float x, ref float y, float w)
     {
-        if (!Map.Provinces[city.ProvinceId].Buildings.Contains(BuildingType.Barracks))
+        if (p.CityId.HasValue && !p.Buildings.Contains(BuildingType.Barracks))
         {
             foreach (var line in Ui.Font.Wrap("Sin cuartel: la ciudad solo entrena exploradores, ingenieros, barcos y cuarteles generales. Constrúyelo en la pestaña Edificios.",
                          w, FontSize.Small))
@@ -535,13 +535,13 @@ public sealed partial class GameScreen
         y += 26;
         foreach (var template in Human.Templates.Take(4))
         {
-            var can = _session.CanTrainTemplate(city, template);
+            var can = _session.CanTrainTemplate(p, template);
             int days = GameSession.TrainingDays(Human, template);
-            string tip = $"{template.Name}: {template.Composition}.\n{template.Men} hombres de la ciudad. Ataque {template.Attack:0.#}, defensa {template.Defense:0.#}." +
+            string tip = $"{template.Name}: {template.Composition}.\n{template.Men} hombres de la provincia. Ataque {template.Attack:0.#}, defensa {template.Defense:0.#}." +
                          $"\nCoste: {template.Cost}. {NationView.TrainingDaysText(days, template.TrainingDays)}" + (can.Ok ? "" : "\n" + can.Message);
             if (Ui.Button(new Rect(x, y, w, 28), $"{template.Name}  ·  {Formations.BattalionCount(template.Battalions.Count)}  ·  {days} d",
                     can.Ok, tooltip: tip, size: FontSize.Small))
-                Show(_session.TrainTemplate(Human.Id, city.Id, template.Id));
+                Show(_session.TrainTemplate(Human.Id, p.Id, template.Id));
             y += 32;
         }
         Ui.Text(x, y, Human.Templates.Count > 4 ? "Más plantillas en la pestaña Plantillas de la nación (N)." : "Diseña plantillas en la pestaña Plantillas de la nación (N).",
@@ -554,14 +554,14 @@ public sealed partial class GameScreen
         foreach (var type in Battalions.All.Where(t => t.Info().Requires.All(Human.Techs.Contains)))
         {
             var info = type.Info();
-            var can = _session.CanTrain(city, type);
+            var can = _session.CanTrain(p, type);
             int days = GameSession.TrainingDays(Human, type);
-            string tip = $"{Formations.BattalionName(info)}: {info.Men} hombres de la ciudad. Ataque {info.Attack:0.#}, defensa {info.Defense:0.#}, " +
+            string tip = $"{Formations.BattalionName(info)}: {info.Men} hombres de la provincia. Ataque {info.Attack:0.#}, defensa {info.Defense:0.#}, " +
                          $"organización {info.MaxOrganisation:0}, {info.Speed * GameRules.CitizenSpeedKmh:0.#} km/h." +
                          (info.Mounted ? "\nMontada: ataca a la mitad en bosques, pantanos y montañas." : "") +
                          $"\nCoste: {info.Cost}. {NationView.TrainingDaysText(days, info.TrainingDays)} Mantenimiento: {NationView.UpkeepText([info.Cost])}." + (can.Ok ? "" : "\n" + can.Message);
             if (Ui.Button(new Rect(x, y, w, 28), $"{info.Name}  ·  {info.Cost}  ·  {days} d", can.Ok, tooltip: tip, size: FontSize.Small))
-                Show(_session.Train(Human.Id, city.Id, type));
+                Show(_session.Train(Human.Id, p.Id, type));
             y += 32;
         }
 
@@ -570,20 +570,20 @@ public sealed partial class GameScreen
         y += 26;
         foreach (var level in CommandLevels.All)
         {
-            var can = _session.CanRaiseHeadquarters(city, level.Level);
+            var can = _session.CanRaiseHeadquarters(p, level.Level);
             string tip = $"Manda hasta {level.MaxSubordinates} {Formations.SubordinatesPlural(level.Level)} a menos de {level.RangeKm:N0} km: " +
                          $"+{MilitaryRules.CommandBonus:P0} en combate y recuperación (+{MilitaryRules.HigherCommandBonus:P0} por cada nivel superior enlazado)." +
-                         $"\n{level.Staff} hombres de la ciudad. Coste: {level.Cost}. Tarda {level.TrainingDays} días." + (can.Ok ? "" : "\n" + can.Message);
+                         $"\n{level.Staff} hombres de la provincia. Coste: {level.Cost}. Tarda {level.TrainingDays} días." + (can.Ok ? "" : "\n" + can.Message);
             if (Ui.Button(new Rect(x, y, w, 28), $"{Formations.LevelName(level.Level)}  ·  {level.Cost}  ·  {level.TrainingDays} d", can.Ok, tooltip: tip, size: FontSize.Small))
-                Show(_session.RaiseHeadquarters(Human.Id, city.Id, level.Level));
+                Show(_session.RaiseHeadquarters(Human.Id, p.Id, level.Level));
             y += 32;
         }
 
-        if (city.Training.Count == 0) return;
+        if (p.Training.Count == 0) return;
         y += 8;
         Ui.Text(x, y, "En instrucción", Theme.Text, bold: true);
         y += 26;
-        foreach (var order in city.Training)
+        foreach (var order in p.Training)
         {
             Ui.Text(x, y, order.Name, Theme.Text, FontSize.Small);
             string days = $"{order.DaysLeft} d";

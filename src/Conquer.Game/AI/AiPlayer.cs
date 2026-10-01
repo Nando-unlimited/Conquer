@@ -261,7 +261,7 @@ internal sealed partial class AiPlayer
         if (cities.Count == 0) return;
         TrainEngineers(cities);
         int settlers = _session.Units.Count(u => u.OwnerId == _player.Id && u.Type == UnitType.Settlers);
-        int claimers = _claimers.Count + cities.Sum(c => c.Training.Count(o => o.Battalion == BattalionType.Scouts));
+        int claimers = _claimers.Count + cities.Sum(c => Map.Provinces[c.ProvinceId].Training.Count(o => o.Battalion == BattalionType.Scouts));
 
         foreach (var city in cities.OrderByDescending(c => Map.Provinces[c.ProvinceId].Population))
         {
@@ -274,7 +274,7 @@ internal sealed partial class AiPlayer
                 continue;
             }
             bool foodToSpare = _player.LastDayNet[(int)ResourceType.Food] > 3 || _player.Stockpile[ResourceType.Food] > 500;
-            if (claimers < 1 + cities.Count && pop > 250 && foodToSpare && _session.Train(_player.Id, city.Id, BattalionType.Scouts).Ok)
+            if (claimers < 1 + cities.Count && pop > 250 && foodToSpare && _session.Train(_player.Id, city.ProvinceId, BattalionType.Scouts).Ok)
                 claimers++;
         }
     }
@@ -310,9 +310,9 @@ internal sealed partial class AiPlayer
     {
         if (!_player.Techs.Contains(Tech.Engineering)) return;
         if (_session.Units.Any(u => u.OwnerId == _player.Id && IsEngineerUnit(u))
-            || cities.Any(c => c.Training.Any(o => o.Battalion == BattalionType.Engineers))) return;
+            || cities.Any(c => Map.Provinces[c.ProvinceId].Training.Any(o => o.Battalion == BattalionType.Engineers))) return;
         if (WantedRoad() == null || !Spare(BattalionType.Engineers.Info().Cost)) return;
-        _session.Train(_player.Id, cities.MaxBy(c => Map.Provinces[c.ProvinceId].Population)!.Id, BattalionType.Engineers);
+        _session.Train(_player.Id, cities.MaxBy(c => Map.Provinces[c.ProvinceId].Population)!.ProvinceId, BattalionType.Engineers);
     }
 
     /// <summary>

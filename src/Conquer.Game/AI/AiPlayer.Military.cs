@@ -70,7 +70,7 @@ internal sealed partial class AiPlayer
         if (cities.Count == 0 || _session.Date.Days < 180) return;
         int target = cities.Count * (_session.EnemiesOf(_player.Id).Any() ? 4 : 2);
         int battalions = Army.Sum(u => u.Battalions.Count)
-            + cities.Sum(c => c.Training.Sum(o => o.TemplateBattalions.Count + (o.Battalion is BattalionType t && !Auxiliary(t) ? 1 : 0)));
+            + cities.Sum(c => Map.Provinces[c.ProvinceId].Training.Sum(o => o.TemplateBattalions.Count + (o.Battalion is BattalionType t && !Auxiliary(t) ? 1 : 0)));
         if (battalions >= target) return;
 
         // Only cities with barracks train troops.
@@ -80,12 +80,12 @@ internal sealed partial class AiPlayer
         // A unit as big as the city can spare (keeping 100 people beyond the minimum), from 2 to 6 battalions.
         int size = Math.Clamp((int)((Map.Provinces[city.ProvinceId].Population - GameRules.MinCityPopulation - 100) / 100), 0, BattalionsPerUnit);
         if (size >= 2 && ArmyTemplate(size) is var template && Spare(template.Cost)
-            && _session.TrainTemplate(_player.Id, city.Id, template.Id).Ok) return;
+            && _session.TrainTemplate(_player.Id, city.ProvinceId, template.Id).Ok) return;
         var best = Battalions.All
-            .Where(t => !t.Info().Naval && !Auxiliary(t) && _session.CanTrain(city, t).Ok && Spare(t.Info().Cost))
+            .Where(t => !t.Info().Naval && !Auxiliary(t) && _session.CanTrain(Map.Provinces[city.ProvinceId], t).Ok && Spare(t.Info().Cost))
             .OrderByDescending(t => t.Info().Attack + t.Info().Defense)
             .Cast<BattalionType?>().FirstOrDefault();
-        if (best is BattalionType type) _session.Train(_player.Id, city.Id, type);
+        if (best is BattalionType type) _session.Train(_player.Id, city.ProvinceId, type);
     }
 
     /// <summary>
@@ -98,13 +98,13 @@ internal sealed partial class AiPlayer
         var ports = _session.Cities.Where(c => c.OwnerId == _player.Id && _session.IsPort(Map.Provinces[c.ProvinceId], _player.Id)).ToList();
         if (ports.Count == 0) return;
         int fleets = _session.Units.Count(u => u.IsFleet && u.OwnerId == _player.Id)
-                     + ports.Sum(c => c.Training.Count(o => o.Battalion is BattalionType t && t.Info().Naval));
+                     + ports.Sum(c => Map.Provinces[c.ProvinceId].Training.Count(o => o.Battalion is BattalionType t && t.Info().Naval));
         if (fleets >= (ports.Count + 2) / 3) return;
         var port = ports.MaxBy(c => Map.Provinces[c.ProvinceId].Population)!;
         var warship = Battalions.All
-            .Where(t => t.Info().Naval && t.Info().Capacity < t.Info().Men && _session.CanTrain(port, t).Ok && Spare(t.Info().Cost))
+            .Where(t => t.Info().Naval && t.Info().Capacity < t.Info().Men && _session.CanTrain(Map.Provinces[port.ProvinceId], t).Ok && Spare(t.Info().Cost))
             .Cast<BattalionType?>().MaxBy(t => t!.Value.Info().Attack);
-        if (warship is BattalionType type) _session.Train(_player.Id, port.Id, type);
+        if (warship is BattalionType type) _session.Train(_player.Id, port.ProvinceId, type);
     }
 
     /// <summary>
@@ -185,9 +185,9 @@ internal sealed partial class AiPlayer
             if (hq != null) _session.Attach(_player.Id, unit.Id, hq.Id);
         }
         bool needed = subordinates.Count(u => u.CommanderId is null) >= 2 || (level >= 2 && subordinates.Count >= 2 && hqs.Count == 0);
-        bool forming = _session.Cities.Any(c => c.OwnerId == _player.Id && c.Training.Any(o => o.HeadquartersLevel == level));
-        if (!needed || forming || _player.CapitalCityId is not int capital || !Spare(info.Cost)) return;
-        _session.RaiseHeadquarters(_player.Id, capital, level);
+        bool forming = _session.Cities.Any(c => c.OwnerId == _player.Id && Map.Provinces[c.ProvinceId].Training.Any(o => o.HeadquartersLevel == level));
+        if (!needed || forming || _player.CapitalCityId is not int capital || _session.CityById(capital) is not { } city || !Spare(info.Cost)) return;
+        _session.RaiseHeadquarters(_player.Id, city.ProvinceId, level);
     }
 
     /// <summary>An HQ walks to where most of its subordinates are, so they stay within its range.</summary>

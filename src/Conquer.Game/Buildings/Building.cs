@@ -6,7 +6,7 @@ namespace Conquer.Game.Buildings;
 
 /// <summary>
 /// The buildings a province can have, one of each. The order is the order they are listed in. Farms,
-/// granaries, sawmills and mines go anywhere; the rest need a city. Only cities with barracks train combat troops. Roads and railways are not buildings but
+/// granaries, sawmills, mines and barracks go anywhere; the rest need a city. Only provinces with barracks train combat troops. Roads and railways are not buildings but
 /// links between provinces (<see cref="Simulation.RoadNetwork"/>).
 /// </summary>
 public enum BuildingType
@@ -15,7 +15,7 @@ public enum BuildingType
     Granary,
     Sawmill,
     Mine,
-    /// <summary>Trains combat battalions: a city without one only trains scouts, engineers, HQs and (in port) ships.</summary>
+    /// <summary>Trains combat battalions, in a city or in a province without one; a city without barracks only trains scouts, engineers, HQs and (in port) ships.</summary>
     Barracks,
     Temple,
     Library,
@@ -64,7 +64,7 @@ public static class Buildings
         [BuildingType.Mine] = new("Mina", "+50 % de producción de los yacimientos de la provincia.",
             new ResourceCost((ResourceType.Wood, 60), (ResourceType.Gold, 20)), 30, Tech.Mining, false, true, new() { Deposits = 0.5 }),
         [BuildingType.Barracks] = new("Cuartel", "Instruye las tropas de combate; tus avances militares lo hacen más rápido.",
-            new ResourceCost((ResourceType.Wood, 60), (ResourceType.Gold, 30)), 30, null, true, false, Modifiers.None),
+            new ResourceCost((ResourceType.Wood, 60), (ResourceType.Gold, 30)), 30, null, false, false, Modifiers.None),
         [BuildingType.Temple] = new("Templo", "+10 de humor en la provincia.",
             new ResourceCost((ResourceType.Wood, 50), (ResourceType.Gold, 30)), 30, Tech.Mythology, true, false, new() { Mood = 10 }),
         [BuildingType.Library] = new("Biblioteca", "+50 % de ciencia de la ciudad.",

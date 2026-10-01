@@ -578,9 +578,10 @@ public sealed partial class GameScreen : IScreen
         if (p.IsOwned)
         {
             string buildings = p.Constructing.HasValue || p.PlannedCityName != null ? $"Edificios ({p.Buildings.Count}+1)" : $"Edificios ({p.Buildings.Count})";
-            bool army = city != null && p.OwnerId == Human.Id;
+            // Cities and barracks train troops; elsewhere the tab still shows what was left training.
+            bool army = p.OwnerId == Human.Id && (city != null || p.Buildings.Contains(BuildingType.Barracks) || p.Training.Count > 0);
             if (!army && _provinceTab == ProvinceTab.Army) _provinceTab = ProvinceTab.General;
-            string[] tabs = army ? ["General", buildings, city!.Training.Count > 0 ? $"Ejército ({city.Training.Count})" : "Ejército"] : ["General", buildings];
+            string[] tabs = army ? ["General", buildings, p.Training.Count > 0 ? $"Ejército ({p.Training.Count})" : "Ejército"] : ["General", buildings];
             float tw = (w - 6 * (tabs.Length - 1)) / tabs.Length;
             for (int i = 0; i < tabs.Length; i++)
                 if (Ui.Button(new Rect(x + i * (tw + 6), y, tw, 28), tabs[i], active: (int)_provinceTab == i, size: FontSize.Small)) _provinceTab = (ProvinceTab)i;
@@ -592,7 +593,7 @@ public sealed partial class GameScreen : IScreen
             }
             if (_provinceTab == ProvinceTab.Army)
             {
-                ArmyPanel(city!, x, ref y, w);
+                ArmyPanel(p, x, ref y, w);
                 return;
             }
         }

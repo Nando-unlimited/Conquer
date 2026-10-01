@@ -2,6 +2,12 @@
 
 Todos los cambios del juego, del más reciente al más antiguo. Cada versión es un commit cuyo título es su número.
 
+## [1.44.1] - 2026-10-01
+
+### Cambiado
+- **El cuartel ya no necesita ciudad**: se puede construir en cualquier provincia tuya. Una provincia sin ciudad pero con cuartel entrena tropas igual que una ciudad: tiene su pestaña **Ejército**, y las tropas aparecen allí. Siempre se queda con unos pocos habitantes para no despoblarse.
+- La instrucción pertenece ahora a la provincia, no a la ciudad: la columna «En curso» de la pestaña Provincias la muestra también en provincias sin ciudad. Las partidas guardadas conservan lo que estaba en instrucción.
+
 ## [1.44.0] - 2026-10-01
 
 ### Añadido

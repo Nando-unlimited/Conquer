@@ -32,9 +32,9 @@ public sealed partial class GameSession
         // Provinces nobody has touched keep their generated state, so only the rest are stored.
         Provinces = Map.Provinces.Where(Changed).Select(p => new ProvinceSave(
             p.Id, p.OwnerId, p.ControllerId, p.Population, p.CityId, p.Mood, p.Fertility, [.. p.Reserves],
-            [.. p.Buildings.Order()], p.Constructing, p.ConstructionDaysLeft, p.PlannedCityName, [.. p.Institutions.Order()], p.Name)).ToList(),
-        Cities = Cities.Select(c => new CitySave(c.Id, c.Name, c.OwnerId, c.ProvinceId, c.FoundedHours, c.FestivalUntilHours,
-            [.. c.Training.Select(o => new TrainingSave(o.Battalion, o.TemplateName, [.. o.TemplateBattalions], o.HeadquartersLevel, o.DaysLeft, o.TotalDays))])).ToList(),
+            [.. p.Buildings.Order()], p.Constructing, p.ConstructionDaysLeft, p.PlannedCityName, [.. p.Institutions.Order()], p.Name,
+            p.Training.Count == 0 ? null : [.. p.Training.Select(ToSave)])).ToList(),
+        Cities = Cities.Select(c => new CitySave(c.Id, c.Name, c.OwnerId, c.ProvinceId, c.FoundedHours, c.FestivalUntilHours)).ToList(),
         Units = Units.Select(u => new UnitSave(
             u.Id, u.OwnerId, u.Type, u.ProvinceId, u.Type is UnitType.Regiment or UnitType.Fleet ? 0 : u.Citizens, u.Number, u.HeadquartersLevel,
             [.. u.Battalions.Select(b => new BattalionSave(b.Type, b.Strength, b.Organisation, b.Experience))],
@@ -84,10 +84,17 @@ public sealed partial class GameSession
     private static Officer FromSave(OfficerSave o) => new(o.Id, o.Name, o.Traits, o.StartingSkill, o.Victories, o.Rank);
 
     /// <summary>Whether the province differs from how <see cref="ResetProvinces"/> leaves it.</summary>
+    private static TrainingSave ToSave(TrainingOrder o) =>
+        new(o.Battalion, o.TemplateName, [.. o.TemplateBattalions], o.HeadquartersLevel, o.DaysLeft, o.TotalDays);
+
+    /// <summary>A saved order, its HQ level moved to the current levels by <paramref name="level"/>.</summary>
+    private static TrainingOrder FromSave(TrainingSave o, Func<int, int> level) =>
+        new(o.Battalion, o.TemplateName, o.TemplateBattalions, level(o.HeadquartersLevel), o.DaysLeft, o.TotalDays);
+
     private static bool Changed(Province p) =>
         p.OwnerId != -1 || p.ControllerId != -1 || p.Population != 0 || p.CityId.HasValue
         || p.Mood != GameRules.StartingMood || p.Fertility != 1 || p.Buildings.Count > 0 || p.Constructing.HasValue || p.PlannedCityName != null
-        || p.Institutions.Count > 0 || p.Name.Length > 0
+        || p.Institutions.Count > 0 || p.Name.Length > 0 || p.Training.Count > 0
         || Resources.Deposits.Any(r => p.Reserves[(int)r] != p.DepositSizes[(int)r] * GameRules.DepositSizeMultiplier);
 
     /// <summary>
@@ -130,6 +137,7 @@ public sealed partial class GameSession
             p.Institutions.UnionWith(ps.Institutions ?? []);
             p.Name = ps.Name ?? "";
             if (p.Name.Length > 0) session._usedProvinceNames.Add(p.Name);
+            foreach (var o in ps.Training ?? []) p.Training.Add(FromSave(o, Level));
         }
 
         foreach (var s in save.Players)
@@ -156,8 +164,9 @@ public sealed partial class GameSession
         foreach (var c in save.Cities)
         {
             var city = new City(c.Id, c.Name, c.OwnerId, c.ProvinceId, c.FoundedHours) { FestivalUntilHours = c.FestivalUntilHours };
-            foreach (var o in c.Training)
-                city.Training.Add(new TrainingOrder(o.Battalion, o.TemplateName, o.TemplateBattalions, Level(o.HeadquartersLevel), o.DaysLeft, o.TotalDays));
+            // Before 1.44.1 the city held what was training; now its province does.
+            foreach (var o in c.Training ?? [])
+                map.Provinces[c.ProvinceId].Training.Add(FromSave(o, Level));
             session.Cities.Add(city);
             session._usedCityNames.Add(c.Name);
             // Before barracks every city trained troops: in an older save each keeps doing so with one.

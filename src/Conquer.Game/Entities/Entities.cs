@@ -92,9 +92,6 @@ public sealed class City
 
     public bool HasFestival(long nowHours) => FestivalUntilHours > nowHours;
 
-    /// <summary>Battalions and HQs being trained, in order; each counts down on its own.</summary>
-    public List<TrainingOrder> Training { get; } = [];
-
     public City(int id, string name, int ownerId, int provinceId, long foundedHours)
     {
         Id = id;

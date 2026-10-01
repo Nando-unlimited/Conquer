@@ -76,13 +76,13 @@ public class MilitaryTests(WorldFixture world)
         s.Human.Stockpile[ResourceType.Wood] = s.Human.Stockpile[ResourceType.Gold] = 500;
         var info = BattalionType.Warriors.Info();
 
-        Assert.True(s.Train(0, city.Id, BattalionType.Warriors).Ok);
+        Assert.True(s.Train(0, city.ProvinceId, BattalionType.Warriors).Ok);
         Assert.Equal(1000 - info.Men, a.Population);
         Assert.Equal(500 - 30, s.Human.Stockpile[ResourceType.Wood]);
-        Assert.Single(city.Training);
+        Assert.Single(a.Training);
 
         RunHours(s, 24 * info.TrainingDays);
-        Assert.Empty(city.Training);
+        Assert.Empty(a.Training);
         var regiment = Assert.Single(s.Units, u => u.IsMilitary && u.OwnerId == 0);
         Assert.Equal(a.Id, regiment.ProvinceId);
         Assert.Equal(info.Men, regiment.Citizens);
@@ -98,20 +98,20 @@ public class MilitaryTests(WorldFixture world)
         s.Human.Stockpile[ResourceType.Wood] = s.Human.Stockpile[ResourceType.Gold] = 500;
         s.Human.Stockpile[ResourceType.Copper] = 100;
 
-        Assert.True(s.Train(0, city.Id, BattalionType.Warriors).Ok); // warriors need nothing
-        Assert.False(s.Train(0, city.Id, BattalionType.Archers).Ok);
+        Assert.True(s.Train(0, city.ProvinceId, BattalionType.Warriors).Ok); // warriors need nothing
+        Assert.False(s.Train(0, city.ProvinceId, BattalionType.Archers).Ok);
         s.Human.Learn(Tech.Archery);
-        Assert.True(s.Train(0, city.Id, BattalionType.Archers).Ok);
+        Assert.True(s.Train(0, city.ProvinceId, BattalionType.Archers).Ok);
 
-        Assert.False(s.Train(0, city.Id, BattalionType.Horsemen).Ok);
+        Assert.False(s.Train(0, city.ProvinceId, BattalionType.Horsemen).Ok);
         s.Human.Learn(Tech.HorsebackRiding);
-        Assert.True(s.Train(0, city.Id, BattalionType.Horsemen).Ok);
-        Assert.False(s.Train(0, city.Id, BattalionType.Chariots).Ok); // needs the wheel
+        Assert.True(s.Train(0, city.ProvinceId, BattalionType.Horsemen).Ok);
+        Assert.False(s.Train(0, city.ProvinceId, BattalionType.Chariots).Ok); // needs the wheel
 
         s.Human.Learn(Tech.TheWheel);
-        Assert.True(s.Train(0, city.Id, BattalionType.ChariotArchers).Ok); // the wheel and archery
+        Assert.True(s.Train(0, city.ProvinceId, BattalionType.ChariotArchers).Ok); // the wheel and archery
         s.Human.Techs.Remove(Tech.Archery);
-        var noBows = s.CanTrain(city, BattalionType.ChariotArchers);
+        var noBows = s.CanTrain(a, BattalionType.ChariotArchers);
         Assert.False(noBows.Ok);
         Assert.Contains("tiro con arco", noBows.Message);
     }
@@ -124,17 +124,17 @@ public class MilitaryTests(WorldFixture world)
         a.Population = 2000;
         foreach (var r in new[] { ResourceType.Wood, ResourceType.Gold, ResourceType.Copper, ResourceType.Iron }) s.Human.Stockpile[r] = 1000;
 
-        Assert.False(s.Train(0, city.Id, BattalionType.Legionaries).Ok);
+        Assert.False(s.Train(0, city.ProvinceId, BattalionType.Legionaries).Ok);
         s.Human.Learn(Tech.MilitaryTactics);
-        Assert.True(s.Train(0, city.Id, BattalionType.Legionaries).Ok);
+        Assert.True(s.Train(0, city.ProvinceId, BattalionType.Legionaries).Ok);
 
-        Assert.False(s.Train(0, city.Id, BattalionType.Catapults).Ok);
+        Assert.False(s.Train(0, city.ProvinceId, BattalionType.Catapults).Ok);
         s.Human.Learn(Tech.SiegeEngines);
-        Assert.True(s.Train(0, city.Id, BattalionType.Catapults).Ok);
+        Assert.True(s.Train(0, city.ProvinceId, BattalionType.Catapults).Ok);
 
-        Assert.False(s.Train(0, city.Id, BattalionType.Cataphracts).Ok);
+        Assert.False(s.Train(0, city.ProvinceId, BattalionType.Cataphracts).Ok);
         s.Human.Learn(Tech.HeavyCavalry);
-        Assert.True(s.Train(0, city.Id, BattalionType.Cataphracts).Ok);
+        Assert.True(s.Train(0, city.ProvinceId, BattalionType.Cataphracts).Ok);
     }
 
     [Fact]
@@ -223,7 +223,7 @@ public class MilitaryTests(WorldFixture world)
         Assert.True(scouts.Cost.Items.Sum(i => i.Amount) < warriors.Cost.Items.Sum(i => i.Amount) / 2);
         Assert.True(scouts.Speed > warriors.Speed);
         Assert.True(scouts.Attack < warriors.Attack && scouts.Defense < warriors.Defense);
-        Assert.True(s.Train(0, city.Id, BattalionType.Scouts).Ok);
+        Assert.True(s.Train(0, city.ProvinceId, BattalionType.Scouts).Ok);
 
         var free = _map.Provinces.First(p => p.IsClaimable && !p.IsOwned);
         var unit = s.AddRegiment(0, free.Id, BattalionType.Scouts);
@@ -238,9 +238,9 @@ public class MilitaryTests(WorldFixture world)
         var city = s.CityIn(a)!;
         a.Population = 1000;
         s.Human.Stockpile[ResourceType.Wood] = s.Human.Stockpile[ResourceType.Gold] = 500;
-        Assert.False(s.Train(0, city.Id, BattalionType.Engineers).Ok);
+        Assert.False(s.Train(0, city.ProvinceId, BattalionType.Engineers).Ok);
         s.Human.Learn(Tech.Engineering);
-        Assert.True(s.Train(0, city.Id, BattalionType.Engineers).Ok);
+        Assert.True(s.Train(0, city.ProvinceId, BattalionType.Engineers).Ok);
         Assert.Equal(BattalionRole.Engineers, BattalionType.Engineers.Role());
 
         var hillsWithRiver = _map.Provinces.First(p => p.Biome == Biome.Hills && p.HasRiver);
@@ -564,7 +564,7 @@ public class MilitaryTests(WorldFixture world)
         s.AddToTemplate(0, template.Id, BattalionType.Archers);
 
         Assert.Equal(20, template.TrainingDays); // the archers are the slowest
-        Assert.True(s.TrainTemplate(0, city.Id, template.Id).Ok);
+        Assert.True(s.TrainTemplate(0, city.ProvinceId, template.Id).Ok);
         Assert.Equal(2000 - 300, a.Population);
         Assert.Equal(500 - 90, s.Human.Stockpile[ResourceType.Wood]);
         Assert.Equal(500 - 50, s.Human.Stockpile[ResourceType.Gold]);
@@ -576,34 +576,66 @@ public class MilitaryTests(WorldFixture world)
     }
 
     [Fact]
-    public void OnlyCitiesWithBarracksTrainCombatTroops()
+    public void OnlyProvincesWithBarracksTrainCombatTroops()
     {
-        var (s, a, b) = TwoNations();
-        var city = s.CityIn(a)!;
+        var (s, a, _) = TwoNations();
         a.ClearBuildings();
         a.Population = 3000;
         foreach (var r in Resources.All) s.Human.Stockpile[r] = 5000;
         s.Human.Learn(Tech.Engineering);
         s.Human.Learn(Tech.Navigation);
 
-        Assert.Equal("Requiere un cuartel en la ciudad.", s.CanTrain(city, BattalionType.Warriors).Message);
-        Assert.False(s.CanTrainTemplate(city, s.Human.Templates[0]).Ok);
-        // Scouts, engineers and HQs need no barracks; ships need a port instead.
-        Assert.True(s.Train(0, city.Id, BattalionType.Scouts).Ok);
-        Assert.True(s.Train(0, city.Id, BattalionType.Engineers).Ok);
-        Assert.True(s.RaiseHeadquarters(0, city.Id, 1).Ok);
+        Assert.Equal("Requiere un cuartel en la provincia.", s.CanTrain(a, BattalionType.Warriors).Message);
+        Assert.False(s.CanTrainTemplate(a, s.Human.Templates[0]).Ok);
+        // Scouts, engineers and HQs need no barracks in a city; ships need a port instead.
+        Assert.True(s.Train(0, a.Id, BattalionType.Scouts).Ok);
+        Assert.True(s.Train(0, a.Id, BattalionType.Engineers).Ok);
+        Assert.True(s.RaiseHeadquarters(0, a.Id, 1).Ok);
         var scoutsOnly = s.AddTemplate(s.Human, [BattalionType.Scouts, BattalionType.Engineers]);
-        Assert.True(s.CanTrainTemplate(city, scoutsOnly).Ok);
+        Assert.True(s.CanTrainTemplate(a, scoutsOnly).Ok);
         Assert.False(BattalionType.Trireme.NeedsBarracks());
 
-        // Barracks go only in cities, need no advance, and once built the city trains combat troops.
-        Assert.Equal("Solo en provincias con ciudad.", s.IsBuildingAvailable(b, BuildingType.Barracks).Message);
+        // Barracks need no advance, and once built the city trains combat troops.
         Assert.True(s.Build(0, a.Id, BuildingType.Barracks).Ok);
-        Assert.False(s.CanTrain(city, BattalionType.Warriors).Ok); // still under construction
+        Assert.False(s.CanTrain(a, BattalionType.Warriors).Ok); // still under construction
         RunHours(s, 24 * BuildingType.Barracks.Info().Days);
         Assert.Contains(BuildingType.Barracks, a.Buildings);
-        Assert.True(s.Train(0, city.Id, BattalionType.Warriors).Ok);
-        Assert.True(s.TrainTemplate(0, city.Id, s.Human.Templates[0].Id).Ok);
+        Assert.True(s.Train(0, a.Id, BattalionType.Warriors).Ok);
+        Assert.True(s.TrainTemplate(0, a.Id, s.Human.Templates[0].Id).Ok);
+    }
+
+    [Fact]
+    public void BarracksTrainTroopsInAProvinceWithoutACity()
+    {
+        var (s, a, b) = TwoNations();
+        foreach (var r in Resources.All) s.Human.Stockpile[r] = 5000;
+        var field = _map.Provinces[a.Neighbors.First(n => n != b.Id && _map.Provinces[n].IsClaimable && !_map.Provinces[n].IsOwned)];
+        var claimer = s.AddRegiment(0, field.Id, BattalionType.Scouts);
+        Assert.True(s.Claim(0, claimer.Id).Ok);
+        s.Disband(0, claimer.Id);
+        field.Population = 500;
+
+        // Without a city or barracks the province trains nothing.
+        Assert.Equal("Hace falta una ciudad o un cuartel en la provincia.", s.CanTrain(field, BattalionType.Scouts).Message);
+        Assert.Equal("Hace falta una ciudad o un cuartel en la provincia.", s.CanRaiseHeadquarters(field, 1).Message);
+        Assert.True(s.IsBuildingAvailable(field, BuildingType.Barracks).Ok);
+        Assert.True(s.Build(0, field.Id, BuildingType.Barracks).Ok);
+        RunHours(s, 24 * BuildingType.Barracks.Info().Days);
+        Assert.Null(field.CityId);
+
+        // With them it trains like a city, keeping enough people to stay settled; ships still need a port.
+        Assert.False(s.CanTrain(field, BattalionType.Trireme).Ok);
+        Assert.True(s.Train(0, field.Id, BattalionType.Warriors).Ok);
+        Assert.Single(field.Training);
+        field.Population = 100;
+        Assert.Equal($"Hacen falta {100 + GameRules.SettledPopulation} habitantes.", s.CanTrain(field, BattalionType.Warriors).Message);
+
+        // What it trains is saved with the province.
+        var loaded = GameSession.Load(_map, s.ToSave("test"));
+        Assert.Single(_map.Provinces[field.Id].Training);
+        RunHours(loaded, 24 * GameSession.TrainingDays(loaded.Human, BattalionType.Warriors));
+        Assert.Empty(_map.Provinces[field.Id].Training);
+        Assert.Contains(loaded.Units, u => u.OwnerId == 0 && u.ProvinceId == field.Id && u.Battalions.Any(x => x.Type == BattalionType.Warriors));
     }
 
     [Fact]
@@ -620,8 +652,8 @@ public class MilitaryTests(WorldFixture world)
         s.Human.Learn(Tech.ImprovedBows);
         Assert.Equal(16, GameSession.TrainingDays(s.Human, BattalionType.Archers)); // 20 / 1.25
         Assert.Equal(15, GameSession.TrainingDays(s.Human, BattalionType.Warriors));
-        Assert.True(s.Train(0, city.Id, BattalionType.Archers).Ok);
-        Assert.Equal(16, city.Training[^1].TotalDays);
+        Assert.True(s.Train(0, city.ProvinceId, BattalionType.Archers).Ok);
+        Assert.Equal(16, a.Training[^1].TotalDays);
 
         // A template waits for its slowest battalion, each at its own pace.
         var template = s.AddTemplate(s.Human, [BattalionType.Warriors, BattalionType.Archers]);

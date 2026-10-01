@@ -33,9 +33,9 @@ public class CityTests(WorldFixture world)
     }
 
     [Fact]
-    public void OnlyLandWorksGoWithoutACity()
+    public void OnlyLandWorksAndBarracksGoWithoutACity()
     {
-        Assert.Equal([BuildingType.Farm, BuildingType.Granary, BuildingType.Sawmill, BuildingType.Mine],
+        Assert.Equal([BuildingType.Farm, BuildingType.Granary, BuildingType.Sawmill, BuildingType.Mine, BuildingType.Barracks],
             Buildings.All.Where(b => !b.Info().CityOnly));
 
         var (s, _, site) = CapitalAndSite();

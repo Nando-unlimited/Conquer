@@ -89,7 +89,8 @@ public sealed class HelpView
         [
             "Las unidades de combate se forman con batallones entrenados en las ciudades (pestaña Ejército de la provincia). Los hombres salen de la ciudad.",
             "## Cuartel",
-            "- Solo las ciudades con cuartel entrenan tropas de combate. Exploradores, ingenieros, colonos y cuarteles generales se forman en cualquier ciudad; los barcos, en los puertos.",
+            "- Solo las provincias con cuartel entrenan tropas de combate. Exploradores, ingenieros, colonos y cuarteles generales se forman en cualquier ciudad; los barcos, en los puertos.",
+            "- El cuartel se puede levantar en cualquier provincia tuya, tenga ciudad o no: una provincia sin ciudad con cuartel entrena tropas (pestaña Ejército) y siempre conserva algunos habitantes.",
             $"- Los avances militares que estudian una tropa (Arcos mejorados, Cría caballar, Instrucción militar...) hacen que el cuartel la entrene un {MilitaryRules.TechTrainingSpeed:P0} antes, y se suman. Arcos mejorados, por ejemplo, solo acelera a arqueros, carros de arqueros y ballesteros.",
             "## Organización",
             $"- Cada unidad se llama por su tamaño: Regimiento (1 a 3 batallones), Brigada (4 a 6) y División (7 a {MilitaryRules.MaxBattalionsPerUnit}). Son las que se mueven y combaten.",

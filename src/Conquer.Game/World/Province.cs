@@ -1,5 +1,6 @@
 using Conquer.Game.Buildings;
 using Conquer.Game.Economy;
+using Conquer.Game.Military;
 using Conquer.Game.Rules;
 using Conquer.Game.Science;
 
@@ -55,16 +56,19 @@ public sealed class Province
     public int ConstructionDaysLeft { get; set; }
     /// <summary>The name of the city being built here, if any; it takes <see cref="ConstructionDaysLeft"/> days like a building.</summary>
     public string? PlannedCityName { get; set; }
+    /// <summary>Battalions and HQs being trained here (in its city or its barracks), in order; each counts down on its own.</summary>
+    public List<TrainingOrder> Training { get; } = [];
 
     public void AddBuilding(BuildingType type)
     {
         if (Buildings.Add(type)) BuildingBonuses += type.Info().Effects;
     }
 
-    /// <summary>Knocks down every building and stops any construction (for a new game).</summary>
+    /// <summary>Knocks down every building and stops any construction and training (for a new game).</summary>
     public void ClearBuildings()
     {
         Buildings.Clear();
+        Training.Clear();
         BuildingBonuses = Modifiers.None;
         Constructing = null;
         ConstructionDaysLeft = 0;

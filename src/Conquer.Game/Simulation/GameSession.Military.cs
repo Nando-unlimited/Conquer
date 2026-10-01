@@ -207,43 +207,60 @@ public sealed partial class GameSession
 
     // ------------------------------------------------------------------ training
 
-    public CommandResult CanTrain(City city, BattalionType type)
+    /// <summary>
+    /// Whether troops can be raised in a province of the player's: it needs a city or barracks (only the barracks
+    /// train combat troops, see <see cref="CanRaiseTroops"/>).
+    /// </summary>
+    public CommandResult CanTrainIn(int playerId, Province p)
     {
-        var p = Map.Provinces[city.ProvinceId];
-        if (type.Info().Naval && !IsPort(p, city.OwnerId)) return CommandResult.Fail("Los barcos solo se construyen en ciudades con puerto.");
+        if (p.OwnerId != playerId) return CommandResult.Fail("La provincia no es tuya.");
+        if (!p.CityId.HasValue && !p.Buildings.Contains(BuildingType.Barracks)) return CommandResult.Fail("Hace falta una ciudad o un cuartel en la provincia.");
+        if (p.IsOccupied) return CommandResult.Fail("La provincia está ocupada por el enemigo.");
+        return CommandResult.Success();
+    }
+
+    public CommandResult CanTrain(Province p, BattalionType type)
+    {
+        if (type.Info().Naval && !IsPort(p, p.OwnerId)) return CommandResult.Fail("Los barcos solo se construyen en ciudades con puerto.");
         if (type.Info().Shipyard is BuildingType yard && !p.Buildings.Contains(yard))
             return CommandResult.Fail($"Requiere {yard.Info().Name.ToLowerInvariant()} en la ciudad.");
-        return CanRaiseTroops(city, type.Info().Men, type.Info().Cost, type.Info().Requires, type.NeedsBarracks());
+        return CanRaiseTroops(p, type.Info().Men, type.Info().Cost, type.Info().Requires, type.NeedsBarracks());
     }
 
     /// <summary>
-    /// Whether a city can raise troops: the advances are known, it has barracks if they are combat troops
-    /// (<paramref name="needsBarracks"/>), it is free, has the men to spare and the nation can pay.
+    /// Whether a province can raise troops: it has a city or barracks (<see cref="CanTrainIn"/>), the advances are
+    /// known, it has barracks if they are combat troops (<paramref name="needsBarracks"/>), it has the men to spare
+    /// (keeping a city's minimum, or a settled province's) and the nation can pay.
     /// </summary>
-    private CommandResult CanRaiseTroops(City city, int men, Economy.ResourceCost cost, IEnumerable<Tech> requires, bool needsBarracks)
+    private CommandResult CanRaiseTroops(Province p, int men, Economy.ResourceCost cost, IEnumerable<Tech> requires, bool needsBarracks)
     {
-        var player = Players[city.OwnerId];
-        var p = Map.Provinces[city.ProvinceId];
+        var where = CanTrainIn(p.OwnerId, p);
+        if (!where.Ok) return where;
+        var player = Players[p.OwnerId];
         var missing = requires.Where(t => !player.Techs.Contains(t)).ToList();
         if (missing.Count > 0) return CommandResult.Fail("Requiere " + string.Join(" y ", missing.Select(t => t.Info().Name.ToLowerInvariant())) + ".");
-        if (needsBarracks && !p.Buildings.Contains(BuildingType.Barracks)) return CommandResult.Fail("Requiere un cuartel en la ciudad.");
-        if (p.IsOccupied) return CommandResult.Fail("La ciudad está ocupada por el enemigo.");
-        if (p.Population - men < GameRules.MinCityPopulation) return CommandResult.Fail($"Hacen falta {men + GameRules.MinCityPopulation} habitantes.");
+        if (needsBarracks && !p.Buildings.Contains(BuildingType.Barracks)) return CommandResult.Fail("Requiere un cuartel en la provincia.");
+        int keep = MinimumPopulation(p);
+        if (p.Population - men < keep) return CommandResult.Fail($"Hacen falta {men + keep} habitantes.");
         if (!player.Stockpile.Has(cost)) return CommandResult.Fail($"Cuesta {cost}.");
         return CommandResult.Success();
     }
 
-    /// <summary>Pays for a battalion and takes its men from the city; it forms a new regiment when trained.</summary>
-    public CommandResult Train(int playerId, int cityId, BattalionType type)
+    /// <summary>People who stay when troops are raised: a city's minimum, or enough to keep a province without one settled.</summary>
+    private static int MinimumPopulation(Province p) => p.CityId.HasValue ? GameRules.MinCityPopulation : GameRules.SettledPopulation;
+
+    /// <summary>Pays for a battalion and takes its men from the province; it forms a new regiment there when trained.</summary>
+    public CommandResult Train(int playerId, int provinceId, BattalionType type)
     {
-        if (CityById(cityId) is not { } city || city.OwnerId != playerId) return CommandResult.Fail("Ciudad no válida.");
-        var check = CanTrain(city, type);
+        var p = Map.Provinces[provinceId];
+        if (p.OwnerId != playerId) return CommandResult.Fail("La provincia no es tuya.");
+        var check = CanTrain(p, type);
         if (!check.Ok) return check;
         var info = type.Info();
         Players[playerId].Stockpile.TrySpend(info.Cost);
-        Map.Provinces[city.ProvinceId].Population -= info.Men;
+        p.Population -= info.Men;
         int days = TrainingDays(Players[playerId], type);
-        city.Training.Add(new TrainingOrder(type, days));
+        p.Training.Add(new TrainingOrder(type, days));
         return CommandResult.Success($"{info.Name} en instrucción: {days} días.");
     }
 
@@ -259,43 +276,47 @@ public sealed partial class GameSession
     public static int TrainingDays(Player player, RegimentTemplate template) =>
         template.Battalions.Count == 0 ? 0 : template.Battalions.Max(b => TrainingDays(player, b));
 
-    public CommandResult CanRaiseHeadquarters(City city, int level)
+    public CommandResult CanRaiseHeadquarters(Province p, int level)
     {
+        var where = CanTrainIn(p.OwnerId, p);
+        if (!where.Ok) return where;
         var info = CommandLevels.Info(level);
-        var p = Map.Provinces[city.ProvinceId];
-        if (p.IsOccupied) return CommandResult.Fail("La ciudad está ocupada por el enemigo.");
-        if (p.Population - info.Staff < GameRules.MinCityPopulation) return CommandResult.Fail($"Hacen falta {info.Staff + GameRules.MinCityPopulation} habitantes.");
-        if (!Players[city.OwnerId].Stockpile.Has(info.Cost)) return CommandResult.Fail($"Cuesta {info.Cost}.");
+        int keep = MinimumPopulation(p);
+        if (p.Population - info.Staff < keep) return CommandResult.Fail($"Hacen falta {info.Staff + keep} habitantes.");
+        if (!Players[p.OwnerId].Stockpile.Has(info.Cost)) return CommandResult.Fail($"Cuesta {info.Cost}.");
         return CommandResult.Success();
     }
 
-    /// <summary>Pays for an HQ of the given level (1 corps … 4 theatre); its staff come from the city.</summary>
-    public CommandResult RaiseHeadquarters(int playerId, int cityId, int level)
+    /// <summary>Pays for an HQ of the given level (1 corps … 3 army group); its staff come from the province.</summary>
+    public CommandResult RaiseHeadquarters(int playerId, int provinceId, int level)
     {
-        if (CityById(cityId) is not { } city || city.OwnerId != playerId) return CommandResult.Fail("Ciudad no válida.");
-        var check = CanRaiseHeadquarters(city, level);
+        var p = Map.Provinces[provinceId];
+        if (p.OwnerId != playerId) return CommandResult.Fail("La provincia no es tuya.");
+        var check = CanRaiseHeadquarters(p, level);
         if (!check.Ok) return check;
         var info = CommandLevels.Info(level);
         Players[playerId].Stockpile.TrySpend(info.Cost);
-        Map.Provinces[city.ProvinceId].Population -= info.Staff;
-        city.Training.Add(new TrainingOrder(level));
+        p.Population -= info.Staff;
+        p.Training.Add(new TrainingOrder(level));
         return CommandResult.Success($"Cuartel general de {Formations.LevelName(level).ToLowerInvariant()} en formación: {info.TrainingDays} días.");
     }
 
-    /// <summary>Every order a city is training advances a day; finished ones appear in the city.</summary>
+    /// <summary>Every order a province is training advances a day (not while occupied); finished ones appear in it.</summary>
     private void DailyTraining(Player player)
     {
-        foreach (var city in Cities.Where(c => c.OwnerId == player.Id && !Map.Provinces[c.ProvinceId].IsOccupied))
+        foreach (int id in player.Provinces)
         {
-            foreach (var order in city.Training.ToList())
+            var p = Map.Provinces[id];
+            if (p.Training.Count == 0 || p.IsOccupied) continue;
+            foreach (var order in p.Training.ToList())
             {
                 if (--order.DaysLeft > 0) continue;
-                city.Training.Remove(order);
-                var unit = order.Battalion is BattalionType ship && ship.Info().Naval ? AddFleet(player.Id, city.ProvinceId, ship)
-                    : order.Battalion is BattalionType type ? AddRegiment(player.Id, city.ProvinceId, type)
-                    : order.TemplateBattalions.Count > 0 ? AddRegiment(player.Id, city.ProvinceId, [.. order.TemplateBattalions])
-                    : AddHeadquarters(player.Id, city.ProvinceId, order.HeadquartersLevel);
-                if (player.IsHuman) Notify(player.Id, $"Nueva unidad en {city.Name}: {unit.Name} ({order.Name.ToLowerInvariant()}).");
+                p.Training.Remove(order);
+                var unit = order.Battalion is BattalionType ship && ship.Info().Naval ? AddFleet(player.Id, id, ship)
+                    : order.Battalion is BattalionType type ? AddRegiment(player.Id, id, type)
+                    : order.TemplateBattalions.Count > 0 ? AddRegiment(player.Id, id, [.. order.TemplateBattalions])
+                    : AddHeadquarters(player.Id, id, order.HeadquartersLevel);
+                if (player.IsHuman) Notify(player.Id, $"Nueva unidad en {PlaceName(p)}: {unit.Name} ({order.Name.ToLowerInvariant()}).");
             }
         }
     }
@@ -364,20 +385,21 @@ public sealed partial class GameSession
         return CommandResult.Success();
     }
 
-    public CommandResult CanTrainTemplate(City city, RegimentTemplate template) =>
-        CanRaiseTroops(city, template.Men, template.Cost, template.Requires, template.NeedsBarracks);
+    public CommandResult CanTrainTemplate(Province p, RegimentTemplate template) =>
+        CanRaiseTroops(p, template.Men, template.Cost, template.Requires, template.NeedsBarracks);
 
     /// <summary>Pays for every battalion of a template at once; they train side by side and form one regiment.</summary>
-    public CommandResult TrainTemplate(int playerId, int cityId, int templateId)
+    public CommandResult TrainTemplate(int playerId, int provinceId, int templateId)
     {
-        if (CityById(cityId) is not { } city || city.OwnerId != playerId) return CommandResult.Fail("Ciudad no válida.");
+        var p = Map.Provinces[provinceId];
+        if (p.OwnerId != playerId) return CommandResult.Fail("La provincia no es tuya.");
         if (TemplateById(Players[playerId], templateId) is not { } template) return CommandResult.Fail("Plantilla no válida.");
-        var check = CanTrainTemplate(city, template);
+        var check = CanTrainTemplate(p, template);
         if (!check.Ok) return check;
         Players[playerId].Stockpile.TrySpend(template.Cost);
-        Map.Provinces[city.ProvinceId].Population -= template.Men;
+        p.Population -= template.Men;
         int days = TrainingDays(Players[playerId], template);
-        city.Training.Add(new TrainingOrder(template, days));
+        p.Training.Add(new TrainingOrder(template, days));
         return CommandResult.Success($"{Formations.CombatName(template.Battalions.Count)} de la {template.Name} en instrucción: {days} días.");
     }
 

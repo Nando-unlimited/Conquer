@@ -129,9 +129,9 @@ public class EraTests(WorldFixture world)
         var (s, a) = WithCapital();
         var city = s.CityIn(a)!;
         a.AddBuilding(BuildingType.Barracks);
-        Assert.False(s.Train(0, city.Id, type).Ok);
+        Assert.False(s.Train(0, city.ProvinceId, type).Ok);
         s.Human.Learn(tech);
-        Assert.True(s.Train(0, city.Id, type).Ok);
+        Assert.True(s.Train(0, city.ProvinceId, type).Ok);
     }
 
     [Fact]

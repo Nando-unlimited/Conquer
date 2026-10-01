@@ -62,8 +62,8 @@ public class NavalTests(WorldFixture world)
         s.FoundCity(0, s.AddUnit(0, UnitType.Settlers, inland.Id, 300).Id);
         inland.Population = 3000;
 
-        Assert.Equal("Los barcos solo se construyen en ciudades con puerto.", s.CanTrain(s.CityIn(inland)!, BattalionType.Trireme).Message);
-        Assert.True(s.Train(0, s.CityIn(port)!.Id, BattalionType.Trireme).Ok);
+        Assert.Equal("Los barcos solo se construyen en ciudades con puerto.", s.CanTrain(inland, BattalionType.Trireme).Message);
+        Assert.True(s.Train(0, port.Id, BattalionType.Trireme).Ok);
         RunUntil(s, () => s.Units.Any(u => u.IsFleet));
 
         var fleet = s.Units.Single(u => u.IsFleet);
@@ -198,7 +198,7 @@ public class NavalTests(WorldFixture world)
         port.ClearBuildings();
 
         Assert.False(s.IsPort(port, 0));
-        Assert.False(s.CanTrain(s.CityIn(port)!, BattalionType.Trireme).Ok);
+        Assert.False(s.CanTrain(port, BattalionType.Trireme).Ok);
         Assert.False(s.CanUnitEnter(fleet, port.Id));
     }
 
@@ -209,11 +209,11 @@ public class NavalTests(WorldFixture world)
         var city = s.CityIn(port)!;
         s.Human.Learn(Tech.NavalEngineering);
 
-        Assert.StartsWith("Requiere dique seco", s.CanTrain(city, BattalionType.Destroyer).Message);
+        Assert.StartsWith("Requiere dique seco", s.CanTrain(port, BattalionType.Destroyer).Message);
         Assert.True(s.IsBuildingAvailable(port, BuildingType.DryDock).Ok);
         port.AddBuilding(BuildingType.DryDock);
-        Assert.True(s.CanTrain(city, BattalionType.Destroyer).Ok);
-        Assert.False(s.CanTrain(city, BattalionType.AircraftCarrier).Ok); // also needs aviation
+        Assert.True(s.CanTrain(port, BattalionType.Destroyer).Ok);
+        Assert.False(s.CanTrain(port, BattalionType.AircraftCarrier).Ok); // also needs aviation
     }
 
     [Fact]

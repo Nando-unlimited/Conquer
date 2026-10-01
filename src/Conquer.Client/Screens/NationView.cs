@@ -241,12 +241,12 @@ public sealed partial class NationView
                 _show(_session.RecruitSettlers(_player.Id, city.Id));
             x += bw + 4;
             var warriors = BattalionType.Warriors.Info();
-            var train = _session.CanTrain(city, BattalionType.Warriors);
+            var train = _session.CanTrain(p, BattalionType.Warriors);
             string trainTip = $"Entrena {Formations.BattalionName(warriors).ToLowerInvariant()} ({warriors.Men} hombres). Coste: {warriors.Cost}. " +
-                              TrainingDaysText(GameSession.TrainingDays(_player, BattalionType.Warriors), warriors.TrainingDays) + (city.Training.Count > 0 ? $"\nEn instrucción: {city.Training.Count}." : "") +
+                              TrainingDaysText(GameSession.TrainingDays(_player, BattalionType.Warriors), warriors.TrainingDays) + (p.Training.Count > 0 ? $"\nEn instrucción: {p.Training.Count}." : "") +
                               (train.Ok ? "" : "\n" + train.Message);
             if (ui.Button(new Rect(x, rowY + 3, bw, RowHeight - 6), warriors.Name, train.Ok, tooltip: trainTip, size: FontSize.Small))
-                _show(_session.Train(_player.Id, city.Id, BattalionType.Warriors));
+                _show(_session.Train(_player.Id, p.Id, BattalionType.Warriors));
             x = r.X + 8 + columns.Take(6).Sum(c => c.Width);
             ViewButton(ui, x, rowY, columns[6].Width, p.Id);
         }
@@ -282,7 +282,7 @@ public sealed partial class NationView
     }
 
     /// <summary>
-    /// What the province is building and its city is training: the first job with its days left, a bar with its
+    /// What the province is building and training: the first job with its days left, a bar with its
     /// progress and how many more there are, with all of them in the tooltip; a dash when nothing.
     /// </summary>
     private void Work(Ui ui, float x, float rowY, float w, Province p)
@@ -292,8 +292,7 @@ public sealed partial class NationView
             jobs.Add(("Obras", building.Info().Name, p.ConstructionDaysLeft, building.Info().Days));
         else if (p.PlannedCityName != null)
             jobs.Add(("Obras", $"Ciudad de {p.PlannedCityName}", p.ConstructionDaysLeft, GameRules.CityBuildingDays));
-        if (_session.CityIn(p) is { } city)
-            jobs.AddRange(city.Training.Select(o => ("Instrucción", o.Name, o.DaysLeft, o.TotalDays)));
+        jobs.AddRange(p.Training.Select(o => ("Instrucción", o.Name, o.DaysLeft, o.TotalDays)));
         if (jobs.Count == 0)
         {
             ui.Text(x, rowY + 6, "-", Theme.TextDim);
