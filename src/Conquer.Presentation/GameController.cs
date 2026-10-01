@@ -21,7 +21,7 @@ public readonly record struct CityNaming(int? UnitId, int ProvinceId);
 /// A game on screen, without the screen: the view (camera, map mode), what is selected, the open dialogs, the clock
 /// and the messages, and the player's orders. The client draws it and turns clicks and keys into calls here.
 /// </summary>
-public sealed class GameController
+public sealed partial class GameController
 {
     private int _seenNotifications;
 

@@ -35,14 +35,6 @@ public sealed partial class GameScreen
     /// <summary>The route being chosen, to draw on the map.</summary>
     private IReadOnlyList<int>? PlannedRoute => RoadWindowOpen ? _roadOptions.FirstOrDefault(o => o.Province == _roadTarget).Plan?.Route : null;
 
-    /// <summary>What to call a city or HQ at the end of a road: the player's city there, else their HQs there.</summary>
-    private string HubName(int provinceId)
-    {
-        var p = Map.Provinces[provinceId];
-        if (_session.CityIn(p) is { } city) return city.Name;
-        var hqs = _session.Units.Where(u => u.OwnerId == Human.Id && u.IsHeadquarters && u.ProvinceId == provinceId).Select(u => u.Name).ToList();
-        return hqs.Count > 0 ? string.Join(", ", hqs) : p.DisplayName;
-    }
 
     private void DrawRoadWindow()
     {
@@ -55,7 +47,7 @@ public sealed partial class GameScreen
         var panel = new Rect(16, TopBarHeight + 16, width, height);
         Ui.Panel(panel);
         float x = panel.X + 20, y = panel.Y + 18, w = panel.W - 40;
-        Ui.Text(x, y, $"{(info.Feminine ? "Nueva" : "Nuevo")} {info.Name.ToLowerInvariant()} desde {HubName(_roadFrom)}", Theme.Accent, FontSize.Large, bold: true);
+        Ui.Text(x, y, $"{(info.Feminine ? "Nueva" : "Nuevo")} {info.Name.ToLowerInvariant()} desde {_game.HubName(_roadFrom)}", Theme.Accent, FontSize.Large, bold: true);
         y += 38;
         Paragraph(x, ref y, w, "¿Qué ciudad o cuartel general quieres unir? La ruta es la que seguiría un ejército, aprovechando las carreteras que ya hay; " +
                                 "las ciudades por las que pasa quedan unidas también.", Theme.TextDim);
@@ -73,8 +65,8 @@ public sealed partial class GameScreen
             if (y + 28 > listBottom) break;
             shown++;
             string label = plan.NewLinks == 0
-                ? $"{HubName(province)}  ·  ya {(info.Feminine ? "unida" : "unido")}"
-                : $"{HubName(province)}  ·  {GameSession.FormatHours(plan.Hours)} de marcha  ·  {plan.NewLinks} tramos";
+                ? $"{_game.HubName(province)}  ·  ya {(info.Feminine ? "unida" : "unido")}"
+                : $"{_game.HubName(province)}  ·  {GameSession.FormatHours(plan.Hours)} de marcha  ·  {plan.NewLinks} tramos";
             if (Ui.Button(new Rect(x, y, w, 26), label, plan.NewLinks > 0, active: province == _roadTarget, size: FontSize.Small))
                 _roadTarget = province;
             y += 30;
@@ -98,7 +90,7 @@ public sealed partial class GameScreen
             Row("Trabajo", engineers > 1
                 ? $"{chosen.WorkDays} días de un batallón: unos {Math.Ceiling(chosen.WorkDays / (double)engineers):0} con los {engineers} que hay aquí"
                 : $"{chosen.WorkDays} días con un batallón de ingenieros", Theme.Text);
-            Row("Une también", chosen.CitiesOnTheWay.Count == 0 ? "ninguna otra ciudad" : string.Join(", ", chosen.CitiesOnTheWay.Select(HubName)), Theme.Text);
+            Row("Une también", chosen.CitiesOnTheWay.Count == 0 ? "ninguna otra ciudad" : string.Join(", ", chosen.CitiesOnTheWay.Select(_game.HubName)), Theme.Text);
         }
 
         var can = _roadTarget < 0 ? CommandResult.Fail("Elige adónde va.") : _session.CanBuildRoad(Human.Id, _roadFrom, _roadTarget, kind);

@@ -587,7 +587,7 @@ Mapa de la Tierra real, generado por `tools/Conquer.EarthData`. Se incluye dentr
 ## 3. `src/Conquer.Presentation` — presentación sin motor
 
 Lo que ve y hace el jugador, sin nada de Silk.NET, OpenGL ni ningún otro motor (un test lo comprueba). El cliente solo lo dibuja,
-así que cambiar de motor no lo toca. Tiene las piezas que ya eran independientes y el estado de la partida en pantalla (`GameController`); el resto de la lógica de las pantallas
+así que cambiar de motor no lo toca. Tiene las piezas que ya eran independientes, el estado de la partida en pantalla (`GameController`) y lo que muestran el panel lateral, las barras de arriba y abajo, el tooltip del mapa y el diálogo de ciudad, como documentos (`Document`); el resto de la lógica de las pantallas
 irá llegando aquí poco a poco.
 
 ### `Camera.cs`
@@ -628,7 +628,7 @@ irá llegando aquí poco a poco.
 Partidas guardadas en disco, en la carpeta `Partidas` junto al ejecutable (`Folder`). Si no se puede escribir en ella, en la carpeta de datos del usuario, donde iban antes de la 1.45.1: `~/.local/share/Conquer/Partidas` en Linux, `%LOCALAPPDATA%\Conquer\Partidas` en Windows y `~/Library/Application Support/Conquer/Partidas` en macOS. Al arrancar, las partidas que quedan allí se mueven a la del juego (`ChooseFolder`). Cada una es un fichero `.conquer` que se llama como la nación y la fecha de juego ("Kartesia - 5 feb 3999 a.C. 00h"). `List()` las devuelve de la más reciente a la más antigua; `Save(partida, versión)` escribe primero un fichero temporal y luego lo renombra, para no dejar nunca una partida a medio escribir; `Read(ruta)` y `Delete(partida)`.
 
 ### `GameController.cs`
-La partida en pantalla, sin pantalla: lo que se ve, lo seleccionado, los diálogos abiertos, el reloj, los mensajes y las órdenes del jugador. `GameScreen` lo dibuja y convierte clics y teclas en llamadas a él.
+La partida en pantalla, sin pantalla: lo que se ve, lo seleccionado, los diálogos abiertos, el reloj, los mensajes y las órdenes del jugador. `GameScreen` lo dibuja y convierte clics y teclas en llamadas a él. Clase parcial: los paneles y barras que construye están en `GameController.Province.cs`, `GameController.Unit.cs` y `GameController.Bars.cs`.
 
 | Elemento | Qué es |
 | --- | --- |
@@ -645,6 +645,46 @@ La partida en pantalla, sin pantalla: lo que se ve, lo seleccionado, los diálog
 | `OrderMove()` | Clic derecho: mueve la unidad seleccionada (o ataca); una orden propia detiene la exploración automática. |
 | `Save(versión)` | Guarda la partida y avisa de cómo fue. |
 | `Naming`, `CityName`, `OpenCityNaming`, `SuggestCityName`, `CancelCityNaming`, `ConfirmCityName` | Diálogo para nombrar una ciudad: propone un nombre, se puede cambiar o pedir otro, y al confirmar la funda o empieza la obra; si el nombre no vale, sigue abierto. |
+
+### `GameController.Province.cs`
+| Función | Qué hace |
+| --- | --- |
+| `SidePanel()` | El panel derecho como `Document`: el de la unidad seleccionada o el de la provincia, con `ClearSelection` como botón de cerrar; null si no hay nada seleccionado. |
+| `ProvincePanel`, `GeneralTab` | Nombre y pestañas General, Edificios y Ejército (esta solo donde se entrenan tropas o queda algo en instrucción). En General: terreno, superficie, altitud, río (con lo que da al pasar el ratón), dueño, población, humor (`MoodTooltip`: sus causas y su efecto en la producción), fertilidad, nacimientos, migrantes, recursos y yacimientos con lo que les queda; en tus ciudades, fiestas y colonos. |
+| `ForcedMigration` | Migración forzada: cuánta gente (−100, −10, +10, +100 y «Máx.», sin pasar de la que puede salir), su coste en oro y el botón para elegir el destino en el mapa. |
+| `BuildingsTab`, `TrainingImprovements`, `IsBuildingKnown` | Pestaña Edificios: la obra en curso (edificio o ciudad) con su barra, los edificios terminados (bajo el cuartel y el taller o la fábrica, las tropas que tus avances instruyen más rápido allí) y, en tus provincias, «Ciudad» y un botón por cada edificio que puedes levantar; los que solo necesitan ciudad o yacimiento dicen qué les falta, y los de avances sin descubrir no aparecen. El taller deja de ofrecerse cuando ya se construyen fábricas. |
+| `ArmyTab` | Pestaña Ejército: un aviso si falta el cuartel o el taller, las unidades de tus plantillas (las cuatro primeras), los batallones sueltos (los de avances sin descubrir no aparecen), los cuarteles generales y lo que está en instrucción, con su barra. |
+
+### `GameController.Unit.cs`
+| Función | Qué hace |
+| --- | --- |
+| `UnitPanel` | Panel de la unidad: tipo, nación, ubicación, estado (`UnitState`: «A bordo de…», «Combatiendo en el mar», «Hacia… (tiempo)», «Explorando»…) y, si es tuya, sus botones: «Editar unidad» (en unidades de combate, cuarteles y flotas; lanza `EditUnitRequested`), embarcar en una flota cercana con sitio (`EmbarkButtons`), fundar, reclamar, «Explorar y reclamar» en las de exploradores (una orden de movimiento o «Detener» lo quitan), licenciar o asentarse y detener. Una unidad embarcada explica cómo desembarcar. |
+| `EngineerButtons` | Con ingenieros: construir una carretera o un ferrocarril desde una ciudad o cuartel tuyo (lanza `RoadRequested`) y las obras que pasan por aquí, con «Cancelar obra». |
+| `RegimentDetails` | Suministro, velocidad, mando, oficial propio, general de su cuartel y experiencia media (en una flota: velocidad en el mar, si está en puerto y su carga), y cada batallón con sus barras de hombres y organización y, al pasar el ratón, su ataque, defensa, papel y experiencia. |
+| `HeadquartersDetails`, `CommandLine`, `OfficerLine`, `AttachButtons` | Alcance, general y subordinados de un cuartel (en rojo los que están fuera de alcance), de quién depende la unidad y botones para asignarla a uno de los tres cuarteles más cercanos del nivel de arriba o quitarla. |
+| `OfficerTooltip(oficial)`, `HubName(provincia)` | Los rasgos y estrellas de un oficial; el nombre de la ciudad o de los cuarteles de una provincia, para las carreteras. |
+
+### `GameController.Bars.cs`
+| Elemento | Qué es |
+| --- | --- |
+| `TopBar()`, `ResourceStock` | La barra superior: nación, población y humor medio, fecha, botones de velocidad, cada recurso conocido con su cantidad abreviada y su cambio del día, y la etiqueta del botón Nación (con «!» si alguna rama de la ciencia no investiga nada teniendo avances disponibles). |
+| `ModeNames`, `ModeButtons()`, `ResourceFilterButtons()` | Un botón por modo de mapa y, en el de recursos, «Todos» y uno por recurso conocido, que hacen de leyenda. |
+| `Hints()` | Las pistas de controles de abajo (otras mientras se elige el destino de una migración). |
+| `MapTooltip()` | El tooltip de la provincia bajo el ratón: nombre, terreno, dueño, río, población, humor y fertilidad, y sus yacimientos en el modo recursos o sus instituciones en el modo instituciones. |
+| `CityNamingDialog()` | El diálogo para nombrar una ciudad: título, dónde o cuánto cuesta, por qué no vale el nombre y la etiqueta de confirmar. |
+
+### `Document.cs`
+El contenido de un panel como datos, de arriba abajo, para que cualquier cliente lo dibuje igual. Las alturas y separaciones van en píxeles de interfaz.
+
+| Elemento | Qué es |
+| --- | --- |
+| `Tone`, `Ink`, `TextSize` | Qué significa un color (normal, tenue, desactivado, dorado, bueno, malo, río, batalla, hombres, organización y los fondos de las barras) o el color propio de una nación (`Ink.Nation`); `Ink.Mood` colorea un humor. Tres tamaños de letra. |
+| `Icon` (`ResourceIcon`, `BattalionIcon`) | Icono de un recurso o de un tipo de batallón. |
+| `Heading`, `Label`, `Paragraph` | Texto en negrita, una línea sin ajustar (con tooltip opcional) y un párrafo ajustado al ancho. |
+| `Info`, `Row` | Etiqueta y valor en dos columnas (con icono y tooltip opcionales); texto a la izquierda y a la derecha de una línea. |
+| `Button`, `ButtonRow`, `Stepper`, `LabelAndButton` | Un botón a todo el ancho con su acción, botones que se reparten una fila (pestañas), un número entre botones que lo bajan y suben, y una línea con un botón pequeño a la derecha. |
+| `Bar`, `Space` | Una barra de progreso y un hueco. |
+| `Document` | La lista de elementos y, si tiene, la acción de su botón de cerrar. |
 
 ---
 
@@ -696,29 +736,23 @@ La pantalla de juego. Clase parcial: el ejército en pantalla está en `GameScre
 | `DrawRivers()` | Dibuja los ríos con `RiverLayer` (con la vega verde solo en el modo terreno). Después, `RoadLayer` dibuja carreteras y ferrocarriles. |
 | `DrawCities()` | Cada ciudad como un grupo de casas con tejado del color de su nación (`MapIcons.City`: más casas cuanto más poblada, torre con bandera dorada en la capital), un poco más grandes con zoom, y su nombre debajo. |
 | `DrawPath(unidad, desde, seleccionada)` | Ruta como flecha verde (`PathArrow`) por el centro de cada provincia del camino, cruzando el borde del mapa por el lado corto: entera para la unidad seleccionada y más tenue para tus demás unidades en marcha. |
-| `DrawTopBar()` | Barra superior: nación, población y humor medio, fecha, velocidades, recursos conocidos (icono, cantidad y cambio del día; el nombre, en el tooltip) y botones «?» (ayuda), Nación (con «!» si alguna rama no investiga nada teniendo avances disponibles) y Menú (con números abreviados por `TextFormat.Compact`: 12,3k, 2,9M). |
-| `DrawSidePanel()`, `UnitPanel()`, `ProvincePanel()` | Panel derecho: datos y botones de la unidad o provincia seleccionada; el de provincia tiene pestañas General, Edificios y Ejército (humor y fertilidad, yacimientos con lo que les queda, fundar, fiestas, reclamar, asentarse, reclutar, migración forzada). |
-| `MoodTooltip(provincia)` | Tooltip del humor con sus causas y su efecto en la producción. |
-| `DrawCityNaming()` | Dibuja el diálogo de `GameController.Naming` para nombrar una ciudad al fundarla con colonos o al construirla: propone un nombre, se puede escribir otro o pedir otro al azar, avisa si no vale y la funda o empieza la obra (Intro confirma, Esc cancela). Mientras está abierto el tiempo se para y las teclas van a la caja de texto. |
-| `BuildingsPanel(...)` | Pestaña Edificios: la obra en curso (edificio o ciudad) con su barra, el botón «Ciudad» en provincias sin ciudad, los edificios terminados y, en tus provincias, un botón por cada edificio que puedes levantar; los que solo necesitan ciudad o yacimiento dicen qué les falta, y los de avances sin descubrir no aparecen (`IsBuildingKnown`). Bajo el cuartel y el taller (o la fábrica), `TrainingImprovements` lista las tropas que tus avances instruyen más rápido allí. El taller deja de ofrecerse cuando ya se construyen fábricas. |
-| `Line()`, `ResourceLine()`, `Paragraph()` | Ayudas para escribir filas (también con el icono de un recurso) y párrafos en el panel. |
-| `DrawBottomBar()`, `ModeBarWidth` | Modos de mapa (un botón de 120 píxeles por modo) y ayuda de controles (si no cabe, quita atajos del medio y deja siempre «F1: ayuda» al final) (la ayuda se oculta con la pantalla de la nación abierta). |
-| `DrawResourceFilter(barra)` | En el modo recursos, fila de botones para ver todos los yacimientos o solo uno de los recursos que conoces; hace de leyenda con el color de cada recurso. |
-| `DrawMessages()`, `HoverTooltip()` | Mensajes (`MessageLog`) en tiras redondeadas con una marca dorada (roja si algo falló) (más arriba si está abierto el filtro de recursos; con la pantalla de la nación abierta, solo el último, en la franja junto a los modos de mapa, con `DrawLatestMessageInStrip`) y tooltip de la provincia bajo el ratón (con sus yacimientos en el modo recursos y sus instituciones en el modo instituciones). |
+| `DrawTopBar()` | Dibuja la barra superior (`GameController.TopBar`): color y nombre de la nación, población y humor, fecha y velocidades, recursos (icono, cantidad y cambio del día) y los botones «?» (ayuda), Nación y Menú, que abren pantallas del cliente. |
+| `DrawSidePanel()` | Dibuja el panel derecho (`GameController.SidePanel`) con `DocumentView`, con su botón de cerrar. |
+| `DrawCityNaming()` | Dibuja el diálogo de `GameController.CityNamingDialog` para nombrar una ciudad al fundarla con colonos o al construirla: propone un nombre, se puede escribir otro o pedir otro al azar, avisa si no vale y la funda o empieza la obra (Intro confirma, Esc cancela). Mientras está abierto el tiempo se para y las teclas van a la caja de texto. |
+| `Paragraph()` | Escribe un párrafo ajustado al ancho (lo usa la ventana de carreteras). |
+| `DrawBottomBar()`, `ModeBarWidth` | Modos de mapa (`GameController.ModeButtons`, un botón de 120 píxeles por modo) y pistas de controles (`GameController.Hints`; si no caben, quita las del medio y deja siempre «F1: ayuda» al final; se ocultan con la pantalla de la nación abierta). |
+| `DrawResourceFilter(barra)` | En el modo recursos, la fila de `GameController.ResourceFilterButtons` sobre los modos de mapa. |
+| `DrawMessages()`, `HoverTooltip()` | Mensajes (`MessageLog`) en tiras redondeadas con una marca dorada (roja si algo falló) (más arriba si está abierto el filtro de recursos; con la pantalla de la nación abierta, solo el último, en la franja junto a los modos de mapa, con `DrawLatestMessageInStrip`) y tooltip de la provincia bajo el ratón (`GameController.MapTooltip`). |
 | `DrawPauseMenu()` | Menú de pausa (Esc): continuar, guardar la partida (`GameController.Save`), ayuda, historial de versiones, volver a la pantalla inicial o salir. |
 
 ### `Screens/GameScreen.Army.cs`
-El ejército en pantalla.
+El ejército en el mapa: fichas de las unidades y batallas. El panel de la unidad y la pestaña Ejército de la provincia los construye `GameController` (sección 3).
 
 | Función | Qué hace |
 | --- | --- |
 | `DrawNationNames()` | El nombre de cada nación sobre su tierra: en su centro (media circular de las longitudes), del tamaño que ocupa en pantalla, oculto si se ve muy pequeña y desvanecido al acercarse mucho. |
 | `DrawUnits()`, `DrawEchelon(...)`, `Bar(...)` (el símbolo, con `MapIcons.NatoSymbol`) | Fichas OTAN: dentro del marco, el símbolo de su arma (`Unit.Function`: aspa para infantería, aspa con raya vertical para la motorizada, aspa con óvalo para la mecanizada, barra diagonal para caballería y exploradores, óvalo para blindados, punto para artillería, puente para ingenieros y alas para aviación); encima, las marcas de tamaño (`Unit.Echelon`: III regimiento, X brigada, XX división, XXX cuerpo, XXXX ejército, XXXXX grupo de ejércitos); los cuarteles, con «HQ» dentro del marco; los colonos, un carromato (`MapIcons.Settlers`); las flotas llevan un casco bajo la letra de su barco y un punto por cada unidad a bordo, y las unidades embarcadas no se dibujan. Barras de hombres (verde) y organización (ámbar). Cada ficha lleva sombra, y el marco de la seleccionada late. Dibuja la ruta (`DrawPath`), la línea a su cuartel (verde si está a su alcance) y una flecha roja (`PathArrow`) al atacar. |
 | `DrawBattles()`, `DrawBattleMark(...)`, `BattleSummary(...)`, `NavalBattleSummary(...)` | Espadas cruzadas sobre cada batalla, en tierra o en el mar; al pasar el ratón, los dos bandos, su organización y el terreno; al hacer clic, la ventana de la batalla. |
-| `UnitPanel(...)`, `UnitState(...)`, `EmbarkButtons(...)`, `EngineerButtons(...)` | Panel de la unidad: tipo, nación, ubicación, estado («A bordo de…», «Combatiendo en el mar», «Explorando») y botones («Editar unidad» en unidades de combate, cuarteles y flotas; fundar, reclamar, «Explorar y reclamar» en las de exploradores (una orden de movimiento o «Detener» lo quitan), construir una carretera o un ferrocarril con ingenieros desde una ciudad o cuartel, las obras que pasan por aquí con «Cancelar obra», embarcar en una flota cercana con sitio, licenciar, detener). Una unidad embarcada explica cómo desembarcar. |
-| `RegimentDetails(...)` | Suministro, velocidad, mando, oficial propio, general de su cuartel y experiencia media (en una flota: velocidad en el mar, si está en puerto y su carga), y cada batallón con sus barras, su papel y experiencia al pasar el ratón. Separar y unir se hacen en la ventana de edición. |
-| `HeadquartersDetails(...)`, `CommandLine(...)`, `OfficerLine(...)`, `AttachButtons(...)` | Alcance, general (nombre y estrellas, con sus rasgos al pasar el ratón) y subordinados de un cuartel, de quién depende la unidad y botones para asignarla a un cuartel cercano o quitarla. |
-| `ArmyPanel(provincia)` | Pestaña Ejército de una provincia tuya con ciudad, cuartel o taller (o con algo en instrucción): un aviso si le falta el cuartel o el taller (este, si ya conoces la Maquinaria de asedio), regimientos que puedes entrenar de tus plantillas (las cuatro primeras), batallones que puedes entrenar (los de avances sin descubrir no aparecen), cuarteles generales y lo que está en instrucción, con los nombres de la época. |
 
 ### `Screens/GameScreen.UnitEditor.cs`
 La ventana para editar una unidad tuya (botón «Editar unidad» de su panel). El tiempo se para mientras está abierta.
@@ -729,7 +763,7 @@ La ventana para editar una unidad tuya (botón «Editar unidad» de su panel). E
 | `NameSection(...)`, `RenameEditedUnit()` | Caja de texto con el nombre, «Renombrar» (o Intro) y «Volver al nombre automático». |
 | `BattalionSection(...)` | Cada batallón o barco es un botón que se marca; «Separar los marcados» los saca juntos en una unidad nueva. |
 | `MergeSection(...)` | Botones para unir las demás unidades tuyas de la provincia, diciendo qué pasa con su oficial. |
-| `OfficerSection(...)`, `OfficerCard(...)`, `OfficerTooltip(...)` | El oficial al mando con sus rasgos (virtudes en verde, defectos en rojo) y «Relevar del mando»; la reserva, con «Asignar» y «Retirar» para cada oficial; y «Reclutar oficial». |
+| `OfficerSection(...)`, `OfficerCard(...)` | El oficial al mando con sus rasgos (virtudes en verde, defectos en rojo) y «Relevar del mando»; la reserva, con «Asignar» y «Retirar» para cada oficial; y «Reclutar oficial». Los rasgos al pasar el ratón salen de `GameController.OfficerTooltip`. |
 | `ShowSampleOfficers(unidad)` | Para `--panel edit`: recluta cuatro oficiales, pone el primero al mando y abre la ventana. |
 
 ### `Screens/GameScreen.Battle.cs`
@@ -751,7 +785,7 @@ La ventana para construir una carretera o un ferrocarril (botón de los ingenier
 | Función | Qué hace |
 | --- | --- |
 | `OpenRoadWindow(desde, tipo)`, `CloseRoadWindow()`, `DrawRoadWindow()` | A la izquierda, para que se vea la ruta: tus otras ciudades y cuarteles, del más cercano al más lejano (el más cercano que lo necesita ya elegido); los ya unidos, apagados; tramos nuevos, coste, trabajo y ciudades que une por el camino; «Construir» y «Cancelar» (o Esc). |
-| `PlannedRoute`, `HubName(provincia)` | La ruta elegida, que `RoadLayer` dibuja en el mapa; el nombre de la ciudad o de los cuarteles de una provincia. |
+| `PlannedRoute` | La ruta elegida, que `RoadLayer` dibuja en el mapa. Los nombres de las ciudades y cuarteles salen de `GameController.HubName`. |
 
 ### `Screens/NationView.Military.cs`
 Pestañas Ejército, Plantillas y Diplomacia de la pantalla de la nación.
@@ -858,11 +892,14 @@ Interfaz propia de "modo inmediato": los botones se declaran en cada fotograma y
 | --- | --- |
 | `Rect` | Rectángulo con `Contains` e `Inset`. |
 | `InputState` | Estado del ratón y del teclado en el fotograma. |
-| `Theme` | Colores de la interfaz, con los degradados de paneles y botones (`PanelTop`/`PanelBottom`, `ButtonTop`/`ButtonBottom`, `HoverTop`…, `ActiveTop`…), el brillo superior (`Highlight`) y los radios de las esquinas (`PanelRadius`, `ButtonRadius`). `Theme.Mood(humor, normal)` colorea un humor: rojo si hay descontento, verde si está contento. |
+| `Theme` | Colores de la interfaz, con los degradados de paneles y botones (`PanelTop`/`PanelBottom`, `ButtonTop`/`ButtonBottom`, `HoverTop`…, `ActiveTop`…), el brillo superior (`Highlight`) y los radios de las esquinas (`PanelRadius`, `ButtonRadius`). `Theme.Mood(humor, normal)` colorea un humor: rojo si hay descontento, verde si está contento. `River`, `Battle`, `Strength` y `Organisation` son el azul de los ríos, el rojo de las batallas y el verde y el ámbar de las barras de hombres y organización; `Theme.Of(tinta)` da el color de un `Ink` de Conquer.Presentation: el de una nación o el del tema para su tono. |
 | `Ui.Panel`, `Text`, `TextCentered`, `Button`, `Hover`, `Tooltip` | Piezas de la interfaz. Un panel lleva sombra, cuerpo en degradado, brillo arriba y borde redondeado (`radius`: 0 para la barra superior; `opaque` para las pantallas de la nación y la ayuda). Un botón tiene relieve, se ilumina bajo el ratón con borde dorado, es dorado si está activo, se hunde al pulsarlo y su texto lleva sombra. Los tooltips tienen sombra y una línea dorada arriba. |
 | `TextField(área, texto, máximo)` | Caja de texto de una línea: añade lo tecleado en el fotograma (`InputState.Chars`) y borra con Retroceso. Solo admite caracteres que la fuente sabe dibujar. |
 | `Ui.MouseOverUi`, `Block` | Si el ratón está sobre la interfaz (para no hacer clic en el mapa a través de un panel). |
 | `BeginFrame`, `EndFrame` | Empezar el fotograma / dibujar el tooltip al final. |
+
+### `UI/DocumentView.cs`
+`DocumentView.Draw(ui, documento, x, y, ancho)`: dibuja un `Document` de Conquer.Presentation de arriba abajo con las piezas de `Ui` y ejecuta la acción de los botones pulsados. `Press(ui, botón, área)` dibuja un botón suelto del modelo (velocidades, modos de mapa, filtro de recursos) con su icono; `Size` traduce los tamaños de letra.
 
 ### `UI/ChangelogView.cs`
 `ChangelogView`: muestra el historial (`Changelog`) en un panel con desplazamiento. `Layout` ajusta cada línea al ancho y le da tamaño y color según sea título, sección, viñeta o párrafo.
@@ -907,7 +944,7 @@ Uso: ver el README.
 | `DifficultyTests.cs` | En Muy difícil hay menos yacimientos, los mismos de la primera tirada y con la mitad de bolsa; el humano empieza con los recursos de su dificultad y los rivales con los normales; los rivales producen más ciencia en dificultades altas; la dificultad se guarda con la partida. `VeryHardWorldFixture` genera el mismo mundo en Muy difícil. |
 | `SaveGameTests.cs` | Cargar una partida y volver a guardarla da exactamente el mismo fichero; la partida cargada sigue jugándose; los mismos ajustes generan el mismo mapa; las partidas anteriores a la 1.13.0 reciben llenos los yacimientos nuevos; el mapa de los tests conserva su huella y cargan las partidas guardadas con la 1.30.1 y con la 1.31.0/1.32.0; las partidas anteriores a los talleres dan uno a cada cuartel cuyo dueño conoce la Maquinaria de asedio; se rechazan las partidas de otro mapa y las dañadas. |
 | `InterfaceTests.cs` | Los nombres se ordenan alfabéticamente en español (sin tildes, ñ tras n); el texto de la ayuda solo usa caracteres que la fuente sabe dibujar (Latin-1); `Conquer.Game` y `Conquer.Presentation` no dependen de ningún motor (ni Silk.NET, ni Stb, ni Godot, ni el cliente); el reloj reanuda a la velocidad que tenía; los mensajes salen del más nuevo al más antiguo y caducan; el historial empieza por la última versión, sin marcas de Markdown. Los tests no usan el cliente. |
-| `ControllerTests.cs` | La partida en pantalla sin pantalla: empieza con los colonos seleccionados y a la vista; seleccionar una provincia quita la unidad; el tiempo no corre congelado ni en pausa; nombrar una ciudad la funda con ese nombre y la selecciona, y un nombre no válido deja el diálogo abierto; el modo de mapa vuelve al terreno tras dar la vuelta. |
+| `ControllerTests.cs` | La partida en pantalla sin pantalla: empieza con los colonos seleccionados y a la vista; seleccionar una provincia quita la unidad; el tiempo no corre congelado ni en pausa; nombrar una ciudad la funda con ese nombre y la selecciona, y un nombre no válido deja el diálogo abierto; el modo de mapa vuelve al terreno tras dar la vuelta; el panel de los colonos ofrece fundar la ciudad; las pestañas de la capital cambian y su botón de cerrar quita la selección; la migración forzada no pide más gente de la que puede salir; los botones de velocidad de la barra superior ponen el reloj. |
 | `ReleaseTests.cs` | La versión del `.csproj` coincide con la primera entrada del `CHANGELOG.md`. |
 
 ---

@@ -4,6 +4,7 @@ using Conquer.Game.Entities;
 using Conquer.Game.Military;
 using Conquer.Game.Rules;
 using Conquer.Game.Simulation;
+using Conquer.Presentation;
 
 namespace Conquer.Client.Screens;
 
@@ -187,7 +188,7 @@ public sealed partial class GameScreen
             var row = new Rect(x, y, w - 150, 30);
             Ui.Text(x, y, officer.Title, Theme.Text, FontSize.Small, bold: true);
             Ui.Text(x, y + 15, officer.Summary, officer.Traits.Any(Officer.IsFlaw) ? Theme.TextDim : Theme.Good, FontSize.Small);
-            if (Ui.Hover(row)) Ui.Tooltip(OfficerTooltip(officer));
+            if (Ui.Hover(row)) Ui.Tooltip(GameController.OfficerTooltip(officer));
             if (Ui.Button(new Rect(x + w - 144, y + 2, 84, 26), "Asignar", size: FontSize.Small,
                     tooltip: officer.Rank < unit.RequiredRank ? $"Ascenderá a {Officer.RankName(unit.RequiredRank).ToLowerInvariant()}." : null))
                 _game.Show(_session.AssignOfficer(Human.Id, unit.Id, officer.Id));
@@ -212,7 +213,7 @@ public sealed partial class GameScreen
         Ui.Text(x, y, officer.Title, Theme.Accent, bold: true);
         string stars = new('*', officer.Skill);
         Ui.Text(x + w - Ui.Font.Measure(stars, FontSize.Normal, true), y, stars, Theme.Accent, bold: true);
-        if (Ui.Hover(new Rect(x, y, w, 22))) Ui.Tooltip(OfficerTooltip(officer));
+        if (Ui.Hover(new Rect(x, y, w, 22))) Ui.Tooltip(GameController.OfficerTooltip(officer));
         y += 24;
         foreach (var trait in officer.Traits)
         {
@@ -222,8 +223,4 @@ public sealed partial class GameScreen
         }
         y += 8;
     }
-
-    private static string OfficerTooltip(Officer officer) =>
-        $"{officer.Title}\n{officer.TraitsDescription}\n" +
-        $"{officer.Skill} de {Officer.MaxSkill} estrellas, {officer.Victories} victorias (una estrella más cada {Officer.VictoriesPerStar}); las virtudes mejoran con cada estrella.";
 }

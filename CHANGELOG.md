@@ -2,6 +2,11 @@
 
 Todos los cambios del juego, del más reciente al más antiguo. Cada versión es un commit cuyo título es su número.
 
+## [1.54.0] - 2026-10-01
+
+### Cambiado
+- **Código separado del motor gráfico** (tercer paso): lo que muestran el panel de la provincia (con sus pestañas General, Edificios y Ejército), el de la unidad, la barra superior, los modos de mapa, las pistas de controles, el tooltip del mapa y el diálogo para nombrar ciudades se construye en Conquer.Presentation como documentos (títulos, datos, párrafos, botones, barras); el cliente solo los dibuja. El juego se ve y funciona igual.
+
 ## [1.53.0] - 2026-10-01
 
 ### Cambiado

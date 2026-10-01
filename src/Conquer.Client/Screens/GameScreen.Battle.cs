@@ -149,7 +149,7 @@ public sealed partial class GameScreen
         StatRow(x, ref y, w, "Hombres", $"{side.Men:N0}", Theme.Text);
         StatRow(x, ref y, w, "Bajas", $"{losses:N0}", losses > 0 ? Theme.Bad : Theme.TextDim);
         StatRow(x, ref y, w, "Organización", $"{side.Organisation:P0}", side.Organisation < 0.25 ? Theme.Bad : Theme.Text);
-        Bar(new Rect(x, y, w, 6), side.Organisation, OrganisationColor);
+        Bar(new Rect(x, y, w, 6), side.Organisation, Theme.Organisation);
         // The point where a unit breaks: defenders retreat, attackers give up.
         Batch.Rect(x + w * (float)MilitaryRules.BreakingOrganisation, y - 2, 1, 10, Theme.Bad);
         y += 14;
@@ -208,8 +208,8 @@ public sealed partial class GameScreen
         Ui.Text(x, y, line, supplied ? Theme.TextDim : Theme.Bad, FontSize.Small);
         y += 17;
         float half = (w - 6) / 2;
-        Bar(new Rect(x, y, half, 4), unit.StrengthShare, StrengthColor);
-        Bar(new Rect(x + half + 6, y, half, 4), unit.OrganisationShare, OrganisationColor);
+        Bar(new Rect(x, y, half, 4), unit.StrengthShare, Theme.Strength);
+        Bar(new Rect(x + half + 6, y, half, 4), unit.OrganisationShare, Theme.Organisation);
         y += 10;
         if (Ui.Hover(row)) Ui.Tooltip(BattleUnitTooltip(unit, mine, attacking));
     }
@@ -302,7 +302,7 @@ public sealed partial class GameScreen
             StatRow(cx, ref cy, column, "Barcos", $"{fleets.Sum(f => f.Battalions.Count)}", Theme.Text);
             StatRow(cx, ref cy, column, "Tripulantes", $"{fleets.Sum(f => f.Citizens):N0}", Theme.Text);
             StatRow(cx, ref cy, column, "Organización", $"{organisation:P0}", organisation < 0.25 ? Theme.Bad : Theme.Text);
-            Bar(new Rect(cx, cy, column, 6), organisation, OrganisationColor);
+            Bar(new Rect(cx, cy, column, 6), organisation, Theme.Organisation);
             cy += 14;
             StatRow(cx, ref cy, column, "Fuego por hora", $"{fleets.Sum(GameSession.ExpectedNavalFire):0.#}", Theme.Text);
             cy += 8;
@@ -316,8 +316,8 @@ public sealed partial class GameScreen
                     Theme.TextDim, FontSize.Small);
                 cy += 17;
                 float half = (column - 6) / 2;
-                Bar(new Rect(cx, cy, half, 4), fleet.StrengthShare, StrengthColor);
-                Bar(new Rect(cx + half + 6, cy, half, 4), fleet.OrganisationShare, OrganisationColor);
+                Bar(new Rect(cx, cy, half, 4), fleet.StrengthShare, Theme.Strength);
+                Bar(new Rect(cx + half + 6, cy, half, 4), fleet.OrganisationShare, Theme.Organisation);
                 cy += 10;
             }
         }

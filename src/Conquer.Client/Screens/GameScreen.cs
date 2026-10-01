@@ -51,6 +51,8 @@ public sealed partial class GameScreen : IScreen
         session.OwnershipChanged += _ => _mapDirty = true;
         _nation = new NationView(session, session.Human, _game.ViewProvince, _game.ViewUnit, _game.Show);
         _renderer.IsResourceKnown = session.Human.Knows;
+        _game.EditUnitRequested += OpenUnitEditor;
+        _game.RoadRequested += OpenRoadWindow;
         if (!loaded) ApplyTestOptions(app.Options, _game.SelectedUnit!);
     }
 
@@ -258,8 +260,6 @@ public sealed partial class GameScreen : IScreen
 
     // ------------------------------------------------------------------ map markers
 
-    private static readonly Rgba RiverColor = new(0xFF3F7FC8);
-
     private void DrawRivers() => _rivers.Draw(Batch, _game.Camera, _game.Mode == MapMode.Terrain);
 
     /// <summary>
@@ -357,48 +357,34 @@ public sealed partial class GameScreen : IScreen
     private void DrawTopBar()
     {
         var s = _app.ScreenSize;
+        var bar = _game.TopBar();
         Ui.Panel(TopBarRect, radius: 0);
         float x = 12;
         Batch.Rect(x, 16, 24, 24, Rgba.Black);
-        Batch.Rect(x + 2, 18, 20, 20, new Rgba(Human.Color));
+        Batch.Rect(x + 2, 18, 20, 20, new Rgba(bar.Color));
         x += 32;
-        Ui.Text(x, 8, Human.Name, Theme.Text, FontSize.Normal, bold: true);
-        var stats = _session.Stats(Human);
-        double population = stats.Settled, mood = stats.AverageMood;
-        Ui.Text(x, 30, $"{population:N0} hab. · humor {mood:0}", Theme.Mood(mood, Theme.TextDim), FontSize.Small);
-        if (Ui.Hover(new Rect(x, 28, 150, 20)))
-            Ui.Tooltip($"{population:N0} habitantes\nHumor medio: {mood:0} ({GameRules.MoodName(mood)})");
+        Ui.Text(x, 8, bar.Nation, Theme.Text, FontSize.Normal, bold: true);
+        Ui.Text(x, 30, bar.People, Theme.Of(bar.PeopleInk), FontSize.Small);
+        if (Ui.Hover(new Rect(x, 28, 150, 20))) Ui.Tooltip(bar.PeopleTooltip);
         x += 150;
 
-        Ui.Text(x, 8, _session.Date.ToString(), Theme.Text);
-        string[] labels = ["||", "1", "2", "3", "4", "5"];
-        for (int i = 0; i < labels.Length; i++)
-        {
-            string tip = i == 0 ? "Pausa (Espacio)" : $"Velocidad {i}: {GameSession.FormatHours(GameClock.HoursPerSecond[i])} por segundo (tecla {i})";
-            if (Ui.Button(new Rect(x + i * 29, 30, 26, 20), labels[i], active: _game.Clock.Speed == i, tooltip: tip, size: FontSize.Small)) _game.Clock.SetSpeed(i);
-        }
+        Ui.Text(x, 8, bar.Date, Theme.Text);
+        for (int i = 0; i < bar.Speeds.Count; i++) DocumentView.Press(Ui, bar.Speeds[i], new Rect(x + i * 29, 30, 26, 20));
         x += 200;
 
-        foreach (var r in Resources.All.Where(Human.Knows))
+        foreach (var stock in bar.Resources)
         {
-            double amount = Human.Stockpile[r];
-            double net = Human.LastDayNet[(int)r];
             // The icon, the amount in store and, under it, the last day's change.
             var rect = new Rect(x, 4, 88, 48);
-            Icons.Resource(Batch, r, new System.Numerics.Vector2(x + 11, 28), 20);
-            Ui.Text(x + 26, 9, TextFormat.Compact(amount), r == ResourceType.Food && Human.IsStarving ? Theme.Bad : Theme.Text, FontSize.Normal, bold: true);
-            if (Math.Abs(net) >= 0.05)
-                Ui.Text(x + 26, 31, (net > 0 ? "+" : "") + TextFormat.Compact(net, decimals: true), net > 0 ? Theme.Good : Theme.Bad, FontSize.Small);
-            if (Ui.Hover(rect)) Ui.Tooltip($"{r.Name()}: {amount:N1}\nCambio en el último día: {net:+0.##;-0.##;0}");
+            Icons.Resource(Batch, stock.Resource, new Vector2(x + 11, 28), 20);
+            Ui.Text(x + 26, 9, stock.Amount, Theme.Of(stock.AmountInk), FontSize.Normal, bold: true);
+            if (stock.Change != null) Ui.Text(x + 26, 31, stock.Change, Theme.Of(stock.ChangeInk), FontSize.Small);
+            if (Ui.Hover(rect)) Ui.Tooltip(stock.Tooltip);
             x += 90;
             if (x > s.X - 330) break;
         }
 
-        // A branch with nothing chosen hands its science to the others, or leaves it waiting when none is researching.
-        bool idleScience = Human.CapitalCityId.HasValue && Techs.Branches.Any(b =>
-            Human.Researching[(int)b] is null && Techs.InBranch(b).Any(t => GameSession.CanResearch(Human, t).Ok));
-        string nationTip = idleScience ? "Gestionar el país (N)\nHay ramas de la ciencia sin investigación." : "Gestionar el país (N)";
-        if (Ui.Button(new Rect(s.X - 190, 12, 92, 32), idleScience ? "Nación !" : "Nación", active: _nation.Visible, tooltip: nationTip))
+        if (Ui.Button(new Rect(s.X - 190, 12, 92, 32), bar.NationButton, active: _nation.Visible, tooltip: bar.NationTooltip))
             _nation.Visible = !_nation.Visible;
         if (Ui.Button(new Rect(s.X - 230, 12, 34, 32), "?", active: _help.Visible, tooltip: "Ayuda (F1)")) _help.Visible = !_help.Visible;
         if (Ui.Button(new Rect(s.X - 90, 12, 78, 32), "Menú")) _menuOpen = true;
@@ -406,46 +392,17 @@ public sealed partial class GameScreen : IScreen
 
     private void DrawSidePanel()
     {
-        var unit = _game.SelectedUnit;
-        if (unit == null && _game.SelectedProvince < 0) return;
-
+        if (_game.SidePanel() is not { } doc) return;
         var s = _app.ScreenSize;
         var panel = new Rect(s.X - SidePanelWidth - 8, TopBarHeight + 8, SidePanelWidth, s.Y - TopBarHeight - 70);
         Ui.Panel(panel);
-        var y = panel.Y + 14;
-        float x = panel.X + 16, w = panel.W - 32;
-        if (Ui.Button(new Rect(panel.Right - 34, panel.Y + 8, 26, 24), "x", size: FontSize.Small))
+        if (doc.OnClose != null && Ui.Button(new Rect(panel.Right - 34, panel.Y + 8, 26, 24), "x", size: FontSize.Small))
         {
-            _game.ClearSelection();
+            doc.OnClose();
             return;
         }
-
-        if (unit != null) UnitPanel(unit, x, ref y, w);
-        else ProvincePanel(Map.Provinces[_game.SelectedProvince], x, ref y, w);
-    }
-
-    private void Line(float x, ref float y, string label, string value, Rgba? valueColor = null)
-    {
-        Ui.Text(x, y, label, Theme.TextDim);
-        Ui.Text(x + 130, y, value, valueColor ?? Theme.Text);
-        y += 24;
-    }
-
-    /// <summary>A <see cref="Line"/> headed by the resource's icon.</summary>
-    private void ResourceLine(float x, ref float y, ResourceType resource, string value, Rgba? valueColor = null)
-    {
-        Icons.Resource(Batch, resource, new System.Numerics.Vector2(x + 8, y + 10), 15);
-        Line(x, ref y, "      " + resource.Name(), value, valueColor);
-    }
-
-    /// <summary>Current mood, where it is heading and why, and what it does to the province.</summary>
-    private string MoodTooltip(Province p)
-    {
-        var factors = _session.MoodFactors(p).Select(f => $"{f.Points:+0;-0;0}  {f.Reason}");
-        string text = $"Humor {p.Mood:0}; tiende a {_session.TargetMood(p):0}.\n" + string.Join("\n", factors) +
-                      $"\nProducción ×{GameRules.MoodProductivity(p.Mood):0.00}";
-        if (p.Mood < GameRules.UnrestMood) text += "\nDescontento: no paga impuestos.";
-        return text;
+        float y = panel.Y + 14;
+        DocumentView.Draw(Ui, doc, panel.X + 16, ref y, panel.W - 32);
     }
 
     private void Paragraph(float x, ref float y, float w, string text, Rgba color, FontSize size = FontSize.Small)
@@ -457,266 +414,6 @@ public sealed partial class GameScreen : IScreen
         }
     }
 
-    private void ProvincePanel(Province p, float x, ref float y, float w)
-    {
-        var city = _session.CityIn(p);
-        Ui.Text(x, y, city?.Name ?? p.DisplayName, Theme.Accent, FontSize.Large, bold: true);
-        y += 36;
-        if (p.IsOwned)
-        {
-            string buildings = p.Constructing.HasValue || p.PlannedCityName != null ? $"Edificios ({p.Buildings.Count}+1)" : $"Edificios ({p.Buildings.Count})";
-            // Cities, barracks and workshops train troops; elsewhere the tab still shows what was left training.
-            bool army = p.OwnerId == Human.Id && (city != null || p.Has(BuildingType.Barracks) || p.Has(BuildingType.Workshop) || p.Training.Count > 0);
-            if (!army && _game.ProvinceTab == ProvinceTab.Army) _game.ProvinceTab = ProvinceTab.General;
-            string[] tabs = army ? ["General", buildings, p.Training.Count > 0 ? $"Ejército ({p.Training.Count})" : "Ejército"] : ["General", buildings];
-            float tw = (w - 6 * (tabs.Length - 1)) / tabs.Length;
-            for (int i = 0; i < tabs.Length; i++)
-                if (Ui.Button(new Rect(x + i * (tw + 6), y, tw, 28), tabs[i], active: (int)_game.ProvinceTab == i, size: FontSize.Small)) _game.ProvinceTab = (ProvinceTab)i;
-            y += 38;
-            if (_game.ProvinceTab == ProvinceTab.Buildings)
-            {
-                BuildingsPanel(p, x, ref y, w);
-                return;
-            }
-            if (_game.ProvinceTab == ProvinceTab.Army)
-            {
-                ArmyPanel(p, x, ref y, w);
-                return;
-            }
-        }
-        if (city != null) Line(x, ref y, "Provincia", p.DisplayName);
-        if (p.PlannedCityName != null) Line(x, ref y, "Ciudad en obras", p.PlannedCityName, Theme.Accent);
-        if (p.Name.Length > 0 || city != null) Line(x, ref y, "Terreno", p.Info.Name);
-        else if (p.IsClaimable) Line(x, ref y, "Nombre", "Sin reclamar", Theme.TextDim);
-        Line(x, ref y, "Superficie", $"{p.AreaKm2:N0} km²");
-        Line(x, ref y, "Altitud media", $"{p.MeanElevation:N0} m");
-        if (p.RiverFlow > 0)
-        {
-            var row = new Rect(x, y, w, 24);
-            Line(x, ref y, "Río", p.HasRiver ? "Gran río" : "Arroyo", p.HasRiver ? RiverColor : Theme.TextDim);
-            if (Ui.Hover(row))
-                Ui.Tooltip(p.HasRiver
-                    ? $"Tierra fértil: +{GameRules.RiverFertility - 1:P0} de comida y de capacidad.\nQuien ataque debe cruzarlo: el defensor dispara un {MilitaryRules.RiverDefense - 1:P0} más."
-                    : "Un arroyo: no cambia nada. Solo los grandes ríos fertilizan la tierra y protegen de los ataques.");
-        }
-
-        if (!p.IsClaimable)
-        {
-            y += 6;
-            Paragraph(x, ref y, w, p.IsWater
-                ? "Aguas abiertas: no se pueden reclamar y solo las unidades navales pueden navegarlas."
-                : "Hielo polar: inhabitable. No se puede reclamar, pero sí atravesar.", Theme.TextDim);
-            return;
-        }
-
-        if (p.IsOwned)
-        {
-            var owner = _session.Players[p.OwnerId];
-            Line(x, ref y, "Dueño", owner.Name, new Rgba(owner.Color));
-            Line(x, ref y, "Población", $"{p.Population:N0} / {_session.CapacityOf(p):N0}");
-            if (p.Population >= 1)
-            {
-                var row = new Rect(x, y, w, 24);
-                Line(x, ref y, "Humor", $"{p.Mood:0} · {GameRules.MoodName(p.Mood)}", Theme.Mood(p.Mood, Theme.Text));
-                if (Ui.Hover(row)) Ui.Tooltip(MoodTooltip(p));
-                row = new Rect(x, y, w, 24);
-                Line(x, ref y, "Fertilidad", $"{p.Fertility:P0}", p.Fertility < 0.75 ? Theme.Bad : p.Fertility >= 1.15 ? Theme.Good : Theme.Text);
-                if (Ui.Hover(row))
-                    Ui.Tooltip("Nacimientos respecto a lo normal. Sube con el buen humor, cae con el hambre y cambia despacio.\n" +
-                               $"Tiende a {_session.TargetFertility(p, owner, owner.IsStarving):P0}.");
-                Line(x, ref y, "Nacimientos", $"+{_session.DailyBirths(p, owner.IsStarving):0.##} al día", owner.IsStarving ? Theme.Bad : Theme.Text);
-            }
-            int incoming = _session.Migrations.Where(m => m.ToProvinceId == p.Id).Sum(m => m.People);
-            int outgoing = _session.Migrations.Where(m => m.FromProvinceId == p.Id).Sum(m => m.People);
-            var migrants = new Rect(x, y, w, 48);
-            Line(x, ref y, "Inmigrantes", $"{incoming:N0}", incoming > 0 ? Theme.Text : Theme.TextDim);
-            Line(x, ref y, "Emigrantes", $"{outgoing:N0}", outgoing > 0 ? Theme.Text : Theme.TextDim);
-            if (Ui.Hover(migrants))
-                Ui.Tooltip("Gente en camino hacia esta provincia y desde ella.\n" +
-                           $"Las ciudades de más de {GameRules.MinEmigrationCityPopulation} habitantes envían cada día un {GameRules.DailyEmigrationShare:P2} de su gente " +
-                           $"a tus provincias sin ciudad que no llegan al {GameRules.MigrationTargetShare:P0} de su capacidad.");
-        }
-        else
-        {
-            Line(x, ref y, "Dueño", "Nadie", Theme.TextDim);
-            Line(x, ref y, "Capacidad", $"{p.Capacity:N0} habitantes");
-        }
-
-        y += 6;
-        Ui.Text(x, y, "Recursos", Theme.Text, FontSize.Normal, bold: true);
-        y += 24;
-        double fed = p.FoodYield * GameRules.FoodPerWorker;
-        ResourceLine(x, ref y, ResourceType.Food, $"{fed * 1000:0} por mil hab./día");
-        if (p.Info.WoodYield > 0) ResourceLine(x, ref y, ResourceType.Wood, $"{p.Info.WoodYield:0.#} por mil hab./día");
-        foreach (var r in Resources.Deposits.Where(r => p.Deposits[(int)r] > 0 && Human.Knows(r)))
-        {
-            var row = new Rect(x, y, w, 24);
-            double left = p.Reserves[(int)r];
-            if (left <= 0) ResourceLine(x, ref y, r, "Agotado", Theme.TextDim);
-            else ResourceLine(x, ref y, r, $"{p.Deposits[(int)r]:0.0}/día · quedan {TextFormat.Compact(left)}");
-            if (Ui.Hover(row))
-                Ui.Tooltip(left <= 0 ? "Esta bolsa se ha agotado y ya no produce."
-                    : $"Bolsa de {r.Name().ToLowerInvariant()}: quedan {left:N0} de {p.DepositSizes[(int)r] * GameRules.DepositSizeMultiplier:N0}.\n" +
-                      $"Explotada al máximo ({GameRules.DepositFullWorkers:N0} habitantes) dura unos {left / p.Deposits[(int)r] / 365:0} años.");
-        }
-
-        if (p.OwnerId != Human.Id) return;
-
-        if (city != null)
-        {
-            y += 10;
-            Ui.Text(x, y, "Fiestas", Theme.Text, FontSize.Normal, bold: true);
-            y += 26;
-            var festival = _session.CanHoldFestival(city);
-            string festivalLabel = city.HasFestival(_session.Date.Hours)
-                ? $"De fiesta: quedan {GameSession.FormatHours(city.FestivalUntilHours - _session.Date.Hours)}"
-                : $"Celebrar fiestas ({GameRules.FestivalCost(p.Population):N0} oro)";
-            string festivalTip = $"+{GameRules.FestivalMood:0} al humor de la ciudad durante {GameRules.FestivalDays} días." +
-                                 (festival.Ok ? "" : "\n" + festival.Message);
-            if (Ui.Button(new Rect(x, y, w, 34), festivalLabel, festival.Ok, tooltip: festivalTip))
-                _game.Show(_session.HoldFestival(Human.Id, city.Id));
-            y += 40;
-
-            y += 10;
-            Ui.Text(x, y, "Colonos", Theme.Text, FontSize.Normal, bold: true);
-            y += 26;
-            var settlers = _session.CanRecruitSettlers(city);
-            string settlersTip = $"{GameRules.SettlerCitizens} ciudadanos salen de la ciudad para fundar otra. Coste: {GameRules.SettlersCost}." +
-                                 (settlers.Ok ? "" : "\n" + settlers.Message);
-            if (Ui.Button(new Rect(x, y, w, 34), $"Enviar colonos ({GameRules.SettlerCitizens} hab.)", settlers.Ok, tooltip: settlersTip))
-                _game.Show(_session.RecruitSettlers(Human.Id, city.Id));
-            y += 40;
-        }
-
-        if (p.Population >= 1)
-        {
-            y += 10;
-            Ui.Text(x, y, "Migración forzada", Theme.Text, FontSize.Normal, bold: true);
-            y += 26;
-            int keep = p.CityId.HasValue ? GameRules.MinCityPopulation : 0;
-            int max = Math.Max(1, (int)p.Population - keep);
-            _game.MigrationAmount = Math.Clamp(_game.MigrationAmount, 1, max);
-            float bw = (w - 80) / 4;
-            if (Ui.Button(new Rect(x, y, bw - 4, 28), "-100", size: FontSize.Small)) _game.MigrationAmount -= 100;
-            if (Ui.Button(new Rect(x + bw, y, bw - 4, 28), "-10", size: FontSize.Small)) _game.MigrationAmount -= 10;
-            Ui.TextCentered(new Rect(x + 2 * bw, y, 80, 28), _game.MigrationAmount.ToString("N0"), Theme.Text, FontSize.Normal, bold: true);
-            if (Ui.Button(new Rect(x + 2 * bw + 80, y, bw - 4, 28), "+10", size: FontSize.Small)) _game.MigrationAmount += 10;
-            if (Ui.Button(new Rect(x + 3 * bw + 80, y, bw - 4, 28), "+100", size: FontSize.Small)) _game.MigrationAmount += 100;
-            _game.MigrationAmount = Math.Clamp(_game.MigrationAmount, 1, max);
-            y += 34;
-            double cost = GameRules.ForcedMigrationCost(_game.MigrationAmount);
-            bool affordable = Human.Stockpile[ResourceType.Gold] >= cost;
-            Ui.Text(x, y, $"Coste: {cost:N0} de oro", affordable ? Theme.TextDim : Theme.Bad, FontSize.Small);
-            if (Ui.Button(new Rect(x + w - 60, y - 2, 60, 22), "Máx.", size: FontSize.Small)) _game.MigrationAmount = max;
-            y += 24;
-            string label = _game.ChoosingMigrationTarget ? "Elige el destino en el mapa..." : "Enviar a otra provincia";
-            if (Ui.Button(new Rect(x, y, w, 34), label, affordable && p.Population - keep >= 1, active: _game.ChoosingMigrationTarget,
-                    tooltip: "Haz clic en una de tus provincias. Los ciudadanos viajan a 10 km/h."))
-                _game.ChoosingMigrationTarget = !_game.ChoosingMigrationTarget;
-        }
-    }
-
-    /// <summary>The battalions the owner's military advances have a training building (barracks or workshop) train faster, and how much.</summary>
-    private void TrainingImprovements(BuildingType building, Player owner, float x, ref float y, float w)
-    {
-        var faster = Battalions.All.Where(t => t.TrainingBuilding() == building && t.Info().Requires.All(owner.Techs.Contains) && GameSession.TrainingSpeed(owner, t) > 0)
-            .Select(t => $"{t.Info().Name} -{1 - 1 / (1 + GameSession.TrainingSpeed(owner, t)):P0}").ToList();
-        if (faster.Count == 0) return;
-        foreach (var line in Ui.Font.Wrap("Instrucción más corta: " + string.Join(", ", faster) + ".", w, FontSize.Small))
-        {
-            Ui.Text(x, y, line, Theme.Good, FontSize.Small);
-            y += Ui.Font.LineHeight(FontSize.Small);
-        }
-        y += 6;
-    }
-
-    /// <summary>
-    /// The province's buildings: the one under construction, the finished ones and, in your own
-    /// provinces, a button for each building you can put up; the rest say what they are missing.
-    /// Buildings whose advance you have not discovered are not listed.
-    /// </summary>
-    private void BuildingsPanel(Province p, float x, ref float y, float w)
-    {
-        if (p.Constructing.HasValue || p.PlannedCityName != null)
-        {
-            var (name, days) = p.Constructing is BuildingType building
-                ? (building.Info().Name, building.Info().Days)
-                : ($"ciudad de {p.PlannedCityName}", GameRules.CityBuildingDays);
-            Ui.Text(x, y, $"En obras: {name}", Theme.Accent, bold: true);
-            y += 26;
-            float done = 1 - p.ConstructionDaysLeft / (float)days;
-            Batch.Rect(x, y, w, 8, Theme.ButtonDisabled);
-            Batch.Rect(x, y, w * done, 8, Theme.Accent);
-            y += 14;
-            Ui.Text(x, y, $"Quedan {p.ConstructionDaysLeft} días", Theme.TextDim, FontSize.Small);
-            y += 30;
-        }
-
-        Ui.Text(x, y, "Construidos", Theme.Text, bold: true);
-        y += 26;
-        if (p.Buildings.Count == 0)
-        {
-            Ui.Text(x, y, "Ninguno todavía.", Theme.TextDim, FontSize.Small);
-            y += 22;
-        }
-        foreach (var built in Buildings.All.Where(p.Buildings.Contains))
-        {
-            Ui.Text(x, y, built.Info().Name, Theme.Good);
-            y += 22;
-            Ui.Text(x + 10, y, built.Info().Description, Theme.TextDim, FontSize.Small);
-            y += 24;
-            // Barracks, and the workshop or the factory it became, list the troops they train faster.
-            var trains = built == BuildingType.Factory ? BuildingType.Workshop : built;
-            if (trains is BuildingType.Barracks or BuildingType.Workshop && p.OwnerId >= 0) TrainingImprovements(trains, _session.Players[p.OwnerId], x + 10, ref y, w - 10);
-        }
-
-        if (p.OwnerId != Human.Id) return;
-        y += 10;
-        Ui.Text(x, y, "Construir", Theme.Text, bold: true);
-        y += 26;
-        var missing = new List<(string Name, string Reason)>();
-        if (!p.CityId.HasValue && p.PlannedCityName == null)
-        {
-            var site = _session.IsCitySite(Human.Id, p);
-            if (!site.Ok) missing.Add(("Ciudad", site.Message));
-            else
-            {
-                var can = _session.CanBuildCity(Human.Id, p);
-                string tip = $"Los habitantes de la provincia levantan una ciudad con el nombre que elijas.\nCoste: {GameRules.CityCost}. Tarda {GameRules.CityBuildingDays} días."
-                    + (can.Ok ? "" : "\n" + can.Message);
-                if (Ui.Button(new Rect(x, y, w, 30), $"Ciudad  ·  {GameRules.CityCost}  ·  {GameRules.CityBuildingDays} d", can.Ok, tooltip: tip, size: FontSize.Small))
-                    _game.OpenCityNaming(null, p.Id);
-                y += 34;
-            }
-        }
-        // Buildings of advances not yet discovered stay out of the list altogether, and so do those replaced by something
-        // better (the workshop, once factories are known).
-        foreach (var type in Buildings.All.Where(t => !p.Buildings.Contains(t) && p.Constructing != t && IsBuildingKnown(t) && t.For(Human) == t))
-        {
-            var available = _session.IsBuildingAvailable(p, type);
-            if (!available.Ok)
-            {
-                missing.Add((type.Info().Name, available.Message));
-                continue;
-            }
-            var info = type.Info();
-            var can = _session.CanBuild(Human.Id, p, type);
-            string tip = $"{info.Description}\nCoste: {info.Cost}. Tarda {info.Days} días." + (can.Ok ? "" : "\n" + can.Message);
-            if (Ui.Button(new Rect(x, y, w, 30), $"{info.Name}  ·  {info.Cost}  ·  {info.Days} d", can.Ok, tooltip: tip, size: FontSize.Small))
-                _game.Show(_session.Build(Human.Id, p.Id, type));
-            y += 34;
-        }
-        if (missing.Count == 0) return;
-        y += 6;
-        foreach (var (name, reason) in missing)
-        {
-            Ui.Text(x, y, $"{name}: {reason.TrimEnd('.').ToLowerInvariant()}", Theme.TextDisabled, FontSize.Small);
-            y += 20;
-        }
-    }
-
-    private bool IsBuildingKnown(BuildingType type) => type.Info().RequiresTech is not Tech tech || Human.Techs.Contains(tech);
-
     /// <summary>One 120-pixel button per map mode.</summary>
     private static readonly float ModeBarWidth = Enum.GetValues<MapMode>().Length * 120 + 12;
 
@@ -725,58 +422,36 @@ public sealed partial class GameScreen : IScreen
         var s = _app.ScreenSize;
         var bar = new Rect(8, s.Y - 52, ModeBarWidth, 44);
         Ui.Panel(bar);
-        string[] names = ["Terreno", "Político", "Población", "Humor", "Fertilidad", "Recursos", "Instituciones"];
-        for (int i = 0; i < names.Length; i++)
-        {
-            if (Ui.Button(new Rect(bar.X + 6 + i * 120, bar.Y + 6, 114, 32), names[i], active: (int)_game.Mode == i, tooltip: "Modo de mapa (Tab)"))
-            {
-                _game.Mode = (MapMode)i;
-            }
-        }
-        if (_game.Mode == MapMode.Resources) DrawResourceFilter(bar);
+        var modes = _game.ModeButtons();
+        for (int i = 0; i < modes.Count; i++) DocumentView.Press(Ui, modes[i], new Rect(bar.X + 6 + i * 120, bar.Y + 6, 114, 32));
+        DrawResourceFilter(bar);
         // With the nation screen open this strip shows the latest message instead (see DrawMessages).
         if (_nation.Visible) return;
 
-        List<string> hints = _game.ChoosingMigrationTarget
-            ? ["Clic izquierdo: elegir provincia de destino", "Esc: cancelar"]
-            : ["Clic: seleccionar", "Arrastrar: mover mapa", "Clic dcho: mover unidad", "Rueda: zoom", "Espacio: pausa", "1-5: velocidad", "Inicio: tu capital", "F1: ayuda"];
+        var hints = _game.Hints();
+        var items = hints.Items.ToList();
         // On a narrow screen the hints before the last give way, so "F1: ayuda" always shows.
         float room = s.X - bar.Right - 32;
-        string help = string.Join("  ·  ", hints);
-        while (hints.Count > 2 && Ui.Font.Measure(help, FontSize.Small) > room)
+        string help = string.Join("  ·  ", items);
+        while (items.Count > 2 && Ui.Font.Measure(help, FontSize.Small) > room)
         {
-            hints.RemoveAt(hints.Count - 2);
-            help = string.Join("  ·  ", hints);
+            items.RemoveAt(items.Count - 2);
+            help = string.Join("  ·  ", items);
         }
         float hw = Ui.Font.Measure(help, FontSize.Small) + 20;
         Ui.Panel(new Rect(bar.Right + 6, s.Y - 44, hw, 30));
-        Ui.Text(bar.Right + 16, s.Y - 38, help, _game.ChoosingMigrationTarget ? Theme.Accent : Theme.TextDim, FontSize.Small);
+        Ui.Text(bar.Right + 16, s.Y - 38, help, Theme.Of(hints.Ink), FontSize.Small);
     }
 
     /// <summary>Row above the map modes that shows every deposit or only one resource; it doubles as the legend.</summary>
     private void DrawResourceFilter(Rect modes)
     {
         const float Bw = 96;
-        var known = Resources.Deposits.Where(Human.Knows).ToList();
-        var panel = new Rect(modes.X, modes.Y - 50, 12 + (known.Count + 1) * (Bw + 4) - 4, 44);
+        var buttons = _game.ResourceFilterButtons();
+        if (buttons.Count == 0) return;
+        var panel = new Rect(modes.X, modes.Y - 50, 12 + buttons.Count * (Bw + 4) - 4, 44);
         Ui.Panel(panel);
-        float x = panel.X + 6;
-        if (Ui.Button(new Rect(x, panel.Y + 6, Bw, 32), "Todos", active: _game.ResourceFilter is null,
-                tooltip: "Color del yacimiento principal de cada provincia", size: FontSize.Small))
-        {
-            _game.ResourceFilter = null;
-        }
-        foreach (var r in known)
-        {
-            x += Bw + 4;
-            var rect = new Rect(x, panel.Y + 6, Bw, 32);
-            if (Ui.Button(rect, "     " + r.Name(), active: _game.ResourceFilter == r,
-                    tooltip: $"Solo {r.Name().ToLowerInvariant()}: más intenso cuanto más queda en la bolsa", size: FontSize.Small))
-            {
-                _game.ResourceFilter = _game.ResourceFilter == r ? null : r;
-            }
-            Icons.Resource(Batch, r, new System.Numerics.Vector2(rect.X + 14, rect.Y + 16), 16);
-        }
+        for (int i = 0; i < buttons.Count; i++) DocumentView.Press(Ui, buttons[i], new Rect(panel.X + 6 + i * (Bw + 4), panel.Y + 6, Bw, 32));
     }
 
     private void DrawMessages()
@@ -826,22 +501,7 @@ public sealed partial class GameScreen : IScreen
 
     private void HoverTooltip()
     {
-        var p = Map.Provinces[_game.HoverProvince];
-        string owner = !p.IsClaimable ? "No reclamable" : p.IsOwned ? _session.Players[p.OwnerId].Name : "Sin dueño";
-        var city = _session.CityIn(p);
-        string text = (city != null ? $"{city.Name}  ·  {p.DisplayName}" : p.DisplayName)
-            + (p.Name.Length > 0 ? $"  ·  {p.Info.Name.ToLowerInvariant()}" : "") + $"  ·  {owner}";
-        if (p.HasRiver) text += "  ·  gran río";
-        if (p.IsOwned) text += $"\n{p.Population:N0} habitantes";
-        if (p.IsOwned && p.Population >= 1) text += $"\nHumor {p.Mood:0} ({GameRules.MoodName(p.Mood)})  ·  Fertilidad {p.Fertility:P0}";
-        if (_game.Mode == MapMode.Resources)
-            foreach (var r in Resources.Deposits.Where(r => p.Deposits[(int)r] > 0 && Human.Knows(r)))
-                text += p.HasDeposit(r) ? $"\n{r.Name()}: {p.Deposits[(int)r]:0.0}/día, quedan {TextFormat.Compact(p.Reserves[(int)r])}" : $"\n{r.Name()}: agotado";
-        if (_game.Mode == MapMode.Institutions)
-            text += p.Institutions.Count > 0 ? "\n" + string.Join(", ", Institutions.All.Where(p.Institutions.Contains).Select(i => i.Info().Name))
-                : Institutions.All.Any(_session.IsBorn) ? "\nSin instituciones" : "\nTodavía no ha nacido ninguna institución";
-        if (_game.ChoosingMigrationTarget) text += "\nClic para enviar aquí a los migrantes";
-        Ui.Tooltip(text);
+        if (_game.MapTooltip() is { } tip) Ui.Tooltip(tip);
     }
 
     private void DrawPauseMenu()
@@ -865,31 +525,27 @@ public sealed partial class GameScreen : IScreen
     /// <summary>Modal dialog: the city's name, suggested and editable, and whether it is free.</summary>
     private void DrawCityNaming()
     {
-        var (unitId, provinceId) = _game.Naming!.Value;
+        if (_game.CityNamingDialog() is not { } dialog) return;
         var s = _app.ScreenSize;
         Batch.Rect(0, 0, s.X, s.Y, Rgba.Black.WithAlpha(0.45f));
         Ui.Block(new Rect(0, 0, s.X, s.Y));
         var panel = new Rect(s.X / 2 - 230, s.Y / 2 - 130, 460, 250);
         Ui.Panel(panel);
         float x = panel.X + 24, y = panel.Y + 20, w = panel.W - 48;
-        Ui.Text(x, y, unitId.HasValue ? "Fundar ciudad" : "Construir ciudad", Theme.Accent, FontSize.Large, bold: true);
+        Ui.Text(x, y, dialog.Title, Theme.Accent, FontSize.Large, bold: true);
         y += 34;
-        string where = unitId.HasValue
-            ? $"Los colonos fundarán la ciudad en {Map.Provinces[provinceId].DisplayName}."
-            : $"Coste: {GameRules.CityCost}. Estará lista en {GameRules.CityBuildingDays} días.";
-        Ui.Text(x, y, where, Theme.TextDim, FontSize.Small);
+        Ui.Text(x, y, dialog.Detail, Theme.TextDim, FontSize.Small);
         y += 26;
         Ui.Text(x, y, "Nombre de la ciudad", Theme.Text);
         y += 24;
         _game.CityName = Ui.TextField(new Rect(x, y, w - 130, 36), _game.CityName, GameRules.MaxCityNameLength);
         if (Ui.Button(new Rect(x + w - 120, y, 120, 36), "Otro nombre", size: FontSize.Small)) _game.SuggestCityName();
         y += 42;
-        var check = _session.CheckCityName(_game.CityName);
-        if (!check.Ok) Ui.Text(x, y, check.Message, Theme.Bad, FontSize.Small);
+        if (dialog.Error != null) Ui.Text(x, y, dialog.Error, Theme.Bad, FontSize.Small);
 
         float by = panel.Bottom - 56, bw = (w - 12) / 2;
         if (Ui.Button(new Rect(x, by, bw, 40), "Cancelar")) _game.CancelCityNaming();
-        if (Ui.Button(new Rect(x + bw + 12, by, bw, 40), unitId.HasValue ? "Fundar" : "Construir", check.Ok)) _game.ConfirmCityName();
+        if (Ui.Button(new Rect(x + bw + 12, by, bw, 40), dialog.Confirm, dialog.Error == null)) _game.ConfirmCityName();
     }
 
     public void Dispose() => _renderer.Dispose();

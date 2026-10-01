@@ -1,6 +1,7 @@
 using System.Numerics;
 using Conquer.Client.Graphics;
 using Conquer.Game.Rules;
+using Conquer.Presentation;
 
 namespace Conquer.Client.UI;
 
@@ -62,9 +63,31 @@ public static class Theme
     public const float PanelRadius = 8;
     public const float ButtonRadius = 4;
 
+    public static readonly Rgba River = new(0xFF3F7FC8);
+    public static readonly Rgba Battle = new(0xFFE04A3A);
+    public static readonly Rgba Strength = new(0xFF6FBF5A);
+    public static readonly Rgba Organisation = new(0xFFE0B656);
+
     /// <summary>Red in unrest, green when content, <paramref name="normal"/> in between.</summary>
     public static Rgba Mood(double mood, Rgba normal) =>
         mood < GameRules.UnrestMood ? Bad : GameRules.MoodLevel(mood) == 3 ? Good : normal;
+
+    /// <summary>The colour of a presentation <see cref="Ink"/>: a nation's own, or the theme's for its tone.</summary>
+    public static Rgba Of(Ink ink) => ink.Color != 0 ? new Rgba(ink.Color) : ink.Tone switch
+    {
+        Tone.Dim => TextDim,
+        Tone.Disabled => TextDisabled,
+        Tone.Accent => Accent,
+        Tone.Good => Good,
+        Tone.Bad => Bad,
+        Tone.River => River,
+        Tone.Battle => Battle,
+        Tone.Strength => Strength,
+        Tone.Organisation => Organisation,
+        Tone.Track => Rgba.Black.WithAlpha(0.7f),
+        Tone.Groove => ButtonDisabled,
+        _ => Text,
+    };
 }
 
 /// <summary>
