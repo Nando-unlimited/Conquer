@@ -92,6 +92,7 @@ internal sealed partial class AiPlayer
             else if (unit.IsMilitary && !GoHomeIfCutOff(unit)) TakeWinterQuarters(unit);
         }
         foreach (int id in _targets.Keys.Where(id => _session.UnitById(id) is null).ToList()) _targets.Remove(id);
+        if (atWar) Invade();
 
         if (dailyDecisions)
         {

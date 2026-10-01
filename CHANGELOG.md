@@ -2,6 +2,16 @@
 
 Todos los cambios del juego, del más reciente al más antiguo. Cada versión es un commit cuyo título es su número.
 
+## [1.65.0] - 2026-10-01
+
+### Añadido
+- **Los rivales invaden por mar.** Hasta ahora no sabían embarcar, así que en los mapas donde cada nación tiene su continente nunca había guerras entre ellos. Ahora, con un puerto y transportes:
+  - También declaran la guerra a naciones de ultramar: con Navegación a vela, a costas a menos de 1.500 km de sus puertos; con Cartografía, hasta 8.000 km. Piden algo más de ventaja que contra un vecino por tierra.
+  - En esas guerras reúnen en su mayor puerto hasta 4 regimientos (la mitad de su ejército) y construyen transportes hasta que quepan todos.
+  - Embarcan, navegan hasta la costa enemiga peor defendida, desembarcan y combaten allí. Los barcos vuelven a puerto.
+  - Si no encuentran ruta a ninguna costa enemiga, las tropas vuelven a tierra.
+  - En una partida de prueba en un mapa aleatorio, desde el año 22 hubo 6 guerras de ultramar con desembarcos y 4 tratados con cesiones de provincias.
+
 ## [1.64.0] - 2026-10-01
 
 ### Añadido

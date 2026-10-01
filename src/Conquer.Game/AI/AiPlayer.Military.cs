@@ -312,9 +312,12 @@ internal sealed partial class AiPlayer
         if (_random.Next(WarChanceDays) != 0) return;
         double power = _session.MilitaryPower(_player.Id);
         if (power <= 0) return;
-        var victim = Neighbours()
-            .Where(n => _session.CanDeclareWar(_player.Id, n).Ok)
-            .Select(n => (Id: n, Odds: _session.MilitaryPower(n) / power / WarAppetite(n)))
+        // Neighbours by land, and those across the sea if it can carry an army there (it asks for more advantage).
+        var candidates = Neighbours().Select(n => (Id: n, Appetite: WarAppetite(n)));
+        if (CanInvade()) candidates = candidates.Concat(OverseasNeighbours().Select(n => (Id: n, Appetite: WarAppetite(n) - OverseasAppetitePenalty)));
+        var victim = candidates
+            .Where(t => t.Appetite > 0 && _session.CanDeclareWar(_player.Id, t.Id).Ok)
+            .Select(t => (t.Id, Odds: _session.MilitaryPower(t.Id) / power / t.Appetite))
             .Where(t => t.Odds < 1)
             .OrderBy(t => t.Odds).Select(t => (int?)t.Id).FirstOrDefault();
         if (victim is int target) _session.DeclareWar(_player.Id, target);

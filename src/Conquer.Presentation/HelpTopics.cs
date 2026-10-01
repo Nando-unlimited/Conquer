@@ -147,6 +147,7 @@ public static class HelpTopics
             "- Ceder: entregas lo que te ocupan para acabar una guerra perdida.",
             $"- Tras cada paz hay una tregua de {GameRules.TruceDays} días: ninguno de los dos puede declarar la guerra al otro.",
             "- Los rivales atacan a vecinos que creen poder vencer, más aún si se han quedado sin tierra libre, si el vecino ya está en otra guerra o si gobierna gente de su cultura.",
+            "- Con puertos y transportes, también cruzan el mar: reúnen tropas en su mayor puerto, embarcan y desembarcan en tu costa peor defendida. Con Navegación a vela llegan a costas cercanas; con Cartografía, al otro lado del océano.",
         ]),
         ("Mapa",
         [

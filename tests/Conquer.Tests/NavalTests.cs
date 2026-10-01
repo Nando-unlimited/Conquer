@@ -240,4 +240,30 @@ public class NavalTests(WorldFixture world)
 
         Assert.Equal(Repaired(dock: false) * MilitaryRules.DryDockRepair, Repaired(dock: true), 6);
     }
+
+    [Fact]
+    public void ComputerRivalsInvadeAcrossTheSea()
+    {
+        var (port, _, landing) = Coast();
+        var s = GameSession.Create(_map, 2, seed: 7);
+        var rival = s.Players[1];
+        s.FoundCity(1, s.AddUnit(1, UnitType.Settlers, port.Id, 300).Id);
+        port.Population = 3000;
+        port.AddBuilding(BuildingType.Port);
+        rival.Learn(Tech.Navigation);
+        foreach (var r in Resources.All) rival.Stockpile[r] = 5000;
+        var regiment = s.AddRegiment(1, port.Id, BattalionType.Warriors);
+        s.AddFleet(1, port.Id, BattalionType.Transport);
+        // The human holds the coast across the sea, with no border with the rival.
+        var scouts = s.AddRegiment(0, landing.Id, BattalionType.Scouts);
+        s.Claim(0, scouts.Id);
+        s.Disband(0, scouts.Id);
+
+        s.DeclareWar(1, 0);
+        RunUntil(s, () => landing.ControllerId == 1, 24 * 30);
+
+        Assert.Equal(1, landing.ControllerId);
+        Assert.Equal(landing.Id, regiment.ProvinceId);
+        Assert.False(regiment.IsAboard);
+    }
 }

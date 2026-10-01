@@ -506,8 +506,19 @@ El ejército de un rival.
 | `GoHomeIfCutOff(unidad)`, `IsEnemyLand(provincia)` | Un regimiento sin suministro vuelve a la capital. |
 | `TakeWinterQuarters(unidad)` | En paz, un regimiento que pierde hombres por el frío o el desierto se refugia en su ciudad más cercana, salvo si guarda una provincia descontenta. |
 | `KeepOrder()`, `GarrisonedRevoltRisk` | En paz, manda el regimiento libre más cercano de su ejército a cada provincia sin guarnición que pasa del 25 % de rebelión; los que ya guardan una provincia descontenta se quedan. |
-| `Diplomacy()`, `Neighbours()`, `WarAppetite(vecino)`, `HasFreeLandNearby()` | Tras dos años, cada día tiene una entre 60 de pensar en una guerra: ataca al vecino más débil (sin tregua) cuyo poder no pase de su apetito por el suyo. El apetito es su carácter (`_aggression`, de 0,8 a 1,1, fijo por semilla), +0,3 si ya no tiene tierra libre junto a la suya, +0,3 si el vecino ya está en guerra y +0,2 si gobierna gente de su cultura. En guerra con otro rival, tras 60 días le exige lo que ocupa si la puntuación lo paga, y le propone la paz blanca cuando la guerra se alarga y va mal. |
+| `Diplomacy()`, `Neighbours()`, `WarAppetite(vecino)`, `HasFreeLandNearby()` | Tras dos años, cada día tiene una entre 60 de pensar en una guerra: ataca al vecino más débil (sin tregua) cuyo poder no pase de su apetito por el suyo; si puede invadir por mar (`CanInvade`), también a las naciones de ultramar (`OverseasNeighbours`), con 0,2 menos de apetito. El apetito es su carácter (`_aggression`, de 0,8 a 1,1, fijo por semilla), +0,3 si ya no tiene tierra libre junto a la suya, +0,3 si el vecino ya está en guerra y +0,2 si gobierna gente de su cultura. En guerra con otro rival, tras 60 días le exige lo que ocupa si la puntuación lo paga, y le propone la paz blanca cuando la guerra se alarga y va mal. |
 | `WouldAcceptPeace(otro, términos)`, `Winning(otro)` | Acepta siempre que le entreguen tierras; cede lo que le ocupan si no va ganando o si la puntuación del enemigo pasa de 50; la paz blanca, tras 60 días si no va ganando (o tras un año). Va ganando si su ejército es mucho más fuerte y ocupa más de lo que ha perdido. |
+
+### `AI/AiPlayer.Naval.cs`
+Invasiones por mar. No guarda nada entre días: cada paso sale de dónde están las tropas y los barcos.
+
+| Función | Qué hace |
+| --- | --- |
+| `StagingPort()`, `TransportType(puerto)`, `CanInvade()` | Su mayor ciudad con puerto (donde se reúne la invasión), el transporte con más sitio que puede construir allí, y si puede invadir (tiene puerto y sabe construir transportes). |
+| `OverseasNeighbours()`, `IsCoast(provincia)` | Naciones sin frontera con la suya cuya costa está al alcance de sus puertos: 1.500 km con Navegación a vela, 8.000 km con Cartografía. |
+| `Invade()` | En guerra con un enemigo sin frontera: reúne en el puerto hasta 4 regimientos (la mitad de su ejército), construye transportes hasta que quepan, embarca, zarpa cuando están todos y desembarca; los barcos vacíos vuelven al puerto. Si no hay ruta a ninguna costa enemiga, las tropas vuelven a tierra. |
+| `Land(flota, carga, enemigos)` | Desembarca todo en la costa enemiga junto a la flota sin tropas enemigas, la más valiosa (`ProvinceValue`). |
+| `SailToLanding(flota, enemigos)` | Navega hasta el mar junto a la costa enemiga peor defendida (y, a igualdad, la más cercana); falso si no encuentra ruta. |
 
 ### `World/Biome.cs`
 | Elemento | Qué es |
