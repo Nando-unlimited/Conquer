@@ -89,7 +89,7 @@ internal sealed partial class AiPlayer
             else if (IsEngineerUnit(unit)) GuideEngineers(unit);
             else if (atWar) GuideSoldier(unit);
             else if (_claimers.Contains(unit.Id)) GuideWarriors(unit);
-            else if (unit.IsMilitary) GoHomeIfCutOff(unit);
+            else if (unit.IsMilitary && !GoHomeIfCutOff(unit)) TakeWinterQuarters(unit);
         }
         foreach (int id in _targets.Keys.Where(id => _session.UnitById(id) is null).ToList()) _targets.Remove(id);
 

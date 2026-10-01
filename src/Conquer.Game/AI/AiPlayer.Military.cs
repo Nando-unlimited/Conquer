@@ -264,6 +264,20 @@ internal sealed partial class AiPlayer
         }
     }
 
+    /// <summary>
+    /// In peace, a regiment losing men to the cold or the desert shelters in its nation's nearest city, unless it is
+    /// holding down a restless province.
+    /// </summary>
+    private void TakeWinterQuarters(Unit unit)
+    {
+        var here = Map.Provinces[unit.ProvinceId];
+        if (unit.IsMoving || unit.IsAboard || _session.DailyAttrition(unit) <= 0) return;
+        if (here.OwnerId == _player.Id && here.Mood < GameRules.UnrestMood) return;
+        var city = _session.Cities.Where(c => c.OwnerId == _player.Id && !Map.Provinces[c.ProvinceId].IsOccupied)
+            .OrderBy(c => Map.DistanceKm(here, Map.Provinces[c.ProvinceId])).FirstOrDefault();
+        if (city != null) _session.MoveUnit(_player.Id, unit.Id, city.ProvinceId);
+    }
+
     /// <summary>A regiment out of supply walks back to the capital before hunger and desertion finish it.</summary>
     private bool GoHomeIfCutOff(Unit unit)
     {

@@ -32,6 +32,8 @@ public sealed partial class GameScreen : IScreen
 
     private bool _mapDirty = true, _dragging;
     private long _lastRefreshDay = -1;
+    /// <summary>The month the map was last coloured in: the terrain map shows the winter snow.</summary>
+    private int _lastRefreshMonth = -1;
 
     private Ui Ui => _app.Ui;
     private Batch2D Batch => _app.Batch;
@@ -113,11 +115,13 @@ public sealed partial class GameScreen : IScreen
             _renderer.ResourceFilter = _game.ResourceFilter;
             _mapDirty = true;
         }
-        if (_mapDirty || (_game.Mode >= MapMode.Population &&_session.Date.Days != _lastRefreshDay))
+        if (_mapDirty || (_game.Mode >= MapMode.Population && _session.Date.Days != _lastRefreshDay)
+            || (_game.Mode == MapMode.Terrain && _session.Date.MonthAndDay.Month != _lastRefreshMonth))
         {
             _renderer.Refresh(_session);
             _mapDirty = false;
             _lastRefreshDay = _session.Date.Days;
+            _lastRefreshMonth = _session.Date.MonthAndDay.Month;
         }
 
         var mouseMap = _game.Camera.ScreenToMap(Ui.Input.Mouse);

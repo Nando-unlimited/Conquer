@@ -46,9 +46,17 @@ public sealed partial class GameController
         bool idleScience = Human.CapitalCityId.HasValue && Techs.Branches.Any(b =>
             Human.Researching[(int)b] is null && Techs.InBranch(b).Any(t => GameSession.CanResearch(Human, t).Ok));
         return new TopBar(Human.Name, Human.Color, $"{population:N0} hab. · moral {mood:0}", Ink.Mood(mood, Tone.Dim),
-            $"{population:N0} habitantes\nMoral media: {mood:0} ({GameRules.MoodName(mood)})", Session.Date.ToString(), speeds, resources,
+            $"{population:N0} habitantes\nMoral media: {mood:0} ({GameRules.MoodName(mood)})", Session.Date + SeasonAtHome(), speeds, resources,
             idleScience ? "Nación !" : "Nación",
             idleScience ? "Gestionar el país (N)\nHay ramas de la ciencia sin investigación." : "Gestionar el país (N)");
+    }
+
+    /// <summary>The season at the capital (or where the first settlers wait), after the date; the hemisphere decides it.</summary>
+    private string SeasonAtHome()
+    {
+        int? home = Human.CapitalCityId is int id && Session.CityById(id) is { } capital ? capital.ProvinceId
+            : Session.Units.FirstOrDefault(u => u.OwnerId == Human.Id)?.ProvinceId;
+        return home is int h ? " · " + GameSession.SeasonNames[(int)Session.SeasonOf(Map.Provinces[h])].ToLowerInvariant() : "";
     }
 
     /// <summary>One button per map mode.</summary>
@@ -83,6 +91,7 @@ public sealed partial class GameController
         string text = (city != null ? $"{city.Name}  ·  {p.DisplayName}" : p.DisplayName)
             + (p.Name.Length > 0 ? $"  ·  {p.Info.Name.ToLowerInvariant()}" : "") + $"  ·  {owner}";
         if (p.HasRiver) text += "  ·  gran río";
+        if (p.IsClaimable && Session.SeasonEffect(p) is { } season) text += "\n" + season;
         if (p.IsOwned) text += $"\n{p.Population:N0} habitantes";
         if (p.IsOwned && p.Population >= 1) text += $"\nMoral {p.Mood:0} ({GameRules.MoodName(p.Mood)})  ·  Fertilidad {p.Fertility:P0}";
         if (Mode == MapMode.Resources)

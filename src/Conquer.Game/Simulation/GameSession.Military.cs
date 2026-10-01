@@ -87,7 +87,9 @@ public sealed partial class GameSession
         : player.Techs.Contains(Tech.Cartography);
 
     /// <summary>Hours a unit needs to walk from one province to its neighbour, at its own pace.</summary>
-    private double UnitStepHours(Unit unit, int from, int to) => Pathfinder.StepHours(from, to) / unit.Speed;
+    /// <summary>Hours a unit needs for one step: the way there at its speed, slowed on land by snow and mud.</summary>
+    private double UnitStepHours(Unit unit, int from, int to) =>
+        Pathfinder.StepHours(from, to) / unit.Speed * (unit.IsFleet ? 1 : SeasonSlowdown(Map.Provinces[to]));
 
     public CommandResult MoveUnit(int playerId, int unitId, int targetProvinceId)
     {
@@ -683,6 +685,16 @@ public sealed partial class GameSession
                 if (unit.IsFleet) Sink(unit);
                 else Destroy(unit, "se ha disuelto: nadie le pagaba", officerSurvives: true);
                 continue;
+            }
+            // Cold and the desert take their toll, in supply or not.
+            if (DailyAttrition(unit) is var attrition and > 0)
+            {
+                foreach (var b in unit.Battalions) b.Strength = Math.Max(0, b.Strength - b.Info.Men * attrition);
+                if (unit.Citizens < 1)
+                {
+                    Destroy(unit, WinterSeverity(Map.Provinces[unit.ProvinceId]) > 0 ? "ha muerto de frío" : "ha muerto de sed en el desierto", officerSurvives: true);
+                    continue;
+                }
             }
             // Troops aboard live off the ships' stores; fleets are repaired and crewed only in their ports.
             if (unit.IsAboard || unit.IsFleet && !IsPort(Map.Provinces[unit.ProvinceId], player.Id)) continue;

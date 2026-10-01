@@ -2,6 +2,17 @@
 
 Todos los cambios del juego, del más reciente al más antiguo. Cada versión es un commit cuyo título es su número.
 
+## [1.64.0] - 2026-10-01
+
+### Añadido
+- **Estaciones**: de diciembre a febrero es invierno en el norte y verano en el sur. La fecha de la barra superior dice la estación en tu capital, y el panel de cada provincia la de allí.
+  - **Nieve**: lejos del trópico (desde 30° de latitud, al máximo desde 60°), en invierno las tropas tardan hasta el doble en marchar.
+  - **Frío**: en invierno, los regimientos pierden hasta un 0,5 % de sus hombres al día, salvo si se refugian en una ciudad de su nación. Una unidad que se queda sin hombres muere de frío.
+  - **Barro**: en primavera y otoño, donde el invierno es duro, las tropas marchan hasta un 50 % más despacio.
+  - **El mapa de terreno se cubre de nieve** en invierno, más espesa cuanto más duro es.
+- **Desierto**: los regimientos pierden un 0,2 % de sus hombres al día por el calor y la sed, en cualquier estación.
+- Los rivales, en paz, llevan a sus tropas a sus ciudades cuando el frío o el desierto las desgasta.
+
 ## [1.63.0] - 2026-10-01
 
 ### Cambiado

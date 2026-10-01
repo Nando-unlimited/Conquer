@@ -176,6 +176,17 @@ public static class GameRules
     /// <summary>Mood a province loses when a treaty hands it to another nation.</summary>
     public const double CededMoodPenalty = 20;
 
+    // Seasons. Winter bites from MildWinterLatitude and is at its worst from HarshWinterLatitude; spring and autumn
+    // bring MudShare of its slowdown as mud. Armies lose men to cold out of their cities, and to the desert all year.
+    public const double MildWinterLatitude = 30;
+    public const double HarshWinterLatitude = 60;
+    public const double MudShare = 0.5;
+    /// <summary>Marching through the deepest snow takes this much longer (1 = twice as long).</summary>
+    public const double WinterSlowdown = 1;
+    /// <summary>Share of its men a regiment loses each day in the harshest winter, out of its nation's cities.</summary>
+    public const double WinterAttrition = 0.005;
+    public const double DesertAttrition = 0.002;
+
     // Culture and revolt. People under a foreign ruler lose ForeignCultureMood, less as they assimilate over about
     // AssimilationYears (faster when happy). A province in unrest with no garrison revolts after RevoltDays or fewer.
     public const double ForeignCultureMood = 25;

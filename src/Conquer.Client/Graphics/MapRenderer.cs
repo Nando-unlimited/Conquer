@@ -420,6 +420,8 @@ public sealed class MapRenderer : IDisposable
                 case MapMode.Terrain:
                     // A light tint: the band along the border tells the nations apart, so the land shows through.
                     if (p.IsOwned) color = new Rgba(players[p.OwnerId].Color).WithAlpha(0.2f);
+                    // Winter snow, thicker the harsher it is.
+                    if (session.WinterSeverity(p) is var snow and > 0) color = new Rgba(0xFFF2F5F8).WithAlpha((float)(0.25 + 0.45 * snow));
                     break;
                 case MapMode.Political:
                     if (p.IsOwned) color = new Rgba(players[p.OwnerId].Color).WithAlpha(0.85f);

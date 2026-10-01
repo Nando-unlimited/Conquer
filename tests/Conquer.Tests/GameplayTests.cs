@@ -171,7 +171,7 @@ public class GameplayTests(WorldFixture world)
     }
 
     [Fact]
-    public void UnitsWalkAtTenKilometresAnHourOnOpenGround()
+    public void UnitsWalkAtTenKilometresAnHourOnOpenGroundSlowedBySnow()
     {
         var s = NewSession();
         var (a, b) = GrasslandPair();
@@ -179,6 +179,7 @@ public class GameplayTests(WorldFixture world)
         double expected = _map.DistanceKm(a, b) / GameRules.CitizenSpeedKmh;
 
         Assert.Equal(expected, s.Pathfinder.StepHours(a.Id, b.Id), 6);
+        expected *= s.SeasonSlowdown(b); // snow or mud, depending on where the pair lies
         Assert.True(s.MoveUnit(0, unit.Id, b.Id).Ok);
         RunHours(s, (int)Math.Floor(expected) - 1);
         Assert.Equal(a.Id, unit.ProvinceId);

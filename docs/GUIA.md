@@ -309,7 +309,7 @@ El ejército dentro de la partida.
 | `RegimentPower(unidad)`, `MilitaryPower(jugador)` | Valor aproximado de combate de un regimiento y de todo un ejército. |
 | `EnemyRegimentsIn(provincia, jugador)` | Regimientos de naciones en guerra con el jugador en una provincia (los embarcados no cuentan). |
 | `CanUnitEnter(unidad, provincia)`, `CanSail(jugador, mar)` | Tierra libre y propia siempre; la de otra nación solo para regimientos en guerra con ella; el agua solo para los aviones (las tropas van en barco). Una flota navega por el mar costero y los lagos con Navegación a vela, por el océano con Cartografía, y entra en sus puertos. |
-| `MoveUnit(...)`, `UnitStepHours(...)` | Orden de mover (la ruta evita tierras vedadas; el tiempo depende de la velocidad de la unidad). Una unidad embarcada desembarca; una en tierra que apunta a una flota suya en el mar de al lado embarca. |
+| `MoveUnit(...)`, `UnitStepHours(...)` | Orden de mover (la ruta evita tierras vedadas; el tiempo depende de la velocidad de la unidad y, en tierra, de la nieve y el barro: `SeasonSlowdown`). Una unidad embarcada desembarca; una en tierra que apunta a una flota suya en el mar de al lado embarca. |
 | `MoveUnits()` | Cada hora cada unidad avanza; un regimiento que entra donde hay tropas enemigas ataca, y si no las hay la ocupa (`EnterProvince`); una flota lleva su carga consigo y se detiene a combatir si encuentra barcos enemigos. |
 | `Occupy(provincia, jugador)` | La provincia pasa a manos del jugador (o vuelve a su dueño) y los civiles, cuarteles y flotas enemigos huyen (los embarcados, con su flota). |
 | `CanTrainIn`, `CanTrain`/`Train`, `CanTrainTemplate`/`TrainTemplate`, `CanRaiseHeadquarters`/`RaiseHeadquarters`, `CanRaiseTroops(...)`, `MinimumPopulation` | Pagan y ponen en instrucción, en una provincia con ciudad, cuartel o taller (`CanTrainIn`; se pasan ids de provincia), un batallón, un barco (solo en ciudades con puerto, y los más avanzados con dique seco; forma una flota nueva) o un cuartel general; los hombres salen de la provincia, que conserva el mínimo de una ciudad o, sin ciudad, el de una provincia poblada. `CanRaiseTroops` comprueba ciudad, cuartel o taller, avances, los edificios que piden los batallones (cuartel para las tropas de combate, taller o fábrica para las máquinas de guerra), ocupación, habitantes y coste. |
@@ -327,7 +327,7 @@ El ejército dentro de la partida.
 | `InCommandRange(unidad)`, `CommandBonus(unidad)` | Si su cuartel la alcanza, y la bonificación de toda la cadena enlazada. |
 | `ComputeSupply(jugador)`, `IsInSupply(unidad)`, `IsSupplied(jugador, provincia)` | Provincias abastecidas: todo lo que sus carreteras y ferrocarriles unen a sus ciudades (`SupplyNetwork`), y desde ahí hasta 10 días de marcha por tierra propia o libre (nunca por mar), y una más allá (el frente). Se recalcula cada día y al terminar un tramo. |
 | `InBattle(unidad)` | Si ataca o defiende. |
-| `DailyMilitary(jugador)` | Cada día: instrucción, suministro, recuperación de organización, refuerzos desde la capital (los reclutas diluyen la experiencia), desgaste sin suministro (la unidad que se queda sin hombres se dispersa) y, si no se pagó el mantenimiento, pérdida de organización y deserciones sin recuperación; los oficiales y generales organizadores aceleran la recuperación y los desorganizados la frenan. Las tropas embarcadas ni se desgastan ni se recuperan; las flotas solo se reparan y completan su tripulación en puerto, el doble de rápido con dique seco. |
+| `DailyMilitary(jugador)` | Cada día: instrucción, suministro, desgaste por frío o desierto (`DailyAttrition`: la unidad que se queda sin hombres muere de frío o de sed), recuperación de organización, refuerzos desde la capital (los reclutas diluyen la experiencia), desgaste sin suministro (la unidad que se queda sin hombres se dispersa) y, si no se pagó el mantenimiento, pérdida de organización y deserciones sin recuperación; los oficiales y generales organizadores aceleran la recuperación y los desorganizados la frenan. Las tropas embarcadas ni se desgastan ni se recuperan; las flotas solo se reparan y completan su tripulación en puerto, el doble de rápido con dique seco. |
 | `StartAttack(...)`, `CancelAttack(...)` | El regimiento se detiene en la frontera y ataca (se une a la batalla o la abre), o la abandona. |
 | `ResolveBattles()` | Una hora de cada batalla: fuego de ambos bandos, daño, retiradas y abandonos; si no quedan defensores, los atacantes entran. |
 | `Engage(unidades, provincia, ataca, ingenierosEnemigos)`, `Engaged` | Los batallones de un bando que combaten esta hora: los mejores que caben en el frente (`FrontWidth`) y, detrás, hasta la mitad de artillería, aviación e ingenieros (exposición 0,25); el resto espera en reserva. Fuego de cada uno: ataque o defensa, hombres, organización, experiencia, mando, oficial propio y general, suministro, terreno (menos si el atacante lleva ingenieros) y murallas. |
@@ -405,6 +405,17 @@ Culturas y rebeliones.
 | `DailyUnrest(jugador)` | Cada día: la tierra vacía toma la cultura del dueño, la gente extranjera se asimila (al terminar adopta la del dueño), y las provincias por debajo de 25 de moral sin guarnición se acercan a la rebelión (1 a 2 días por día, según la moral); con moral alta se calman (2 por día). Avisa al llegar a la mitad. |
 | `Revolt(provincia)` | La provincia se subleva: se une a la nación de su cultura (`Cede`, con moral al menos 60, y las tropas del antiguo dueño vuelven a casa si no están en guerra) o, si no puede, hay una revuelta: muere el 10 % de la gente, arde un edificio al azar y la moral sube al menos a 35. |
 | `SendHome(unidad)` | Una unidad en tierra que su nación ya no controla vuelve a su provincia más cercana, o se disuelve si no tiene ninguna. También la usa `MakePeace`. |
+
+### `Simulation/GameSession.Seasons.cs`
+Estaciones y desgaste.
+
+| Elemento | Qué hace |
+| --- | --- |
+| `Season`, `SeasonNames`, `SeasonOf(provincia)` | Primavera, verano, otoño e invierno; de diciembre a febrero es invierno en el norte y verano en el sur. |
+| `WinterSeverity(provincia)`, `MudSeverity(provincia)` | Dureza del invierno (0 a 1): nada por debajo de 30° de latitud, máxima desde 60°. El barro de primavera y otoño es la mitad de esa dureza. |
+| `SeasonSlowdown(provincia)` | Cuánto más se tarda en entrar marchando: hasta el doble con la nieve más profunda (`WinterSlowdown`), hasta 1,5 veces con barro. Las flotas no se frenan. |
+| `DailyAttrition(unidad)` | Parte de sus hombres que pierde un regimiento al día: hasta un 0,5 % por el frío fuera de una ciudad de su nación (`WinterAttrition`) y un 0,2 % en el desierto (`DesertAttrition`). |
+| `SeasonEffect(provincia)` | Lo que la estación y la tierra hacen allí a las tropas, en texto; nulo si nada. |
 
 ### `Simulation/RoadNetwork.cs`
 Carreteras y ferrocarriles.
@@ -493,6 +504,7 @@ El ejército de un rival.
 | `FollowTroops(cuartel)` | El cuartel va adonde están sus unidades si alguna queda fuera de alcance. |
 | `GuideSoldier(unidad)` | En guerra: acude a sus ciudades atacadas, ataca la provincia enemiga vecina más débil (si supera 1,3 veces su defensa) o marcha hacia tierra enemiga que su suministro alcance; descansa si está desorganizada. |
 | `GoHomeIfCutOff(unidad)`, `IsEnemyLand(provincia)` | Un regimiento sin suministro vuelve a la capital. |
+| `TakeWinterQuarters(unidad)` | En paz, un regimiento que pierde hombres por el frío o el desierto se refugia en su ciudad más cercana, salvo si guarda una provincia descontenta. |
 | `KeepOrder()`, `GarrisonedRevoltRisk` | En paz, manda el regimiento libre más cercano de su ejército a cada provincia sin guarnición que pasa del 25 % de rebelión; los que ya guardan una provincia descontenta se quedan. |
 | `Diplomacy()`, `Neighbours()`, `WarAppetite(vecino)`, `HasFreeLandNearby()` | Tras dos años, cada día tiene una entre 60 de pensar en una guerra: ataca al vecino más débil (sin tregua) cuyo poder no pase de su apetito por el suyo. El apetito es su carácter (`_aggression`, de 0,8 a 1,1, fijo por semilla), +0,3 si ya no tiene tierra libre junto a la suya, +0,3 si el vecino ya está en guerra y +0,2 si gobierna gente de su cultura. En guerra con otro rival, tras 60 días le exige lo que ocupa si la puntuación lo paga, y le propone la paz blanca cuando la guerra se alarga y va mal. |
 | `WouldAcceptPeace(otro, términos)`, `Winning(otro)` | Acepta siempre que le entreguen tierras; cede lo que le ocupan si no va ganando o si la puntuación del enemigo pasa de 50; la paz blanca, tras 60 días si no va ganando (o tras un año). Va ganando si su ejército es mucho más fuerte y ocupa más de lo que ha perdido. |
@@ -672,7 +684,7 @@ La partida en pantalla, sin pantalla: lo que se ve, lo seleccionado, los diálog
 | Función | Qué hace |
 | --- | --- |
 | `SidePanel()` | El panel derecho como `Document`: el de la unidad seleccionada o el de la provincia, con `ClearSelection` como botón de cerrar; null si no hay nada seleccionado. |
-| `ProvincePanel`, `GeneralTab` | Nombre y pestañas General, Edificios y Ejército (esta solo donde se entrenan tropas o queda algo en instrucción). En General: terreno, superficie, altitud, río (con lo que da al pasar el ratón), dueño, población, moral (`MoodTooltip`: sus causas y su efecto en la producción), fertilidad, nacimientos, migrantes, recursos y yacimientos con lo que les queda; en tus ciudades, fiestas y colonos. |
+| `ProvincePanel`, `GeneralTab` | Nombre y pestañas General, Edificios y Ejército (esta solo donde se entrenan tropas o queda algo en instrucción). En General: terreno, superficie, altitud, estación (con lo que la nieve, el barro o el desierto hacen a las tropas), río (con lo que da al pasar el ratón), dueño, población, moral (`MoodTooltip`: sus causas y su efecto en la producción), fertilidad, nacimientos, migrantes, recursos y yacimientos con lo que les queda; en tus ciudades, fiestas y colonos. |
 | `AddCultureAndRevolt(documento, provincia)` | En General, la cultura de su gente (con lo asimilada que está y los años que le faltan) y, si está descontenta o camino de la rebelión, el porcentaje, si tiene guarnición y qué pasará al sublevarse. |
 | `ForcedMigration` | Migración forzada: cuánta gente (−100, −10, +10, +100 y «Máx.», sin pasar de la que puede salir), su coste en oro y el botón para elegir el destino en el mapa. |
 | `BuildingsTab`, `TrainingImprovements`, `IsBuildingKnown` | Pestaña Edificios: la obra en curso (edificio o ciudad) con su barra, los edificios terminados (bajo el cuartel y el taller o la fábrica, las tropas que tus avances instruyen más rápido allí) y, en tus provincias, «Ciudad» y un botón por cada edificio que puedes levantar; los que solo necesitan ciudad o yacimiento dicen qué les falta, y los de avances sin descubrir no aparecen. El taller deja de ofrecerse cuando ya se construyen fábricas. |
@@ -690,7 +702,7 @@ La partida en pantalla, sin pantalla: lo que se ve, lo seleccionado, los diálog
 ### `GameController.Bars.cs`
 | Elemento | Qué es |
 | --- | --- |
-| `TopBar()`, `ResourceStock` | La barra superior: nación, población y moral media, fecha, botones de velocidad, cada recurso conocido con su cantidad abreviada y su cambio del día, y la etiqueta del botón Nación (con «!» si alguna rama de la ciencia no investiga nada teniendo avances disponibles). |
+| `TopBar()`, `ResourceStock`, `SeasonAtHome()` | La barra superior: nación, población y moral media, fecha con la estación en la capital, botones de velocidad, cada recurso conocido con su cantidad abreviada y su cambio del día, y la etiqueta del botón Nación (con «!» si alguna rama de la ciencia no investiga nada teniendo avances disponibles). |
 | `ModeNames`, `ModeButtons()`, `ResourceFilterButtons()` | Un botón por modo de mapa y, en el de recursos, «Todos» y uno por recurso conocido, que hacen de leyenda. |
 | `Hints()` | Las pistas de controles de abajo (otras mientras se elige el destino de una migración). |
 | `MapTooltip()` | El tooltip de la provincia bajo el ratón: nombre, terreno, dueño, río, población, moral y fertilidad, y sus yacimientos en el modo recursos sus instituciones en el modo instituciones, o su cultura, asimilación y rebelión en el modo cultura. |
@@ -837,7 +849,7 @@ La pantalla de juego. Clase parcial: el ejército en pantalla está en `GameScre
 | `GameScreen(...)` | Crea el `GameController` de la partida (que centra la vista en tus colonos o, en una partida cargada, en tu capital) y el renderizador. |
 | `ApplyTestOptions(...)`, `ShowSampleArmy(...)` | Aplican `--days`, `--zoom`, `--at`, `--mode`, `--nation` y `--panel` (con `regiment`, entrena y selecciona una unidad de muestra bajo un cuerpo; con `march`, además la pone en marcha para ver su ruta; con `edit`, recluta oficiales y abre su ventana de edición, `ShowSampleOfficers`; con `found`, abre el diálogo para nombrar la ciudad de los colonos). |
 | `Frame(dt)` | Fotograma: teclas, tiempo, refresco del mapa, dibujo del mapa, marcadores, paneles e interacción. |
-| `Frame(dt)` (tiempo) | Llama a `GameController.Tick`, congelado con el menú, la ayuda, el historial o una ventana abierta, y pasa al renderizador el modo de mapa y el filtro de recursos cuando cambian. |
+| `Frame(dt)` (tiempo) | Llama a `GameController.Tick`, congelado con el menú, la ayuda, el historial o una ventana abierta, y pasa al renderizador el modo de mapa y el filtro de recursos cuando cambian. Recolorea el mapa cada día en los modos de datos y cada mes en el de terreno, por la nieve. |
 | `HandleKeys` | Teclado (Espacio, 1-5, Tab, Inicio, N, F1, +/-, WASD, Esc, que llama a `GameController.Escape`). Mientras la ayuda (`HelpView`) está abierta el tiempo se para y el mapa no responde; con la ventana de edición de una unidad abierta, las teclas van a su nombre (Intro renombra, Esc cierra). |
 | `HandleMapMouse()` | Rueda para el zoom, arrastrar para mover el mapa, clics. |
 | `LeftClick()` | Abre la batalla o selecciona la unidad bajo el ratón; si no hay ninguna (o se elige el destino de una migración), `GameController.ClickProvince`. |
@@ -887,7 +899,7 @@ Dibuja el mapa entero con un único shader.
 | `Prepare(mapa)` | Prepara (fuera del hilo principal) los píxeles de ids, colores del terreno y detalle. |
 | `ProvinceAt(mapa, punto, zoom)` | Provincia que se ve en un punto, con la misma regla que el shader (para los clics). |
 | `SmoothZoom` | Zoom a partir del cual las fronteras se suavizan. |
-| `Refresh(partida)` | Recalcula el color de cada provincia según el modo (en el de cultura, el color de la nación de su gente), su dueño, el color de su dueño y, si está ocupada, el del ocupante (texturas pequeñas de 256×128). Si ha cambiado algún dueño, vuelve a calcular las distancias a la frontera (`BuildBorderDistances`: crece píxel a píxel desde las fronteras entre tierras de distinto dueño, hasta 5; las costas no cuentan). |
+| `Refresh(partida)` | Recalcula el color de cada provincia según el modo (en el de cultura, el color de la nación de su gente; en el de terreno, la nieve del invierno), su dueño, el color de su dueño y, si está ocupada, el del ocupante (texturas pequeñas de 256×128). Si ha cambiado algún dueño, vuelve a calcular las distancias a la frontera (`BuildBorderDistances`: crece píxel a píxel desde las fronteras entre tierras de distinto dueño, hasta 5; las costas no cuentan). |
 | `PopulationColor(densidad)` | Escala de color del modo población. |
 | `ScaleColor(valor)` | Rojo-amarillo-verde de 0 a 1, para los modos moral y fertilidad. |
 | `DepositColor(provincia)` | Color del modo recursos: el del yacimiento principal que queda de los conocidos, o con filtro ese recurso más intenso cuanto más queda. Gris si no hay nada. |
