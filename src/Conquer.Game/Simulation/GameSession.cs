@@ -113,6 +113,8 @@ public sealed partial class GameSession
             p.Mood = GameRules.StartingMood;
             p.Fertility = 1;
             p.Institutions.Clear();
+            p.CultureId = -1;
+            p.Assimilation = p.RevoltProgress = 0;
             p.Name = "";
             p.ClearBuildings();
             foreach (var r in Resources.Deposits)
@@ -160,6 +162,7 @@ public sealed partial class GameSession
             factors.Add(("Hacinamiento", -GameRules.MaxOvercrowdingMoodPenalty * Math.Min(1, p.Population / capacity - 1)));
         if (owner.IsStarving) factors.Add(("Hambre", GameRules.StarvingMood));
         if (p.IsOccupied) factors.Add(("Ocupada por el enemigo", MilitaryRules.OccupiedMood));
+        if (HasForeignCulture(p)) factors.Add(($"Cultura de {Players[p.CultureId].Name}", ForeignCultureMood(p)));
         foreach (var tech in owner.Techs.Where(t => t.Info().Effects.Mood != 0))
             factors.Add((tech.Info().Name, tech.Info().Effects.Mood));
         foreach (var building in p.Buildings.Where(b => b.Info().Effects.Mood != 0))
@@ -214,6 +217,7 @@ public sealed partial class GameSession
         if (Date.Hour == 0)
         {
             foreach (var player in Players) DailyEconomy(player);
+            foreach (var player in Players) DailyUnrest(player);
             foreach (var player in Players) DailyMigration(player);
             foreach (var player in Players) DailyScience(player);
             DailyInstitutions();
@@ -235,6 +239,9 @@ public sealed partial class GameSession
             var target = Map.Provinces[m.ToProvinceId];
             if (target.OwnerId == m.OwnerId && !target.IsOccupied)
             {
+                // Settlers of the ruler's culture count as assimilated people.
+                if (HasForeignCulture(target))
+                    target.Assimilation = Math.Min(1, (target.Assimilation * target.Population + m.People) / (target.Population + m.People));
                 Settle(target, m.People, m.Mood);
                 if (m.Forced && m.OwnerId == HumanPlayerId)
                     Notify(m.OwnerId, $"{m.People} ciudadanos han llegado a su nuevo hogar.");
@@ -889,7 +896,13 @@ public sealed partial class GameSession
     {
         if (p.OwnerId >= 0) Players[p.OwnerId].Provinces.Remove(p.Id);
         // A city still being built belongs to the people who planned it; a new owner starts over.
-        if (p.OwnerId != playerId) p.PlannedCityName = null;
+        if (p.OwnerId != playerId)
+        {
+            p.PlannedCityName = null;
+            // People keep their culture and start assimilating afresh; empty land takes its new ruler's.
+            p.Assimilation = p.RevoltProgress = 0;
+        }
+        if (p.CultureId < 0 || p.Population < 1) p.CultureId = playerId;
         p.OwnerId = p.ControllerId = playerId;
         Players[playerId].Provinces.Add(p.Id);
         NameProvince(p);

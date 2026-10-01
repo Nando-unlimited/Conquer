@@ -2,6 +2,24 @@
 
 Todos los cambios del juego, del más reciente al más antiguo. Cada versión es un commit cuyo título es su número.
 
+## [1.61.0] - 2026-10-01
+
+### Añadido
+- **Culturas**: la gente de cada provincia es de la cultura de la nación que la pobló, y la conserva aunque la provincia cambie de manos.
+  - Bajo un dueño extranjero pierde hasta 25 de humor, menos a medida que se asimila. Tarda unos 15 años con humor 50: más deprisa con buen humor (hasta el doble) y más despacio con mal humor (hasta 4 veces). Los migrantes de tus otras provincias que se instalan allí la aceleran.
+  - Al asimilarse del todo, adopta tu cultura. La tierra vacía toma siempre la de su dueño.
+  - **Nuevo modo de mapa, Cultura**: cada provincia, del color de la nación de su gente. Si no coincide con la franja de su frontera, su gente es extranjera.
+  - El panel de la provincia muestra su cultura, lo asimilada que está y cuántos años le faltan.
+- **Rebeliones**: una provincia descontenta (humor por debajo de 25) sin tropas de su dueño dentro se acerca a la rebelión. Tarda de 30 a 60 días, menos cuanto peor es el humor.
+  - Si su gente es de otra nación que aún tiene tierras, **se subleva y se une a ella**. Esto no pasa con la capital.
+  - Si no, estalla una **revuelta**: muere el 10 % de la gente y arde uno de sus edificios.
+  - **Una guarnición** (un regimiento tuyo en la provincia) la detiene. Con buen humor se calma poco a poco.
+  - El panel de la provincia muestra cómo va la rebelión, si tiene guarnición y qué pasará al sublevarse. Llega un aviso cuando está a medio camino.
+  - Los rivales mandan tropas a sus provincias que van camino de la rebelión.
+
+### Cambiado
+- Al cargar una partida anterior, la gente de cada provincia tiene la cultura de su dueño.
+
 ## [1.60.0] - 2026-10-01
 
 ### Añadido

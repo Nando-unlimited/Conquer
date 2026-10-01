@@ -182,13 +182,7 @@ public sealed partial class GameSession
         foreach (var unit in Units.ToList())
         {
             var here = Map.Provinces[unit.ProvinceId];
-            if ((unit.OwnerId != a && unit.OwnerId != b) || !here.IsOwned || here.ControllerId == unit.OwnerId) continue;
-            unit.Path.Clear();
-            unit.StepHours = unit.HoursToNext = 0;
-            var home = Players[unit.OwnerId].Provinces.Where(id => Map.Provinces[id].ControllerId == unit.OwnerId)
-                .OrderBy(id => Map.DistanceKm(here, Map.Provinces[id])).Select(id => (int?)id).FirstOrDefault();
-            if (home is int h) unit.ProvinceId = h;
-            else RemoveUnit(unit);
+            if ((unit.OwnerId == a || unit.OwnerId == b) && here.IsOwned && here.ControllerId != unit.OwnerId) SendHome(unit);
         }
 
         foreach (int id in new[] { a, b }.Where(id => id == HumanPlayerId))

@@ -443,6 +443,11 @@ public sealed class MapRenderer : IDisposable
                 case MapMode.Resources:
                     if (p.IsClaimable) color = DepositColor(p);
                     break;
+                case MapMode.Culture:
+                    // The fill is the people's culture and the border band their ruler: a mismatch is foreign land.
+                    if (p.IsOwned && p.Population >= 1 && p.CultureId >= 0) color = new Rgba(players[p.CultureId].Color).WithAlpha(0.85f);
+                    else if (p.IsClaimable) color = new Rgba(0xFF808080).WithAlpha(0.55f);
+                    break;
             }
             SetColor(_colorData, o, color);
         }

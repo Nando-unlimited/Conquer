@@ -24,7 +24,7 @@ public sealed record CityNamingDialog(string Title, string Detail, string? Error
 /// <summary>The bars around the map, the map's tooltip and the city naming dialog.</summary>
 public sealed partial class GameController
 {
-    public static readonly string[] ModeNames = ["Terreno", "Político", "Población", "Humor", "Fertilidad", "Recursos", "Instituciones"];
+    public static readonly string[] ModeNames = ["Terreno", "Político", "Población", "Humor", "Fertilidad", "Recursos", "Instituciones", "Cultura"];
 
     public TopBar TopBar()
     {
@@ -91,6 +91,11 @@ public sealed partial class GameController
         if (Mode == MapMode.Institutions)
             text += p.Institutions.Count > 0 ? "\n" + string.Join(", ", Institutions.All.Where(p.Institutions.Contains).Select(i => i.Info().Name))
                 : Institutions.All.Any(Session.IsBorn) ? "\nSin instituciones" : "\nTodavía no ha nacido ninguna institución";
+        if (Mode == MapMode.Culture && p.IsOwned && Session.CultureOf(p) is { } culture && p.Population >= 1)
+        {
+            text += GameSession.HasForeignCulture(p) ? $"\nCultura de {culture.Name} ({p.Assimilation:P0} asimilada)" : $"\nCultura de {culture.Name}";
+            if (p.RevoltProgress > 0) text += $"\nRebelión {GameSession.RevoltRisk(p):P0}";
+        }
         if (ChoosingMigrationTarget) text += "\nClic para enviar aquí a los migrantes";
         return text;
     }

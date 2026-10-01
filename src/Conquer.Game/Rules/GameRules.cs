@@ -152,6 +152,20 @@ public static class GameRules
     /// <summary>Mood a province loses when a treaty hands it to another nation.</summary>
     public const double CededMoodPenalty = 20;
 
+    // Culture and revolt. People under a foreign ruler lose ForeignCultureMood, less as they assimilate over about
+    // AssimilationYears (faster when happy). A province in unrest with no garrison revolts after RevoltDays or fewer.
+    public const double ForeignCultureMood = 25;
+    public const double AssimilationYears = 15;
+    public const double MinAssimilationPace = 0.25;
+    public const double MaxAssimilationPace = 2;
+    public const double RevoltDays = 60;
+    public const double RevoltCalmingPerDay = 2;
+    /// <summary>Share of the people a riot kills.</summary>
+    public const double RevoltDeaths = 0.1;
+    /// <summary>Mood a province is left with at least after a riot, or after rejoining the nation of its culture.</summary>
+    public const double AfterRiotMood = 35;
+    public const double LiberatedMood = 60;
+
     // Fertility (birth-rate multiplier, 1 = normal). It follows mood and food, more slowly than mood.
     public const double FertilityChangePerDay = 0.03;
     /// <summary>Share of normal fertility left while the nation starves.</summary>

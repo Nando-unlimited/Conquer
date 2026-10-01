@@ -34,7 +34,7 @@ public sealed partial class GameSession
         Provinces = Map.Provinces.Where(Changed).Select(p => new ProvinceSave(
             p.Id, p.OwnerId, p.ControllerId, p.Population, p.CityId, p.Mood, p.Fertility, [.. p.Reserves],
             [.. p.Buildings.Order()], p.Constructing, p.ConstructionDaysLeft, p.PlannedCityName, [.. p.Institutions.Order()], p.Name,
-            p.Training.Count == 0 ? null : [.. p.Training.Select(ToSave)])).ToList(),
+            p.Training.Count == 0 ? null : [.. p.Training.Select(ToSave)], p.CultureId, p.Assimilation, p.RevoltProgress)).ToList(),
         Cities = Cities.Select(c => new CitySave(c.Id, c.Name, c.OwnerId, c.ProvinceId, c.FoundedHours, c.FestivalUntilHours)).ToList(),
         Units = Units.Select(u => new UnitSave(
             u.Id, u.OwnerId, u.Type, u.ProvinceId, u.Type is UnitType.Regiment or UnitType.Fleet ? 0 : u.Citizens, u.Number, u.HeadquartersLevel,
@@ -96,7 +96,7 @@ public sealed partial class GameSession
     private static bool Changed(Province p) =>
         p.OwnerId != -1 || p.ControllerId != -1 || p.Population != 0 || p.CityId.HasValue
         || p.Mood != GameRules.StartingMood || p.Fertility != 1 || p.Buildings.Count > 0 || p.Constructing.HasValue || p.PlannedCityName != null
-        || p.Institutions.Count > 0 || p.Name.Length > 0 || p.Training.Count > 0
+        || p.Institutions.Count > 0 || p.Name.Length > 0 || p.Training.Count > 0 || p.CultureId != -1 || p.RevoltProgress != 0
         || Resources.Deposits.Any(r => p.Reserves[(int)r] != p.DepositSizes[(int)r] * GameRules.DepositSizeMultiplier);
 
     /// <summary>
@@ -140,6 +140,10 @@ public sealed partial class GameSession
             p.Name = ps.Name ?? "";
             if (p.Name.Length > 0) session._usedProvinceNames.Add(p.Name);
             foreach (var o in ps.Training ?? []) p.Training.Add(FromSave(o, Level));
+            // Before 1.61.0 there were no cultures: the people share their ruler's.
+            p.CultureId = ps.CultureId ?? (p.Population >= 1 ? p.OwnerId : -1);
+            p.Assimilation = ps.Assimilation;
+            p.RevoltProgress = ps.RevoltProgress;
         }
 
         foreach (var s in save.Players)

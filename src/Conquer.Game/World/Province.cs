@@ -44,6 +44,12 @@ public sealed class Province
     public double Mood { get; set; } = GameRules.StartingMood;
     /// <summary>Birth-rate multiplier (1 = normal); follows mood and food slowly.</summary>
     public double Fertility { get; set; } = 1;
+    /// <summary>The nation whose culture its people share (the one that settled it); -1 while nobody lives there.</summary>
+    public int CultureId { get; set; } = -1;
+    /// <summary>0 to 1: how far foreign people have come toward adopting their ruler's culture.</summary>
+    public double Assimilation { get; set; }
+    /// <summary>Days of unrest without a garrison, which lead to revolt at <see cref="GameRules.RevoltDays"/>.</summary>
+    public double RevoltProgress { get; set; }
     /// <summary>Institutions that have reached the province.</summary>
     public HashSet<Institution> Institutions { get; } = [];
 

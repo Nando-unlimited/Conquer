@@ -92,6 +92,7 @@ internal sealed partial class AiPlayer
         if (dailyDecisions)
         {
             HoldFestivals();
+            if (!atWar) KeepOrder();
             SetResearchPriorities();
             ChooseResearch();
             AdoptInstitutions();

@@ -257,7 +257,7 @@ El corazón del juego: una partida en marcha. Es una clase parcial: el ejército
 | `UnitById`, `CityById`, `CityIn(provincia)` | Búsquedas. |
 | `CapacityOf(provincia)` | Habitantes que puede alimentar una provincia, contando la bonificación de ciudad y los avances de su dueño (Irrigación) y sus edificios (Acueducto). |
 | `BonusesOf(provincia)` | Mejoras que se aplican a una provincia: las de los avances de su dueño más las de sus edificios. |
-| `MoodFactors(provincia)` | Lista de (causa, puntos) que forman el humor objetivo: base, ciudad, capital o distancia a ella (menos con Administración), fiestas, reservas de comida, hacinamiento, hambre, ocupación enemiga, avances que dan humor (Mitología) y edificios que dan humor (Templo). |
+| `MoodFactors(provincia)` | Lista de (causa, puntos) que forman el humor objetivo: base, ciudad, capital o distancia a ella (menos con Administración), fiestas, reservas de comida, hacinamiento, hambre, ocupación enemiga, cultura extranjera (menos cuanto más asimilada), avances que dan humor (Mitología) y edificios que dan humor (Templo). |
 | `TargetMood(provincia)` | Suma de esos factores, entre 0 y 100. |
 | `Stats(jugador)` | Totales de la nación (`NationStats`): población asentada, en unidades y migrando; provincias, ciudades y unidades; humor y fertilidad medios ponderados por habitantes, habitantes en cada nivel de humor, lo que queda en los yacimientos de sus provincias (`Reserves`) y los nacimientos diarios (`DailyBirths`). |
 | `Step()` | Avanza una hora: mueve unidades, resuelve las batallas en tierra y en el mar, hace llegar migrantes, los exploradores que van solos reclaman y eligen destino; a medianoche economía, migración, ciencia, instituciones, obras y ejército; cada 6 h piensan las IA. |
@@ -290,7 +290,7 @@ El corazón del juego: una partida en marcha. Es una clase parcial: el ejército
 | `CanHoldFestival(ciudad)` / `HoldFestival(...)` | Comprueba / paga unas fiestas que suben el humor de la ciudad durante 30 días (una a la vez). |
 | `CanForceMigration(...)` / `ForceMigration(...)` | Comprueba / envía un número elegido de ciudadanos entre dos provincias propias pagando oro; viajan con el humor de su origen menos 20. |
 | `Settle(provincia, personas, humor)` | Añade gente a una provincia mezclando su humor con el de los residentes según cuántos son (migrantes, colonos al fundar, unidades que se asientan). |
-| `SetOwner(provincia, jugador)` | Cambia el dueño (y el controlador) de una provincia y avisa al cliente (`OwnershipChanged`). |
+| `SetOwner(provincia, jugador)` | Cambia el dueño (y el controlador) de una provincia y avisa al cliente (`OwnershipChanged`). Si cambia de dueño, la asimilación y la rebelión vuelven a cero; la tierra vacía toma la cultura del nuevo dueño y la gente conserva la suya. |
 | `AddUnit`, `RemoveUnit` | Crean y quitan unidades (`AddUnit` también se usa en los tests); al quitar una, sus subordinados pierden el cuartel, sale de las batallas y su oficial vuelve a la reserva (salvo si la destruyeron). |
 | `Notify(jugador, texto)` | Añade una notificación. |
 | `FormatHours(h)` | "5 h", "2 d 3 h". |
@@ -393,6 +393,18 @@ Guerra, puntuación de guerra y tratados de paz.
 | `MakePeace(a, b, términos)` | Firma la paz: terminan las batallas, las provincias del tratado cambian de dueño (`Cede`), las demás ocupadas vuelven a sus dueños y los ejércitos regresan a su provincia más cercana. Avisa si una nación se queda sin tierras (anexionada). |
 | `Cede(provincia, receptor)` | Pasa una provincia con su ciudad y edificios: se pierde lo que se entrenaba o construía allí, su humor baja 20 y, si era la capital, el antiguo dueño pasa la capital a su ciudad más poblada. |
 
+### `Simulation/GameSession.Culture.cs`
+Culturas y rebeliones.
+
+| Función | Qué hace |
+| --- | --- |
+| `CultureOf(provincia)`, `HasForeignCulture(provincia)` | La nación cuya cultura comparte su gente, y si no es la de su dueño. |
+| `ForeignCultureMood(provincia)`, `DailyAssimilation(provincia)` | Humor que resta la cultura extranjera (25, menos cuanto más asimilada) y lo que avanza la asimilación cada día (unos 15 años a humor 50, más deprisa con buen humor). |
+| `IsGarrisoned(provincia)`, `RevoltRisk(provincia)`, `WouldSecede(provincia)` | Si hay un regimiento de su dueño dentro, lo cerca que está de la rebelión (0 a 1) y si al sublevarse se uniría a la nación de su cultura (gente extranjera, esa nación aún tiene tierras y no es la capital del dueño). |
+| `DailyUnrest(jugador)` | Cada día: la tierra vacía toma la cultura del dueño, la gente extranjera se asimila (al terminar adopta la del dueño), y las provincias por debajo de 25 de humor sin guarnición se acercan a la rebelión (1 a 2 días por día, según el humor); con buen humor se calman (2 por día). Avisa al llegar a la mitad. |
+| `Revolt(provincia)` | La provincia se subleva: se une a la nación de su cultura (`Cede`, con humor al menos 60, y las tropas del antiguo dueño vuelven a casa si no están en guerra) o, si no puede, hay una revuelta: muere el 10 % de la gente, arde un edificio al azar y el humor sube al menos a 35. |
+| `SendHome(unidad)` | Una unidad en tierra que su nación ya no controla vuelve a su provincia más cercana, o se disuelve si no tiene ninguna. También la usa `MakePeace`. |
+
 ### `Simulation/RoadNetwork.cs`
 Carreteras y ferrocarriles.
 
@@ -480,6 +492,7 @@ El ejército de un rival.
 | `FollowTroops(cuartel)` | El cuartel va adonde están sus unidades si alguna queda fuera de alcance. |
 | `GuideSoldier(unidad)` | En guerra: acude a sus ciudades atacadas, ataca la provincia enemiga vecina más débil (si supera 1,3 veces su defensa) o marcha hacia tierra enemiga que su suministro alcance; descansa si está desorganizada. |
 | `GoHomeIfCutOff(unidad)`, `IsEnemyLand(provincia)` | Un regimiento sin suministro vuelve a la capital. |
+| `KeepOrder()`, `GarrisonedRevoltRisk` | En paz, manda el regimiento libre más cercano de su ejército a cada provincia sin guarnición que pasa del 25 % de rebelión; los que ya guardan una provincia descontenta se quedan. |
 | `Diplomacy()`, `Neighbours()` | Tras dos años, a veces declara la guerra a un vecino con menos del 60 % de su poder. En guerra con otro rival, tras 60 días le exige lo que ocupa si la puntuación lo paga, y le propone la paz blanca cuando la guerra se alarga y va mal. |
 | `WouldAcceptPeace(otro, términos)`, `Winning(otro)` | Acepta siempre que le entreguen tierras; cede lo que le ocupan si no va ganando o si la puntuación del enemigo pasa de 50; la paz blanca, tras 60 días si no va ganando (o tras un año). Va ganando si su ejército es mucho más fuerte y ocupa más de lo que ha perdido. |
 
@@ -493,7 +506,7 @@ El ejército de un rival.
 ### `World/Province.cs`
 `Province`: id, nombre propio (`Name`: se lo pone la primera nación que la reclama; hasta entonces, y siempre en océanos y polos, está vacío y `DisplayName` usa el del bioma), bioma dominante, centro (píxel y lat/lon), área en km², altitud media, vecinas,
 yacimientos (`Deposits`: producción diaria; `DepositSizes`: tamaño de la bolsa; `Reserves`: lo que queda en la partida), dueño, población, ciudad, humor (`Mood`, 0-100) y fertilidad
-(`Fertility`, multiplicador de nacimientos, 1 = normal), instituciones que han llegado (`Institutions`). `ControllerId` es quién la tiene en la guerra (su dueño, o el enemigo que la ocupa) e `IsOccupied` si la ocupa otro. `IsWater`, `IsClaimable`, `IsOwned`,
+(`Fertility`, multiplicador de nacimientos, 1 = normal), instituciones que han llegado (`Institutions`), cultura (`CultureId`: la nación que la pobló; -1 si está vacía), asimilación (`Assimilation`, 0-1) y días camino de la rebelión (`RevoltProgress`). `ControllerId` es quién la tiene en la guerra (su dueño, o el enemigo que la ocupa) e `IsOccupied` si la ocupa otro. `IsWater`, `IsClaimable`, `IsOwned`,
 `RiverFlow` (agua del mayor río que la cruza, 0 sin río), `HasRiver` (la cruza un gran río), `FoodYield` (rendimiento de comida de su bioma, más en un gran río),
 `Capacity` (habitantes que alimenta su tierra, más en un gran río) y `HasDeposit(recurso)` (tiene ese yacimiento sin agotar) son atajos.
 Edificios: los terminados (`Buildings`) y la suma de sus efectos (`BuildingBonuses`), el que está en obras (`Constructing`) o la ciudad en obras (`PlannedCityName`) y los días que le quedan (`ConstructionDaysLeft`). Lo que entrena su ciudad, su cuartel o su taller (`Training`). `AddBuilding(tipo)` añade uno terminado y `RemoveBuilding(tipo)` lo derriba; `Has(tipo)` dice si lo tiene o tiene aquello en que se convirtió (una fábrica cuenta como taller); `ClearBuildings()` los quita todos y vacía la instrucción (nueva partida).
@@ -605,7 +618,7 @@ y el teclado en llamadas aquí, así que cambiar de motor (por ejemplo, a Godot)
 | `Clamp()` | No deja salirse por arriba o por abajo del mapa. |
 
 ### `MapMode.cs`
-`MapMode`: terreno, político, población, humor, fertilidad, recursos e instituciones.
+`MapMode`: terreno, político, población, humor, fertilidad, recursos, instituciones y cultura.
 
 ### `GameClock.cs`
 `GameClock`: el reloj de la partida. `HoursPerSecond` son las horas de juego por segundo real de cada velocidad (pausa, 1 h/s … 7 días/s); `SetSpeed`, `TogglePause` (reanuda a la velocidad de antes) y `Advance(dt)`, que dice cuántas horas simular en este fotograma sin acumular retraso si el ordenador no da abasto.
@@ -659,6 +672,7 @@ La partida en pantalla, sin pantalla: lo que se ve, lo seleccionado, los diálog
 | --- | --- |
 | `SidePanel()` | El panel derecho como `Document`: el de la unidad seleccionada o el de la provincia, con `ClearSelection` como botón de cerrar; null si no hay nada seleccionado. |
 | `ProvincePanel`, `GeneralTab` | Nombre y pestañas General, Edificios y Ejército (esta solo donde se entrenan tropas o queda algo en instrucción). En General: terreno, superficie, altitud, río (con lo que da al pasar el ratón), dueño, población, humor (`MoodTooltip`: sus causas y su efecto en la producción), fertilidad, nacimientos, migrantes, recursos y yacimientos con lo que les queda; en tus ciudades, fiestas y colonos. |
+| `AddCultureAndRevolt(documento, provincia)` | En General, la cultura de su gente (con lo asimilada que está y los años que le faltan) y, si está descontenta o camino de la rebelión, el porcentaje, si tiene guarnición y qué pasará al sublevarse. |
 | `ForcedMigration` | Migración forzada: cuánta gente (−100, −10, +10, +100 y «Máx.», sin pasar de la que puede salir), su coste en oro y el botón para elegir el destino en el mapa. |
 | `BuildingsTab`, `TrainingImprovements`, `IsBuildingKnown` | Pestaña Edificios: la obra en curso (edificio o ciudad) con su barra, los edificios terminados (bajo el cuartel y el taller o la fábrica, las tropas que tus avances instruyen más rápido allí) y, en tus provincias, «Ciudad» y un botón por cada edificio que puedes levantar; los que solo necesitan ciudad o yacimiento dicen qué les falta, y los de avances sin descubrir no aparecen. El taller deja de ofrecerse cuando ya se construyen fábricas. |
 | `ArmyTab` | Pestaña Ejército: un aviso si falta el cuartel o el taller, las unidades de tus plantillas (las cuatro primeras), los batallones sueltos (los de avances sin descubrir no aparecen), los cuarteles generales y lo que está en instrucción, con su barra. |
@@ -678,7 +692,7 @@ La partida en pantalla, sin pantalla: lo que se ve, lo seleccionado, los diálog
 | `TopBar()`, `ResourceStock` | La barra superior: nación, población y humor medio, fecha, botones de velocidad, cada recurso conocido con su cantidad abreviada y su cambio del día, y la etiqueta del botón Nación (con «!» si alguna rama de la ciencia no investiga nada teniendo avances disponibles). |
 | `ModeNames`, `ModeButtons()`, `ResourceFilterButtons()` | Un botón por modo de mapa y, en el de recursos, «Todos» y uno por recurso conocido, que hacen de leyenda. |
 | `Hints()` | Las pistas de controles de abajo (otras mientras se elige el destino de una migración). |
-| `MapTooltip()` | El tooltip de la provincia bajo el ratón: nombre, terreno, dueño, río, población, humor y fertilidad, y sus yacimientos en el modo recursos o sus instituciones en el modo instituciones. |
+| `MapTooltip()` | El tooltip de la provincia bajo el ratón: nombre, terreno, dueño, río, población, humor y fertilidad, y sus yacimientos en el modo recursos sus instituciones en el modo instituciones, o su cultura, asimilación y rebelión en el modo cultura. |
 | `CityNamingDialog()` | El diálogo para nombrar una ciudad: título, dónde o cuánto cuesta, por qué no vale el nombre y la etiqueta de confirmar. |
 
 ### `Document.cs`
@@ -872,7 +886,7 @@ Dibuja el mapa entero con un único shader.
 | `Prepare(mapa)` | Prepara (fuera del hilo principal) los píxeles de ids, colores del terreno y detalle. |
 | `ProvinceAt(mapa, punto, zoom)` | Provincia que se ve en un punto, con la misma regla que el shader (para los clics). |
 | `SmoothZoom` | Zoom a partir del cual las fronteras se suavizan. |
-| `Refresh(partida)` | Recalcula el color de cada provincia según el modo, su dueño, el color de su dueño y, si está ocupada, el del ocupante (texturas pequeñas de 256×128). Si ha cambiado algún dueño, vuelve a calcular las distancias a la frontera (`BuildBorderDistances`: crece píxel a píxel desde las fronteras entre tierras de distinto dueño, hasta 5; las costas no cuentan). |
+| `Refresh(partida)` | Recalcula el color de cada provincia según el modo (en el de cultura, el color de la nación de su gente), su dueño, el color de su dueño y, si está ocupada, el del ocupante (texturas pequeñas de 256×128). Si ha cambiado algún dueño, vuelve a calcular las distancias a la frontera (`BuildBorderDistances`: crece píxel a píxel desde las fronteras entre tierras de distinto dueño, hasta 5; las costas no cuentan). |
 | `PopulationColor(densidad)` | Escala de color del modo población. |
 | `ScaleColor(valor)` | Rojo-amarillo-verde de 0 a 1, para los modos humor y fertilidad. |
 | `DepositColor(provincia)` | Color del modo recursos: el del yacimiento principal que queda de los conocidos, o con filtro ese recurso más intenso cuanto más queda. Gris si no hay nada. |

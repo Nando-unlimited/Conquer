@@ -240,6 +240,27 @@ internal sealed partial class AiPlayer
         if (nearest >= 0) _session.MoveUnit(_player.Id, unit.Id, nearest);
     }
 
+    /// <summary>Provinces this close to revolt get a garrison.</summary>
+    private const double GarrisonedRevoltRisk = 0.25;
+
+    /// <summary>In peace, sends the nearest idle regiment of its army to each province heading for revolt without a garrison.</summary>
+    private void KeepOrder()
+    {
+        var restless = _player.Provinces.Select(id => Map.Provinces[id])
+            .Where(p => GameSession.RevoltRisk(p) >= GarrisonedRevoltRisk && !_session.IsGarrisoned(p)).ToList();
+        if (restless.Count == 0) return;
+        var heading = Army.Where(u => u.IsMoving).Select(u => u.Path[^1]).ToHashSet();
+        // Regiments already holding down a restless province stay there.
+        var idle = Army.Where(u => !u.IsMoving && !u.IsAboard && u.AttackingProvinceId is null
+            && !(Map.Provinces[u.ProvinceId].OwnerId == _player.Id && Map.Provinces[u.ProvinceId].Mood < GameRules.UnrestMood)).ToList();
+        foreach (var p in restless.Where(p => !heading.Contains(p.Id)).OrderByDescending(GameSession.RevoltRisk))
+        {
+            var unit = idle.OrderBy(u => Map.DistanceKm(Map.Provinces[u.ProvinceId], p)).FirstOrDefault();
+            if (unit == null) return;
+            if (_session.MoveUnit(_player.Id, unit.Id, p.Id).Ok) idle.Remove(unit);
+        }
+    }
+
     /// <summary>A regiment out of supply walks back to the capital before hunger and desertion finish it.</summary>
     private bool GoHomeIfCutOff(Unit unit)
     {

@@ -37,6 +37,33 @@ public sealed partial class GameController
 
     private static Heading Section(string text, float height = 26) => new(text, Tone.Normal, Height: height);
 
+    /// <summary>Whose culture the people share and how far they have assimilated; how close the province is to revolt, if at all.</summary>
+    private void AddCultureAndRevolt(Document doc, Province p)
+    {
+        if (Session.CultureOf(p) is not { } culture) return;
+        if (GameSession.HasForeignCulture(p))
+        {
+            double years = (1 - p.Assimilation) / GameSession.DailyAssimilation(p) / 365;
+            doc.Add(new Info("Cultura", $"{culture.Name} · {p.Assimilation:P0} asimilada", Ink.Nation(culture.Color),
+                $"Su gente es de cultura de {culture.Name}: pierde {-GameSession.ForeignCultureMood(p):0} de humor, menos cuanto más se asimila.\n" +
+                $"Al ritmo actual adoptará la de {Session.Players[p.OwnerId].Name} en unos {years:0} años; va más deprisa con buen humor.\n" +
+                "Los migrantes de tus otras provincias que se instalan aquí la aceleran."));
+        }
+        else
+            doc.Add(new Info("Cultura", culture.Name, Ink.Nation(culture.Color), "Su gente comparte la cultura de su nación."));
+
+        if (p.RevoltProgress <= 0 && p.Mood >= GameRules.UnrestMood) return;
+        bool garrison = Session.IsGarrisoned(p);
+        string outcome = Session.WouldSecede(p)
+            ? $"se sublevará y se unirá a {culture.Name}"
+            : $"estallará una revuelta: morirá el {GameRules.RevoltDeaths:P0} de su gente y arderá uno de sus edificios";
+        string tip = $"Con el humor por debajo de {GameRules.UnrestMood:0} y sin tropas de su dueño dentro, la provincia se acerca a la rebelión, " +
+                     $"más deprisa cuanto peor es el humor. Al llegar al 100 % {outcome}.\n" +
+                     "Una guarnición (un regimiento en la provincia) la detiene; con buen humor se calma poco a poco." +
+                     (garrison ? "\nAhora hay guarnición: no avanza." : "");
+        doc.Add(new Info("Rebelión", $"{GameSession.RevoltRisk(p):P0}" + (garrison ? " · guarnición" : ""), garrison ? Tone.Normal : Tone.Bad, tip));
+    }
+
     private void ProvincePanel(Document doc, Province p)
     {
         var city = Session.CityIn(p);
@@ -99,6 +126,7 @@ public sealed partial class GameController
                     "Nacimientos respecto a lo normal. Sube con el buen humor, cae con el hambre y cambia despacio.\n" +
                     $"Tiende a {Session.TargetFertility(p, owner, owner.IsStarving):P0}."));
                 doc.Add(new Info("Nacimientos", $"+{Session.DailyBirths(p, owner.IsStarving):0.##} al día", owner.IsStarving ? Tone.Bad : Tone.Normal));
+                AddCultureAndRevolt(doc, p);
             }
             int incoming = Session.Migrations.Where(m => m.ToProvinceId == p.Id).Sum(m => m.People);
             int outgoing = Session.Migrations.Where(m => m.FromProvinceId == p.Id).Sum(m => m.People);
