@@ -96,6 +96,22 @@ public class SaveGameTests(WorldFixture world)
     }
 
     [Fact]
+    public void OlderSavesGiveAWorkshopToBarracksThatBuiltWarMachines()
+    {
+        var s = PlayedGame();
+        s.Human.Learn(Tech.SiegeEngines);
+        _map.Provinces[s.Cities.First(c => c.OwnerId == s.Human.Id).ProvinceId].AddBuilding(BuildingType.Barracks);
+        var save = s.ToSave("test") with { Workshops = false };
+
+        var loaded = GameSession.Load(_map, save);
+
+        // The barracks built catapults before workshops: where the owner knew how, they get a workshop to go on doing so.
+        var barracks = _map.Provinces.Where(p => p.OwnerId >= 0 && p.Buildings.Contains(BuildingType.Barracks)).ToList();
+        Assert.Contains(barracks, p => p.OwnerId == loaded.Human.Id);
+        Assert.All(barracks, p => Assert.Equal(loaded.Players[p.OwnerId].Techs.Contains(Tech.SiegeEngines), p.Buildings.Contains(BuildingType.Workshop)));
+    }
+
+    [Fact]
     public void TheSameSettingsGenerateTheSameMap()
     {
         var again = WorldGenerator.Generate(new WorldSettings(MapKind.Random, 42));

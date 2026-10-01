@@ -665,8 +665,8 @@ public class GameplayTests(WorldFixture world)
         {
             var capital = _map.Provinces[s.CityById(ai.CapitalCityId!.Value)!.ProvinceId];
             Assert.Contains(BuildingType.Barracks, capital.Buildings);
-            var combat = s.Units.Where(u => u.OwnerId == ai.Id && u.IsMilitary).SelectMany(u => u.Battalions).Count(b => b.Type.NeedsBarracks())
-                         + ai.Provinces.Sum(id => _map.Provinces[id].Training.Count(o => o.TemplateBattalions.Count > 0 || o.Battalion is { } t && t.NeedsBarracks()));
+            var combat = s.Units.Where(u => u.OwnerId == ai.Id && u.IsMilitary).SelectMany(u => u.Battalions).Count(b => b.Type.TrainingBuilding() != null)
+                         + ai.Provinces.Sum(id => _map.Provinces[id].Training.Count(o => o.TemplateBattalions.Count > 0 || o.Battalion is { } t && t.TrainingBuilding() != null));
             Assert.True(combat > 0, $"{ai.Name} has no combat troops");
         }
     }

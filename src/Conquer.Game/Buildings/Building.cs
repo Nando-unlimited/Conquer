@@ -6,7 +6,8 @@ namespace Conquer.Game.Buildings;
 
 /// <summary>
 /// The buildings a province can have, one of each. The order is the order they are listed in. Farms,
-/// granaries, sawmills, mines and barracks go anywhere; the rest need a city. Only provinces with barracks train combat troops. Roads and railways are not buildings but
+/// granaries, sawmills, mines, barracks, workshops and factories go anywhere; the rest need a city. Only provinces with barracks train combat
+/// troops, and only those with a workshop (or the factory it becomes) build war machines. Roads and railways are not buildings but
 /// links between provinces (<see cref="Simulation.RoadNetwork"/>).
 /// </summary>
 public enum BuildingType
@@ -36,6 +37,8 @@ public enum BuildingType
     PowerPlant,
     Port,
     DryDock,
+    /// <summary>Builds the war machines (<see cref="Military.Battalions.TrainingBuilding"/>); it becomes a <see cref="Factory"/> once its owner knows industrialisation.</summary>
+    Workshop,
 }
 
 /// <param name="Days">Days of work to build it.</param>
@@ -45,9 +48,15 @@ public enum BuildingType
 /// <param name="Effects">What it improves in its own province.</param>
 /// <param name="NeedsCoast">Only a province next to the sea or a lake can build it.</param>
 /// <param name="RequiresBuilding">Another building the province must have first.</param>
+/// <param name="BecomesWith">The building it turns into once its owner knows that one's advance; from then on that one is built instead.</param>
 public sealed record BuildingInfo(
     string Name, string Description, ResourceCost Cost, int Days,
-    Tech? RequiresTech, bool CityOnly, bool NeedsDeposit, Modifiers Effects, bool NeedsCoast = false, BuildingType? RequiresBuilding = null);
+    Tech? RequiresTech, bool CityOnly, bool NeedsDeposit, Modifiers Effects, bool NeedsCoast = false, BuildingType? RequiresBuilding = null,
+    BuildingType? BecomesWith = null)
+{
+    /// <summary>Its name with the indefinite article: «un cuartel», «una fábrica».</summary>
+    public string WithArticle => (Name.EndsWith('a') ? "una " : "un ") + Name.ToLowerInvariant();
+}
 
 public static class Buildings
 {
@@ -85,8 +94,8 @@ public static class Buildings
             new ResourceCost((ResourceType.Wood, 100), (ResourceType.Gold, 150)), 80, Tech.Banking, true, false, new() { Taxes = 0.5 }),
         [BuildingType.Castle] = new("Castillo", "Quien defiende la provincia hace el doble de daño.",
             new ResourceCost((ResourceType.Wood, 250), (ResourceType.Gold, 100), (ResourceType.Iron, 20)), 150, Tech.Castles, true, false, new() { Defense = 1 }),
-        [BuildingType.Factory] = new("Fábrica", "+50 % de madera y de yacimientos en la provincia.",
-            new ResourceCost((ResourceType.Wood, 200), (ResourceType.Gold, 200), (ResourceType.Iron, 50), (ResourceType.Coal, 50)), 120, Tech.Industrialization, true, false,
+        [BuildingType.Factory] = new("Fábrica", "Construye las máquinas de guerra, como el taller. +50 % de madera y de yacimientos en la provincia.",
+            new ResourceCost((ResourceType.Wood, 200), (ResourceType.Gold, 200), (ResourceType.Iron, 50), (ResourceType.Coal, 50)), 120, Tech.Industrialization, false, false,
             new() { Wood = 0.5, Deposits = 0.5 }),
         [BuildingType.Hospital] = new("Hospital", "+20 % de fertilidad y la tierra alimenta un 10 % más de gente en la provincia.",
             new ResourceCost((ResourceType.Wood, 150), (ResourceType.Gold, 150)), 90, Tech.Sanitation, true, false, new() { Fertility = 0.2, Capacity = 0.1 }),
@@ -98,7 +107,13 @@ public static class Buildings
         [BuildingType.DryDock] = new("Dique seco", "Construye los barcos más avanzados y repara las flotas el doble de rápido.",
             new ResourceCost((ResourceType.Gold, 300), (ResourceType.Iron, 150), (ResourceType.Coal, 50)), 120, Tech.NavalEngineering, true, false, Modifiers.None,
             NeedsCoast: true, RequiresBuilding: BuildingType.Port),
+        [BuildingType.Workshop] = new("Taller", "Construye las máquinas de guerra: catapultas, cañones, artillería, tanques y bombarderos. Con la industrialización pasa a ser una fábrica.",
+            new ResourceCost((ResourceType.Wood, 80), (ResourceType.Gold, 40)), 40, Tech.SiegeEngines, false, false, Modifiers.None, BecomesWith: BuildingType.Factory),
     };
 
     public static BuildingInfo Info(this BuildingType type) => Table[type];
+
+    /// <summary>What the building is for this player: the one it turns into (<see cref="BuildingInfo.BecomesWith"/>) once they know how, or itself.</summary>
+    public static BuildingType For(this BuildingType type, Entities.Player player) =>
+        type.Info().BecomesWith is BuildingType next && next.Info().RequiresTech is Tech tech && player.Techs.Contains(tech) ? next : type;
 }

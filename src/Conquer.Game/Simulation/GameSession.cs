@@ -468,6 +468,8 @@ public sealed partial class GameSession
         if (p.OwnerId < 0) return CommandResult.Fail("La provincia no es de nadie.");
         if (info.RequiresTech is Tech tech && !Players[p.OwnerId].Techs.Contains(tech))
             return CommandResult.Fail($"Requiere {tech.Info().Name.ToLowerInvariant()}.");
+        if (type.For(Players[p.OwnerId]) is var better && better != type)
+            return CommandResult.Fail($"Ahora se construye {better.Info().WithArticle}.");
         if (info.CityOnly && !p.CityId.HasValue) return CommandResult.Fail("Solo en provincias con ciudad.");
         if (info.NeedsCoast && !p.Neighbors.Any(n => Map.Provinces[n].IsWater)) return CommandResult.Fail("Solo en provincias con costa.");
         if (info.RequiresBuilding is BuildingType first && !p.Buildings.Contains(first))
@@ -576,9 +578,13 @@ public sealed partial class GameSession
     /// <summary>What to call a place in messages: its city if it has one, otherwise the province.</summary>
     public string PlaceName(Province p) => CityIn(p)?.Name ?? p.DisplayName;
 
-    /// <summary>Every construction advances a day; finished buildings start working at once and finished cities are founded.</summary>
+    /// <summary>
+    /// Every construction advances a day; finished buildings start working at once and finished cities are founded.
+    /// Buildings the player now knows how to turn into something better (workshops into factories) become it.
+    /// </summary>
     private void DailyConstruction(Player player)
     {
+        UpgradeBuildings(player);
         foreach (int id in player.Provinces)
         {
             var p = Map.Provinces[id];
@@ -586,9 +592,11 @@ public sealed partial class GameSession
             p.ConstructionDaysLeft = 0;
             if (p.Constructing is BuildingType type)
             {
-                p.AddBuilding(type);
+                // Started before the advance that improves it: it opens as the better building.
+                var built = type.For(player);
+                p.AddBuilding(built);
                 p.Constructing = null;
-                if (player.IsHuman) Notify(player.Id, $"Terminada la obra: {type.Info().Name} en {PlaceName(p)}.");
+                if (player.IsHuman) Notify(player.Id, $"Terminada la obra: {built.Info().Name} en {PlaceName(p)}.");
             }
             else
             {
@@ -596,6 +604,37 @@ public sealed partial class GameSession
                 p.PlannedCityName = null;
                 AddCity(player, p, name);
             }
+        }
+    }
+
+    /// <summary>
+    /// Turns the player's buildings into what they become with an advance they know (<see cref="BuildingInfo.BecomesWith"/>):
+    /// workshops into factories, also those of provinces just conquered. Tells the human how many changed.
+    /// </summary>
+    private void UpgradeBuildings(Player player)
+    {
+        var upgraded = new Dictionary<(BuildingType From, BuildingType To), int>();
+        foreach (int id in player.Provinces)
+        {
+            var p = Map.Provinces[id];
+            foreach (var old in p.Buildings.Where(b => b.For(player) != b).ToList())
+            {
+                var better = old.For(player);
+                p.RemoveBuilding(old);
+                p.AddBuilding(better);
+                upgraded[(old, better)] = upgraded.GetValueOrDefault((old, better)) + 1;
+            }
+        }
+        if (!player.IsHuman) return;
+        foreach (var ((from, to), count) in upgraded)
+            Notify(player.Id, count == 1
+                ? $"{to.Info().RequiresTech?.Info().Name}: tu {from.Info().Name.ToLowerInvariant()} pasa a ser {to.Info().WithArticle}."
+                : $"{to.Info().RequiresTech?.Info().Name}: tus {count} {Plural(from)} pasan a ser {Plural(to)}.");
+
+        static string Plural(BuildingType b)
+        {
+            string name = b.Info().Name.ToLowerInvariant();
+            return name.EndsWith('r') || name.EndsWith('l') ? name + "es" : name + "s";
         }
     }
 

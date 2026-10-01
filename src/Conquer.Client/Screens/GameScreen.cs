@@ -578,8 +578,8 @@ public sealed partial class GameScreen : IScreen
         if (p.IsOwned)
         {
             string buildings = p.Constructing.HasValue || p.PlannedCityName != null ? $"Edificios ({p.Buildings.Count}+1)" : $"Edificios ({p.Buildings.Count})";
-            // Cities and barracks train troops; elsewhere the tab still shows what was left training.
-            bool army = p.OwnerId == Human.Id && (city != null || p.Buildings.Contains(BuildingType.Barracks) || p.Training.Count > 0);
+            // Cities, barracks and workshops train troops; elsewhere the tab still shows what was left training.
+            bool army = p.OwnerId == Human.Id && (city != null || p.Has(BuildingType.Barracks) || p.Has(BuildingType.Workshop) || p.Training.Count > 0);
             if (!army && _provinceTab == ProvinceTab.Army) _provinceTab = ProvinceTab.General;
             string[] tabs = army ? ["General", buildings, p.Training.Count > 0 ? $"Ejército ({p.Training.Count})" : "Ejército"] : ["General", buildings];
             float tw = (w - 6 * (tabs.Length - 1)) / tabs.Length;
@@ -729,10 +729,10 @@ public sealed partial class GameScreen : IScreen
         }
     }
 
-    /// <summary>The battalions the owner's military advances have its barracks train faster, and how much.</summary>
-    private void BarracksImprovements(Player owner, float x, ref float y, float w)
+    /// <summary>The battalions the owner's military advances have a training building (barracks or workshop) train faster, and how much.</summary>
+    private void TrainingImprovements(BuildingType building, Player owner, float x, ref float y, float w)
     {
-        var faster = Battalions.All.Where(t => t.NeedsBarracks() && t.Info().Requires.All(owner.Techs.Contains) && GameSession.TrainingSpeed(owner, t) > 0)
+        var faster = Battalions.All.Where(t => t.TrainingBuilding() == building && t.Info().Requires.All(owner.Techs.Contains) && GameSession.TrainingSpeed(owner, t) > 0)
             .Select(t => $"{t.Info().Name} -{1 - 1 / (1 + GameSession.TrainingSpeed(owner, t)):P0}").ToList();
         if (faster.Count == 0) return;
         foreach (var line in Ui.Font.Wrap("Instrucción más corta: " + string.Join(", ", faster) + ".", w, FontSize.Small))
@@ -778,7 +778,9 @@ public sealed partial class GameScreen : IScreen
             y += 22;
             Ui.Text(x + 10, y, built.Info().Description, Theme.TextDim, FontSize.Small);
             y += 24;
-            if (built == BuildingType.Barracks && p.OwnerId >= 0) BarracksImprovements(_session.Players[p.OwnerId], x + 10, ref y, w - 10);
+            // Barracks, and the workshop or the factory it became, list the troops they train faster.
+            var trains = built == BuildingType.Factory ? BuildingType.Workshop : built;
+            if (trains is BuildingType.Barracks or BuildingType.Workshop && p.OwnerId >= 0) TrainingImprovements(trains, _session.Players[p.OwnerId], x + 10, ref y, w - 10);
         }
 
         if (p.OwnerId != Human.Id) return;
@@ -800,8 +802,9 @@ public sealed partial class GameScreen : IScreen
                 y += 34;
             }
         }
-        // Buildings of advances not yet discovered stay out of the list altogether.
-        foreach (var type in Buildings.All.Where(t => !p.Buildings.Contains(t) && p.Constructing != t && IsBuildingKnown(t)))
+        // Buildings of advances not yet discovered stay out of the list altogether, and so do those replaced by something
+        // better (the workshop, once factories are known).
+        foreach (var type in Buildings.All.Where(t => !p.Buildings.Contains(t) && p.Constructing != t && IsBuildingKnown(t) && t.For(Human) == t))
         {
             var available = _session.IsBuildingAvailable(p, type);
             if (!available.Ok)

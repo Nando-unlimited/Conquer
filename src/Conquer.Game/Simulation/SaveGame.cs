@@ -43,6 +43,11 @@ public sealed record SaveGame
     /// one, as every city trained troops before.
     /// </summary>
     public bool Barracks { get; init; }
+    /// <summary>
+    /// Written since only provinces with a workshop (or factory) build war machines (1.45.0). Loading an older save gives
+    /// one to every province with barracks whose owner knows siege engines, as the barracks built them before.
+    /// </summary>
+    public bool Workshops { get; init; }
     public required long Hours { get; init; }
     public required bool ComputerRivals { get; init; }
 

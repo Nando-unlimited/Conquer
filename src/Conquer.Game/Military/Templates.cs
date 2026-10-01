@@ -30,8 +30,8 @@ public sealed class RegimentTemplate
         .GroupBy(i => i.Type).Select(g => (g.Key, g.Sum(i => i.Amount))).OrderBy(i => i.Key).ToArray());
     /// <summary>Its battalions train side by side, so the slowest sets the time; before advances (see <see cref="Simulation.GameSession.TrainingDays(Entities.Player, RegimentTemplate)"/>).</summary>
     public int TrainingDays => Battalions.Count == 0 ? 0 : Battalions.Max(b => b.Info().TrainingDays);
-    /// <summary>Whether any of its battalions trains only in barracks.</summary>
-    public bool NeedsBarracks => Battalions.Any(b => b.NeedsBarracks());
+    /// <summary>The buildings its battalions train in (<see cref="Military.Battalions.TrainingBuilding"/>): barracks, a workshop, both or none.</summary>
+    public IEnumerable<Buildings.BuildingType> TrainingBuildings => Battalions.Select(b => b.TrainingBuilding()).OfType<Buildings.BuildingType>().Distinct().Order();
     /// <summary>Every advance any of its battalions needs.</summary>
     public IEnumerable<Tech> Requires => Battalions.SelectMany(b => b.Info().Requires).Distinct();
     public double Attack => Battalions.Sum(b => b.Info().Attack);

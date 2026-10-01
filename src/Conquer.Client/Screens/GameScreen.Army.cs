@@ -518,13 +518,18 @@ public sealed partial class GameScreen
 
     // ------------------------------------------------------------------ province: Ejército tab
 
-    /// <summary>Battalions the province (its city or its barracks) can train (those of undiscovered advances are not listed), HQs, and what is in training.</summary>
+    /// <summary>Battalions the province (its city, its barracks or its workshop) can train (those of undiscovered advances are not listed), HQs, and what is in training.</summary>
     private void ArmyPanel(Province p, float x, ref float y, float w)
     {
-        if (p.CityId.HasValue && !p.Buildings.Contains(BuildingType.Barracks))
+        // The training buildings it lacks, of those the player can build: barracks always, the workshop once siege engines are known.
+        var lacking = new[] { BuildingType.Barracks, BuildingType.Workshop }.Where(b => !p.Has(b) && IsBuildingKnown(b)).Select(b => b.For(Human)).ToList();
+        if (lacking.Count > 0)
         {
-            foreach (var line in Ui.Font.Wrap("Sin cuartel: la ciudad solo entrena exploradores, ingenieros, barcos y cuarteles generales. Constrúyelo en la pestaña Edificios.",
-                         w, FontSize.Small))
+            var reasons = lacking.Select(b => b == BuildingType.Barracks
+                ? "Sin cuartel no entrena infantería ni caballería."
+                : $"Sin {b.Info().Name.ToLowerInvariant()} no construye máquinas de guerra (catapultas, cañones, artillería, tanques, bombarderos).");
+            string text = string.Join(" ", reasons) + (lacking.Count > 1 ? " Constrúyelos" : lacking[0] == BuildingType.Factory ? " Constrúyela" : " Constrúyelo") + " en la pestaña Edificios.";
+            foreach (var line in Ui.Font.Wrap(text, w, FontSize.Small))
             {
                 Ui.Text(x, y, line, Theme.Bad, FontSize.Small);
                 y += Ui.Font.LineHeight(FontSize.Small);

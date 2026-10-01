@@ -29,7 +29,7 @@ internal sealed partial class AiPlayer
     private const double BigCityPopulation = 2000;
     private static readonly BuildingType[] BuildOrder =
     [
-        BuildingType.Farm, BuildingType.Granary, BuildingType.Barracks, BuildingType.Temple, BuildingType.Library, BuildingType.Market,
+        BuildingType.Farm, BuildingType.Granary, BuildingType.Barracks, BuildingType.Workshop, BuildingType.Temple, BuildingType.Library, BuildingType.Market,
         BuildingType.Mine, BuildingType.Sawmill, BuildingType.Aqueduct, BuildingType.HerbalistHut, BuildingType.Amphitheatre,
         BuildingType.Walls, BuildingType.University, BuildingType.Bank, BuildingType.Castle,
         BuildingType.Factory, BuildingType.Hospital, BuildingType.PowerPlant, BuildingType.Port, BuildingType.DryDock,
@@ -154,6 +154,9 @@ internal sealed partial class AiPlayer
         BuildingType.Walls or BuildingType.Castle => p.Population >= BigCityPopulation,
         // Barracks in the capital, where it trains its army, and in the big cities.
         BuildingType.Barracks => p.CityId == _player.CapitalCityId || p.Population >= BigCityPopulation,
+        // A workshop beside its barracks for the war machines; factories in its cities, as they pay off there.
+        BuildingType.Workshop => p.Buildings.Contains(BuildingType.Barracks),
+        BuildingType.Factory => p.CityId.HasValue,
         _ => true,
     };
 

@@ -136,8 +136,20 @@ public static class Battalions
 
     public static BattalionInfo Info(this BattalionType type) => Table[type];
 
-    /// <summary>Combat troops train only in a city with barracks; scouts and engineers anywhere, and ships in ports.</summary>
-    public static bool NeedsBarracks(this BattalionType type) => !type.Info().Naval && type is not (BattalionType.Scouts or BattalionType.Engineers);
+    /// <summary>The war machines: built in a workshop (or the factory it becomes) rather than drilled in barracks.</summary>
+    private static readonly HashSet<BattalionType> Machines =
+    [
+        BattalionType.Catapults, BattalionType.Cannons, BattalionType.FieldArtillery, BattalionType.HeavyArtillery, BattalionType.Tanks, BattalionType.Bombers,
+    ];
+
+    /// <summary>
+    /// The building a province needs to train the battalion: a workshop for the war machines, barracks for the other
+    /// combat troops, and none for scouts, engineers and ships (which need a port instead).
+    /// </summary>
+    public static BuildingType? TrainingBuilding(this BattalionType type) =>
+        type.Info().Naval || type is BattalionType.Scouts or BattalionType.Engineers ? null
+        : Machines.Contains(type) ? BuildingType.Workshop
+        : BuildingType.Barracks;
 
     private static readonly HashSet<BattalionType> Artillery =
         [BattalionType.Catapults, BattalionType.Cannons, BattalionType.FieldArtillery, BattalionType.HeavyArtillery];

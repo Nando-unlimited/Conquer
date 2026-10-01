@@ -4,6 +4,7 @@ using Conquer.Game.Entities;
 using Conquer.Game.Military;
 using Conquer.Game.Rules;
 using Conquer.Game.Simulation;
+using Conquer.Game.World;
 
 namespace Conquer.Game.AI;
 
@@ -79,7 +80,7 @@ internal sealed partial class AiPlayer
         if (city == null || Map.Provinces[city.ProvinceId].Population < 400) return;
         // A unit as big as the city can spare (keeping 100 people beyond the minimum), from 2 to 6 battalions.
         int size = Math.Clamp((int)((Map.Provinces[city.ProvinceId].Population - GameRules.MinCityPopulation - 100) / 100), 0, BattalionsPerUnit);
-        if (size >= 2 && ArmyTemplate(size) is var template && Spare(template.Cost)
+        if (size >= 2 && ArmyTemplate(size, Map.Provinces[city.ProvinceId]) is var template && Spare(template.Cost)
             && _session.TrainTemplate(_player.Id, city.ProvinceId, template.Id).Ok) return;
         var best = Battalions.All
             .Where(t => !t.Info().Naval && !Auxiliary(t) && _session.CanTrain(Map.Provinces[city.ProvinceId], t).Ok && Spare(t.Info().Cost))
@@ -109,11 +110,13 @@ internal sealed partial class AiPlayer
 
     /// <summary>
     /// Its unit design, kept up to date with what it knows and can supply: its sturdiest infantry, with its
-    /// hardest-hitting troop as the third and fifth battalions, cut down to the size the city can spare.
+    /// hardest-hitting troop as the third and fifth battalions, cut down to the size the city can spare. War machines
+    /// only if the city has a workshop to build them.
     /// </summary>
-    private RegimentTemplate ArmyTemplate(int size)
+    private RegimentTemplate ArmyTemplate(int size, Province where)
     {
-        var known = Battalions.All.Where(t => !t.Info().Naval && !Auxiliary(t) && t.Info().Requires.All(_player.Techs.Contains) && CanSupply(t)).ToList();
+        var known = Battalions.All.Where(t => !t.Info().Naval && !Auxiliary(t) && t.Info().Requires.All(_player.Techs.Contains) && CanSupply(t)
+                                              && (t.TrainingBuilding() is not BuildingType b || where.Has(b))).ToList();
         var infantry = known.Where(t => !t.Info().Mounted).MaxBy(t => t.Info().Defense);
         var striker = known.MaxBy(t => t.Info().Attack);
         BattalionType[] design = [.. new[] { infantry, infantry, striker, infantry, striker, infantry }.Take(size)];

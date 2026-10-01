@@ -21,6 +21,7 @@ public sealed partial class GameSession
         ExtraDeposits = true,
         ThreeCommandLevels = true,
         Barracks = true,
+        Workshops = true,
         Hours = Date.Hours,
         ComputerRivals = _computerRivals,
         Players = Players.Select(p => new PlayerSave(
@@ -172,6 +173,14 @@ public sealed partial class GameSession
             // Before barracks every city trained troops: in an older save each keeps doing so with one.
             if (!save.Barracks) map.Provinces[c.ProvinceId].AddBuilding(BuildingType.Barracks);
         }
+        // Before workshops the barracks also built the war machines: in an older save each that could keeps doing so with
+        // a workshop (a factory, for a nation already industrialised).
+        if (!save.Workshops)
+            foreach (var p in map.Provinces.Where(p => p.OwnerId >= 0 && p.Buildings.Contains(BuildingType.Barracks)))
+            {
+                var owner = session.Players[p.OwnerId];
+                if (BuildingType.Workshop.Info().RequiresTech is { } tech && owner.Techs.Contains(tech)) p.AddBuilding(BuildingType.Workshop.For(owner));
+            }
 
         foreach (var u in save.Units)
         {

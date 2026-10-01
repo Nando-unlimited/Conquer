@@ -2,6 +2,21 @@
 
 Todos los cambios del juego, del más reciente al más antiguo. Cada versión es un commit cuyo título es su número.
 
+## [1.45.0] - 2026-10-01
+
+### Añadido
+- **Taller**: un edificio nuevo para construir las máquinas de guerra (80 de madera y 40 de oro, 40 días; llega con la Maquinaria de asedio). Como el cuartel, se puede levantar en cualquier provincia tuya, tenga ciudad o no.
+  - **Solo las provincias con taller construyen catapultas, cañones, artillería de campaña, artillería pesada, tanques y bombarderos.** El cuartel ya no los entrena: se queda con la infantería y la caballería.
+  - Una plantilla que mezcla soldados y máquinas pide cuartel y taller en la misma provincia.
+  - La pestaña Ejército avisa de lo que le falta a la provincia, y cada tropa dice «Requiere un taller en la provincia».
+  - Los avances que aceleran las máquinas (Talleres de asedio, Fundiciones de artillería, Producción bélica) las hacen salir antes del taller; su panel lo muestra.
+- **Los talleres pasan a ser fábricas con la Industrialización**: al descubrirla, todos tus talleres (y los que conquistes después) se convierten en fábricas, que siguen construyendo las máquinas de guerra y además dan +50 % de madera y de yacimientos. Desde entonces se construyen fábricas en lugar de talleres, y un taller en obras se termina como fábrica.
+
+### Cambiado
+- La fábrica ya no necesita ciudad: se puede construir en cualquier provincia tuya.
+- La IA levanta un taller donde tiene cuartel y solo pone máquinas de guerra en su plantilla si puede construirlas.
+- Al cargar una partida guardada de una versión anterior, cada provincia con cuartel cuyo dueño conoce la Maquinaria de asedio recibe un taller (o una fábrica, si ya conoce la Industrialización), porque hasta ahora el cuartel construía las máquinas.
+
 ## [1.44.1] - 2026-10-01
 
 ### Cambiado

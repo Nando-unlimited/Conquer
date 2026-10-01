@@ -208,13 +208,14 @@ public sealed partial class GameSession
     // ------------------------------------------------------------------ training
 
     /// <summary>
-    /// Whether troops can be raised in a province of the player's: it needs a city or barracks (only the barracks
-    /// train combat troops, see <see cref="CanRaiseTroops"/>).
+    /// Whether troops can be raised in a province of the player's: it needs a city, barracks or a workshop (only the
+    /// barracks train combat troops, and only the workshop war machines, see <see cref="CanRaiseTroops"/>).
     /// </summary>
     public CommandResult CanTrainIn(int playerId, Province p)
     {
         if (p.OwnerId != playerId) return CommandResult.Fail("La provincia no es tuya.");
-        if (!p.CityId.HasValue && !p.Buildings.Contains(BuildingType.Barracks)) return CommandResult.Fail("Hace falta una ciudad o un cuartel en la provincia.");
+        if (!p.CityId.HasValue && !p.Has(BuildingType.Barracks) && !p.Has(BuildingType.Workshop))
+            return CommandResult.Fail($"Hace falta una ciudad, un cuartel o {BuildingType.Workshop.For(Players[playerId]).Info().WithArticle} en la provincia.");
         if (p.IsOccupied) return CommandResult.Fail("La provincia está ocupada por el enemigo.");
         return CommandResult.Success();
     }
@@ -224,22 +225,24 @@ public sealed partial class GameSession
         if (type.Info().Naval && !IsPort(p, p.OwnerId)) return CommandResult.Fail("Los barcos solo se construyen en ciudades con puerto.");
         if (type.Info().Shipyard is BuildingType yard && !p.Buildings.Contains(yard))
             return CommandResult.Fail($"Requiere {yard.Info().Name.ToLowerInvariant()} en la ciudad.");
-        return CanRaiseTroops(p, type.Info().Men, type.Info().Cost, type.Info().Requires, type.NeedsBarracks());
+        return CanRaiseTroops(p, type.Info().Men, type.Info().Cost, type.Info().Requires, type.TrainingBuilding() is BuildingType b ? [b] : []);
     }
 
     /// <summary>
-    /// Whether a province can raise troops: it has a city or barracks (<see cref="CanTrainIn"/>), the advances are
-    /// known, it has barracks if they are combat troops (<paramref name="needsBarracks"/>), it has the men to spare
-    /// (keeping a city's minimum, or a settled province's) and the nation can pay.
+    /// Whether a province can raise troops: it has a city, barracks or a workshop (<see cref="CanTrainIn"/>), the
+    /// advances are known, it has the buildings they train in (<see cref="Battalions.TrainingBuilding"/>), it has the
+    /// men to spare (keeping a city's minimum, or a settled province's) and the nation can pay.
     /// </summary>
-    private CommandResult CanRaiseTroops(Province p, int men, Economy.ResourceCost cost, IEnumerable<Tech> requires, bool needsBarracks)
+    private CommandResult CanRaiseTroops(Province p, int men, Economy.ResourceCost cost, IEnumerable<Tech> requires, IEnumerable<BuildingType> buildings)
     {
         var where = CanTrainIn(p.OwnerId, p);
         if (!where.Ok) return where;
         var player = Players[p.OwnerId];
         var missing = requires.Where(t => !player.Techs.Contains(t)).ToList();
         if (missing.Count > 0) return CommandResult.Fail("Requiere " + string.Join(" y ", missing.Select(t => t.Info().Name.ToLowerInvariant())) + ".");
-        if (needsBarracks && !p.Buildings.Contains(BuildingType.Barracks)) return CommandResult.Fail("Requiere un cuartel en la provincia.");
+        var lacking = buildings.Where(b => !p.Has(b)).ToList();
+        if (lacking.Count > 0)
+            return CommandResult.Fail("Requiere " + string.Join(" y ", lacking.Select(b => b.For(player).Info().WithArticle)) + " en la provincia.");
         int keep = MinimumPopulation(p);
         if (p.Population - men < keep) return CommandResult.Fail($"Hacen falta {men + keep} habitantes.");
         if (!player.Stockpile.Has(cost)) return CommandResult.Fail($"Cuesta {cost}.");
@@ -386,7 +389,7 @@ public sealed partial class GameSession
     }
 
     public CommandResult CanTrainTemplate(Province p, RegimentTemplate template) =>
-        CanRaiseTroops(p, template.Men, template.Cost, template.Requires, template.NeedsBarracks);
+        CanRaiseTroops(p, template.Men, template.Cost, template.Requires, template.TrainingBuildings);
 
     /// <summary>Pays for every battalion of a template at once; they train side by side and form one regiment.</summary>
     public CommandResult TrainTemplate(int playerId, int provinceId, int templateId)

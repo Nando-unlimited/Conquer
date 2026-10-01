@@ -128,6 +128,7 @@ public class MilitaryTests(WorldFixture world)
         s.Human.Learn(Tech.MilitaryTactics);
         Assert.True(s.Train(0, city.ProvinceId, BattalionType.Legionaries).Ok);
 
+        a.AddBuilding(BuildingType.Workshop);
         Assert.False(s.Train(0, city.ProvinceId, BattalionType.Catapults).Ok);
         s.Human.Learn(Tech.SiegeEngines);
         Assert.True(s.Train(0, city.ProvinceId, BattalionType.Catapults).Ok);
@@ -593,7 +594,7 @@ public class MilitaryTests(WorldFixture world)
         Assert.True(s.RaiseHeadquarters(0, a.Id, 1).Ok);
         var scoutsOnly = s.AddTemplate(s.Human, [BattalionType.Scouts, BattalionType.Engineers]);
         Assert.True(s.CanTrainTemplate(a, scoutsOnly).Ok);
-        Assert.False(BattalionType.Trireme.NeedsBarracks());
+        Assert.Null(BattalionType.Trireme.TrainingBuilding());
 
         // Barracks need no advance, and once built the city trains combat troops.
         Assert.True(s.Build(0, a.Id, BuildingType.Barracks).Ok);
@@ -616,8 +617,8 @@ public class MilitaryTests(WorldFixture world)
         field.Population = 500;
 
         // Without a city or barracks the province trains nothing.
-        Assert.Equal("Hace falta una ciudad o un cuartel en la provincia.", s.CanTrain(field, BattalionType.Scouts).Message);
-        Assert.Equal("Hace falta una ciudad o un cuartel en la provincia.", s.CanRaiseHeadquarters(field, 1).Message);
+        Assert.Equal("Hace falta una ciudad, un cuartel o un taller en la provincia.", s.CanTrain(field, BattalionType.Scouts).Message);
+        Assert.Equal("Hace falta una ciudad, un cuartel o un taller en la provincia.", s.CanRaiseHeadquarters(field, 1).Message);
         Assert.True(s.IsBuildingAvailable(field, BuildingType.Barracks).Ok);
         Assert.True(s.Build(0, field.Id, BuildingType.Barracks).Ok);
         RunHours(s, 24 * BuildingType.Barracks.Info().Days);
@@ -636,6 +637,62 @@ public class MilitaryTests(WorldFixture world)
         RunHours(loaded, 24 * GameSession.TrainingDays(loaded.Human, BattalionType.Warriors));
         Assert.Empty(_map.Provinces[field.Id].Training);
         Assert.Contains(loaded.Units, u => u.OwnerId == 0 && u.ProvinceId == field.Id && u.Battalions.Any(x => x.Type == BattalionType.Warriors));
+    }
+
+    [Fact]
+    public void OnlyProvincesWithAWorkshopBuildWarMachines()
+    {
+        var (s, a, _) = TwoNations();
+        a.Population = 3000;
+        foreach (var r in Resources.All) s.Human.Stockpile[r] = 5000;
+        Assert.Equal(
+            [BattalionType.Catapults, BattalionType.Cannons, BattalionType.FieldArtillery, BattalionType.HeavyArtillery, BattalionType.Tanks, BattalionType.Bombers],
+            Battalions.All.Where(t => t.TrainingBuilding() == BuildingType.Workshop));
+
+        // The workshop comes with siege engines, the first war machine.
+        Assert.Equal("Requiere maquinaria de asedio.", s.IsBuildingAvailable(a, BuildingType.Workshop).Message);
+        s.Human.Learn(Tech.SiegeEngines);
+        Assert.Equal("Requiere un taller en la provincia.", s.CanTrain(a, BattalionType.Catapults).Message);
+        var siege = s.AddTemplate(s.Human, [BattalionType.Warriors, BattalionType.Catapults]);
+        Assert.Equal("Requiere un taller en la provincia.", s.CanTrainTemplate(a, siege).Message);
+        a.RemoveBuilding(BuildingType.Barracks);
+        Assert.Equal("Requiere un cuartel y un taller en la provincia.", s.CanTrainTemplate(a, siege).Message);
+
+        Assert.True(s.Build(0, a.Id, BuildingType.Workshop).Ok);
+        RunHours(s, 24 * BuildingType.Workshop.Info().Days);
+        Assert.Contains(BuildingType.Workshop, a.Buildings);
+        // A workshop builds war machines but drills no soldiers: that is still the barracks' job.
+        Assert.True(s.Train(0, a.Id, BattalionType.Catapults).Ok);
+        Assert.Equal("Requiere un cuartel en la provincia.", s.CanTrain(a, BattalionType.Warriors).Message);
+        a.AddBuilding(BuildingType.Barracks);
+        Assert.True(s.TrainTemplate(0, a.Id, siege.Id).Ok);
+    }
+
+    [Fact]
+    public void WorkshopsBecomeFactoriesWithIndustrialization()
+    {
+        var (s, a, _) = TwoNations();
+        a.Population = 3000;
+        foreach (var r in Resources.All) s.Human.Stockpile[r] = 5000;
+        s.Human.Learn(Tech.SiegeEngines);
+        s.Human.Learn(Tech.Metallurgy);
+        a.AddBuilding(BuildingType.Workshop);
+
+        s.Human.Learn(Tech.Industrialization);
+        // From then on factories are built instead of workshops, also where there is no city.
+        Assert.Equal("Ahora se construye una fábrica.", s.IsBuildingAvailable(a, BuildingType.Workshop).Message);
+        Assert.False(BuildingType.Factory.Info().CityOnly);
+        RunHours(s, 24);
+        Assert.DoesNotContain(BuildingType.Workshop, a.Buildings);
+        Assert.Contains(BuildingType.Factory, a.Buildings);
+        Assert.Equal(0.5, a.BuildingBonuses.Deposits);
+        Assert.Contains(s.Notifications, n => n.Text == "Industrialización: tu taller pasa a ser una fábrica.");
+
+        // The factory builds the war machines as the workshop did.
+        Assert.True(s.Train(0, a.Id, BattalionType.Cannons).Ok);
+        a.RemoveBuilding(BuildingType.Factory);
+        Assert.Equal("Requiere una fábrica en la provincia.", s.CanTrain(a, BattalionType.Cannons).Message);
+        Assert.Equal(0, a.BuildingBonuses.Deposits);
     }
 
     [Fact]
@@ -677,10 +734,10 @@ public class MilitaryTests(WorldFixture world)
         foreach (var tech in faster)
         {
             Assert.Equal(TechBranch.Military, tech.Info().Branch);
-            Assert.All(tech.Info().FasterTraining, type => Assert.True(type.NeedsBarracks()));
+            Assert.All(tech.Info().FasterTraining, type => Assert.NotNull(type.TrainingBuilding()));
         }
         // Every combat battalion has some advance that speeds it up.
-        Assert.All(Battalions.All.Where(t => t.NeedsBarracks()), type => Assert.Contains(faster, t => t.Info().FasterTraining.Contains(type)));
+        Assert.All(Battalions.All.Where(t => t.TrainingBuilding() != null), type => Assert.Contains(faster, t => t.Info().FasterTraining.Contains(type)));
     }
 
     [Fact]
