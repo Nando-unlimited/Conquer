@@ -33,6 +33,8 @@ public enum TextSize
     Small,
     Normal,
     Large,
+    /// <summary>The title face: the game's name and the nations on the map.</summary>
+    Title,
 }
 
 /// <summary>A <see cref="Tone"/>, or a nation's own colour (0xAARRGGBB) when <see cref="Color"/> is set.</summary>

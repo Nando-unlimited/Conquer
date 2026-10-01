@@ -127,10 +127,7 @@ public sealed partial class GameScreen : IScreen
         _renderer.Draw(_game.Camera, _game.SelectedProvince, _game.HoverProvince, _app.PixelScale, _game.Now);
         DrawRivers();
         _roads.Draw(Batch, _game.Camera, _session.Roads, _session.RoadProjects.Where(r => r.OwnerId == Human.Id), _game.PlannedRoute);
-        DrawCities();
-        DrawNationNames();
-        DrawUnits();
-        DrawBattles();
+        DrawMarkers();
 
         DrawTopBar();
         if (!_game.Nation.Visible) DrawSidePanel();
@@ -260,95 +257,7 @@ public sealed partial class GameScreen : IScreen
 
     private void DrawRivers() => _rivers.Draw(Batch, _game.Camera, _game.Mode == MapMode.Terrain);
 
-    /// <summary>
-    /// Each nation's name over its land: in its middle (a circular mean of longitudes, so a nation across
-    /// the date line is labelled over its land), sized to how big it looks, hidden while it is too small
-    /// and faded out when zoomed in so close that it covers the screen.
-    /// </summary>
-    private void DrawNationNames()
-    {
-        const float KmPerMapPixel = 40075f / 3600;
-        foreach (var player in _session.Players)
-        {
-            if (player.Provinces.Count < 3) continue;
-            double cos = 0, sin = 0, ySum = 0, area = 0;
-            foreach (int id in player.Provinces)
-            {
-                var p = Map.Provinces[id];
-                double angle = (p.CenterX + 0.5) / Map.Width * Math.Tau;
-                cos += Math.Cos(angle) * p.AreaKm2;
-                sin += Math.Sin(angle) * p.AreaKm2;
-                ySum += (p.CenterY + 0.5) * p.AreaKm2;
-                area += p.AreaKm2;
-            }
-            double mean = Math.Atan2(sin, cos);
-            var centre = new Vector2((float)((mean < 0 ? mean + Math.Tau : mean) / Math.Tau * Map.Width), (float)(ySum / area));
-            var s = _game.Camera.MapToScreen(centre);
-            if (!OnScreen(s)) continue;
-
-            float extent = (float)Math.Sqrt(area) / KmPerMapPixel * _game.Camera.Zoom;
-            if (extent < 45) continue;
-            var size = extent > 280 ? FontSize.Title : extent > 150 ? FontSize.Large : extent > 80 ? FontSize.Normal : FontSize.Small;
-            float alpha = Math.Clamp((1600 - extent) / 600, 0, 1) * 0.85f;
-            if (alpha <= 0) continue;
-            string name = player.Name.ToUpperInvariant();
-            var r = new Rect(s.X - 300, s.Y - 30, 600, 60);
-            Ui.TextCentered(r with { X = r.X + 2, Y = r.Y + 2 }, name, Rgba.Black.WithAlpha(alpha * 0.7f), size, bold: true);
-            Ui.TextCentered(r, name, Batch2D.Mix(new Rgba(player.Color), Rgba.White, 0.55f).WithAlpha(alpha), size, bold: true);
-        }
-    }
-
     private Vector2 Center(int provinceId) => _game.Center(provinceId);
-
-    private Vector2 Between(int from, int to, double t) => _game.Between(from, to, t);
-
-    private bool OnScreen(Vector2 p, float margin = 40) =>
-        p.X > -margin && p.Y > -margin && p.X < _game.Camera.Screen.X + margin && p.Y < _game.Camera.Screen.Y + margin;
-
-    private void DrawCities()
-    {
-        foreach (var city in _session.Cities)
-        {
-            var s = _game.Camera.MapToScreen(Center(city.ProvinceId));
-            if (!OnScreen(s)) continue;
-            bool capital = _session.Players[city.OwnerId].CapitalCityId == city.Id;
-            var color = new Rgba(_session.Players[city.OwnerId].Color);
-            // Houses grow a little as the map is zoomed in; their bases stand on the province's centre.
-            float scale = Math.Clamp(_game.Camera.Zoom / 4.5f, 0.6f, 1.5f);
-            int houses = MapIcons.Houses(Map.Provinces[city.ProvinceId].Population);
-            float below = MapIcons.City(Batch, s + new Vector2(0, 5 * scale), color, houses, capital, scale);
-            if (_game.Camera.Zoom >= 2.5f || (capital && _game.Camera.Zoom >= 1))
-            {
-                float w = Ui.Font.Measure(city.Name, FontSize.Small, true);
-                float ty = s.Y + 5 * scale + below;
-                Ui.Text(s.X - w / 2 + 1, ty + 1, city.Name, Rgba.Black, FontSize.Small, bold: true);
-                Ui.Text(s.X - w / 2, ty, city.Name, Rgba.White, FontSize.Small, bold: true);
-            }
-        }
-    }
-
-    private static readonly Rgba MoveColor = new(0xFF62B83E);
-
-    /// <summary>
-    /// The unit's route as an arrow from where it is through each province it will cross: full for the selected
-    /// unit, fainter for the player's other units on the move. Each step crosses the date line the short way.
-    /// </summary>
-    private void DrawPath(Unit unit, Vector2 from, bool selected)
-    {
-        if (unit.Path.Count == 0) return;
-        var origin = _game.Camera.MapToScreen(from);
-        var points = new List<Vector2> { origin };
-        var previous = from;
-        foreach (int step in unit.Path)
-        {
-            var c = Center(step);
-            float dx = c.X - previous.X;
-            dx -= Map.Width * MathF.Round(dx / Map.Width);
-            previous = new Vector2(previous.X + dx, c.Y);
-            points.Add(origin + (previous - from) * _game.Camera.Zoom);
-        }
-        PathArrow.Draw(Batch, points, MoveColor, _game.Now, selected ? 6 : 4, selected ? 1 : 0.55f);
-    }
 
     // ------------------------------------------------------------------ panels
 

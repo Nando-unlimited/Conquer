@@ -11,6 +11,7 @@ public static class DocumentView
     {
         TextSize.Small => FontSize.Small,
         TextSize.Large => FontSize.Large,
+        TextSize.Title => FontSize.Title,
         _ => FontSize.Normal,
     };
 

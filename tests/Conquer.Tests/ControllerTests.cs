@@ -233,6 +233,26 @@ public class ControllerTests(WorldFixture world)
     }
 
     [Fact]
+    public void TheMapShowsTheSelectedSettlersAndThenTheirCity()
+    {
+        var game = NewGame();
+        game.Camera.Screen = new System.Numerics.Vector2(1600, 900);
+        var counter = Assert.Single(game.Markers().Units, c => c.UnitId == game.SelectedUnitId);
+        Assert.Equal(CounterKind.Settlers, counter.Kind);
+        Assert.True(counter.Selected);
+        Assert.Equal(1, counter.Scale);
+
+        var settlers = game.SelectedUnit!;
+        game.OpenCityNaming(settlers.Id, settlers.ProvinceId);
+        game.CityName = "Villanueva";
+        game.ConfirmCityName();
+        var city = Assert.Single(game.Markers().Cities);
+        Assert.True(city.Capital);
+        Assert.Equal("Villanueva", city.Name);
+        Assert.DoesNotContain(game.Markers().Units, c => c.UnitId == settlers.Id);
+    }
+
+    [Fact]
     public void TheMapModeCyclesBackToTerrain()
     {
         var game = NewGame();

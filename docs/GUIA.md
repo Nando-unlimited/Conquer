@@ -587,7 +587,7 @@ Mapa de la Tierra real, generado por `tools/Conquer.EarthData`. Se incluye dentr
 ## 3. `src/Conquer.Presentation` — presentación sin motor
 
 Lo que ve y hace el jugador, sin nada de Silk.NET, OpenGL ni ningún otro motor (un test lo comprueba). El cliente solo lo dibuja,
-así que cambiar de motor no lo toca. Tiene las piezas que ya eran independientes, el estado de la partida en pantalla (`GameController`) y lo que muestran el panel lateral, las barras de arriba y abajo, el tooltip del mapa y el diálogo de ciudad, como documentos (`Document`), y la pantalla de la nación (`NationScreen`); el resto de la lógica de las pantallas
+así que cambiar de motor no lo toca. Tiene las piezas que ya eran independientes, el estado de la partida en pantalla (`GameController`) y lo que muestran el panel lateral, las barras de arriba y abajo, el tooltip del mapa y el diálogo de ciudad, como documentos (`Document`), , la pantalla de la nación (`NationScreen`), las ventanas de edición, carreteras y batallas, y los marcadores del mapa; el resto de la lógica de las pantallas
 irá llegando aquí poco a poco.
 
 ### `Camera.cs`
@@ -749,6 +749,16 @@ La ventana de una batalla (clic en sus espadas). Se actualiza en directo y el ti
 | `NavalBattle(...)` | Batalla en el mar: cada nación con sus barcos, tripulantes, organización, fuego y flotas. |
 | `OpenFirstBattle()` | Para `--panel battle`: abre la primera batalla en curso. |
 
+### `GameController.Map.cs`
+Lo que se dibuja sobre las provincias, ya en posiciones de pantalla (con la cámara) y sin lo que queda fuera de ella: `Markers()` devuelve `MapMarkers`.
+
+| Elemento | Qué es |
+| --- | --- |
+| `Cities()`, `CityMarker` | Cada ciudad, con el color de su nación, su población (más casas cuanto más poblada), si es la capital, un poco más grande con zoom, y su nombre si hay sitio (con zoom, o la capital desde más lejos). |
+| `NationLabels()`, `NationLabel` | El nombre de cada nación sobre su tierra: en su centro (media circular de las longitudes), del tamaño que ocupa en pantalla, oculto si se ve muy pequeña y desvanecido al acercarse mucho. |
+| `Counters()`, `CounterKind`, `UnitCounter` | Cada unidad que no va embarcada: dónde está (a mitad de camino si marcha; varias en una provincia se escalonan), su color, si está seleccionada, su tipo (combate, flota, cuartel o colonos), su arma (`Unit.Function`), su letra, cuántas van a bordo, sus marcas de tamaño (`Unit.Echelon`), sus barras y, con ella, su ruta (`Route`: entera para la seleccionada y para tus demás unidades en marcha si hay zoom, cruzando el borde del mapa por el lado corto), la línea a su cuartel (si está seleccionada) y la flecha de su ataque. Se encogen con el zoom lejano. |
+| `Battles()`, `BattleMarker`, `BattleSummary(...)`, `NavalBattleSummary(...)` | Espadas cruzadas sobre cada batalla, en tierra o en el mar; su tooltip (los dos bandos, su organización y el terreno) solo se calcula al pasar el ratón. |
+
 ---
 
 ## 4. `src/Conquer.Client` — ventana, gráficos e interfaz
@@ -795,10 +805,8 @@ La pantalla de juego. Clase parcial: el ejército en pantalla está en `GameScre
 | `LeftClick()` | Abre la batalla o selecciona la unidad bajo el ratón; si no hay ninguna (o se elige el destino de una migración), `GameController.ClickProvince`. |
 | `RightClick()` | `GameController.OrderMove`: mueve la unidad seleccionada (o ataca, si el destino es enemigo). |
 | `NationRect` | Rectángulo de la pantalla de la nación. |
-| `Center`, `Between`, `OnScreen` | Atajos a `GameController.Center` y `Between`, y si algo está en pantalla. |
+| `Center` | Atajo a `GameController.Center` (para `ShowSampleArmy`). |
 | `DrawRivers()` | Dibuja los ríos con `RiverLayer` (con la vega verde solo en el modo terreno). Después, `RoadLayer` dibuja carreteras y ferrocarriles. |
-| `DrawCities()` | Cada ciudad como un grupo de casas con tejado del color de su nación (`MapIcons.City`: más casas cuanto más poblada, torre con bandera dorada en la capital), un poco más grandes con zoom, y su nombre debajo. |
-| `DrawPath(unidad, desde, seleccionada)` | Ruta como flecha verde (`PathArrow`) por el centro de cada provincia del camino, cruzando el borde del mapa por el lado corto: entera para la unidad seleccionada y más tenue para tus demás unidades en marcha. |
 | `DrawTopBar()` | Dibuja la barra superior (`GameController.TopBar`): color y nombre de la nación, población y humor, fecha y velocidades, recursos (icono, cantidad y cambio del día) y los botones «?» (ayuda), Nación y Menú, que abren pantallas del cliente. |
 | `DrawSidePanel()` | Dibuja el panel derecho (`GameController.SidePanel`) con `DocumentView`, con su botón de cerrar. |
 | `DrawCityNaming()` | Dibuja el diálogo de `GameController.CityNamingDialog` para nombrar una ciudad al fundarla con colonos o al construirla: propone un nombre, se puede escribir otro o pedir otro al azar, avisa si no vale y la funda o empieza la obra (Intro confirma, Esc cancela). Mientras está abierto el tiempo se para y las teclas van a la caja de texto. |
@@ -808,14 +816,15 @@ La pantalla de juego. Clase parcial: el ejército en pantalla está en `GameScre
 | `DrawMessages()`, `HoverTooltip()` | Mensajes (`MessageLog`) en tiras redondeadas con una marca dorada (roja si algo falló) (más arriba si está abierto el filtro de recursos; con la pantalla de la nación abierta, solo el último, en la franja junto a los modos de mapa, con `DrawLatestMessageInStrip`) y tooltip de la provincia bajo el ratón (`GameController.MapTooltip`). |
 | `DrawPauseMenu()` | Menú de pausa (Esc): continuar, guardar la partida (`GameController.Save`), ayuda, historial de versiones, volver a la pantalla inicial o salir. |
 
-### `Screens/GameScreen.Army.cs`
-El ejército en el mapa: fichas de las unidades y batallas. El panel de la unidad y la pestaña Ejército de la provincia los construye `GameController` (sección 3).
+### `Screens/GameScreen.Markers.cs`
+Dibuja los marcadores de `GameController.Markers`.
 
 | Función | Qué hace |
 | --- | --- |
-| `DrawNationNames()` | El nombre de cada nación sobre su tierra: en su centro (media circular de las longitudes), del tamaño que ocupa en pantalla, oculto si se ve muy pequeña y desvanecido al acercarse mucho. |
-| `DrawUnits()`, `DrawEchelon(...)`, `Bar(...)` (el símbolo, con `MapIcons.NatoSymbol`) | Fichas OTAN: dentro del marco, el símbolo de su arma (`Unit.Function`: aspa para infantería, aspa con raya vertical para la motorizada, aspa con óvalo para la mecanizada, barra diagonal para caballería y exploradores, óvalo para blindados, punto para artillería, puente para ingenieros y alas para aviación); encima, las marcas de tamaño (`Unit.Echelon`: III regimiento, X brigada, XX división, XXX cuerpo, XXXX ejército, XXXXX grupo de ejércitos); los cuarteles, con «HQ» dentro del marco; los colonos, un carromato (`MapIcons.Settlers`); las flotas llevan un casco bajo la letra de su barco y un punto por cada unidad a bordo, y las unidades embarcadas no se dibujan. Barras de hombres (verde) y organización (ámbar). Cada ficha lleva sombra, y el marco de la seleccionada late. Dibuja la ruta (`DrawPath`), la línea a su cuartel (verde si está a su alcance) y una flecha roja (`PathArrow`) al atacar. |
-| `DrawBattles()`, `DrawBattleMark(...)`, `BattleSummary(...)`, `NavalBattleSummary(...)` | Espadas cruzadas sobre cada batalla, en tierra o en el mar; al pasar el ratón, los dos bandos, su organización y el terreno; al hacer clic, la ventana de la batalla. |
+| `DrawMarkers()` | Ciudades, nombres de naciones, fichas y batallas, en ese orden; guarda dónde quedan las fichas y las espadas para los clics. |
+| `DrawCity(...)`, `DrawNationName(...)` | Las casas de una ciudad (`MapIcons.City`: torre con bandera dorada en la capital) con su nombre debajo; el nombre de una nación con sombra, en un tono claro de su color. |
+| `DrawCounter(...)`, `DrawEchelon(...)`, `Bar(...)` | Fichas OTAN: la ruta como flecha verde (`PathArrow`), la línea al cuartel (verde si está a su alcance), la flecha roja del ataque y la ficha: dentro del marco, el símbolo de su arma (`MapIcons.NatoSymbol`: aspa para infantería, aspa con raya vertical para la motorizada, aspa con óvalo para la mecanizada, barra diagonal para caballería y exploradores, óvalo para blindados, punto para artillería, puente para ingenieros y alas para aviación); encima, las marcas de tamaño (III regimiento, X brigada, XX división, XXX cuerpo, XXXX ejército, XXXXX grupo de ejércitos); los cuarteles, con «HQ»; los colonos, un carromato (`MapIcons.Settlers`); las flotas, un casco bajo la letra de su barco y un punto por cada unidad a bordo. Barras de hombres (verde) y organización (ámbar). Cada ficha lleva sombra, y el marco de la seleccionada late. |
+| `DrawBattleMark(...)` | Las espadas cruzadas, que laten; al pasar el ratón, su resumen; al hacer clic, la ventana de la batalla. |
 
 ### `Screens/GameScreen.UnitEditor.cs`
 Dibuja la ventana de `GameController.UnitEditor`: a la izquierda el nombre (`NameSection`, con la caja de texto), los batallones o barcos (`BattalionSection`) y las uniones (`MergeSection`); a la derecha, en unidades con oficial, el oficial y la reserva (`OfficerSection`, `OfficerCard`). Las listas se cortan donde acaba la ventana. `ShowSampleOfficers(unidad)`, para `--panel edit`, recluta cuatro oficiales, pone el primero al mando y abre la ventana.
@@ -960,7 +969,7 @@ Uso: ver el README.
 | `DifficultyTests.cs` | En Muy difícil hay menos yacimientos, los mismos de la primera tirada y con la mitad de bolsa; el humano empieza con los recursos de su dificultad y los rivales con los normales; los rivales producen más ciencia en dificultades altas; la dificultad se guarda con la partida. `VeryHardWorldFixture` genera el mismo mundo en Muy difícil. |
 | `SaveGameTests.cs` | Cargar una partida y volver a guardarla da exactamente el mismo fichero; la partida cargada sigue jugándose; los mismos ajustes generan el mismo mapa; las partidas anteriores a la 1.13.0 reciben llenos los yacimientos nuevos; el mapa de los tests conserva su huella y cargan las partidas guardadas con la 1.30.1 y con la 1.31.0/1.32.0; las partidas anteriores a los talleres dan uno a cada cuartel cuyo dueño conoce la Maquinaria de asedio; se rechazan las partidas de otro mapa y las dañadas. |
 | `InterfaceTests.cs` | Los nombres se ordenan alfabéticamente en español (sin tildes, ñ tras n); el texto de la ayuda solo usa caracteres que la fuente sabe dibujar (Latin-1); `Conquer.Game` y `Conquer.Presentation` no dependen de ningún motor (ni Silk.NET, ni Stb, ni Godot, ni el cliente); el reloj reanuda a la velocidad que tenía; los mensajes salen del más nuevo al más antiguo y caducan; el historial empieza por la última versión, sin marcas de Markdown. Los tests no usan el cliente. |
-| `ControllerTests.cs` | La partida en pantalla sin pantalla: empieza con los colonos seleccionados y a la vista; seleccionar una provincia quita la unidad; el tiempo no corre congelado ni en pausa; nombrar una ciudad la funda con ese nombre y la selecciona, y un nombre no válido deja el diálogo abierto; el modo de mapa vuelve al terreno tras dar la vuelta; el panel de los colonos ofrece fundar la ciudad; las pestañas de la capital cambian y su botón de cerrar quita la selección; la migración forzada no pide más gente de la que puede salir; los botones de velocidad de la barra superior ponen el reloj; el editor de unidades separa los batallones marcados en una unidad nueva, renombra y recupera el nombre automático; la ventana de carreteras sin destinos lo dice y se cancela; la ventana de una batalla muestra los dos bandos, el fuego y el gráfico, y «Ir a la provincia» centra el mapa en ella. |
+| `ControllerTests.cs` | La partida en pantalla sin pantalla: empieza con los colonos seleccionados y a la vista; seleccionar una provincia quita la unidad; el tiempo no corre congelado ni en pausa; nombrar una ciudad la funda con ese nombre y la selecciona, y un nombre no válido deja el diálogo abierto; el modo de mapa vuelve al terreno tras dar la vuelta; el panel de los colonos ofrece fundar la ciudad; las pestañas de la capital cambian y su botón de cerrar quita la selección; la migración forzada no pide más gente de la que puede salir; los botones de velocidad de la barra superior ponen el reloj; el editor de unidades separa los batallones marcados en una unidad nueva, renombra y recupera el nombre automático; la ventana de carreteras sin destinos lo dice y se cancela; la ventana de una batalla muestra los dos bandos, el fuego y el gráfico, y «Ir a la provincia» centra el mapa en ella; el mapa muestra la ficha de los colonos seleccionados y, una vez fundada, su ciudad con su nombre. |
 | `NationScreenTests.cs` | La pantalla de la nación como datos: la tabla de ciudades lista la capital y su «Ver» la muestra en el mapa; pulsar un título de columna ordena por ella y pulsarlo otra vez lo invierte; el diseñador añade un batallón a una plantilla nueva; declarar la guerra cambia el botón a proponer la paz; la ciencia tiene tres ramas e «Investigar» elige el avance; el resumen muestra la capital. |
 | `ReleaseTests.cs` | La versión del `.csproj` coincide con la primera entrada del `CHANGELOG.md`. |
 
