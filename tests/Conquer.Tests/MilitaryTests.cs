@@ -46,6 +46,27 @@ public class MilitaryTests(WorldFixture world)
     }
 
     [Fact]
+    public void UnitsShowTheNatoSymbolOfTheirSizeAndArm()
+    {
+        Assert.Equal("III", Formations.CombatEchelon(3));
+        Assert.Equal("X", Formations.CombatEchelon(4));
+        Assert.Equal("XX", Formations.CombatEchelon(7));
+        Assert.Equal(["XXX", "XXXX", "XXXXX"], CommandLevels.All.Select(l => l.Symbol));
+
+        Assert.Equal(UnitFunction.Infantry, Formations.Function([BattalionType.Warriors, BattalionType.Archers]));
+        Assert.Equal(UnitFunction.Cavalry, Formations.Function([BattalionType.Horsemen, BattalionType.Chariots, BattalionType.Warriors]));
+        Assert.Equal(UnitFunction.Cavalry, Formations.Function([BattalionType.Scouts]));
+        Assert.Equal(UnitFunction.Armour, Formations.Function([BattalionType.Tanks]));
+        Assert.Equal(UnitFunction.Mechanised, Formations.Function([BattalionType.Tanks, BattalionType.MotorisedInfantry]));
+        Assert.Equal(UnitFunction.MotorisedInfantry, Formations.Function([BattalionType.MotorisedInfantry]));
+        Assert.Equal(UnitFunction.Artillery, Formations.Function([BattalionType.Cannons, BattalionType.Cannons, BattalionType.Musketeers]));
+        Assert.Equal(UnitFunction.Engineers, Formations.Function([BattalionType.Engineers]));
+        Assert.Equal(UnitFunction.Air, Formations.Function([BattalionType.Bombers]));
+        // A tie goes to the front line.
+        Assert.Equal(UnitFunction.Infantry, Formations.Function([BattalionType.Catapults, BattalionType.Warriors]));
+    }
+
+    [Fact]
     public void BattalionsTakeMenResourcesAndDaysToTrain()
     {
         var (s, a, _) = TwoNations();

@@ -2,6 +2,19 @@
 
 Todos los cambios del juego, del más reciente al más antiguo. Cada versión es un commit cuyo título es su número.
 
+## [1.41.1] - 2026-09-30
+
+### Cambiado
+- Los cuarteles generales vuelven a llevar «HQ» dentro del marco en lugar del asta de la OTAN; encima siguen sus marcas de nivel (XXX, XXXX, XXXXX).
+
+## [1.41.0] - 2026-09-30
+
+### Cambiado
+- **Fichas OTAN de las unidades**: muestran el símbolo de su tamaño y de su tipo de tropa.
+  - Encima del marco, las marcas de tamaño: III regimiento, X brigada, XX división; XXX cuerpo, XXXX ejército y XXXXX grupo de ejércitos. Antes las unidades de combate no llevaban ninguna.
+  - Dentro, el símbolo del arma que forma la mayoría de sus batallones: aspa para la infantería, aspa con raya vertical para la motorizada, aspa con óvalo para la mecanizada (tanques con infantería motorizada), barra diagonal para la caballería, los carros y los exploradores, óvalo para los blindados, punto para la artillería, puente para los ingenieros y alas para la aviación. Antes solo se distinguía la infantería de los montados, y los tanques salían como caballería.
+  - Los cuarteles generales llevan el asta de la OTAN bajo el marco en lugar del texto «HQ».
+
 ## [1.40.0] - 2026-09-30
 
 ### Cambiado
