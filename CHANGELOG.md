@@ -2,6 +2,11 @@
 
 Todos los cambios del juego, del más reciente al más antiguo. Cada versión es un commit cuyo título es su número.
 
+## [1.52.0] - 2026-10-01
+
+### Cambiado
+- **Código separado del motor gráfico** (primer paso): el nuevo proyecto Conquer.Presentation reúne lo que no depende de Silk.NET ni de OpenGL (cámara, modos de mapa, reloj y velocidades, mensajes, textos de ayuda, historial de versiones, partidas guardadas y formato de cifras). El juego se ve y funciona igual.
+
 ## [1.51.0] - 2026-10-01
 
 ### Cambiado

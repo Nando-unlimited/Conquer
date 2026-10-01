@@ -9,12 +9,13 @@ Estado: versión 1.0.2.
 
 ## 1. Visión general
 
-La solución (`Conquer.sln`) tiene cuatro proyectos:
+La solución (`Conquer.sln`) tiene cinco proyectos:
 
 | Proyecto | Tipo | Qué contiene |
 | --- | --- | --- |
 | `src/Conquer.Game` | Librería | Todas las reglas y la simulación: mundo, provincias, recursos, unidades, ciudades, migración, IA. **No sabe nada de gráficos**, así que se puede probar sin abrir ventana. |
-| `src/Conquer.Client` | Ejecutable (`Conquer.exe`) | Ventana, dibujo del mapa por shader, interfaz propia, menús. Usa `Conquer.Game`. |
+| `src/Conquer.Presentation` | Librería | Lo que ve y hace el jugador sin depender de ningún motor gráfico: cámara, modos de mapa, reloj de juego, mensajes, textos (ayuda, historial, cifras) y partidas guardadas. Usa `Conquer.Game`. |
+| `src/Conquer.Client` | Ejecutable (`Conquer.exe`) | Ventana, dibujo del mapa por shader, interfaz propia, menús. Usa `Conquer.Game` y `Conquer.Presentation`; es lo único que cambiaría al pasar a otro motor (Godot). |
 | `tools/Conquer.EarthData` | Herramienta de consola | Genera el mapa de la Tierra real (`earth.gz`) a partir de datos públicos. Solo se usa para regenerar ese fichero. |
 | `tests/Conquer.Tests` | Tests (xUnit) | Pruebas de la generación del mundo, de las reglas y de la versión. |
 
@@ -583,7 +584,52 @@ Mapa de la Tierra real, generado por `tools/Conquer.EarthData`. Se incluye dentr
 
 ---
 
-## 3. `src/Conquer.Client` — ventana, gráficos e interfaz
+## 3. `src/Conquer.Presentation` — presentación sin motor
+
+Lo que ve y hace el jugador, sin nada de Silk.NET, OpenGL ni ningún otro motor (un test lo comprueba). El cliente solo lo dibuja,
+así que cambiar de motor no lo toca. Por ahora tiene las piezas que ya eran independientes; el resto de la lógica de las pantallas
+irá llegando aquí poco a poco.
+
+### `Camera.cs`
+| Función | Qué hace |
+| --- | --- |
+| `ScreenToMap`, `MapToScreen` | Convierten entre píxeles de pantalla y del mapa (teniendo en cuenta la vuelta al mundo). |
+| `Pan`, `ZoomAt`, `LookAt` | Mover, hacer zoom alrededor del ratón, centrar. |
+| `Clamp()` | No deja salirse por arriba o por abajo del mapa. |
+
+### `MapMode.cs`
+`MapMode`: terreno, político, población, humor, fertilidad, recursos e instituciones.
+
+### `GameClock.cs`
+`GameClock`: el reloj de la partida. `HoursPerSecond` son las horas de juego por segundo real de cada velocidad (pausa, 1 h/s … 7 días/s); `SetSpeed`, `TogglePause` (reanuda a la velocidad de antes) y `Advance(dt)`, que dice cuántas horas simular en este fotograma sin acumular retraso si el ordenador no da abasto.
+
+### `MessageLog.cs`
+`MessageLog`: los mensajes en pantalla (resultados de las órdenes y avisos de la partida), cada uno `Lifetime` segundos. `Current(ahora)` quita los caducados y devuelve los demás del más nuevo al más antiguo; `Message.Opacity(ahora)` los desvanece el último segundo y medio.
+
+### `TextFormat.cs`
+| Función | Qué hace |
+| --- | --- |
+| `Compact(valor, decimales)` | Cifra abreviada: 950, 12,3k, 2,9M (con `decimales`, 8,7). |
+| `Plural(n, uno, varios)` | «1 unidad», «3 unidades». |
+| `UpkeepText(costes)` | Mantenimiento diario en palabras: «1,2 oro, 0,4 hierro/día». |
+| `TrainingDaysText(días, base)` | Días de instrucción, con los de antes de tus avances si estos los acortan. |
+| `SpanishSortKey(nombre)` | Clave para ordenar nombres en orden alfabético español sin ICU: sin mayúsculas ni tildes, y la ñ después de la n. |
+
+### `Markup.cs`
+`Markup.Parse(línea)`: el poco Markdown de la ayuda y el historial: «## » título, «### » sección, «- » viñeta y el resto párrafo (`MarkupLine`, `MarkupKind`).
+
+### `HelpTopics.cs`
+**Aquí se escribe la ayuda.** Temas: controles, primeros pasos, población y humor, economía y recursos, ciudades, ciencia, ejército, flotas y mar, diplomacia, mapa y partida. Las cifras salen de `GameRules`, así que siguen los cambios de equilibrio; solo caben caracteres Latin-1 (nada de «…» ni «−»). `Lines(tema)` da el tema ya interpretado; `AllText`, todo el texto para los tests.
+
+### `Changelog.cs`
+`Changelog.Lines`: `CHANGELOG.md` (incluido en esta librería) ya interpretado, sin el título, los corchetes de las versiones ni las negritas.
+
+### `SaveFiles.cs`
+Partidas guardadas en disco, en la carpeta `Partidas` junto al ejecutable (`Folder`). Si no se puede escribir en ella, en la carpeta de datos del usuario, donde iban antes de la 1.45.1: `~/.local/share/Conquer/Partidas` en Linux, `%LOCALAPPDATA%\Conquer\Partidas` en Windows y `~/Library/Application Support/Conquer/Partidas` en macOS. Al arrancar, las partidas que quedan allí se mueven a la del juego (`ChooseFolder`). Cada una es un fichero `.conquer` que se llama como la nación y la fecha de juego ("Kartesia - 5 feb 3999 a.C. 00h"). `List()` las devuelve de la más reciente a la más antigua; `Save(partida, versión)` escribe primero un fichero temporal y luego lo renombra, para no dejar nunca una partida a medio escribir; `Read(ruta)` y `Delete(partida)`.
+
+---
+
+## 4. `src/Conquer.Client` — ventana, gráficos e interfaz
 
 ### `Program.cs`
 Punto de entrada. Comprueba OpenGL 3.3 (`GlSupport.Ensure`), pone el formato de números en español (a mano, sin depender de ICU) y lee los argumentos.
@@ -613,9 +659,6 @@ Punto de entrada. Comprueba OpenGL 3.3 (`GlSupport.Ensure`), pone el formato de 
 | `LoadGameScreen` | Lista de partidas guardadas, de la más reciente a la más antigua, para cargar o borrar (pide confirmación). |
 | `LoadingScreen` | Genera el mundo en segundo plano y muestra el progreso, para una partida nueva o una guardada; al terminar abre `GameScreen`. |
 
-### `SaveFiles.cs`
-Partidas guardadas en disco, en la carpeta `Partidas` junto al ejecutable (`Folder`). Si no se puede escribir en ella, en la carpeta de datos del usuario, donde iban antes de la 1.45.1: `~/.local/share/Conquer/Partidas` en Linux, `%LOCALAPPDATA%\Conquer\Partidas` en Windows y `~/Library/Application Support/Conquer/Partidas` en macOS. Al arrancar, las partidas que quedan allí se mueven a la del juego (`ChooseFolder`). Cada una es un fichero `.conquer` que se llama como la nación y la fecha de juego ("Kartesia - 5 feb 3999 a.C. 00h"). `List()` las devuelve de la más reciente a la más antigua; `Save(partida)` escribe primero un fichero temporal y luego lo renombra, para no dejar nunca una partida a medio escribir; `Read(ruta)` y `Delete(partida)`.
-
 ### `Screens/GameScreen.cs`
 La pantalla de juego. Clase parcial: el ejército en pantalla está en `GameScreen.Army.cs`, la ventana de edición de unidades en `GameScreen.UnitEditor.cs` la de cada batalla en `GameScreen.Battle.cs` y la de las carreteras nuevas en `GameScreen.Roads.cs`.
 
@@ -624,8 +667,8 @@ La pantalla de juego. Clase parcial: el ejército en pantalla está en `GameScre
 | `GameScreen(...)` | Crea el renderizador y la cámara y centra la vista en tus colonos o, en una partida cargada, en tu capital (sin repetir los avisos antiguos). |
 | `ApplyTestOptions(...)`, `ShowSampleArmy(...)` | Aplican `--days`, `--zoom`, `--at`, `--mode`, `--nation` y `--panel` (con `regiment`, entrena y selecciona una unidad de muestra bajo un cuerpo; con `march`, además la pone en marcha para ver su ruta; con `edit`, recluta oficiales y abre su ventana de edición, `ShowSampleOfficers`; con `found`, abre el diálogo para nombrar la ciudad de los colonos). |
 | `Frame(dt)` | Fotograma: teclas, tiempo, refresco del mapa, dibujo del mapa, marcadores, paneles e interacción. |
-| `AdvanceTime(dt)` | Convierte tiempo real en horas de juego según la velocidad (pausa, 1 h/s … 7 días/s). |
-| `SetSpeed`, `HandleKeys` | Velocidad y teclado (Espacio, 1-5, Tab, Inicio, N, F1, +/-, WASD, Esc). Mientras la ayuda (`HelpView`) está abierta el tiempo se para y el mapa no responde; con la ventana de edición de una unidad abierta, las teclas van a su nombre (Intro renombra, Esc cierra). |
+| `AdvanceTime(dt)` | Simula las horas de juego que da el reloj (`GameClock.Advance`), salvo con el menú, la ayuda, el historial o una ventana abierta. |
+| `HandleKeys` | Teclado (Espacio, 1-5, Tab, Inicio, N, F1, +/-, WASD, Esc). Mientras la ayuda (`HelpView`) está abierta el tiempo se para y el mapa no responde; con la ventana de edición de una unidad abierta, las teclas van a su nombre (Intro renombra, Esc cierra). |
 | `HandleMapMouse()` | Rueda para el zoom, arrastrar para mover el mapa, clics. |
 | `LeftClick()` | Selecciona unidad o provincia, o elige el destino de una migración forzada. |
 | `RightClick()` | Da orden de mover la unidad seleccionada (o de atacar, si el destino es enemigo). |
@@ -637,7 +680,7 @@ La pantalla de juego. Clase parcial: el ejército en pantalla está en `GameScre
 | `DrawRivers()` | Dibuja los ríos con `RiverLayer` (con la vega verde solo en el modo terreno). Después, `RoadLayer` dibuja carreteras y ferrocarriles. |
 | `DrawCities()` | Cada ciudad como un grupo de casas con tejado del color de su nación (`MapIcons.City`: más casas cuanto más poblada, torre con bandera dorada en la capital), un poco más grandes con zoom, y su nombre debajo. |
 | `DrawPath(unidad, desde, seleccionada)` | Ruta como flecha verde (`PathArrow`) por el centro de cada provincia del camino, cruzando el borde del mapa por el lado corto: entera para la unidad seleccionada y más tenue para tus demás unidades en marcha. |
-| `DrawTopBar()`, `Compact()` | Barra superior: nación, población y humor medio, fecha, velocidades, recursos conocidos (icono, cantidad y cambio del día; el nombre, en el tooltip) y botones «?» (ayuda), Nación (con «!» si alguna rama no investiga nada teniendo avances disponibles) y Menú (con números abreviados: 12,3k, 2,9M). |
+| `DrawTopBar()` | Barra superior: nación, población y humor medio, fecha, velocidades, recursos conocidos (icono, cantidad y cambio del día; el nombre, en el tooltip) y botones «?» (ayuda), Nación (con «!» si alguna rama no investiga nada teniendo avances disponibles) y Menú (con números abreviados por `TextFormat.Compact`: 12,3k, 2,9M). |
 | `DrawSidePanel()`, `UnitPanel()`, `ProvincePanel()` | Panel derecho: datos y botones de la unidad o provincia seleccionada; el de provincia tiene pestañas General, Edificios y Ejército (humor y fertilidad, yacimientos con lo que les queda, fundar, fiestas, reclamar, asentarse, reclutar, migración forzada). |
 | `MoodTooltip(provincia)` | Tooltip del humor con sus causas y su efecto en la producción. |
 | `OpenCityNaming(...)`, `DrawCityNaming()`, `ConfirmCityName()` | Diálogo para nombrar una ciudad al fundarla con colonos o al construirla: propone un nombre, se puede escribir otro o pedir otro al azar, avisa si no vale y la funda o empieza la obra (Intro confirma, Esc cancela). Mientras está abierto el tiempo se para y las teclas van a la caja de texto. |
@@ -645,7 +688,7 @@ La pantalla de juego. Clase parcial: el ejército en pantalla está en `GameScre
 | `Line()`, `ResourceLine()`, `Paragraph()` | Ayudas para escribir filas (también con el icono de un recurso) y párrafos en el panel. |
 | `DrawBottomBar()`, `ModeBarWidth` | Modos de mapa (un botón de 120 píxeles por modo) y ayuda de controles (si no cabe, quita atajos del medio y deja siempre «F1: ayuda» al final) (la ayuda se oculta con la pantalla de la nación abierta). |
 | `DrawResourceFilter(barra)` | En el modo recursos, fila de botones para ver todos los yacimientos o solo uno de los recursos que conoces; hace de leyenda con el color de cada recurso. |
-| `DrawMessages()`, `HoverTooltip()` | Mensajes en tiras redondeadas con una marca dorada (roja si algo falló) (más arriba si está abierto el filtro de recursos; con la pantalla de la nación abierta, solo el último, en la franja junto a los modos de mapa, con `DrawLatestMessageInStrip`) y tooltip de la provincia bajo el ratón (con sus yacimientos en el modo recursos y sus instituciones en el modo instituciones). |
+| `DrawMessages()`, `HoverTooltip()` | Mensajes (`MessageLog`) en tiras redondeadas con una marca dorada (roja si algo falló) (más arriba si está abierto el filtro de recursos; con la pantalla de la nación abierta, solo el último, en la franja junto a los modos de mapa, con `DrawLatestMessageInStrip`) y tooltip de la provincia bajo el ratón (con sus yacimientos en el modo recursos y sus instituciones en el modo instituciones). |
 | `DrawPauseMenu()`, `SaveCurrentGame()` | Menú de pausa (Esc): continuar, guardar la partida (`SaveFiles.Save`), ayuda, historial de versiones, volver a la pantalla inicial o salir. |
 
 ### `Screens/GameScreen.Army.cs`
@@ -700,8 +743,8 @@ Pestañas Ejército, Plantillas y Diplomacia de la pantalla de la nación.
 
 | Función | Qué hace |
 | --- | --- |
-| `Army(...)`, `UnitActivity(...)`, `Plural(...)` | Orden de batalla, con el mantenimiento diario del ejército (en rojo si no se paga): cada cuartel con sus unidades en árbol, después las unidades sin cuartel y las flotas, con ubicación, hombres, organización, suministro, estado y «Ver». |
-| `Templates(...)` | Diseñador de unidades: tus plantillas a la izquierda (nueva, duplicar, borrar); a la derecha los batallones de la elegida (hasta 12, con «Quitar»), botones para añadir los que conoces y lo que cuesta, su mantenimiento y cómo lucha una unidad de ese diseño; `UpkeepText` escribe un mantenimiento y `TrainingDaysText`, los días de instrucción (con los de antes de tus avances si estos los acortan). |
+| `Army(...)`, `UnitActivity(...)` | Orden de batalla, con el mantenimiento diario del ejército (en rojo si no se paga): cada cuartel con sus unidades en árbol, después las unidades sin cuartel y las flotas, con ubicación, hombres, organización, suministro, estado y «Ver». |
+| `Templates(...)` | Diseñador de unidades: tus plantillas a la izquierda (nueva, duplicar, borrar); a la derecha los batallones de la elegida (hasta 12, con «Quitar»), botones para añadir los que conoces y lo que cuesta, su mantenimiento y cómo lucha una unidad de ese diseño (con `TextFormat.UpkeepText` y `TextFormat.TrainingDaysText`). |
 | `Diplomacy(...)` | Cada nación: paz o guerra (y desde cuándo), su poder militar frente al tuyo, provincias, lo tomado y perdido, y los botones de declarar la guerra o proponer la paz. |
 
 ### `Screens/NationView.cs`
@@ -716,18 +759,16 @@ Pantalla de la nación (botón «Nación» o tecla N). El tiempo sigue corriendo
 | `Cities(...)` | Tabla de ciudades: población / capacidad, humor, fertilidad, fiestas, enviar colonos o entrenar guerreros y «Ver». |
 | `Provinces(...)`, `Work(...)` | Tabla de todas las provincias: población, humor, fertilidad, terreno, migrantes en camino, lo que tiene en curso (la obra y lo que entrena su ciudad: la primera con sus días y su barra, cuántas más hay y todas en el tooltip) y «Ver». |
 | `ProvinceCells(...)` | Celdas de población, humor (con tooltip de causas) y fertilidad, comunes a las dos tablas. |
-| `Header(...)`, `Sort(...)` | Cabeceras que ordenan al pulsarlas (nombre, población, humor, fertilidad; otra pulsación invierte el orden). |
-| `SpanishSortKey(nombre)` | Clave para ordenar nombres en orden alfabético español sin ICU: sin mayúsculas ni tildes, y la ñ después de la n. |
+| `Header(...)`, `Sort(...)` | Cabeceras que ordenan al pulsarlas (nombre, población, humor, fertilidad; otra pulsación invierte el orden). Los nombres se ordenan con `TextFormat.SpanishSortKey`. |
 | `Rows(...)` | Filas visibles con desplazamiento por la rueda del ratón y barra de desplazamiento. |
 | `Science(...)`, `Branch(...)`, `TechCard(...)`, `ProgressBar(...)` | Pestaña Ciencia: puntos al día (con su desglose y los guardados), una segunda fila con un botón por era para ver sus niveles (`_scienceEra`; por defecto, la primera con avances por descubrir; «(+)» y su tooltip avisan del recargo si falta su institución), la institución que abre la era mostrada a la derecha, su estado con `InstitutionStatus` (adoptada, cuánto se ha extendido y el botón para adoptarla con oro, o sin nacer), y una columna por rama con su prioridad (− y +) y su parte, lo que investiga con barra y tiempo estimado (o un aviso para elegir), y sus niveles: cada uno con lo que hace falta para abrirlo y una tarjeta por avance con su estado, coste (con el descuento por vecinos o el recargo por institución), efecto, requisitos, los edificios y batallones que permite y el botón Investigar. |
-| `Heading`, `Row`, `ViewButton`, `ProvinceName`, `Compact` | Ayudas de dibujo y formato. |
+| `Heading`, `Row`, `ViewButton`, `ProvinceName` | Ayudas de dibujo y formato. |
 
 ### `Graphics/MapRenderer.cs`
 Dibuja el mapa entero con un único shader.
 
 | Elemento | Qué es |
 | --- | --- |
-| `MapMode` | Terreno, político, población, humor, fertilidad, recursos e instituciones. |
 | `ResourceFilter` | En el modo recursos, el único recurso que se muestra (o `null` para todos). |
 | `IsResourceKnown` | Qué recursos conoce quien mira; los demás no se dibujan. |
 | Shader de fragmentos | Para cada píxel de pantalla calcula el punto del mapa, busca la provincia en la textura de ids y la colorea según su dueño o su población. Con zoom alto mezcla las 3×3 celdas vecinas con pesos B-spline cuadráticos (`smoothRegions`, `strongest`) para trazar fronteras y costa como curvas suaves, sin escalones; el color del terreno sale solo de las celdas del mismo lado de la costa (`isWater`, en el canal verde de la textura de dueños) y la franja clara del agua sigue la distancia a la costa. Con zoom lejano compara con el píxel vecino. Ilumina el relieve desde el noroeste con la altura interpolada de la textura de detalle (`landDetail`, `relief`; baches finos sobre todo en la roca) y añade textura procedural según el suelo (`octave`, `noise`, `crowns`: moteado, copas de árboles, dunas), cada capa solo cuando es lo bastante grande en pantalla (`detailFade`); el agua toma su color de la profundidad, de turquesa en los bajíos a azul marino en las fosas, con bajíos más claros junto a la costa, espuma que rompe en ella con zoom alto y ondas lentas (`waterDetail`, `uTime`). En el mapa político todo se ve como sobre pergamino viejo (`parchment`): colores hacia el crema, manchas suaves fijas al mapa y bordes tostados. Las fronteras nacionales son una línea oscura con, por dentro, una franja del color de la nación que se desvanece (`nationBorder`; su anchura sale de la textura de distancias a la frontera, y con zoom lejano la línea busca hasta 6 píxeles alrededor, `ownerDistanceNear`; en los modos de datos, una sombra); las provincias ocupadas llevan rayas del color del ocupante. Resalta la provincia seleccionada y la que está bajo el ratón, y aplica una viñeta suave hacia los bordes de la pantalla. |
@@ -744,13 +785,6 @@ Dibuja el mapa entero con un único shader.
 
 ### `Graphics/TerrainColors.cs`
 `Build(mapa)`: color de cada píxel según el bioma; en tierra, alturas algo más pálidas (el relieve lo ilumina el shader). El agua la colorea el shader según su profundidad. `BuildDetail(mapa)`: textura de detalle con la altura de la tierra (canal rojo, en escala de raíz cuadrada hasta `MaxHeight`; en el agua, su profundidad hasta `MaxDepth`) y cuánto suelo es bosque, arena y roca (`Ground`); al filtrarse, los biomas vecinos se funden.
-
-### `Graphics/Camera.cs`
-| Función | Qué hace |
-| --- | --- |
-| `ScreenToMap`, `MapToScreen` | Convierten entre píxeles de pantalla y del mapa (teniendo en cuenta la vuelta al mundo). |
-| `Pan`, `ZoomAt`, `LookAt` | Mover, hacer zoom alrededor del ratón, centrar. |
-| `Clamp()` | No deja salirse por arriba o por abajo del mapa. |
 
 ### `Graphics/Batch2D.cs`
 | Elemento | Qué es |
@@ -816,17 +850,17 @@ Interfaz propia de "modo inmediato": los botones se declaran en cada fotograma y
 | `BeginFrame`, `EndFrame` | Empezar el fotograma / dibujar el tooltip al final. |
 
 ### `UI/ChangelogView.cs`
-`ChangelogView`: muestra `CHANGELOG.md` (incluido en el ejecutable) en un panel con desplazamiento. `Layout` convierte el Markdown en líneas con formato.
+`ChangelogView`: muestra el historial (`Changelog`) en un panel con desplazamiento. `Layout` ajusta cada línea al ancho y le da tamaño y color según sea título, sección, viñeta o párrafo.
 
 ### `Screens/HelpView.cs`
-`HelpView`: la ayuda durante la partida (F1, el botón «?» de la barra superior o el menú de pausa). Temas a la izquierda y el texto del elegido a la derecha, con desplazamiento: controles, primeros pasos, población y humor, economía y recursos, ciudades, ciencia, ejército, flotas y mar, diplomacia, mapa y partida. **Aquí se escribe la ayuda.** Las cifras salen de `GameRules`, así que siguen los cambios de equilibrio; en el texto, «## » empieza un título y «- » una viñeta, y solo caben caracteres Latin-1 (nada de «…» ni «−»). `Layout` ajusta el tema al ancho; `AllText` da todo el texto para los tests.
+`HelpView`: la ayuda durante la partida (F1, el botón «?» de la barra superior o el menú de pausa). Temas a la izquierda y el texto del elegido a la derecha, con desplazamiento. El texto está en `HelpTopics` (Conquer.Presentation); `Layout` ajusta el tema al ancho.
 
 ### `Assets/`
 Fuentes Fira Sans (normal y negrita) y Cinzel (variable; se usa su peso por defecto), de Google Fonts, con sus licencias `OFL-FiraSans.txt` y `OFL-Cinzel.txt`.
 
 ---
 
-## 4. `tools/Conquer.EarthData/Program.cs`
+## 5. `tools/Conquer.EarthData/Program.cs`
 Genera `src/Conquer.Game/Assets/earth.gz` a partir del relieve y la batimetría de la NASA (GEBCO) y de
 las costas, lagos y glaciares de Natural Earth.
 
@@ -840,7 +874,7 @@ Uso: ver el README.
 
 ---
 
-## 5. `tests/Conquer.Tests`
+## 6. `tests/Conquer.Tests`
 
 | Fichero | Qué comprueba |
 | --- | --- |
@@ -857,12 +891,12 @@ Uso: ver el README.
 | `InstitutionTests.cs` | Los avances de la era Clásica cuestan más sin Urbanismo y sus niveles siguen a los de la Antigüedad; Construcción permite el anfiteatro. El Urbanismo nace en la primera ciudad grande; se extiende solo a provincias asentadas; una nación lo adopta cuando lo tiene la mitad de su población y gana su bonus; se puede adoptar antes pagando oro; los avances de una era cuestan más hasta adoptar su institución; las instituciones se guardan con la partida. |
 | `DifficultyTests.cs` | En Muy difícil hay menos yacimientos, los mismos de la primera tirada y con la mitad de bolsa; el humano empieza con los recursos de su dificultad y los rivales con los normales; los rivales producen más ciencia en dificultades altas; la dificultad se guarda con la partida. `VeryHardWorldFixture` genera el mismo mundo en Muy difícil. |
 | `SaveGameTests.cs` | Cargar una partida y volver a guardarla da exactamente el mismo fichero; la partida cargada sigue jugándose; los mismos ajustes generan el mismo mapa; las partidas anteriores a la 1.13.0 reciben llenos los yacimientos nuevos; el mapa de los tests conserva su huella y cargan las partidas guardadas con la 1.30.1 y con la 1.31.0/1.32.0; las partidas anteriores a los talleres dan uno a cada cuartel cuyo dueño conoce la Maquinaria de asedio; se rechazan las partidas de otro mapa y las dañadas. |
-| `InterfaceTests.cs` | Los nombres se ordenan alfabéticamente en español (sin tildes, ñ tras n); el texto de la ayuda solo usa caracteres que la fuente sabe dibujar (Latin-1). |
+| `InterfaceTests.cs` | Los nombres se ordenan alfabéticamente en español (sin tildes, ñ tras n); el texto de la ayuda solo usa caracteres que la fuente sabe dibujar (Latin-1); `Conquer.Game` y `Conquer.Presentation` no dependen de ningún motor (ni Silk.NET, ni Stb, ni Godot, ni el cliente); el reloj reanuda a la velocidad que tenía; los mensajes salen del más nuevo al más antiguo y caducan; el historial empieza por la última versión, sin marcas de Markdown. Los tests no usan el cliente. |
 | `ReleaseTests.cs` | La versión del `.csproj` coincide con la primera entrada del `CHANGELOG.md`. |
 
 ---
 
-## 6. Otros ficheros
+## 7. Otros ficheros
 
 | Fichero | Qué es |
 | --- | --- |

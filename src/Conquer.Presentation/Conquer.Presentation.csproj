@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    What the player sees and does, without any engine: the camera, the game clock, messages, texts and saved games.
+    The client (today Silk.NET + OpenGL) only draws it; no graphics or windowing package may be referenced here.
+  -->
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Conquer.Game\Conquer.Game.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="..\..\CHANGELOG.md" LogicalName="CHANGELOG.md" />
+    <InternalsVisibleTo Include="Conquer.Tests" />
+  </ItemGroup>
+
+</Project>

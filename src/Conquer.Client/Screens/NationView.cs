@@ -8,6 +8,7 @@ using Conquer.Game.Rules;
 using Conquer.Game.Science;
 using Conquer.Game.Simulation;
 using Conquer.Game.World;
+using Conquer.Presentation;
 
 namespace Conquer.Client.Screens;
 
@@ -159,7 +160,7 @@ public sealed partial class NationView
             ui.Text(x + colW - 310, y, $"{_player.Stockpile[res]:N0}");
             ui.Text(x + colW - 200, y, Math.Abs(net) < 0.005 ? "-" : $"{net:+#,0.##;-#,0.##}", net > 0 ? Theme.Good : net < 0 ? Theme.Bad : Theme.TextDim);
             bool mined = Resources.Deposits.Contains(res);
-            ui.Text(x + colW - 90, y, mined ? Compact(stats.Reserves[(int)res]) : "-", mined && stats.Reserves[(int)res] > 0 ? Theme.Text : Theme.TextDim);
+            ui.Text(x + colW - 90, y, mined ? TextFormat.Compact(stats.Reserves[(int)res]) : "-", mined && stats.Reserves[(int)res] > 0 ? Theme.Text : Theme.TextDim);
             y += 24;
         }
     }
@@ -243,7 +244,7 @@ public sealed partial class NationView
             var warriors = BattalionType.Warriors.Info();
             var train = _session.CanTrain(p, BattalionType.Warriors);
             string trainTip = $"Entrena {Formations.BattalionName(warriors).ToLowerInvariant()} ({warriors.Men} hombres). Coste: {warriors.Cost}. " +
-                              TrainingDaysText(GameSession.TrainingDays(_player, BattalionType.Warriors), warriors.TrainingDays) + (p.Training.Count > 0 ? $"\nEn instrucción: {p.Training.Count}." : "") +
+                              TextFormat.TrainingDaysText(GameSession.TrainingDays(_player, BattalionType.Warriors), warriors.TrainingDays) + (p.Training.Count > 0 ? $"\nEn instrucción: {p.Training.Count}." : "") +
                               (train.Ok ? "" : "\n" + train.Message);
             if (ui.Button(new Rect(x, rowY + 3, bw, RowHeight - 6), warriors.Name, train.Ok, tooltip: trainTip, size: FontSize.Small))
                 _show(_session.Train(_player.Id, p.Id, BattalionType.Warriors));
@@ -491,7 +492,7 @@ public sealed partial class NationView
     {
         double capacity = _session.CapacityOf(p);
         ui.Text(x, rowY + 6, $"{p.Population:N0}", p.Population > capacity ? Theme.Bad : Theme.Text);
-        ui.Text(x + ui.Font.Measure($"{p.Population:N0} ", FontSize.Normal), rowY + 8, $"/ {Compact(capacity)}", Theme.TextDim, FontSize.Small);
+        ui.Text(x + ui.Font.Measure($"{p.Population:N0} ", FontSize.Normal), rowY + 8, $"/ {TextFormat.Compact(capacity)}", Theme.TextDim, FontSize.Small);
         x += columns[1].Width;
 
         bool populated = p.Population >= 1;
@@ -543,40 +544,13 @@ public sealed partial class NationView
         return r.Y + 36;
     }
 
-    /// <summary>
-    /// Key that sorts names in Spanish alphabetical order with plain ordinal comparison (the game runs
-    /// without ICU, so culture-aware comparison is not available): case and accents are ignored and ñ goes after n.
-    /// </summary>
-    internal static string SpanishSortKey(string name)
-    {
-        var key = new System.Text.StringBuilder(name.Length + 2);
-        foreach (char ch in name)
-        {
-            char c = char.ToLowerInvariant(ch);
-            switch (c)
-            {
-                case 'à' or 'á' or 'â' or 'ã' or 'ä' or 'å': key.Append('a'); break;
-                case 'ç': key.Append('c'); break;
-                case 'è' or 'é' or 'ê' or 'ë': key.Append('e'); break;
-                case 'ì' or 'í' or 'î' or 'ï': key.Append('i'); break;
-                case 'ò' or 'ó' or 'ô' or 'õ' or 'ö': key.Append('o'); break;
-                case 'ù' or 'ú' or 'û' or 'ü': key.Append('u'); break;
-                case 'ý' or 'ÿ': key.Append('y'); break;
-                // '~' sorts after every letter, so "ñ" lands between "nz" and "o".
-                case 'ñ': key.Append("n~"); break;
-                default: key.Append(c); break;
-            }
-        }
-        return key.ToString();
-    }
-
     /// <summary>Orders rows by the tab's sort column: name, population, mood or fertility.</summary>
     private IEnumerable<T> Sort<T>(NationTab tab, IEnumerable<T> rows, Func<T, Province> province, Func<T, string> name)
     {
         int t = (int)tab;
         if (_sortColumn[t] == 0)
         {
-            Func<T, string> sortName = row => SpanishSortKey(name(row));
+            Func<T, string> sortName = row => TextFormat.SpanishSortKey(name(row));
             return _sortAscending[t] ? rows.OrderBy(sortName, StringComparer.Ordinal) : rows.OrderByDescending(sortName, StringComparer.Ordinal);
         }
         Func<T, double> key = _sortColumn[t] switch
@@ -613,7 +587,4 @@ public sealed partial class NationView
             ui.Batch.Rect(r.Right - 4, barY, 4, barH, Theme.PanelBorder);
         }
     }
-
-    private static string Compact(double value) =>
-        value >= 1_000_000 ? $"{value / 1_000_000:0.#}M" : value >= 10_000 ? $"{value / 1000:0.#}k" : $"{value:N0}";
 }

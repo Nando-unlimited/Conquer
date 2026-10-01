@@ -9,14 +9,13 @@ using Conquer.Game.Rules;
 using Conquer.Game.Science;
 using Conquer.Game.Simulation;
 using Conquer.Game.World;
+using Conquer.Presentation;
 using Silk.NET.Input;
 
 namespace Conquer.Client.Screens;
 
 public sealed partial class GameScreen : IScreen
 {
-    /// <summary>Game hours per real second at each speed; index 0 is paused.</summary>
-    private static readonly double[] HoursPerSecond = [0, 1, 4, 12, 48, 168];
     private const float TopBarHeight = 56;
     private const float SidePanelWidth = 340;
 
@@ -30,10 +29,10 @@ public sealed partial class GameScreen : IScreen
     private readonly HelpView _help = new();
     private readonly NationView _nation;
     private readonly List<(int UnitId, Rect Bounds)> _unitHitBoxes = [];
-    private readonly List<(string Text, double Time, bool Ok)> _messages = [];
+    private readonly MessageLog _messages = new();
+    private readonly GameClock _clock = new();
 
-    private int _speed = 1, _lastSpeed = 1;
-    private double _hourAccumulator, _realTime;
+    private double _realTime;
     private bool _mapDirty = true, _menuOpen, _dragging;
     private long _lastRefreshDay = -1;
     private int _seenNotifications;
@@ -70,7 +69,7 @@ public sealed partial class GameScreen : IScreen
             _seenNotifications = session.Notifications.Count;
             _camera.LookAt(_camera.Center, zoom: 8);
             CenterOnHome();
-            _messages.Add(("Partida cargada.", 0, true));
+            _messages.Add("Partida cargada.", 0);
             return;
         }
         var settlers = session.Units.First(u => u.OwnerId == GameSession.HumanPlayerId);
@@ -176,18 +175,8 @@ public sealed partial class GameScreen : IScreen
 
     private void AdvanceTime(double dt)
     {
-        if (_menuOpen || _changelog.Visible || _help.Visible || _naming.HasValue || _editingUnitId.HasValue || RoadWindowOpen || _speed == 0) return;
-        _hourAccumulator += dt * HoursPerSecond[_speed];
-        int steps = Math.Min((int)_hourAccumulator, 400);
-        _hourAccumulator -= steps;
-        if (_hourAccumulator > 4) _hourAccumulator = 0; // don't build up a backlog when the machine can't keep up
-        for (int i = 0; i < steps; i++) _session.Step();
-    }
-
-    private void SetSpeed(int speed)
-    {
-        if (speed > 0) _lastSpeed = speed;
-        _speed = speed;
+        if (_menuOpen || _changelog.Visible || _help.Visible || _naming.HasValue || _editingUnitId.HasValue || RoadWindowOpen) return;
+        for (int i = _clock.Advance(dt); i > 0; i--) _session.Step();
     }
 
     private void HandleKeys(double dt)
@@ -221,8 +210,8 @@ public sealed partial class GameScreen : IScreen
                     else if (_selectedUnitId.HasValue || _selectedProvince >= 0) { _selectedUnitId = null; _selectedProvince = -1; }
                     else _menuOpen = !_menuOpen;
                     break;
-                case Key.Space: SetSpeed(_speed == 0 ? _lastSpeed : 0); break;
-                case >= Key.Number1 and <= Key.Number5: SetSpeed(key - Key.Number1 + 1); break;
+                case Key.Space: _clock.TogglePause(); break;
+                case >= Key.Number1 and <= Key.Number5: _clock.SetSpeed(key - Key.Number1 + 1); break;
                 case Key.Tab: _renderer.Mode = (MapMode)(((int)_renderer.Mode + 1) % Enum.GetValues<MapMode>().Length); _mapDirty = true; break;
                 case Key.Home: CenterOnHome(); break;
                 case Key.N when !_menuOpen: _nation.Visible = !_nation.Visible; break;
@@ -336,7 +325,7 @@ public sealed partial class GameScreen : IScreen
 
     private void Show(CommandResult result)
     {
-        if (!string.IsNullOrEmpty(result.Message)) _messages.Add((result.Message, _realTime, result.Ok));
+        _messages.Add(result.Message, _realTime, result.Ok);
     }
 
     private void CollectNotifications()
@@ -344,7 +333,7 @@ public sealed partial class GameScreen : IScreen
         for (; _seenNotifications < _session.Notifications.Count; _seenNotifications++)
         {
             var n = _session.Notifications[_seenNotifications];
-            if (n.PlayerId == Human.Id || n.PlayerId < 0) _messages.Add((n.Text, _realTime, true));
+            if (n.PlayerId == Human.Id || n.PlayerId < 0) _messages.Add(n.Text, _realTime);
         }
     }
 
@@ -478,8 +467,8 @@ public sealed partial class GameScreen : IScreen
         string[] labels = ["||", "1", "2", "3", "4", "5"];
         for (int i = 0; i < labels.Length; i++)
         {
-            string tip = i == 0 ? "Pausa (Espacio)" : $"Velocidad {i}: {GameSession.FormatHours(HoursPerSecond[i])} por segundo (tecla {i})";
-            if (Ui.Button(new Rect(x + i * 29, 30, 26, 20), labels[i], active: _speed == i, tooltip: tip, size: FontSize.Small)) SetSpeed(i);
+            string tip = i == 0 ? "Pausa (Espacio)" : $"Velocidad {i}: {GameSession.FormatHours(GameClock.HoursPerSecond[i])} por segundo (tecla {i})";
+            if (Ui.Button(new Rect(x + i * 29, 30, 26, 20), labels[i], active: _clock.Speed == i, tooltip: tip, size: FontSize.Small)) _clock.SetSpeed(i);
         }
         x += 200;
 
@@ -490,9 +479,9 @@ public sealed partial class GameScreen : IScreen
             // The icon, the amount in store and, under it, the last day's change.
             var rect = new Rect(x, 4, 88, 48);
             Icons.Resource(Batch, r, new System.Numerics.Vector2(x + 11, 28), 20);
-            Ui.Text(x + 26, 9, Compact(amount), r == ResourceType.Food && Human.IsStarving ? Theme.Bad : Theme.Text, FontSize.Normal, bold: true);
+            Ui.Text(x + 26, 9, TextFormat.Compact(amount), r == ResourceType.Food && Human.IsStarving ? Theme.Bad : Theme.Text, FontSize.Normal, bold: true);
             if (Math.Abs(net) >= 0.05)
-                Ui.Text(x + 26, 31, (net > 0 ? "+" : "") + Compact(net, decimals: true), net > 0 ? Theme.Good : Theme.Bad, FontSize.Small);
+                Ui.Text(x + 26, 31, (net > 0 ? "+" : "") + TextFormat.Compact(net, decimals: true), net > 0 ? Theme.Good : Theme.Bad, FontSize.Small);
             if (Ui.Hover(rect)) Ui.Tooltip($"{r.Name()}: {amount:N1}\nCambio en el último día: {net:+0.##;-0.##;0}");
             x += 90;
             if (x > s.X - 330) break;
@@ -506,15 +495,6 @@ public sealed partial class GameScreen : IScreen
             _nation.Visible = !_nation.Visible;
         if (Ui.Button(new Rect(s.X - 230, 12, 34, 32), "?", active: _help.Visible, tooltip: "Ayuda (F1)")) _help.Visible = !_help.Visible;
         if (Ui.Button(new Rect(s.X - 90, 12, 78, 32), "Menú")) _menuOpen = true;
-    }
-
-    /// <summary>Short form for the top bar: 950, 12,3k, 2,9M.</summary>
-    private static string Compact(double value, bool decimals = false)
-    {
-        double abs = Math.Abs(value);
-        if (abs >= 1_000_000) return $"{value / 1_000_000:0.#}M";
-        if (abs >= 10_000) return $"{value / 1000:0.#}k";
-        return decimals && abs < 100 ? $"{value:0.#}" : $"{value:N0}";
     }
 
     private void DrawSidePanel()
@@ -668,7 +648,7 @@ public sealed partial class GameScreen : IScreen
             var row = new Rect(x, y, w, 24);
             double left = p.Reserves[(int)r];
             if (left <= 0) ResourceLine(x, ref y, r, "Agotado", Theme.TextDim);
-            else ResourceLine(x, ref y, r, $"{p.Deposits[(int)r]:0.0}/día · quedan {Compact(left)}");
+            else ResourceLine(x, ref y, r, $"{p.Deposits[(int)r]:0.0}/día · quedan {TextFormat.Compact(left)}");
             if (Ui.Hover(row))
                 Ui.Tooltip(left <= 0 ? "Esta bolsa se ha agotado y ya no produce."
                     : $"Bolsa de {r.Name().ToLowerInvariant()}: quedan {left:N0} de {p.DepositSizes[(int)r] * GameRules.DepositSizeMultiplier:N0}.\n" +
@@ -899,18 +879,18 @@ public sealed partial class GameScreen : IScreen
 
     private void DrawMessages()
     {
-        const double Lifetime = 8;
-        _messages.RemoveAll(m => _realTime - m.Time > Lifetime);
+        var messages = _messages.Current(_realTime);
         var s = _app.ScreenSize;
         if (_nation.Visible)
         {
-            DrawLatestMessageInStrip(Lifetime);
+            if (messages.Count > 0) DrawLatestMessageInStrip(messages[0]);
             return;
         }
         float y = s.Y - (_renderer.Mode == MapMode.Resources ? 120 : 70); // above the resource filter when it is open
-        foreach (var (text, time, ok) in _messages.AsEnumerable().Reverse().Take(5))
+        foreach (var message in messages.Take(5))
         {
-            float alpha = (float)Math.Clamp((Lifetime - (_realTime - time)) / 1.5, 0, 1);
+            var (text, _, ok) = message;
+            float alpha = message.Opacity(_realTime);
             float w = Ui.Font.Measure(text, FontSize.Normal) + 24;
             var r = new Rect(s.X / 2 - w / 2, y - 30, w, 28);
             // A rounded strip with an accent (red for failures) along its left edge.
@@ -925,10 +905,9 @@ public sealed partial class GameScreen : IScreen
     /// The nation screen covers the space where messages stack, so only the latest one shows, in the
     /// strip beside the map modes, cut short if it does not fit.
     /// </summary>
-    private void DrawLatestMessageInStrip(double lifetime)
+    private void DrawLatestMessageInStrip(Message message)
     {
-        if (_messages.Count == 0) return;
-        var (text, time, ok) = _messages[^1];
+        var (text, _, ok) = message;
         var s = _app.ScreenSize;
         float x = 8 + ModeBarWidth + 6, maxW = s.X - x - 8;
         if (Ui.Font.Measure(text, FontSize.Small) + 20 > maxW)
@@ -936,7 +915,7 @@ public sealed partial class GameScreen : IScreen
             while (text.Length > 0 && Ui.Font.Measure(text + "...", FontSize.Small) + 20 > maxW) text = text[..^1];
             text = text.TrimEnd() + "...";
         }
-        float alpha = (float)Math.Clamp((lifetime - (_realTime - time)) / 1.5, 0, 1);
+        float alpha = message.Opacity(_realTime);
         var r = new Rect(x, s.Y - 44, Ui.Font.Measure(text, FontSize.Small) + 20, 30);
         Batch.RoundedRect(r.X, r.Y, r.W, r.H, Theme.ButtonRadius, Theme.PanelTop.WithAlpha(0.92f * alpha), Theme.PanelBottom.WithAlpha(0.92f * alpha));
         Batch.RoundedOutline(r.X, r.Y, r.W, r.H, Theme.ButtonRadius, Theme.PanelBorder.WithAlpha(alpha));
@@ -955,7 +934,7 @@ public sealed partial class GameScreen : IScreen
         if (p.IsOwned && p.Population >= 1) text += $"\nHumor {p.Mood:0} ({GameRules.MoodName(p.Mood)})  ·  Fertilidad {p.Fertility:P0}";
         if (_renderer.Mode == MapMode.Resources)
             foreach (var r in Resources.Deposits.Where(r => p.Deposits[(int)r] > 0 && Human.Knows(r)))
-                text += p.HasDeposit(r) ? $"\n{r.Name()}: {p.Deposits[(int)r]:0.0}/día, quedan {Compact(p.Reserves[(int)r])}" : $"\n{r.Name()}: agotado";
+                text += p.HasDeposit(r) ? $"\n{r.Name()}: {p.Deposits[(int)r]:0.0}/día, quedan {TextFormat.Compact(p.Reserves[(int)r])}" : $"\n{r.Name()}: agotado";
         if (_renderer.Mode == MapMode.Institutions)
             text += p.Institutions.Count > 0 ? "\n" + string.Join(", ", Institutions.All.Where(p.Institutions.Contains).Select(i => i.Info().Name))
                 : Institutions.All.Any(_session.IsBorn) ? "\nSin instituciones" : "\nTodavía no ha nacido ninguna institución";
@@ -1036,7 +1015,7 @@ public sealed partial class GameScreen : IScreen
     {
         try
         {
-            string name = SaveFiles.Save(_session);
+            string name = SaveFiles.Save(_session, ConquerApp.Version);
             Show(CommandResult.Success($"Partida guardada: {name}."));
             _menuOpen = false;
         }

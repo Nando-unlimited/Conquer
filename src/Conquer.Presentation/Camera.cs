@@ -1,6 +1,6 @@
 using System.Numerics;
 
-namespace Conquer.Client.Graphics;
+namespace Conquer.Presentation;
 
 /// <summary>
 /// View onto the map. Positions are in map pixels; X wraps around the planet, Y is clamped.

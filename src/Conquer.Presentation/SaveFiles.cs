@@ -1,6 +1,6 @@
 using Conquer.Game.Simulation;
 
-namespace Conquer.Client;
+namespace Conquer.Presentation;
 
 /// <summary>A saved game on disk: its name (the file name) and when it was saved.</summary>
 public sealed record SaveFile(string Path, string Name, DateTime SavedAt);
@@ -55,8 +55,8 @@ public static class SaveFiles
             .ToList();
     }
 
-    /// <summary>Writes the game as "Nation - date" and returns that name; saving again at the same moment overwrites it.</summary>
-    public static string Save(GameSession session)
+    /// <summary>Writes the game as "Nation - date", stamped with the game <paramref name="version"/>, and returns that name; saving again at the same moment overwrites it.</summary>
+    public static string Save(GameSession session, string version)
     {
         var date = session.Date;
         string name = Clean($"{session.Human.Name} - {date.ToString().Replace(", ", " ").Replace(":00", "h")}");
@@ -64,7 +64,7 @@ public static class SaveFiles
         string path = System.IO.Path.Combine(Folder, name + Extension);
         // Write to a temporary file first so a crash never leaves a half-written save behind.
         string temporary = path + ".tmp";
-        using (var file = File.Create(temporary)) session.ToSave(ConquerApp.Version).Write(file);
+        using (var file = File.Create(temporary)) session.ToSave(version).Write(file);
         File.Move(temporary, path, overwrite: true);
         return name;
     }

@@ -5,6 +5,7 @@ using Conquer.Game.Economy;
 using Conquer.Game.Military;
 using Conquer.Game.Rules;
 using Conquer.Game.Simulation;
+using Conquer.Presentation;
 
 namespace Conquer.Client.Screens;
 
@@ -24,7 +25,7 @@ public sealed partial class NationView
     {
         var mine = _session.Units.Where(u => u.OwnerId == _player.Id && (u.CommandLevel >= 0 || u.IsFleet)).ToList();
         var regiments = mine.Where(u => u.IsMilitary).ToList();
-        ui.Text(r.X, r.Y, $"{Plural(regiments.Count, "unidad de combate", Formations.CombatPlural)} · {Formations.BattalionCount(regiments.Sum(u => u.Battalions.Count))} · {regiments.Sum(u => u.Citizens):N0} hombres · " +
+        ui.Text(r.X, r.Y, $"{TextFormat.Plural(regiments.Count, "unidad de combate", Formations.CombatPlural)} · {Formations.BattalionCount(regiments.Sum(u => u.Battalions.Count))} · {regiments.Sum(u => u.Citizens):N0} hombres · " +
                           $"poder militar {_session.MilitaryPower(_player.Id):0} · mantenimiento {_session.Upkeep(_player)[(int)ResourceType.Gold]:0.#} de oro/día" +
                           (_player.ArmyUnpaid ? " (sin pagar)" : ""), _player.ArmyUnpaid ? Theme.Bad : Theme.Text, bold: true);
         var body = new Rect(r.X, r.Y + 34, r.W, r.H - 34);
@@ -93,21 +94,6 @@ public sealed partial class NationView
             }
         }
     }
-
-    private static string Plural(int n, string one, string many) => $"{n:N0} {(n == 1 ? one : many)}";
-
-    /// <summary>Daily upkeep in words: "0,3 oro/día" or "1,2 oro, 0,4 hierro/día".</summary>
-    public static string UpkeepText(IEnumerable<ResourceCost> costs)
-    {
-        var upkeep = new double[Resources.All.Length];
-        foreach (var cost in costs) GameSession.AddUpkeep(upkeep, cost);
-        var parts = Resources.All.Where(r => upkeep[(int)r] > 0).Select(r => $"{upkeep[(int)r]:0.##} {r.Name().ToLowerInvariant()}").ToList();
-        return parts.Count == 0 ? "nada" : string.Join(", ", parts) + "/día";
-    }
-
-    /// <summary>"Tarda 16 días (20 sin tus avances militares)." or, with none that speed it up, "Tarda 20 días."</summary>
-    public static string TrainingDaysText(int days, int baseDays) =>
-        days < baseDays ? $"Tarda {days} días ({baseDays} sin tus avances militares)." : $"Tarda {days} días.";
 
     private string UnitActivity(Unit unit)
     {
@@ -214,7 +200,7 @@ public sealed partial class NationView
         Row(ui, sx, ref sy, sw, "Defensa", $"{template.Defense:0.#}");
         Row(ui, sx, ref sy, sw, "Organización", $"{template.MaxOrganisation:0}");
         Row(ui, sx, ref sy, sw, "Velocidad", $"{template.Speed * GameRules.CitizenSpeedKmh:0.#} km/h");
-        Row(ui, sx, ref sy, sw, "Mantenimiento", UpkeepText(template.Battalions.Select(b => b.Info().Cost)));
+        Row(ui, sx, ref sy, sw, "Mantenimiento", TextFormat.UpkeepText(template.Battalions.Select(b => b.Info().Cost)));
         sy += 6;
         ui.Text(sx, sy, "Coste", Theme.TextDim);
         sy += 22;

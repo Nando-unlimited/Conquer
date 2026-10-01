@@ -8,6 +8,7 @@ using Conquer.Game.Rules;
 using Conquer.Game.Science;
 using Conquer.Game.Simulation;
 using Conquer.Game.World;
+using Conquer.Presentation;
 
 namespace Conquer.Client.Screens;
 
@@ -494,7 +495,7 @@ public sealed partial class GameScreen
             var can = _session.CanTrainTemplate(p, template);
             int days = GameSession.TrainingDays(Human, template);
             string tip = $"{template.Name}: {template.Composition}.\n{template.Men} hombres de la provincia. Ataque {template.Attack:0.#}, defensa {template.Defense:0.#}." +
-                         $"\nCoste: {template.Cost}. {NationView.TrainingDaysText(days, template.TrainingDays)}" + (can.Ok ? "" : "\n" + can.Message);
+                         $"\nCoste: {template.Cost}. {TextFormat.TrainingDaysText(days, template.TrainingDays)}" + (can.Ok ? "" : "\n" + can.Message);
             if (Ui.Button(new Rect(x, y, w, 28), $"{template.Name}  ·  {Formations.BattalionCount(template.Battalions.Count)}  ·  {days} d",
                     can.Ok, tooltip: tip, size: FontSize.Small))
                 Show(_session.TrainTemplate(Human.Id, p.Id, template.Id));
@@ -515,7 +516,7 @@ public sealed partial class GameScreen
             string tip = $"{Formations.BattalionName(info)}: {info.Men} hombres de la provincia. Ataque {info.Attack:0.#}, defensa {info.Defense:0.#}, " +
                          $"organización {info.MaxOrganisation:0}, {info.Speed * GameRules.CitizenSpeedKmh:0.#} km/h." +
                          (info.Mounted ? "\nMontada: ataca a la mitad en bosques, pantanos y montañas." : "") +
-                         $"\nCoste: {info.Cost}. {NationView.TrainingDaysText(days, info.TrainingDays)} Mantenimiento: {NationView.UpkeepText([info.Cost])}." + (can.Ok ? "" : "\n" + can.Message);
+                         $"\nCoste: {info.Cost}. {TextFormat.TrainingDaysText(days, info.TrainingDays)} Mantenimiento: {TextFormat.UpkeepText([info.Cost])}." + (can.Ok ? "" : "\n" + can.Message);
             if (Ui.Button(new Rect(x, y, w, 28), $"{info.Name}  ·  {info.Cost}  ·  {days} d", can.Ok, tooltip: tip, size: FontSize.Small))
                 Show(_session.Train(Human.Id, p.Id, type));
             MapIcons.Battalion(Batch, x + 7, y + 7, type);

@@ -1,23 +1,16 @@
 using Conquer.Client.Graphics;
+using Conquer.Presentation;
 
 namespace Conquer.Client.UI;
 
-/// <summary>Shows CHANGELOG.md (embedded in the client) as a scrollable panel.</summary>
+/// <summary>Shows the <see cref="Changelog"/> as a scrollable panel.</summary>
 public sealed class ChangelogView
 {
     private readonly List<(string Text, FontSize Size, bool Bold, Rgba Color, float Indent)> _lines = [];
     private float _scroll;
     private float _wrappedFor = -1;
-    private readonly string[] _source;
 
     public bool Visible { get; set; }
-
-    public ChangelogView()
-    {
-        using var stream = typeof(ChangelogView).Assembly.GetManifestResourceStream("CHANGELOG.md");
-        using var reader = new StreamReader(stream ?? new MemoryStream());
-        _source = reader.ReadToEnd().Replace("\r", "").Split('\n');
-    }
 
     /// <summary>Draws the panel while it is visible; its Close button hides it.</summary>
     public void Frame(Ui ui, Rect area)
@@ -48,21 +41,21 @@ public sealed class ChangelogView
     {
         _wrappedFor = width;
         _lines.Clear();
-        foreach (var raw in _source)
+        foreach (var line in Changelog.Lines)
         {
-            if (raw.StartsWith("# ")) continue;
-            if (raw.StartsWith("## "))
-                _lines.Add((raw[3..].Replace("[", "").Replace("]", ""), FontSize.Large, true, Theme.Accent, 0));
-            else if (raw.StartsWith("### "))
-                _lines.Add((raw[4..], FontSize.Normal, true, Theme.Text, 0));
-            else if (raw.StartsWith("- "))
+            switch (line.Kind)
             {
-                var wrapped = font.Wrap(raw[2..].Replace("**", ""), width - 24, FontSize.Normal);
-                for (int i = 0; i < wrapped.Count; i++)
-                    _lines.Add(((i == 0 ? "· " : "") + wrapped[i], FontSize.Normal, false, Theme.Text, i == 0 ? 6 : 18));
+                case MarkupKind.Heading: _lines.Add((line.Text, FontSize.Large, true, Theme.Accent, 0)); break;
+                case MarkupKind.Subheading: _lines.Add((line.Text, FontSize.Normal, true, Theme.Text, 0)); break;
+                case MarkupKind.Bullet:
+                    var wrapped = font.Wrap(line.Text, width - 24, FontSize.Normal);
+                    for (int i = 0; i < wrapped.Count; i++)
+                        _lines.Add(((i == 0 ? "· " : "") + wrapped[i], FontSize.Normal, false, Theme.Text, i == 0 ? 6 : 18));
+                    break;
+                default:
+                    foreach (var l in font.Wrap(line.Text, width, FontSize.Normal)) _lines.Add((l, FontSize.Normal, false, Theme.TextDim, 0));
+                    break;
             }
-            else if (raw.Trim().Length > 0)
-                foreach (var l in font.Wrap(raw, width, FontSize.Normal)) _lines.Add((l, FontSize.Normal, false, Theme.TextDim, 0));
         }
     }
 }

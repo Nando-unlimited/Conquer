@@ -10,12 +10,12 @@
     <!-- No ICU dependency, so it runs on minimal Linux systems; Program.cs sets the Spanish number format. -->
     <InvariantGlobalization>true</InvariantGlobalization>
     <RootNamespace>Conquer.Client</RootNamespace>
-    <!-- Game version: bump on every change and add a matching entry at the top of CHANGELOG.md. -->
-    <Version>1.51.0</Version>
+    <Version>1.52.0</Version>
   </PropertyGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\Conquer.Game\Conquer.Game.csproj" />
+    <ProjectReference Include="..\Conquer.Presentation\Conquer.Presentation.csproj" />
   </ItemGroup>
 
   <ItemGroup>
@@ -30,8 +30,6 @@
     <EmbeddedResource Include="Assets\FiraSans-Regular.ttf" LogicalName="Conquer.Client.Assets.FiraSans-Regular.ttf" />
     <EmbeddedResource Include="Assets\FiraSans-Bold.ttf" LogicalName="Conquer.Client.Assets.FiraSans-Bold.ttf" />
     <EmbeddedResource Include="Assets\Cinzel.ttf" LogicalName="Conquer.Client.Assets.Cinzel.ttf" />
-    <EmbeddedResource Include="..\..\CHANGELOG.md" LogicalName="CHANGELOG.md" />
-    <InternalsVisibleTo Include="Conquer.Tests" />
   </ItemGroup>
 
 </Project>

@@ -2,20 +2,10 @@ using Conquer.Game.Economy;
 using Conquer.Game.Science;
 using Conquer.Game.Simulation;
 using Conquer.Game.World;
+using Conquer.Presentation;
 using Silk.NET.OpenGL;
 
 namespace Conquer.Client.Graphics;
-
-public enum MapMode
-{
-    Terrain,
-    Political,
-    Population,
-    Mood,
-    Fertility,
-    Resources,
-    Institutions,
-}
 
 /// <summary>
 /// Draws the whole map with one full-screen quad. The fragment shader turns each screen pixel into

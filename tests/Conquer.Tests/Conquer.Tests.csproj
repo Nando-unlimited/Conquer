@@ -22,7 +22,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\Conquer.Game\Conquer.Game.csproj" />
-    <ProjectReference Include="..\..\src\Conquer.Client\Conquer.Client.csproj" />
-  </ItemGroup>
+    <ProjectReference Include="..\..\src\Conquer.Presentation\Conquer.Presentation.csproj" />  </ItemGroup>
 
 </Project>

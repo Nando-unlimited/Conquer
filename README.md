@@ -52,7 +52,8 @@ Se guardan en la carpeta `Partidas`, junto al ejecutable del juego. Si esa carpe
 | Carpeta | Contenido |
 | --- | --- |
 | `src/Conquer.Game` | Reglas y simulación, sin dependencias gráficas: mapa, biomas, provincias, recursos, unidades, migración, IA. |
-| `src/Conquer.Client` | Ventana, renderizado del mapa por shader, interfaz propia. |
+| `src/Conquer.Presentation` | Lo que ve y hace el jugador, sin motor gráfico: cámara, reloj de juego, mensajes, textos de ayuda e historial, partidas guardadas. |
+| `src/Conquer.Client` | Ventana, renderizado del mapa por shader, interfaz propia (Silk.NET + OpenGL). Solo dibuja; cambiar de motor no toca los otros dos. |
 | `tools/Conquer.EarthData` | Genera `src/Conquer.Game/Assets/earth.gz` (mapa de la Tierra real) a partir de datos públicos. |
 | `tests/Conquer.Tests` | Pruebas de la generación del mundo y de las reglas. |
 
