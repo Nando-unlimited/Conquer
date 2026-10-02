@@ -169,6 +169,11 @@ public sealed class Officer
         "Nuño", "Olga", "Pedro", "Ramiro", "Sancho", "Teresa", "Urbano", "Vicente", "Ximena", "Rodrigo", "Leonor", "Mencía",
     ];
 
+    private static readonly HashSet<string> FemaleNames = ["Beatriz", "Elena", "Inés", "Lucía", "Olga", "Teresa", "Ximena", "Leonor", "Mencía"];
+
+    /// <summary>Whether the officer is a woman, by her first name.</summary>
+    public bool IsFemale => FemaleNames.Contains(Name.Split(' ')[0]);
+
     private static readonly string[] Surnames =
     [
         "de Alarcón", "Barrantes", "Castro", "Dávila", "Enríquez", "Figueroa", "Guzmán", "Haro", "Iturbe", "Lara", "Mendoza", "Núñez",

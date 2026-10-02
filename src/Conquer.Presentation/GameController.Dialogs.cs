@@ -5,11 +5,11 @@ using Conquer.Game.Simulation;
 
 namespace Conquer.Presentation;
 
-/// <summary>An officer's title and stars, and each trait on its own line (virtues in green, flaws in red).</summary>
-public sealed record OfficerCard(string Title, string Stars, string Tooltip, IReadOnlyList<(string Text, Ink Ink)> Traits);
+/// <summary>An officer's portrait, title and stars, and each trait on its own line (virtues in green, flaws in red).</summary>
+public sealed record OfficerCard(string Title, string Stars, string Tooltip, IReadOnlyList<(string Text, Ink Ink)> Traits, Portrait Portrait);
 
 /// <summary>An officer in the reserve: their title, a summary of their traits, and the buttons to assign or retire them.</summary>
-public sealed record ReserveOfficer(string Title, string Summary, Ink SummaryInk, string Tooltip, Button Assign, Button Retire);
+public sealed record ReserveOfficer(string Title, string Summary, Ink SummaryInk, string Tooltip, Button Assign, Button Retire, Portrait Portrait);
 
 /// <summary>
 /// The officer column of the unit editor: who leads the unit (or why nobody does), the reserve and the button to recruit.
@@ -135,10 +135,11 @@ public sealed partial class GameController
             officer.Traits.Any(Officer.IsFlaw) ? Tone.Dim : Tone.Good, OfficerTooltip(officer),
             new Button("Asignar", () => Show(Session.AssignOfficer(Human.Id, unit.Id, officer.Id)),
                 Tooltip: officer.Rank < unit.RequiredRank ? $"Ascenderá a {Officer.RankName(unit.RequiredRank).ToLowerInvariant()}." : null, Size: TextSize.Small),
-            new Button("Retirar", () => Show(Session.RetireOfficer(Human.Id, officer.Id)), Tooltip: "Deja el ejército para siempre.", Size: TextSize.Small))).ToList();
+            new Button("Retirar", () => Show(Session.RetireOfficer(Human.Id, officer.Id)), Tooltip: "Deja el ejército para siempre.", Size: TextSize.Small),
+            PortraitOf(officer, unit.IsFleet))).ToList();
         var can = Session.CanRecruitOfficer(Human);
         return new OfficerColumn($"{role} (rango: {Officer.RankName(unit.RequiredRank).ToLowerInvariant()})",
-            unit.Officer is { } current ? OfficerCard(current) : null,
+            unit.Officer is { } current ? OfficerCard(current, unit.IsFleet) : null,
             unit.Officer is null ? null : new Button("Relevar del mando", () => Show(Session.RelieveOfficer(Human.Id, unit.Id)),
                 Tooltip: "Vuelve a la reserva; la unidad se queda sin oficial.", Size: TextSize.Small),
             unit.Officer is null ? "Sin oficial: ni ventajas ni defectos." : null,
@@ -147,9 +148,13 @@ public sealed partial class GameController
                 Tooltip: can.Ok ? "Se une a la reserva con rasgos al azar: una o dos virtudes, y a veces un defecto." : can.Message, Size: TextSize.Small));
     }
 
-    private static OfficerCard OfficerCard(Officer officer) =>
+    private OfficerCard OfficerCard(Officer officer, bool naval) =>
         new(officer.Title, new string('*', officer.Skill), OfficerTooltip(officer),
-            officer.Traits.Select(t => ($"{Officer.TraitName(t)}: {Officer.TraitDescription(t)}", (Ink)(Officer.IsFlaw(t) ? Tone.Bad : Tone.Good))).ToList());
+            officer.Traits.Select(t => ($"{Officer.TraitName(t)}: {Officer.TraitDescription(t)}", (Ink)(Officer.IsFlaw(t) ? Tone.Bad : Tone.Good))).ToList(),
+            PortraitOf(officer, naval));
+
+    /// <summary>The officer's portrait in the player's colour and era.</summary>
+    public Portrait PortraitOf(Officer officer, bool naval = false) => Portrait.Of(officer, Human.Era, Human.Color, naval);
 
     // ------------------------------------------------------------------ road window
 

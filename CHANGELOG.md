@@ -2,6 +2,14 @@
 
 Todos los cambios del juego, del más reciente al más antiguo. Cada versión es un commit cuyo título es su número.
 
+## [1.87.0] - 2026-10-02
+
+### Añadido
+- **Retratos de los oficiales**, traídos de la otra versión del juego. Cada oficial y general tiene una cara propia, sacada de su nombre, así que nunca cambia y las partidas guardadas no necesitan nada nuevo.
+  - Lleva el uniforme y el tocado de su época en el color de su nación: casco de bronce con cresta en la Antigüedad, yelmo nasal en la Edad Media, tricornio, quepis y gorra de plato; de marino si manda una flota.
+  - Los galones (coronel) o las estrellas (generales) de los hombros dicen su rango, cada estrella de habilidad más allá de la primera añade un pasador en el pecho y el pelo encanece a medida que gana experiencia.
+  - Se ven en el editor de la unidad (el oficial al mando y los de la reserva) y en el panel de la unidad, bajo su oficial y su general.
+
 ## [1.86.0] - 2026-10-02
 
 ### Cambiado

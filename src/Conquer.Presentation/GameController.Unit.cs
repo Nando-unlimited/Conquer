@@ -195,6 +195,7 @@ public sealed partial class GameController
             doc.Add(CommandLine(unit));
             doc.Add(OfficerLine("Oficial", unit.Officer, "Manda esta unidad."));
             doc.Add(OfficerLine("General", Session.GeneralOf(unit), "Manda las unidades de su cuartel general que estén a su alcance."));
+            doc.Add(PortraitsOf(unit, ("Oficial", unit.Officer), ("General", Session.GeneralOf(unit))));
             if (unit.Battalions.Count > 0)
             {
                 double xp = unit.Battalions.Sum(b => b.Experience * b.Strength) / Math.Max(1, unit.Battalions.Sum(b => b.Strength));
@@ -225,6 +226,7 @@ public sealed partial class GameController
         doc.Add(new Info("Alcance", $"{info.RangeKm:N0} km"));
         doc.Add(CommandLine(hq));
         doc.Add(OfficerLine("General", hq.Officer, "Manda las unidades de su cuartel general que estén a su alcance."));
+        doc.Add(PortraitsOf(hq, ("General", hq.Officer)));
         var subs = Session.SubordinatesOf(hq).ToList();
         string below = Formations.SubordinatesPlural(hq.HeadquartersLevel);
         doc.Add(Section($"Al mando ({subs.Count}/{info.MaxSubordinates} {below})", 24));
@@ -238,6 +240,15 @@ public sealed partial class GameController
     }
 
     /// <summary>An officer leading the unit, or its HQ's general, with their traits and what they do on hover.</summary>
+
+    /// <summary>The portraits of the unit's officer and general, in its nation's colour and era; empty if it has neither.</summary>
+    private Element PortraitsOf(Unit unit, params (string Role, Officer? Officer)[] officers)
+    {
+        var owner = Session.Players[unit.OwnerId];
+        var shown = officers.Where(o => o.Officer != null)
+            .Select(o => (Portrait.Of(o.Officer!, owner.Era, owner.Color, unit.IsFleet), o.Role, OfficerTooltip(o.Officer!))).ToList();
+        return shown.Count == 0 ? new Space(0) : new Portraits(shown);
+    }
     private static Info OfficerLine(string label, Officer? officer, string role) =>
         officer == null
             ? new Info(label, "Ninguno", Tone.Dim)

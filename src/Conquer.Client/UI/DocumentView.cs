@@ -106,6 +106,18 @@ public static class DocumentView
                 case Space space:
                     y += space.Height;
                     break;
+                case Portraits portraits:
+                    float px = x;
+                    foreach (var (portrait, caption, tooltip) in portraits.Officers)
+                    {
+                        var frame = new Rect(px, y, portraits.Size, portraits.Size);
+                        PortraitPainter.Draw(ui.Batch, frame, portrait);
+                        ui.TextCentered(new Rect(px - 10, y + portraits.Size + 2, portraits.Size + 20, 18), caption, Theme.TextDim, FontSize.Small);
+                        if (ui.Hover(frame)) ui.Tooltip(tooltip);
+                        px += portraits.Size + 14;
+                    }
+                    y += portraits.Size + 24;
+                    break;
             }
         }
     }

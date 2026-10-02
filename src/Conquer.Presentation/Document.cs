@@ -135,3 +135,6 @@ public sealed class Document
 
     public void Add(Element element) => Elements.Add(element);
 }
+
+/// <summary>Officers' portraits side by side, each with a caption under it (and a tooltip), <see cref="Size"/> pixels square.</summary>
+public sealed record Portraits(IReadOnlyList<(Portrait Portrait, string Caption, string Tooltip)> Officers, float Size = 64) : Element;

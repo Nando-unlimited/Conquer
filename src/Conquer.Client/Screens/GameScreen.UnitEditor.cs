@@ -124,8 +124,9 @@ public sealed partial class GameScreen
         {
             if (y + 34 > bottom - 44) break;
             shown++;
-            Ui.Text(x, y, officer.Title, Theme.Text, FontSize.Small, bold: true);
-            Ui.Text(x, y + 15, officer.Summary, Theme.Of(officer.SummaryInk), FontSize.Small);
+            PortraitPainter.Draw(Batch, new Rect(x, y, 30, 30), officer.Portrait);
+            Ui.Text(x + 36, y, officer.Title, Theme.Text, FontSize.Small, bold: true);
+            Ui.Text(x + 36, y + 15, officer.Summary, Theme.Of(officer.SummaryInk), FontSize.Small);
             if (Ui.Hover(new Rect(x, y, w - 150, 30))) Ui.Tooltip(officer.Tooltip);
             DocumentView.Press(Ui, officer.Assign, new Rect(x + w - 144, y + 2, 84, 26));
             DocumentView.Press(Ui, officer.Retire, new Rect(x + w - 54, y + 2, 54, 26));
@@ -139,18 +140,22 @@ public sealed partial class GameScreen
         DocumentView.Press(Ui, officers.Recruit, new Rect(x, Math.Max(y, bottom - 36), w, 32));
     }
 
-    /// <summary>An officer's title, stars and each trait on its own line, virtues in green and flaws in red.</summary>
+    /// <summary>An officer's portrait, and beside it their title, stars and each trait on its own line, virtues in green and flaws in red.</summary>
     private void OfficerCard(OfficerCard officer, float x, ref float y, float w)
     {
-        Ui.Text(x, y, officer.Title, Theme.Accent, bold: true);
-        Ui.Text(x + w - Ui.Font.Measure(officer.Stars, FontSize.Normal, true), y, officer.Stars, Theme.Accent, bold: true);
-        if (Ui.Hover(new Rect(x, y, w, 22))) Ui.Tooltip(officer.Tooltip);
+        const float portrait = 72;
+        float top = y;
+        PortraitPainter.Draw(Batch, new Rect(x, y, portrait, portrait), officer.Portrait);
+        float tx = x + portrait + 10, tw = w - portrait - 10;
+        Ui.Text(tx, y, officer.Title, Theme.Accent, bold: true);
+        Ui.Text(tx + tw - Ui.Font.Measure(officer.Stars, FontSize.Normal, true), y, officer.Stars, Theme.Accent, bold: true);
+        if (Ui.Hover(new Rect(x, y, w, portrait))) Ui.Tooltip(officer.Tooltip);
         y += 24;
         foreach (var (text, ink) in officer.Traits)
         {
-            Ui.Text(x + 8, y, text, Theme.Of(ink), FontSize.Small);
+            Ui.Text(tx + 4, y, Ui.Font.Wrap(text, tw - 4, FontSize.Small).First(), Theme.Of(ink), FontSize.Small);
             y += 18;
         }
-        y += 8;
+        y = Math.Max(y, top + portrait) + 8;
     }
 }
