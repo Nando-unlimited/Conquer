@@ -71,6 +71,7 @@ commit es el número de versión. Un test comprueba que el csproj y el changelog
 - Costas, lagos y glaciares: Natural Earth 1:50m (dominio público).
 - Fuentes Fira Sans y Cinzel: SIL Open Font License 1.1 (`src/Conquer.Client/Assets/OFL-FiraSans.txt` y `OFL-Cinzel.txt`).
 - Música y efectos de sonido: dominio público, de Kenney.nl, de autores de OpenGameArt.org (RandomMind, Spring Spring, Joth, Wolfgang_, nene, Emma_MA, fvcalderan, William Hector, HaelDB) y de Kevin MacLeod («The Britons», FreePD.com). Detalle en `src/Conquer.Client/Assets/Audio/CREDITS.txt`.
+- «Lord of the Land» Kevin MacLeod (incompetech.com), Licensed under Creative Commons: By Attribution 4.0 License (https://creativecommons.org/licenses/by/4.0/).
 
 Para regenerar el mapa de la Tierra, descarga `gebco_08_rev_elev_21600x10800.png`, `gebco_08_rev_bath_21600x10800.png`
 (NASA Visible Earth) y `ne_50m_land`, `ne_50m_lakes`, `ne_50m_glaciated_areas` en GeoJSON (Natural Earth) a una

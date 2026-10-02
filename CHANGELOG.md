@@ -2,6 +2,11 @@
 
 Todos los cambios del juego, del más reciente al más antiguo. Cada versión es un commit cuyo título es su número.
 
+## [1.70.2] - 2026-10-02
+
+### Añadido
+- **Nueva pista para la paz en las primeras eras**: «Lord of the Land», de Kevin MacLeod (incompetech.com, licencia CC BY 4.0; se cita en el README y en `Assets/Audio/CREDITS.txt`).
+
 ## [1.70.1] - 2026-10-02
 
 ### Cambiado

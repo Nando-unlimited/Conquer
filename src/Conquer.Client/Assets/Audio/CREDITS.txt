@@ -1,4 +1,4 @@
-Audio de Conquer. Todo es de dominio público (CC0 1.0, https://creativecommons.org/publicdomain/zero/1.0/):
+Audio de Conquer. Todo es de dominio público (CC0 1.0, https://creativecommons.org/publicdomain/zero/1.0/), salvo «Lord of the Land» (CC BY 4.0, abajo):
 se puede usar sin atribución, pero se cita a los autores por cortesía.
 
 Efectos (Sfx):
@@ -16,6 +16,10 @@ Música (Music), de OpenGameArt.org:
 - cinematic_calm: Wolfgang_ («At Home - Orchestral»).
 - new_sunrise: nene («New Sunrise»).
 - determined_pursuit, orchestral_battle: Emma_MA («Determined Pursuit», «QaziJamJam Orchestral Battle Theme»).
+
+Música de Kevin MacLeod:
+- lord_of_the_land: «Lord of the Land» (incompetech.com), licencia CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/).
+  Esta sí pide atribución: «Lord of the Land» Kevin MacLeod (incompetech.com), Licensed under Creative Commons: By Attribution 4.0.
 
 Música del menú principal:
 - the_britons: Kevin MacLeod, «The Britons» (FreePD.com, dominio público).

@@ -22,7 +22,7 @@ public enum SoundCue
 /// <summary>Which music plays: tracks in Assets/Audio/Music, by age and by war or peace.</summary>
 public static class Soundtrack
 {
-    private static readonly string[] EarlyPeace = ["exploration", "harvest_season", "market_day", "kings_feast"];
+    private static readonly string[] EarlyPeace = ["exploration", "harvest_season", "market_day", "kings_feast", "lord_of_the_land"];
     private static readonly string[] EarlyWar = ["medieval_battle", "war_theme"];
     private static readonly string[] LatePeace = ["fantasy_orchestral", "cinematic_calm", "new_sunrise"];
     private static readonly string[] LateWar = ["determined_pursuit", "orchestral_battle"];
