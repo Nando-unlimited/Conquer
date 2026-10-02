@@ -505,6 +505,15 @@ Eventos con decisiones. Usa su propio generador aleatorio (`seed ^ 0xDEC1`).
 
 La ventana está en `GameController.Decisions.cs` (`DecisionWindow`, `DecisionOpen`, que para el tiempo) y se dibuja en `GameScreen.Decisions.cs`.
 
+### `Simulation/GameSession.History.cs`
+El registro de estadísticas.
+
+| Elemento | Qué hace |
+| --- | --- |
+| `HistorySample`, `History`, `HistoryOf(jugador)` | Las cifras de una nación un día (gente, soldados, oro neto al día, provincias, ciencia al día); se guardan todas (`SaveGame.History`). |
+| `Sample(jugador)` | Las cifras de una nación ahora mismo. |
+| `DailyHistory()` | Cada 30 días anota las de cada nación que sigue en pie. |
+
 ### `Simulation/GameSession.Sieges.cs`
 Asedios.
 
@@ -889,6 +898,11 @@ La pantalla de la nación (botón «Nación» o tecla N) como datos: `Visible`, 
 | --- | --- |
 | `Trade()`, `Offers(nación)`, `OfferRow`, `Amount` | Pestaña Comercio: tus acuerdos en curso (con los días que quedan y «Cancelar») y las ofertas de cada nación en paz: lo que le sobra, por oro o por lo que más le falta de lo que te sobra a ti, y lo tuyo que te compra por oro, con «Firmar». El tooltip de cada cantidad da su valor en oro. |
 
+### `NationScreen.Statistics.cs`
+| Función | Qué hace |
+| --- | --- |
+| `StatisticsMetric`, `Metric`, `Statistics()` | Pestaña Estadísticas: botones para elegir la cifra (población, ejército, oro al día, provincias o ciencia al día) y una gráfica con una línea por nación desde el principio, más la cifra de hoy. Puntos y marcas van de 0 a 1 en cada eje; la nación del jugador va primero en la leyenda y encima del resto. |
+
 ### `NationPages.cs`
 Lo que muestra cada pestaña de la pantalla de la nación, para que el cliente lo dibuje.
 
@@ -898,6 +912,7 @@ Lo que muestra cada pestaña de la pantalla de la nación, para que el cliente l
 | `TablePage`, `SummaryPage` | Una tabla, bajo una línea en negrita si la hay (Ciudades, Provincias, Ejército, Diplomacia); dos columnas de cifras (Resumen). |
 | `SciencePage`, `InstitutionBadge`, `BranchColumn`, `TechLevel`, `TechCard` | La ciencia: puntos al día, instituciones de la era mostrada, botones de era y, por rama, prioridad, estado, niveles y tarjetas de avance. |
 | `TemplatesPage`, `TemplateSlot` | El diseñador de unidades: plantillas y sus acciones, huecos de la elegida, batallones para añadir y sus cifras (un `Document`). |
+| `StatisticsPage`, `ChartSeries`, `ChartTick` | Las estadísticas: botones de cifra, título, una línea por nación (puntos de 0 a 1, color, última cifra, si es la del jugador) y las marcas de los ejes. |
 
 ### `Audio.cs`
 | Elemento | Qué hace |
@@ -1063,7 +1078,7 @@ Dibuja la ventana de `GameController.UnitEditor`: a la izquierda el nombre (`Nam
 `DrawRoadWindow()`: dibuja la ventana de `GameController.RoadWindow` a la izquierda, para que se vea la ruta en el mapa: los destinos que caben (y cuántos más hay), y debajo lo que cuesta y une el elegido, con «Construir» y «Cancelar».
 
 ### `Screens/NationView.cs`
-`NationView`: dibuja la pantalla de la nación (`NationScreen`): el panel opaco con el nombre, las pestañas y «Cerrar», y la página de la pestaña. Las tablas (`TablePage`, `TextCell`, `Header`, `Rows`) llevan cabeceras que ordenan, filas alternas resaltadas bajo el ratón y desplazamiento con la rueda (guardado por pestaña); el resumen son dos `Document`; la ciencia (`Science`, `InstitutionBadge`, `Branch`, `TechCard`) coloca las tres ramas en columnas con sus tarjetas de 88 píxeles; el diseñador (`Templates`) pone la lista de plantillas a la izquierda, los huecos y los batallones para añadir en el centro y sus cifras a la derecha.
+`NationView`: dibuja la pantalla de la nación (`NationScreen`): el panel opaco con el nombre, las pestañas y «Cerrar», y la página de la pestaña. Las tablas (`TablePage`, `TextCell`, `Header`, `Rows`) llevan cabeceras que ordenan, filas alternas resaltadas bajo el ratón y desplazamiento con la rueda (guardado por pestaña); el resumen son dos `Document`; la ciencia (`Science`, `InstitutionBadge`, `Branch`, `TechCard`) coloca las tres ramas en columnas con sus tarjetas de 88 píxeles; el diseñador (`Templates`) pone la lista de plantillas a la izquierda, los huecos y los batallones para añadir en el centro y sus cifras a la derecha. Las estadísticas (`Statistics`) dibujan la gráfica con sus líneas de guía y la leyenda a la derecha.
 
 ### `Graphics/MapRenderer.cs`
 Dibuja el mapa entero con un único shader.

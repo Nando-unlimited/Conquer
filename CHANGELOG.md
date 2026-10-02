@@ -2,6 +2,14 @@
 
 Todos los cambios del juego, del más reciente al más antiguo. Cada versión es un commit cuyo título es su número.
 
+## [1.80.0] - 2026-10-02
+
+### Añadido
+- **Estadísticas**: nueva pestaña de la nación con una gráfica de cómo ha cambiado cada nación desde el principio de la partida.
+  - Elige la cifra: **población, ejército, oro al día, provincias o ciencia al día**.
+  - Cada nación es una línea de su color, la tuya más gruesa. La leyenda da la cifra de hoy de cada una, y las eliminadas siguen ahí hasta el día en que cayeron.
+  - Las cifras se anotan cada 30 días y se guardan con la partida. En las partidas anteriores, el registro empieza al cargarlas.
+
 ## [1.79.0] - 2026-10-02
 
 ### Añadido

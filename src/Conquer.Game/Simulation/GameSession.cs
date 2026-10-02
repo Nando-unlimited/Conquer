@@ -245,6 +245,7 @@ public sealed partial class GameSession
             DailyTrade();
             DailyPlague();
             DailyDecisions();
+            DailyHistory();
         }
         if (Date.Hours % 6 == 0)
             foreach (var ai in _ais.Where(a => !Players[a.PlayerId].Eliminated)) ai.Think(dailyDecisions: Date.Hour == 0);

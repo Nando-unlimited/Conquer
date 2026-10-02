@@ -83,6 +83,8 @@ public sealed record SaveGame
     public List<Decision>? Decisions { get; init; }
     public List<MoodEvent>? MoodEvents { get; init; }
     public int NextDecisionId { get; init; }
+    /// <summary>The ledger of each nation's figures; missing in saves from before 1.80.0.</summary>
+    public List<HistorySample>? History { get; init; }
     public required List<Notification> Notifications { get; init; }
     public required List<AiSave> Ais { get; init; }
     public required Dictionary<int, double> EmigrationCarry { get; init; }

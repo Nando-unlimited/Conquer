@@ -253,6 +253,9 @@ public static class GameRules
     public const double DecisionPeople = 20000;
     public const int DecisionMoodDays = 365;
 
+    // The ledger: every HistoryDays days each nation's figures are written down for the statistics graphs.
+    public const int HistoryDays = 30;
+
     // Manpower. A nation's reserve of recruits holds BaseManpower plus ManpowerShare of its settled people (more with
     // advances) and refills in ManpowerRecoveryYears. Training, raising HQs and reinforcing draw on it.
     public const double BaseManpower = 500;

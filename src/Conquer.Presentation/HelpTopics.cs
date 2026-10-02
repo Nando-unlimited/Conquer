@@ -192,6 +192,7 @@ public static class HelpTopics
             "- Música y sonido: en el menú (y en la pantalla inicial) hay un botón para cada uno; cada pulsación sube el volumen y, después del máximo, lo apaga. La música cambia con la era y cuando estás en guerra.",
             "- La dificultad se elige al empezar: cambia cuántos yacimientos hay y su tamaño, los recursos iniciales y lo que producen los rivales.",
             "- Los rivales del ordenador se expanden, investigan, construyen y hacen la guerra por su cuenta.",
+            $"- Estadísticas (pestaña de la nación): cada {GameRules.HistoryDays} días se anotan la población, el ejército, el oro y la ciencia al día y las provincias de cada nación; la gráfica muestra cómo han cambiado desde el principio de la partida.",
         ]),
     ];
 

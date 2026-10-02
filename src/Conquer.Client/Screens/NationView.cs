@@ -1,6 +1,7 @@
 using Conquer.Client.Graphics;
 using Conquer.Client.UI;
 using Conquer.Game.Military;
+using System.Numerics;
 using Conquer.Presentation;
 
 namespace Conquer.Client.Screens;
@@ -29,6 +30,56 @@ public sealed class NationView(NationScreen screen)
             case TablePage table: TablePage(ui, content, table); break;
             case SciencePage science: Science(ui, content, science); break;
             case TemplatesPage templates: Templates(ui, content, templates); break;
+            case StatisticsPage statistics: Statistics(ui, content, statistics); break;
+        }
+    }
+
+    // ------------------------------------------------------------------ statistics
+
+    /// <summary>The figure buttons, then the graph on the left with its marks and the legend on the right.</summary>
+    private static void Statistics(Ui ui, Rect r, StatisticsPage page)
+    {
+        for (int i = 0; i < page.Metrics.Count; i++) DocumentView.Press(ui, page.Metrics[i], new Rect(r.X + i * 138, r.Y, 132, 30));
+        ui.Text(r.X, r.Y + 44, page.Title, Theme.Text, bold: true);
+        if (page.Empty != null)
+        {
+            ui.Text(r.X, r.Y + 80, page.Empty, Theme.TextDim);
+            return;
+        }
+
+        const float legendW = 250, axisW = 64, axisH = 28;
+        var chart = new Rect(r.X + axisW, r.Y + 84, r.W - legendW - axisW - 20, r.H - 84 - axisH);
+        ui.Batch.Rect(chart.X, chart.Y, chart.W, chart.H, Rgba.Black.WithAlpha(0.25f));
+        foreach (var tick in page.YTicks)
+        {
+            float y = chart.Bottom - tick.At * chart.H;
+            ui.Batch.Rect(chart.X, y, chart.W, 1, Theme.PanelBorder);
+            ui.Text(r.X, y - 9, tick.Text, Theme.TextDim, FontSize.Small);
+        }
+        foreach (var tick in page.XTicks)
+        {
+            float x = chart.X + tick.At * chart.W;
+            ui.Batch.Rect(x, chart.Y, 1, chart.H, Theme.PanelBorder);
+            ui.Text(x + 4, chart.Bottom + 6, tick.Text, Theme.TextDim, FontSize.Small);
+        }
+        // The player's line last, so it is drawn on top.
+        foreach (var s in page.Series.OrderBy(s => s.Player))
+        {
+            var color = new Rgba(s.Color);
+            Vector2 At((float X, float Y) p) => new(chart.X + p.X * chart.W, chart.Bottom - p.Y * chart.H);
+            if (s.Points.Count == 1) ui.Batch.Rect(At(s.Points[0]).X - 2, At(s.Points[0]).Y - 2, 4, 4, color);
+            for (int i = 1; i < s.Points.Count; i++) ui.Batch.Line(At(s.Points[i - 1]), At(s.Points[i]), color, s.Player ? 3 : 2);
+        }
+
+        float lx = chart.Right + 20, ly = chart.Y;
+        foreach (var s in page.Series)
+        {
+            if (ly + 24 > r.Bottom) break;
+            ui.Batch.Rect(lx, ly + 3, 16, 16, Rgba.Black);
+            ui.Batch.Rect(lx + 2, ly + 5, 12, 12, new Rgba(s.Color));
+            ui.Text(lx + 24, ly, ui.Font.Wrap(s.Name, legendW - 100, FontSize.Small).First(), s.Player ? Theme.Accent : Theme.Text, FontSize.Small, s.Player);
+            ui.Text(lx + legendW - 70, ly, s.Last, Theme.TextDim, FontSize.Small);
+            ly += 26;
         }
     }
 

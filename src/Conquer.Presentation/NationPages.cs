@@ -61,3 +61,16 @@ public sealed record TemplateSlot(BattalionType? Battalion, string Name, string 
 
 public sealed record TemplatesPage(IReadOnlyList<Button> Templates, IReadOnlyList<Button> Actions, string Name, string Kind,
     IReadOnlyList<TemplateSlot> Slots, IReadOnlyList<Button> Add, Document Details) : NationPage;
+
+/// <summary>One nation's line on a graph: its points from 0 to 1 on both axes, its latest figure, and whether it is the player's.</summary>
+public sealed record ChartSeries(string Name, uint Color, IReadOnlyList<(float X, float Y)> Points, string Last, bool Player);
+
+/// <summary>A mark on an axis of a graph, from 0 to 1 along it.</summary>
+public sealed record ChartTick(float At, string Text);
+
+/// <summary>
+/// The statistics: buttons to choose the figure, then a graph with one line per nation over the game, its axes'
+/// marks and a legend with each nation's latest figure. <see cref="Empty"/> when there is nothing to draw yet.
+/// </summary>
+public sealed record StatisticsPage(IReadOnlyList<Button> Metrics, string Title, string? Empty, IReadOnlyList<ChartSeries> Series,
+    IReadOnlyList<ChartTick> YTicks, IReadOnlyList<ChartTick> XTicks) : NationPage;
