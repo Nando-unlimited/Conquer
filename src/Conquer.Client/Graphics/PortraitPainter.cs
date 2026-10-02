@@ -9,7 +9,7 @@ namespace Conquer.Client.Graphics;
 /// Paints an officer's portrait from shapes (<see cref="Portrait"/>): head and shoulders with their face, in the uniform
 /// and headgear of their era (crested bronze helmet, nasal helm, tricorne or bicorne, kepi, peaked cap) in their
 /// nation's colour, with bars (a colonel) or stars (generals) on the shoulders and a ribbon for each star beyond the
-/// first. Brought from the other version of the game.
+/// first. Brought from the other version of the game. Officers with a painted portrait in Assets/Portraits take that instead.
 /// </summary>
 public static class PortraitPainter
 {
@@ -22,7 +22,69 @@ public static class PortraitPainter
         Lips = Hex(0x7a3a30), FemaleLips = Hex(0xa8453a), Bronze = Hex(0x8f6a28), Steel = Hex(0x9aa0a8), Crest = Hex(0xa8281e),
         HatBlack = Hex(0x161616), NavyBlue = Hex(0x1c2740), White = Hex(0xe8e4d8), Backdrop = Hex(0x20252e);
 
+    private static SpriteAtlas? _photos;
+    private static Dictionary<string, string[]> _groups = [];
+
+    /// <summary>
+    /// The painted portraits of Assets/Portraits, loaded once: "renacimiento-hombre-03" belongs to the group
+    /// "renacimiento-hombre". Officers of an era and sex (or sailors) with pictures take one of them; the rest are drawn.
+    /// </summary>
+    public static void LoadPhotos(Silk.NET.OpenGL.GL gl)
+    {
+        if (_photos != null) return;
+        _photos = new SpriteAtlas(gl, "Portraits", maxSize: 256);
+        _groups = _photos.Names.GroupBy(GroupOf).ToDictionary(g => g.Key, g => g.Order(StringComparer.Ordinal).ToArray());
+    }
+
+    /// <summary>"renacimiento-hombre-03" is in "renacimiento-hombre": the name without its last part if that is a number.</summary>
+    public static string GroupOf(string name)
+    {
+        int dash = name.LastIndexOf('-');
+        return dash > 0 && int.TryParse(name[(dash + 1)..], out _) ? name[..dash] : name;
+    }
+
+    /// <summary>The officer's portrait: a painted one of their group if there is any, or one drawn from shapes.</summary>
     public static void Draw(Batch2D b, Rect rect, Portrait face)
+    {
+        if (_photos != null && face.PhotoGroups.Select(g => _groups.GetValueOrDefault(g)).FirstOrDefault(g => g is { Length: > 0 }) is { } group)
+            DrawPhoto(b, rect, face, group[face.Pick % group.Length]);
+        else
+            DrawShapes(b, rect, face);
+    }
+
+    /// <summary>
+    /// A painted portrait in a frame of the nation's colour, with the rank on a band along the bottom: three bars for a
+    /// colonel, a star for each grade of general.
+    /// </summary>
+    private static void DrawPhoto(Batch2D b, Rect rect, Portrait face, string name)
+    {
+        var country = new Rgba(face.Color | 0xFF000000);
+        _photos!.DrawCover(b, name, new Vector2(rect.X, rect.Y), new Vector2(rect.Right, rect.Bottom));
+        float frame = Math.Max(2, rect.W / 28f);
+        b.Rect(rect.X, rect.Y, rect.W, frame, country);
+        b.Rect(rect.X, rect.Bottom - frame, rect.W, frame, country);
+        b.Rect(rect.X, rect.Y, frame, rect.H, country);
+        b.Rect(rect.Right - frame, rect.Y, frame, rect.H, country);
+        if (rect.W < 40) return;
+        float band = rect.H * 0.16f, top = rect.Bottom - frame - band;
+        b.Rect(rect.X + frame, top, rect.W - 2 * frame, band, Rgba.Black.WithAlpha(0.6f));
+        float size = band * 0.32f, cy = top + band / 2;
+        int marks = face.Rank >= 1 ? face.Rank : 3;
+        float step = size * 2.6f, x = rect.X + rect.W / 2 - (marks - 1) * step / 2;
+        for (int i = 0; i < marks; i++, x += step)
+        {
+            if (face.Rank >= 1)
+            {
+                b.Triangle(new(x, cy - size * 1.3f), new(x + size * 0.45f, cy), new(x, cy + size * 1.3f), Gold);
+                b.Triangle(new(x, cy - size * 1.3f), new(x - size * 0.45f, cy), new(x, cy + size * 1.3f), Gold);
+                b.Triangle(new(x - size * 1.3f, cy), new(x, cy - size * 0.45f), new(x + size * 1.3f, cy), Gold);
+                b.Triangle(new(x - size * 1.3f, cy), new(x, cy + size * 0.45f), new(x + size * 1.3f, cy), Gold);
+            }
+            else b.Rect(x - size * 0.4f, cy - size * 1.2f, size * 0.8f, size * 2.4f, Gold);
+        }
+    }
+
+    private static void DrawShapes(Batch2D b, Rect rect, Portrait face)
     {
         Vector2 P(float u, float v) => new(rect.X + u * rect.W, rect.Y + v * rect.H);
         Vector2 R(float u, float v) => new(u * rect.W, v * rect.H);

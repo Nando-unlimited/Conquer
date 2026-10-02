@@ -1,0 +1,10 @@
+Retratos pintados de los oficiales.
+
+Deja aquí imágenes cuadradas (PNG o JPG, 256 px o más) llamadas época-grupo-número, por ejemplo
+renacimiento-hombre-03.png. Épocas: antigua, clasica, medieval, renacimiento, industrial, moderna.
+Grupos: hombre, mujer, marino. Cómo crearlas: docs/RETRATOS.md.
+
+Las épocas sin imágenes usan el retrato dibujado.
+
+Origen y licencia de las imágenes (herramienta y plan con que se hicieron):
+- (aún no hay ninguna)

@@ -32,6 +32,30 @@ public class PortraitTests
     }
 
     [Fact]
+    public void ASailorLooksForASailorsPortraitFirst()
+    {
+        var officer = new Officer(5, "Leonor Bazán", [OfficerTrait.Offensive], 1);
+        Assert.Equal(["renacimiento-marino", "renacimiento-mujer"], Portrait.Of(officer, Era.Renaissance, 0, naval: true).PhotoGroups);
+        Assert.Equal(["antigua-mujer"], Portrait.Of(officer, Era.Ancient, 0).PhotoGroups);
+    }
+
+    /// <summary>The painted portraits in the assets are named era-group-number, so every one can be found.</summary>
+    [Fact]
+    public void ThePaintedPortraitsAreWellNamed()
+    {
+        var dir = new DirectoryInfo(AppContext.BaseDirectory);
+        while (dir != null && !File.Exists(Path.Combine(dir.FullName, "Conquer.sln"))) dir = dir.Parent;
+        var folder = Path.Combine(dir!.FullName, "src", "Conquer.Client", "Assets", "Portraits");
+        var groups = Enum.GetValues<Era>().SelectMany(e => new[] { "hombre", "mujer", "marino" }.Select(g => $"{Portrait.EraSlug(e)}-{g}")).ToHashSet();
+        foreach (var file in Directory.GetFiles(folder).Where(f => f.EndsWith(".png") || f.EndsWith(".jpg")))
+        {
+            string name = Path.GetFileNameWithoutExtension(file);
+            int dash = name.LastIndexOf('-');
+            Assert.True(dash > 0 && int.TryParse(name[(dash + 1)..], out _) && groups.Contains(name[..dash]), $"Nombre de retrato no válido: {name}");
+        }
+    }
+
+    [Fact]
     public void HairGreysWithSkill()
     {
         var young = Portrait.Of(new Officer(1, "Pedro Castro", [OfficerTrait.Offensive], 1), Era.Modern, 0xFF000000);

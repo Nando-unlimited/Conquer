@@ -39,9 +39,10 @@ public enum FacialHair
 /// <param name="Accent">Picks the background tint.</param>
 /// <param name="Rank">0 for a colonel, up to 5 for a marshal.</param>
 /// <param name="Naval">Commands a fleet: a sailor's uniform.</param>
+/// <param name="Pick">Chooses among the painted portraits of its group, when there are any.</param>
 public readonly record struct Portrait(
     bool IsFemale, int SkinTone, int HairColor, HairStyle Hair, FacialHair Beard, float FaceWidth, float JawWidth, float Age,
-    float BrowTilt, float NoseSize, bool Bareheaded, int Accent, int Skill, int Rank, Era Era, bool Naval, uint Color)
+    float BrowTilt, float NoseSize, bool Bareheaded, int Accent, int Skill, int Rank, Era Era, bool Naval, uint Color, int Pick = 0)
 {
     public const int SkinTones = 6;
     public const int HairColors = 5;
@@ -58,11 +59,35 @@ public readonly record struct Portrait(
         if (!female && random.NextSingle() < 0.35f) beard = FacialHair.None; // many are clean-shaven
         return new Portrait(female, random.Next(SkinTones), random.Next(HairColors), hair, beard, random.NextSingle(),
             female ? random.NextSingle() * 0.5f : random.NextSingle(), random.NextSingle(), random.NextSingle() * 2f - 1f,
-            random.NextSingle(), random.NextSingle() < 0.25f, random.Next(4), officer.Skill, (int)officer.Rank, era, naval, color);
+            random.NextSingle(), random.NextSingle() < 0.25f, random.Next(4), officer.Skill, (int)officer.Rank, era, naval, color, random.Next(1 << 20));
     }
 
     /// <summary>How grey the hair is, 0 to 1: some with age, more as skill (and years of service) grows.</summary>
     public float Greying => Math.Clamp(Age * 0.5f - 0.15f + (Skill - 1) * 0.15f, 0f, 1f);
+
+    /// <summary>
+    /// The groups of painted portraits (Assets/Portraits) this officer may take one of, best first: "renacimiento-marino"
+    /// for a fleet's, then "renacimiento-mujer" or "renacimiento-hombre". <see cref="Pick"/> chooses within the group.
+    /// </summary>
+    public IEnumerable<string> PhotoGroups
+    {
+        get
+        {
+            if (Naval) yield return $"{EraSlug(Era)}-marino";
+            yield return $"{EraSlug(Era)}-{(IsFemale ? "mujer" : "hombre")}";
+        }
+    }
+
+    /// <summary>An era as it is written in the portraits' file names.</summary>
+    public static string EraSlug(Era era) => era switch
+    {
+        Era.Ancient => "antigua",
+        Era.Classical => "clasica",
+        Era.Medieval => "medieval",
+        Era.Renaissance => "renacimiento",
+        Era.Industrial => "industrial",
+        _ => "moderna",
+    };
 
     /// <summary>FNV-1a: unlike <see cref="string.GetHashCode()"/>, the same in every run.</summary>
     private static int StableHash(string text)

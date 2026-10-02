@@ -2,6 +2,12 @@
 
 Todos los cambios del juego, del más reciente al más antiguo. Cada versión es un commit cuyo título es su número.
 
+## [1.88.0] - 2026-10-02
+
+### Añadido
+- **Preparado para retratos pintados**: si en `Assets/Portraits` hay imágenes de una época (por ejemplo `renacimiento-hombre-03.png`), los oficiales de esa época toman una de su sexo, o de marino si mandan una flota, y siempre la misma. El juego les pone un marco del color de su nación y su rango en una banda abajo. Las épocas sin imágenes siguen con el retrato dibujado.
+- `docs/RETRATOS.md` explica cómo crearlas con una IA de imágenes: formato, nombres, cuántas hacen falta, un estilo común y la descripción de cada época para oficiales, oficiales mujeres y marinos.
+
 ## [1.87.0] - 2026-10-02
 
 ### Añadido

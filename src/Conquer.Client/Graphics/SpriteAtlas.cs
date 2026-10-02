@@ -19,16 +19,25 @@ public sealed class SpriteAtlas : IDisposable
 
     public Texture Texture { get; }
 
-    /// <summary>Loads every embedded picture whose resource name starts with "Sprites/".</summary>
-    public SpriteAtlas(GL gl)
+    /// <summary>The names of the pictures it holds.</summary>
+    public IReadOnlyCollection<string> Names => _sprites.Keys;
+
+    /// <summary>
+    /// Loads every embedded PNG or JPEG picture whose resource name starts with <paramref name="folder"/> and a slash,
+    /// shrunk to at most <paramref name="maxSize"/> pixels on a side when given.
+    /// </summary>
+    public SpriteAtlas(GL gl, string folder = "Sprites", int maxSize = 0)
     {
         var assembly = typeof(SpriteAtlas).Assembly;
-        var images = assembly.GetManifestResourceNames().Where(n => n.StartsWith("Sprites/", StringComparison.Ordinal) && n.EndsWith(".png", StringComparison.Ordinal))
+        string prefix = folder + "/";
+        var images = assembly.GetManifestResourceNames()
+            .Where(n => n.StartsWith(prefix, StringComparison.Ordinal) && (n.EndsWith(".png", StringComparison.OrdinalIgnoreCase) || n.EndsWith(".jpg", StringComparison.OrdinalIgnoreCase)))
             .Order(StringComparer.Ordinal)
             .Select(n =>
             {
                 using var stream = assembly.GetManifestResourceStream(n)!;
-                return (Name: n["Sprites/".Length..^".png".Length], Image: ImageResult.FromStream(stream, ColorComponents.RedGreenBlueAlpha));
+                var image = ImageResult.FromStream(stream, ColorComponents.RedGreenBlueAlpha);
+                return (Name: Path.GetFileNameWithoutExtension(n[prefix.Length..]), Image: maxSize > 0 ? Shrink(image, maxSize) : image);
             }).ToList();
 
         // Shelf packing in rows of a fixed width, tallest first.
@@ -63,6 +72,25 @@ public sealed class SpriteAtlas : IDisposable
         Texture = new Texture(gl, width, height, pixels, smooth: true, mipmaps: true);
     }
 
+    /// <summary>The picture scaled down (averaging the pixels each new one covers) so neither side exceeds <paramref name="maxSize"/>.</summary>
+    private static ImageResult Shrink(ImageResult image, int maxSize)
+    {
+        int factor = (int)Math.Ceiling(Math.Max(image.Width, image.Height) / (double)maxSize);
+        if (factor <= 1) return image;
+        int w = image.Width / factor, h = image.Height / factor;
+        var data = new byte[w * h * 4];
+        for (int y = 0; y < h; y++)
+            for (int x = 0; x < w; x++)
+                for (int c = 0; c < 4; c++)
+                {
+                    int sum = 0;
+                    for (int dy = 0; dy < factor; dy++)
+                        for (int dx = 0; dx < factor; dx++)
+                            sum += image.Data[((y * factor + dy) * image.Width + x * factor + dx) * 4 + c];
+                    data[(y * w + x) * 4 + c] = (byte)(sum / (factor * factor));
+                }
+        return new ImageResult { Width = w, Height = h, Data = data, Comp = ColorComponents.RedGreenBlueAlpha, SourceComp = image.SourceComp };
+    }
     /// <summary>
     /// Gives the see-through pixels next to the pictures the colour of their neighbours, a few pixels out, so blending
     /// towards them at the edges (and in the smaller mipmaps) doesn't darken the outlines.
@@ -127,6 +155,29 @@ public sealed class SpriteAtlas : IDisposable
     {
         var (uv0, uv1) = mirrored ? (new Vector2(s.UvMax.X, s.UvMin.Y), new Vector2(s.UvMin.X, s.UvMax.Y)) : (s.UvMin, s.UvMax);
         batch.Quad(Texture, p0, p1, uv0, uv1, tint);
+    }
+
+    /// <summary>Draws a picture filling the whole of a rectangle, cutting off what overflows its sides (centred, a little higher for faces).</summary>
+    public void DrawCover(Batch2D batch, string name, Vector2 p0, Vector2 p1)
+    {
+        if (!_sprites.TryGetValue(name, out var s)) return;
+        var box = p1 - p0;
+        float pictureAspect = s.Size.X / s.Size.Y, boxAspect = box.X / box.Y;
+        var span = s.UvMax - s.UvMin;
+        Vector2 uv0 = s.UvMin, uv1 = s.UvMax;
+        if (pictureAspect > boxAspect)
+        {
+            float keep = boxAspect / pictureAspect, cut = span.X * (1 - keep) / 2;
+            uv0.X += cut;
+            uv1.X -= cut;
+        }
+        else
+        {
+            float keep = pictureAspect / boxAspect, cut = span.Y * (1 - keep);
+            uv0.Y += cut * 0.3f;
+            uv1.Y -= cut * 0.7f;
+        }
+        batch.Quad(Texture, p0, p1, uv0, uv1, Rgba.White);
     }
 
     public void Dispose() => Texture.Dispose();
