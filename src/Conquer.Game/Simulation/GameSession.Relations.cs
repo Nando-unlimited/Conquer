@@ -39,6 +39,8 @@ public sealed partial class GameSession
         if (IsVassalOf(about, from)) factors.Add(("Nuestro vasallo", GameRules.OverlordOpinion));
         if (HavePact(from, about)) factors.Add(("Pacto de no agresión", GameRules.PactOpinion));
         if (GivesAccess(about, from)) factors.Add(("Nos deja pasar", GameRules.AccessOpinion));
+        int deals = _trades.Count(t => t.Involves(from) && t.Involves(about));
+        if (deals > 0) factors.Add(("Comercio", Math.Min(GameRules.MaxTradeOpinion, deals * GameRules.TradeOpinion)));
         var borders = BorderNations(from);
         if (borders.Contains(about)) factors.Add(("Frontera común", GameRules.BorderOpinion));
         // Both border a nation stronger than us: the natural reason to ally.

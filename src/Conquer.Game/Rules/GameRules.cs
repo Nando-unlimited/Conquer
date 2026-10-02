@@ -221,6 +221,33 @@ public static class GameRules
     public const int BrokenPactTruceDays = 365;
     public const double AccessOpinion = 10;
     public const double AccessAcceptOpinion = 20;
+    // Trade. A nation sells TradeSurplusShare of what it gains of a resource each day, at its gold value
+    // (ResourceValue); a computer rival keeps a margin of up to MaxTradeMargin, less the better it thinks of the
+    // other. Deals last TradeDealDays and each one lifts opinion a little on both sides.
+    public const double TradeSurplusShare = 0.5;
+    public const double MaxTradeMargin = 0.5;
+    public const double MinTradeGoldPerDay = 1;
+    public const int TradeDealDays = 365;
+    public const int MaxTradeDeals = 6;
+    public const double TradeAcceptOpinion = -25;
+    public const double TradeOpinion = 5;
+    public const double MaxTradeOpinion = 15;
+    public const double CancelledTradeOpinion = -10;
+
+    /// <summary>What a unit of each resource is worth in gold, for trade.</summary>
+    public static double ResourceValue(ResourceType resource) => resource switch
+    {
+        ResourceType.Food => 0.1,
+        ResourceType.Wood => 0.5,
+        ResourceType.Coal or ResourceType.Copper => 1.5,
+        ResourceType.Iron or ResourceType.Silver => 2,
+        ResourceType.Rubber => 3,
+        ResourceType.Silicon or ResourceType.Oil or ResourceType.Aluminium => 4,
+        _ => 1,
+    };
+
+    /// <summary>The share of the value a computer rival keeps for itself: half when it hates the other, nothing when it loves it.</summary>
+    public static double TradeMargin(double opinion) => Math.Clamp(MaxTradeMargin / 2 - opinion / 400, 0, MaxTradeMargin);
 
     // Seasons. Winter bites from MildWinterLatitude and is at its worst from HarshWinterLatitude; spring and autumn
     // bring MudShare of its slowdown as mud. Armies lose men to cold out of their cities, and to the desert all year.

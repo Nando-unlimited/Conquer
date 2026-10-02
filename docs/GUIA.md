@@ -419,6 +419,17 @@ Pactos de no agresión y paso militar.
 | `MayCross(jugador, dueño)` | Si los ejércitos de una nación pueden cruzar en paz las tierras de otra: aliados, señor y vasallo, o con paso (lo usa `CanUnitEnter`). |
 | `CanAgree`, `Evict(invitado, anfitrión)`, `EndAgreements(a, b)` | Lo que piden todos estos acuerdos (no estar en guerra, ni ser vasallo); las tropas que ya no pueden estar en tierra ajena vuelven a casa (también al romper una alianza); la guerra (`StartWar`) acaba con los pactos y el paso entre los dos. |
 
+### `Simulation/GameSession.Trade.cs`
+Comercio de recursos.
+
+| Elemento | Qué hace |
+| --- | --- |
+| `TradeDeal` | Un acuerdo: quién vende qué y cuánto al día, quién paga con qué y cuánto, y hasta cuándo. Se guardan tal cual en `SaveGame.Trades` (con `NextTradeId`). |
+| `Surplus(nación, recurso)` | Lo que puede vender al día: la mitad de lo que ganó de ese recurso el último día (`GameRules.TradeSurplusShare`). |
+| `TradeOffer(comprador, vendedor, bienes, pago)` | Lo que ofrecería el vendedor: su excedente, a su valor en oro (`GameRules.ResourceValue`) con el margen del lado de la IA (`GameRules.TradeMargin`, menor cuanto mejor ve al otro), recortado a lo que el comprador puede pagar. Nulo si vale menos de 1 de oro al día. |
+| `CanTrade`/`Trade`, `CancelTrade` | Firma el acuerdo por 365 días (sin guerra, conociendo los dos recursos, uno por recurso y pareja, hasta 6 por nación, y si la IA ve al otro con al menos −25). Cancelarlo deja un recuerdo de −10. |
+| `DailyTrade()`, `DailyTradeBalance(nación)` | Cada día se entregan los bienes y el pago (también en `LastDayNet`); los acuerdos vencidos, entre enemigos o que alguien no puede cumplir terminan. `DailyTradeBalance` da lo que una nación recibe y entrega al día. |
+
 ### `Simulation/GameSession.Relations.cs`
 Opinión entre naciones, regalos y alianzas.
 
@@ -570,6 +581,7 @@ Los amigos del rival.
 | `WouldAlly(otro)` | Firma una alianza si su opinión del otro llega a 40, tiene sitio para otro aliado y el otro no es aliado de sus enemigos. |
 | `SeekAlliances()` | Cada 60 días de media, ofrece la alianza al rival que mejor ve (al menos 15); si este aún no le ve lo bastante bien pero no le es hostil, le hace un regalo si le sobra oro. |
 | `DefendingPower(víctima)` | El ejército al que se enfrentaría: el de la víctima más el de sus aliados, y menos cuanto peor la ve (una nación odiada parece más débil). |
+| `SeekTrade()` | Cada 30 días de media, compra por oro un recurso que conoce y del que no gana nada al rival que más tiene de sobra. Nunca impone acuerdos al humano. |
 | `WouldSignPact(otro)`, `WouldGrantAccess(otro)`, `SeekPacts()` | Firma un pacto si su opinión del otro llega a 0, o a −25 si su ejército es más fuerte; deja pasar a quien ve con al menos 20. Cada 60 días de media busca un pacto con el vecino más fuerte que le da miedo (un ejército un 20 % mayor). |
 
 ### `AI/AiPlayer.Naval.cs`
@@ -802,7 +814,7 @@ La pantalla de la nación (botón «Nación» o tecla N) como datos: `Visible`, 
 
 | Elemento | Qué es |
 | --- | --- |
-| `NationTab` | Pestañas: `Summary` (Resumen), `Cities` (Ciudades), `Provinces` (Provincias), `Science` (Ciencia), `Army` (Ejército), `Templates` (Plantillas) y `Diplomacy` (Diplomacia). |
+| `NationTab` | Pestañas: `Summary` (Resumen), `Cities` (Ciudades), `Provinces` (Provincias), `Science` (Ciencia), `Army` (Ejército), `Templates` (Plantillas), `Diplomacy` (Diplomacia) y `Trade` (Comercio). |
 | `Summary(...)` | Resumen: población (total, asentada, en unidades, migrando), fertilidad media, moral media con su reparto por niveles (`MoodDistribution`), territorio, ciencia por día y, por rama, su parte y el avance en curso, cada institución (adoptada, cuánto de tu población la tiene o sin nacer), comida con sus días de reserva y el resto de recursos conocidos con su almacén, balance diario y lo que queda en sus bolsas. |
 | `Cities(...)` | Tabla de ciudades: población / capacidad, moral, fertilidad, fiestas, enviar colonos o entrenar guerreros y «Ver». |
 | `Provinces(...)`, `Work(...)` | Tabla de todas las provincias: población, moral, fertilidad, terreno, migrantes en camino, lo que tiene en curso (la obra y lo que entrena su ciudad: la primera con sus días y su barra, cuántas más hay y todas en el tooltip) y «Ver». |
@@ -820,6 +832,11 @@ La pantalla de la nación (botón «Nación» o tecla N) como datos: `Visible`, 
 | `Army()`, `UnitActivity(...)` | Orden de batalla, con el mantenimiento diario del ejército (en rojo si no se paga): cada cuartel con sus unidades en árbol, después las unidades sin cuartel y las flotas, con ubicación, hombres, organización, suministro, estado y «Ver». |
 | `Templates()` | Diseñador de unidades: tus plantillas a la izquierda (nueva, duplicar, borrar); a la derecha los batallones de la elegida (hasta 12, con «Quitar»), botones para añadir los que conoces y lo que cuesta, su mantenimiento y cómo lucha una unidad de ese diseño (con `TextFormat.UpkeepText` y `TextFormat.TrainingDaysText`). |
 | `Diplomacy()`, `RelationCell`, `OpinionCell`, `PeaceTimeButtons`, `WarScoreCell`, `PeaceButtons`, `TermsButton` | Cada nación que sigue en la partida: relación (en guerra y desde cuándo, vasallo o señor, aliados, tregua o paz; en el tooltip sus aliados, su señor, sus vasallos y las reparaciones), lo que piensa de nosotros (con sus razones), su poder militar frente al tuyo, provincias, lo tomado y perdido, la puntuación de guerra (con su desglose) y los botones: en paz, guerra, alianza (o romperla), pacto (o romperlo), pedir paso, dar paso (o cerrarlo) y regalo (`PactButton`, `Agreement`); con un vasallo, anexionarlo o liberarlo; en guerra, paz blanca, exigir lo ocupado, tributo, vasallo y ceder lo ocupado. |
+
+### `NationScreen.Trade.cs`
+| Función | Qué hace |
+| --- | --- |
+| `Trade()`, `Offers(nación)`, `OfferRow`, `Amount` | Pestaña Comercio: tus acuerdos en curso (con los días que quedan y «Cancelar») y las ofertas de cada nación en paz: lo que le sobra, por oro o por lo que más le falta de lo que te sobra a ti, y lo tuyo que te compra por oro, con «Firmar». El tooltip de cada cantidad da su valor en oro. |
 
 ### `NationPages.cs`
 Lo que muestra cada pestaña de la pantalla de la nación, para que el cliente lo dibuje.

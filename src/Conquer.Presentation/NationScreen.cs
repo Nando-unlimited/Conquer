@@ -18,6 +18,7 @@ public enum NationTab
     Army,
     Templates,
     Diplomacy,
+    Trade,
 }
 
 /// <summary>
@@ -26,7 +27,7 @@ public enum NationTab
 /// </summary>
 public sealed partial class NationScreen
 {
-    public static readonly string[] TabNames = ["Resumen", "Ciudades", "Provincias", "Ciencia", "Ejército", "Plantillas", "Diplomacia"];
+    public static readonly string[] TabNames = ["Resumen", "Ciudades", "Provincias", "Ciencia", "Ejército", "Plantillas", "Diplomacia", "Comercio"];
 
     private readonly GameController _game;
     private readonly int[] _sortColumn = new int[TabNames.Length];
@@ -57,6 +58,7 @@ public sealed partial class NationScreen
         NationTab.Army => Army(),
         NationTab.Templates => Templates(),
         NationTab.Diplomacy => Diplomacy(),
+        NationTab.Trade => Trade(),
         _ => Summary(),
     };
 

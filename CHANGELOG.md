@@ -2,6 +2,17 @@
 
 Todos los cambios del juego, del más reciente al más antiguo. Cada versión es un commit cuyo título es su número.
 
+## [1.73.0] - 2026-10-02
+
+### Añadido
+- **Comercio de recursos**, en una pestaña nueva de la pantalla de la nación, **Comercio**:
+  - Cada nación en paz ofrece **la mitad de lo que gana al día** de cada recurso que le sobra. Lo vende por oro o a cambio del recurso tuyo que más le falta, y te compra por oro lo que te sobra a ti.
+  - Cada recurso tiene un **valor en oro**: la comida 0,1, la madera 0,5, el carbón y el cobre 1,5, el hierro y la plata 2, el caucho 3, y el silicio, el petróleo y el aluminio 4. Los rivales se quedan un **margen** de hasta el 50 %, menor cuanto mejor te ven.
+  - Pulsa **Firmar** para un acuerdo de un año: cada día se entregan los bienes y el pago, que se suman al balance diario. Hay como mucho 6 acuerdos por nación y uno por recurso con cada nación.
+  - Cada acuerdo sube 5 la opinión de cada nación sobre la otra (hasta 15). **Cancelar** uno antes de tiempo deja un mal recuerdo (−10).
+  - Un acuerdo se rompe si una parte no puede entregar o pagar, o si estalla una guerra entre las dos.
+- **Los rivales comercian entre ellos**: compran por oro los recursos que conocen y no producen al rival que más tiene de sobra.
+
 ## [1.72.0] - 2026-10-02
 
 ### Añadido

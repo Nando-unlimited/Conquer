@@ -55,6 +55,8 @@ public sealed partial class GameSession
         Reparations = [.. _reparations],
         Pacts = _pacts.Order().Select(x => new AllianceSave(x.Item1, x.Item2)).ToList(),
         Access = _access.Order().Select(x => new AccessSave(x.Granter, x.Grantee)).ToList(),
+        Trades = [.. _trades],
+        NextTradeId = _nextTradeId,
         Notifications = [.. Notifications],
         Ais = _ais.Select(ai => ai.ToSave()).ToList(),
         EmigrationCarry = new Dictionary<int, double>(_emigrationCarry),
@@ -244,6 +246,8 @@ public sealed partial class GameSession
         session._reparations.AddRange(save.Reparations ?? []);
         foreach (var x in save.Pacts ?? []) session._pacts.Add((x.A, x.B));
         foreach (var x in save.Access ?? []) session._access.Add((x.Granter, x.Grantee));
+        session._trades.AddRange(save.Trades ?? []);
+        session._nextTradeId = save.NextTradeId;
         session.Notifications.AddRange(save.Notifications);
         foreach (var (province, carry) in save.EmigrationCarry) session._emigrationCarry[province] = carry;
         foreach (var n in save.UnitNumbers)

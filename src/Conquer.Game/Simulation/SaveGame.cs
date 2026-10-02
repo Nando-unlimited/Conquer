@@ -76,6 +76,9 @@ public sealed record SaveGame
     /// <summary>Non-aggression pacts and military access; missing in saves from before 1.72.0.</summary>
     public List<AllianceSave>? Pacts { get; init; }
     public List<AccessSave>? Access { get; init; }
+    /// <summary>Trade deals; missing in saves from before 1.73.0.</summary>
+    public List<TradeDeal>? Trades { get; init; }
+    public int NextTradeId { get; init; }
     public required List<Notification> Notifications { get; init; }
     public required List<AiSave> Ais { get; init; }
     public required Dictionary<int, double> EmigrationCarry { get; init; }

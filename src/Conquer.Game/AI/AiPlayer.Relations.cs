@@ -35,6 +35,25 @@ internal sealed partial class AiPlayer
     /// <summary>Whether it lets the other nation's armies through: it must think well enough of it.</summary>
     public bool WouldGrantAccess(int otherId) => _session.Opinion(_player.Id, otherId) >= GameRules.AccessAcceptOpinion;
 
+    /// <summary>On average, a rival looks for trade this often (in days).</summary>
+    private const int TradeChanceDays = 30;
+
+    /// <summary>
+    /// Now and then, buys for gold a resource it knows but gains none of from the rival with most to spare, if it can
+    /// afford it. It never imposes a deal on the human.
+    /// </summary>
+    private void SeekTrade()
+    {
+        if (_random.Next(TradeChanceDays) != 0 || GameSession.Surplus(_player, ResourceType.Gold) <= 0) return;
+        foreach (var goods in Resources.All.Where(r => r != ResourceType.Gold && _player.Knows(r) && _player.LastDayNet[(int)r] <= 0))
+        {
+            var seller = _session.Players
+                .Where(p => !p.IsHuman && p.Id != _player.Id && _session.CanTrade(_player.Id, p.Id, goods, ResourceType.Gold).Ok)
+                .MaxBy(p => GameSession.Surplus(p, goods));
+            if (seller != null && _session.Trade(_player.Id, seller.Id, goods, ResourceType.Gold).Ok) return;
+        }
+    }
+
     /// <summary>Now and then, seeks a pact with the strongest neighbour whose army frightens it.</summary>
     private void SeekPacts()
     {

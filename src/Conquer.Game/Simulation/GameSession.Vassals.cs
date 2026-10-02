@@ -204,6 +204,7 @@ public sealed partial class GameSession
         _vassals.Remove(playerId);
         foreach (var v in VassalsOf(playerId).ToList()) _vassals.Remove(v.Id);
         _reparations.RemoveAll(r => r.PayerId == playerId || r.ReceiverId == playerId);
+        _trades.RemoveAll(t => t.Involves(playerId));
         foreach (var unit in Units.Where(u => u.OwnerId == playerId).ToList()) RemoveUnit(unit, officerSurvives: false);
         Migrations.RemoveAll(m => m.OwnerId == playerId);
         foreach (var r in Resources.All) player.Stockpile[r] = 0;
