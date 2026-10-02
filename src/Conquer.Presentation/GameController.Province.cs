@@ -55,6 +55,23 @@ public sealed partial class GameController
             "Los migrantes de tus otras provincias que se instalan aquí también ayudan."));
     }
 
+    /// <summary>An epidemic raging in the province, or the immunity left by the last one.</summary>
+    private void AddPlague(Document doc, Province p)
+    {
+        if (GameSession.IsSick(p))
+        {
+            double deaths = p.Population * Session.PlagueDeaths(p);
+            doc.Add(new Info("Epidemia", $"{p.PlagueDaysLeft} días · {TextFormat.Compact(deaths)} muertos/día", Tone.Bad,
+                $"Una epidemia mata cada día al {Session.PlagueDeaths(p):P2} de su gente y le quita {GameRules.PlagueMood:0} de moral.\n" +
+                "Se contagia a las provincias vecinas, mucho más por los caminos, y de puerto a puerto.\n" +
+                $"Resistencia aquí: {Session.PlagueResistance(p):P0} (Medicina, Saneamiento, Antibióticos, herbolarios y hospitales).\n" +
+                $"Al terminar, la provincia queda inmune unos {GameRules.PlagueImmunityYears:0} años."));
+        }
+        else if (p.PlagueImmuneUntil > Session.Date.Hours && p.Population >= 1)
+            doc.Add(new Info("Epidemia", $"Inmune {(p.PlagueImmuneUntil - Session.Date.Hours) / 24 / 365.0:0.#} años", Tone.Good,
+                "Ya pasó una epidemia: su gente no volverá a enfermar en un tiempo."));
+    }
+
     /// <summary>Whose culture the people share and how far they have assimilated; how close the province is to revolt, if at all.</summary>
     private void AddCultureAndRevolt(Document doc, Province p)
     {
@@ -70,6 +87,7 @@ public sealed partial class GameController
         else
             doc.Add(new Info("Cultura", culture.Name, Ink.Nation(culture.Color), "Su gente comparte la cultura de su nación."));
         AddFaith(doc, p);
+        AddPlague(doc, p);
 
         if (p.RevoltProgress <= 0 && p.Mood >= GameRules.UnrestMood) return;
         bool garrison = Session.IsGarrisoned(p);

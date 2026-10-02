@@ -52,6 +52,10 @@ public sealed class Province
     public int ReligionId { get; set; } = -1;
     /// <summary>0 to 1: how far people of another faith have come toward their ruler's.</summary>
     public double Conversion { get; set; }
+    /// <summary>Days an epidemic still has to run there; 0 when healthy.</summary>
+    public int PlagueDaysLeft { get; set; }
+    /// <summary>The hour until which it cannot fall ill again, after an epidemic.</summary>
+    public long PlagueImmuneUntil { get; set; }
     /// <summary>Days of unrest without a garrison, which lead to revolt at <see cref="GameRules.RevoltDays"/>.</summary>
     public double RevoltProgress { get; set; }
     /// <summary>Institutions that have reached the province.</summary>

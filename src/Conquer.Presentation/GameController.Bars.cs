@@ -110,6 +110,7 @@ public sealed partial class GameController
         }
         if (Mode == MapMode.Religion && p.IsOwned && p.ReligionId >= 0 && p.Population >= 1)
             text += Session.HasOtherFaith(p) ? $"\n{GameSession.ReligionName(p.ReligionId)} ({p.Conversion:P0} convertida)" : $"\n{GameSession.ReligionName(p.ReligionId)}";
+        if (GameSession.IsSick(p) && Session.VisibleProvinces(Human.Id).Contains(p.Id)) text += $"\nEpidemia: {p.PlagueDaysLeft} días";
         if (ChoosingMigrationTarget) text += "\nClic para enviar aquí a los migrantes";
         return text;
     }

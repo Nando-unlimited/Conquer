@@ -230,6 +230,21 @@ public static class GameRules
     public const double SameFaithOpinion = 10;
     public const double OtherFaithOpinion = -10;
 
+    // Epidemics. A city may fall ill each day (more likely the bigger it is); the sickness lasts PlagueDays, kills
+    // PlagueDeathRate of the people a day and costs PlagueMood, and spreads to neighbours (far more along roads and
+    // between ports). Medicine and hospitals resist it. A province that has had it is immune for PlagueImmunityYears.
+    public const double PlagueOutbreakChance = 1.0 / (365 * 40);
+    public const double PlagueOutbreakPeople = 20000;
+    public const int PlagueDays = 90;
+    public const double PlagueDeathRate = 0.001;
+    public const double PlagueMood = 15;
+    public const double PlagueSpread = 0.005;
+    public const double PlagueRoadSpread = 0.03;
+    public const double PlaguePortSpread = 0.005;
+    public const double PlaguePortKm = 2000;
+    public const double PlagueImmunityYears = 10;
+    public const double MaxPlagueResistance = 0.9;
+
     // Manpower. A nation's reserve of recruits holds BaseManpower plus ManpowerShare of its settled people (more with
     // advances) and refills in ManpowerRecoveryYears. Training, raising HQs and reinforcing draw on it.
     public const double BaseManpower = 500;

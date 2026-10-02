@@ -482,6 +482,15 @@ Religiones.
 | `HasOtherFaith(provincia)`, `DailyConversion(provincia)`, `YearsToConvert(provincia)` | Si su gente sigue otra fe que su dueño (−10 de moral en `MoodFactors`), lo que avanza al día hacia la de su dueño (unos 25 años; más con moral alta, el doble con templo y +50 % con la Teología) y los años que le faltan. Los migrantes de la nación también la convierten (`ArriveMigrations`). |
 | `DailyFaith(jugador)` | Cada día: la tierra vacía toma la fe de su dueño y la poblada avanza hacia ella; al llegar, la adopta. |
 
+### `Simulation/GameSession.Plague.cs`
+Epidemias. Usa su propio generador aleatorio (`seed ^ 0x9A6E`), así que no altera el resto de la partida.
+
+| Elemento | Qué hace |
+| --- | --- |
+| `IsSick(provincia)`, `StartPlague(provincia)` | Si sufre una epidemia (`Province.PlagueDaysLeft` > 0) y hacer que enferme durante 90 días. Mientras dura, −15 de moral en `MoodFactors`. |
+| `PlagueResistance(provincia)`, `PlagueDeaths(provincia)` | La parte de muertes y contagios que se evita (`Modifiers.PlagueResistance`: Medicina y Salubridad 25 %, Antibióticos 40 %, herbolario 20 %, hospital 40 %; como mucho 90 %) y la parte de su gente que muere cada día (0,1 % sin resistencia). |
+| `DailyPlague()` | Cada día: las provincias enfermas pierden gente y contagian a sus vecinas (0,5 %, 3 % por un camino) y a los puertos a menos de 2000 km (0,5 %); al terminar quedan inmunes 10 años (`PlagueImmuneUntil`). Además cada ciudad puede enfermar sola, más cuanto mayor es. |
+
 ### `Simulation/GameSession.Sieges.cs`
 Asedios.
 

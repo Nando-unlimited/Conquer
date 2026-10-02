@@ -2,6 +2,16 @@
 
 Todos los cambios del juego, del más reciente al más antiguo. Cada versión es un commit cuyo título es su número.
 
+## [1.78.0] - 2026-10-02
+
+### Añadido
+- **Epidemias**: de vez en cuando una ciudad enferma, más a menudo cuanto más grande es.
+  - Durante 90 días muere cada día el 0,1 % de su gente y la provincia pierde 15 de moral.
+  - **Contagio**: pasa a las provincias vecinas, seis veces más deprisa por un camino, y de un puerto a otros a menos de 2000 km.
+  - **Resistencia**: la Medicina y la Salubridad la frenan un 25 %, los Antibióticos un 40 %, el herbolario un 20 % y el hospital un 40 %, hasta un 90 % en total. Frena tanto las muertes como el contagio.
+  - Al terminar, la provincia queda **inmune 10 años**.
+  - Nueva alerta "Epidemia" con tus provincias enfermas, los días que les quedan y los muertos al día. El panel de la provincia y su tooltip también lo muestran.
+
 ## [1.77.0] - 2026-10-02
 
 ### Añadido

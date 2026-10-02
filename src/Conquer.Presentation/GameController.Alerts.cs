@@ -57,6 +57,13 @@ public sealed partial class GameController
                 p => $"{PlaceOf(p)}: moral {p.Mood:0}" + (p.RevoltProgress > 0 ? $", rebelión {GameSession.RevoltRisk(p):P0}" : "")
                      + (Session.IsGarrisoned(p) ? " (guarnición)" : "")));
 
+        var sick = Human.Provinces.Select(id => Map.Provinces[id]).Where(GameSession.IsSick)
+            .OrderByDescending(p => p.Population).Select(p => p.Id).ToList();
+        if (sick.Count > 0)
+            alerts.Add(ProvinceAlert("Epidemia", Tone.Bad, sick,
+                "Una epidemia mata a parte de la gente de estas provincias y se contagia por los caminos y los puertos. La Medicina, el Saneamiento y los hospitales la frenan.",
+                p => $"{PlaceOf(p)}: {p.PlagueDaysLeft} días, {TextFormat.Compact(p.Population * Session.PlagueDeaths(p))} muertos/día"));
+
         var regiments = Session.Units.Where(u => u.OwnerId == Human.Id && u.IsMilitary && !u.IsAboard).ToList();
         var unsupplied = regiments.Where(u => !Session.IsInSupply(u)).Select(u => u.Id).ToList();
         if (unsupplied.Count > 0)

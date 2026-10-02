@@ -28,6 +28,8 @@ public sealed record Modifiers
     public double DistanceMood { get; init; }
     /// <summary>Size of the nation's reserve of recruits.</summary>
     public double Manpower { get; init; }
+    /// <summary>Share of the deaths and the spread of epidemics avoided.</summary>
+    public double PlagueResistance { get; init; }
 
     public static readonly Modifiers None = new();
 
@@ -46,5 +48,6 @@ public sealed record Modifiers
         BuildSpeed = a.BuildSpeed + b.BuildSpeed,
         DistanceMood = a.DistanceMood + b.DistanceMood,
         Manpower = a.Manpower + b.Manpower,
+        PlagueResistance = a.PlagueResistance + b.PlagueResistance,
     };
 }

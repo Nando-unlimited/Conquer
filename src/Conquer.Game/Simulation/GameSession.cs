@@ -122,6 +122,8 @@ public sealed partial class GameSession
             p.Institutions.Clear();
             p.CultureId = p.ReligionId = -1;
             p.Assimilation = p.RevoltProgress = p.Conversion = 0;
+            p.PlagueDaysLeft = 0;
+            p.PlagueImmuneUntil = 0;
             p.Name = "";
             p.ClearBuildings();
             foreach (var r in Resources.Deposits)
@@ -172,6 +174,7 @@ public sealed partial class GameSession
         if (p.IsOccupied) factors.Add(("Ocupada por el enemigo", MilitaryRules.OccupiedMood));
         if (HasForeignCulture(p)) factors.Add(($"Cultura de {Players[p.CultureId].Name}", ForeignCultureMood(p)));
         if (HasOtherFaith(p)) factors.Add(($"Fe: {ReligionName(p.ReligionId)}", -GameRules.OtherFaithMood));
+        if (IsSick(p)) factors.Add(("Epidemia", -GameRules.PlagueMood));
         foreach (var tech in owner.Techs.Where(t => t.Info().Effects.Mood != 0))
             factors.Add((tech.Info().Name, tech.Info().Effects.Mood));
         foreach (var building in p.Buildings.Where(b => b.Info().Effects.Mood != 0))
@@ -239,6 +242,7 @@ public sealed partial class GameSession
             DailyTributes();
             DailyCapitulations();
             DailyTrade();
+            DailyPlague();
         }
         if (Date.Hours % 6 == 0)
             foreach (var ai in _ais.Where(a => !Players[a.PlayerId].Eliminated)) ai.Think(dailyDecisions: Date.Hour == 0);
