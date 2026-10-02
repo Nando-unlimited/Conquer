@@ -1,5 +1,6 @@
 using System.Numerics;
 using System.Reflection;
+using Conquer.Client.Audio;
 using Conquer.Client.Graphics;
 using Conquer.Client.Screens;
 using Conquer.Client.UI;
@@ -10,6 +11,13 @@ using Silk.NET.OpenGL;
 using Silk.NET.Windowing;
 
 namespace Conquer.Client;
+
+/// <summary>A screen with sounds of its own and music of its own; the others play the menu music.</summary>
+public interface IAudibleScreen
+{
+    IReadOnlyList<string> Playlist { get; }
+    IReadOnlyList<SoundCue> TakeSounds();
+}
 
 public interface IScreen : IDisposable
 {
@@ -24,6 +32,7 @@ public sealed class ConquerApp
     private readonly InputState _input = new();
     private IScreen? _screen;
     private IScreen? _nextScreen;
+    private AudioPlayer? _audio;
 
     public GL Gl { get; private set; } = null!;
     public Batch2D Batch { get; private set; } = null!;
@@ -63,7 +72,11 @@ public sealed class ConquerApp
         _window.Load += OnLoad;
         _window.Render += OnRender;
         _window.FramebufferResize += size => Gl?.Viewport(size);
-        _window.Closing += () => _screen?.Dispose();
+        _window.Closing += () =>
+        {
+            _screen?.Dispose();
+            _audio?.Dispose();
+        };
     }
 
     /// <summary>1600×900, or smaller so the window fits on the monitor with room for its frame and the taskbar.</summary>
@@ -91,6 +104,7 @@ public sealed class ConquerApp
         Batch = new Batch2D(Gl);
         Font = new Font(Gl);
         Ui = new Ui(Batch, Font, _input);
+        _audio = new AudioPlayer();
 
         var input = _window.CreateInput();
         foreach (var mouse in input.Mice)
@@ -143,6 +157,7 @@ public sealed class ConquerApp
         Ui.BeginFrame();
         Batch.Begin(ScreenSize);
         _screen?.Frame(Math.Min(dt, 0.25));
+        PlayAudio(dt);
         Ui.EndFrame(ScreenSize);
         Batch.Flush();
         _input.EndFrame();
@@ -154,6 +169,21 @@ public sealed class ConquerApp
             _screen = _nextScreen;
             _nextScreen = null;
         }
+    }
+
+    /// <summary>The click of any button pressed this frame, the sounds and music of the screen (the menu music elsewhere).</summary>
+    private void PlayAudio(double dt)
+    {
+        if (_audio == null) return;
+        var sounds = new List<SoundCue>();
+        if (Ui.ButtonClicked) sounds.Add(SoundCue.Click);
+        IReadOnlyList<string> playlist = Soundtrack.Menu;
+        if (_screen is IAudibleScreen audible)
+        {
+            playlist = audible.Playlist;
+            sounds.AddRange(audible.TakeSounds());
+        }
+        _audio.Update(dt, playlist, sounds, AudioSettings.Current);
     }
 
     private int _framesOnScreen;

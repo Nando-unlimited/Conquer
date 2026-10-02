@@ -88,6 +88,7 @@ public sealed partial class GameSession
     {
         p.RevoltProgress = 0;
         int ruler = p.OwnerId;
+        Raise(GameEventKind.Revolt, ruler, p.CultureId);
         string place = PlaceName(p);
         if (WouldSecede(p))
         {

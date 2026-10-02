@@ -67,6 +67,7 @@ public sealed partial class GameSession
         if (!check.Ok) return check;
         _wars[WarKey(playerId, targetId)] = new War(Date.Hours);
         Remember(targetId, playerId, "Nos declaró la guerra", GameRules.DeclaredWarOpinion);
+        Raise(GameEventKind.WarDeclared, playerId, targetId);
         if (playerId == HumanPlayerId) Notify(HumanPlayerId, $"Declaramos la guerra a {Players[targetId].Name}.");
         else if (targetId == HumanPlayerId) Notify(HumanPlayerId, $"¡{Players[playerId].Name} nos declara la guerra!");
         CallAllies(playerId, targetId);
@@ -181,6 +182,7 @@ public sealed partial class GameSession
         int giver = receiver == a ? b : a;
         _wars.Remove(WarKey(a, b));
         _truces[WarKey(a, b)] = Date.Hours + GameRules.TruceDays * 24;
+        Raise(GameEventKind.PeaceSigned, a, b);
         EndSieges(s => WarKey(s.AttackerId, Map.Provinces[s.ProvinceId].ControllerId) == WarKey(a, b));
         foreach (var battle in _battles.Where(x => WarKey(x.AttackerId, x.DefenderId) == WarKey(a, b)).ToList())
         {

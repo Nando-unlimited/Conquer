@@ -97,6 +97,7 @@ public sealed partial class GameSession
         Players[playerId].Stockpile[ResourceType.Gold] -= gold;
         Players[targetId].Stockpile[ResourceType.Gold] += gold;
         Remember(targetId, playerId, "Regalos", GameRules.GiftOpinion);
+        Raise(GameEventKind.GiftSent, playerId, targetId);
         if (targetId == HumanPlayerId) Notify(HumanPlayerId, $"{Players[playerId].Name} nos envía {gold:0} de oro.");
         return CommandResult.Success($"Regalo enviado a {Players[targetId].Name}: su opinión de nosotros sube.");
     }
@@ -159,6 +160,7 @@ public sealed partial class GameSession
             _wars[WarKey(ally.Id, attackerId)] = new War(Date.Hours);
             Remember(attackerId, ally.Id, "Nos declaró la guerra", GameRules.DeclaredWarOpinion / 2);
             joined.Add(ally);
+            Raise(GameEventKind.WarDeclared, ally.Id, attackerId);
             if (ally.Id == HumanPlayerId) Notify(HumanPlayerId, $"Entramos en guerra con {Players[attackerId].Name} para defender a nuestro aliado {Players[defenderId].Name}.");
             else if (attackerId == HumanPlayerId) Notify(HumanPlayerId, $"¡{ally.Name}, aliada de {Players[defenderId].Name}, nos declara la guerra!");
             else if (defenderId == HumanPlayerId) Notify(HumanPlayerId, $"{ally.Name} entra en la guerra a nuestro lado.");

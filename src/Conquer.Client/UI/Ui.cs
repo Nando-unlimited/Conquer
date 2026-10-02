@@ -117,7 +117,11 @@ public sealed class Ui
     {
         _blockers.Clear();
         _tooltip = null;
+        ButtonClicked = false;
     }
+
+    /// <summary>Whether a button was clicked this frame (it clicks).</summary>
+    public bool ButtonClicked { get; private set; }
 
     public bool MouseOverUi => _blockers.Any(r => r.Contains(Input.Mouse));
 
@@ -170,7 +174,9 @@ public sealed class Ui
         if (enabled) TextCentered(textArea with { X = textArea.X + 1, Y = textArea.Y + 1 }, label, Rgba.Black.WithAlpha(0.45f), size);
         TextCentered(textArea, label, enabled ? active ? Rgba.White : Theme.Text : Theme.TextDisabled, size);
         if (hover && tooltip != null) _tooltip = tooltip;
-        return enabled && hover && Input.LeftReleased && r.Contains(Input.LeftPressPosition);
+        bool clicked = enabled && hover && Input.LeftReleased && r.Contains(Input.LeftPressPosition);
+        ButtonClicked |= clicked;
+        return clicked;
     }
 
     /// <summary>

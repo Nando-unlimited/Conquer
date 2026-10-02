@@ -23,7 +23,7 @@ public sealed partial class GameController
         else MenuOpen = !MenuOpen;
     }
 
-    /// <summary>The pause menu's buttons: carry on, save, help, changelog, back to the title screen or quit.</summary>
+    /// <summary>The pause menu's buttons: carry on, save, help, music and sound volumes, changelog, back to the title screen or quit.</summary>
     public IReadOnlyList<Button> PauseMenu(IMenuNavigator navigator, string version) =>
     [
         new("Continuar", () => MenuOpen = false),

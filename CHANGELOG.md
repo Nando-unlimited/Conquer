@@ -2,6 +2,23 @@
 
 Todos los cambios del juego, del más reciente al más antiguo. Cada versión es un commit cuyo título es su número.
 
+## [1.70.0] - 2026-10-02
+
+### Añadido
+- **Música**: 11 pistas que cambian según la situación.
+  - **Hasta la Edad Media**, música medieval: cuatro pistas para la paz y dos para la guerra.
+  - **Desde la era de los Descubrimientos**, música orquestal: tres pistas para la paz y dos para la guerra.
+  - Al declararse o acabar una guerra, o al cambiar de era, la pista se funde y empieza otra que encaja.
+  - En la pantalla inicial suena un tema orquestal.
+- **Efectos de sonido**:
+  - **Guerra**: tambores al declarar la guerra o al entrar en una.
+  - **Paz**: una fanfarria al firmarla.
+  - Campana en los asedios y las revueltas, choque metálico al empezar una batalla y monedas en los regalos.
+  - Melodía al fundar una ciudad, martillo al terminar una obra y página al descubrir un avance.
+  - Una campanilla al cumplirse una orden, un clic en los botones y un aviso cuando aparece una alerta grave.
+- **Volumen**: en el menú de pausa y en la pantalla inicial hay un botón para la música y otro para el sonido. Cada pulsación sube el volumen un cuarto y, después del máximo, lo apaga. Se recuerda entre partidas.
+- Todo el audio es de dominio público (CC0): Kenney.nl y autores de OpenGameArt.org. Los créditos están en el README y en `Assets/Audio/CREDITS.txt`.
+
 ## [1.69.0] - 2026-10-02
 
 ### Añadido

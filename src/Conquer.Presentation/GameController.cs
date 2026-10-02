@@ -62,6 +62,7 @@ public sealed partial class GameController
         Session = session;
         Camera = new Camera(session.Map.Width, session.Map.Height);
         Nation = new NationScreen(this);
+        session.Happened += Hear;
         if (loaded)
         {
             _seenNotifications = session.Notifications.Count;
@@ -89,10 +90,15 @@ public sealed partial class GameController
             var n = Session.Notifications[_seenNotifications];
             if (n.PlayerId == Human.Id || n.PlayerId < 0) Messages.Add(n.Text, Now);
         }
+        ListenForAlerts();
     }
 
     /// <summary>Shows the result of an order: what happened, or why it could not be done.</summary>
-    public void Show(CommandResult result) => Messages.Add(result.Message, Now, result.Ok);
+    public void Show(CommandResult result)
+    {
+        Messages.Add(result.Message, Now, result.Ok);
+        if (result.Ok) Play(SoundCue.Confirm);
+    }
 
     // ------------------------------------------------------------------ view
 

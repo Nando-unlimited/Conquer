@@ -748,6 +748,7 @@ public sealed partial class GameSession
             int defender = EnemyRegimentsIn(provinceId, unit.OwnerId).First().OwnerId;
             battle = new Battle(provinceId, unit.OwnerId, defender, Date.Hours);
             _battles.Add(battle);
+            Raise(GameEventKind.BattleStarted, unit.OwnerId, defender);
             string place = PlaceName(Map.Provinces[provinceId]);
             if (unit.OwnerId == HumanPlayerId) Notify(HumanPlayerId, $"Atacamos {place}.");
             else if (defender == HumanPlayerId) Notify(HumanPlayerId, $"{Players[unit.OwnerId].Name} ataca {place}.");

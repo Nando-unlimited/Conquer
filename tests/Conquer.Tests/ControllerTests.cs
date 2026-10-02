@@ -319,4 +319,31 @@ public class ControllerTests(WorldFixture world)
         alert.OnClick();
         Assert.Equal(capital.Id, game.SelectedProvince);
     }
+
+    [Fact]
+    public void WarPeaceAndOrdersSoundAndTheMusicFollowsTheWar()
+    {
+        var game = new GameController(GameSession.Create(_map, 2, seed: 7, computerRivals: false));
+        Assert.Equal(Soundtrack.For(Game.Science.Era.Ancient, atWar: false), game.Playlist);
+        game.TakeSounds();
+
+        game.Show(game.Session.DeclareWar(0, 1));
+        Assert.Equal([SoundCue.War, SoundCue.Confirm], game.TakeSounds());
+        Assert.Equal(Soundtrack.For(Game.Science.Era.Ancient, atWar: true), game.Playlist);
+
+        game.Session.MakePeace(0, 1);
+        Assert.Equal([SoundCue.Peace], game.TakeSounds());
+        Assert.Empty(game.TakeSounds());
+
+        // A failed order makes no sound.
+        game.Show(game.Session.ProposePeace(0, 1));
+        Assert.Empty(game.TakeSounds());
+    }
+
+    [Fact]
+    public void TheMusicTurnsOrchestralInTheAgeOfDiscoveries()
+    {
+        Assert.NotEqual(Soundtrack.For(Game.Science.Era.Medieval, false), Soundtrack.For(Game.Science.Era.Renaissance, false));
+        Assert.Equal(Soundtrack.For(Game.Science.Era.Renaissance, true), Soundtrack.For(Game.Science.Era.Modern, true));
+    }
 }

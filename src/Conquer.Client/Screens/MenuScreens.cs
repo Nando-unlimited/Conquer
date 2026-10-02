@@ -34,7 +34,7 @@ public sealed class MainMenuScreen(ConquerApp app) : IScreen
         ui.TextCentered(new Rect(0, s.Y * 0.12f + 80, s.X, 30), $"Versión {ConquerApp.Version}", Theme.TextDim);
 
         float w = 320, x = cx - w / 2, y = s.Y * 0.12f + 150;
-        ui.Panel(new Rect(x - 24, y - 24, w + 48, 60 * 3 + 16 + 50 + 40 + 48));
+        ui.Panel(new Rect(x - 24, y - 24, w + 48, 60 * _menu.Main().Count + 16 + 50 * (_menu.Other().Count - 1) + 40 + 48));
         foreach (var button in _menu.Main())
         {
             DocumentView.Press(ui, button, new Rect(x, y, w, 48));

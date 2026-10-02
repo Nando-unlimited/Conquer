@@ -14,7 +14,7 @@ using Silk.NET.Input;
 
 namespace Conquer.Client.Screens;
 
-public sealed partial class GameScreen : IScreen
+public sealed partial class GameScreen : IScreen, IAudibleScreen
 {
     private const float TopBarHeight = 56;
     private const float SidePanelWidth = 340;
@@ -22,6 +22,9 @@ public sealed partial class GameScreen : IScreen
     private readonly ConquerApp _app;
     private readonly GameSession _session;
     private readonly GameController _game;
+
+    public IReadOnlyList<string> Playlist => _game.Playlist;
+    public IReadOnlyList<SoundCue> TakeSounds() => _game.TakeSounds();
     private readonly MapRenderer _renderer;
     private readonly RiverLayer _rivers;
     private readonly RoadLayer _roads;
@@ -424,11 +427,13 @@ public sealed partial class GameScreen : IScreen
         var s = _app.ScreenSize;
         Batch.Rect(0, 0, s.X, s.Y, Rgba.Black.WithAlpha(0.45f));
         Ui.Block(new Rect(0, 0, s.X, s.Y));
-        var panel = new Rect(s.X / 2 - 160, s.Y / 2 - 200, 320, 390);
+        var buttons = _game.PauseMenu(new MenuNavigator(_app), ConquerApp.Version);
+        float height = 60 + buttons.Count * 50 + 40;
+        var panel = new Rect(s.X / 2 - 160, s.Y / 2 - height / 2, 320, height);
         Ui.Panel(panel);
         Ui.TextCentered(new Rect(panel.X, panel.Y + 10, panel.W, 36), "Pausa", Theme.Accent, FontSize.Large, bold: true);
         float x = panel.X + 30, y = panel.Y + 60, w = panel.W - 60;
-        foreach (var button in _game.PauseMenu(new MenuNavigator(_app), ConquerApp.Version))
+        foreach (var button in buttons)
         {
             DocumentView.Press(Ui, button, new Rect(x, y, w, 40));
             y += 50;

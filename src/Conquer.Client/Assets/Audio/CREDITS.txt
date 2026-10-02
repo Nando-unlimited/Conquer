@@ -1,0 +1,18 @@
+Audio de Conquer. Todo es de dominio público (CC0 1.0, https://creativecommons.org/publicdomain/zero/1.0/):
+se puede usar sin atribución, pero se cita a los autores por cortesía.
+
+Efectos (Sfx):
+- click, alert, battle, build, bell, coins, discovery, city_founded: Kenney (www.kenney.nl), paquetes Interface Sounds,
+  Impact Sounds, RPG Audio y Music Jingles.
+- peace: fvcalderan, «Classic Fanfare Lick» (OpenGameArt.org).
+- war: William Hector, «Horde War Drums Loop» (OpenGameArt.org).
+- confirm: HaelDB, «Point Bell» (OpenGameArt.org).
+
+Música (Music), de OpenGameArt.org:
+- exploration, harvest_season, market_day, kings_feast, medieval_battle: RandomMind
+  («Medieval Exploration», «Medieval: Harvest Season», «Medieval: Market Day», «Medieval: King's Feast», «Medieval: Battle»).
+- war_theme: Spring Spring («War Theme»).
+- fantasy_orchestral: Joth («Fantasy Orchestral Theme»).
+- cinematic_calm: Wolfgang_ («At Home - Orchestral»).
+- new_sunrise: nene («New Sunrise»).
+- determined_pursuit, orchestral_battle: Emma_MA («Determined Pursuit», «QaziJamJam Orchestral Battle Theme»).

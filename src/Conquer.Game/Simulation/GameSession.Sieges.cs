@@ -52,6 +52,7 @@ public sealed partial class GameSession
     {
         if (_sieges.TryGetValue(p.Id, out var siege) && siege.AttackerId == attackerId) return;
         _sieges[p.Id] = new Siege(p.Id, attackerId);
+        Raise(GameEventKind.SiegeLaid, attackerId, p.ControllerId);
         string place = PlaceName(p);
         if (attackerId == HumanPlayerId)
             Notify(HumanPlayerId, $"Sitiamos {place}: caerá en unos {SiegeDays(p):0} días, menos con artillería.");

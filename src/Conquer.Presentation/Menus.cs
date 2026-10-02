@@ -30,7 +30,7 @@ public sealed class MainMenu(IMenuNavigator navigator)
         new("Cargar partida", () => { if (!ChangelogOpen) navigator.ShowLoadGame(); }, _latest != null, Size: TextSize.Large),
     ];
 
-    /// <summary>The two smaller ones below: the changelog and Salir.</summary>
+    /// <summary>The smaller ones below: the changelog, the music and sound volumes, and Salir.</summary>
     public IReadOnlyList<Button> Other() =>
     [
         new("Historial de versiones", () => ChangelogOpen = true),

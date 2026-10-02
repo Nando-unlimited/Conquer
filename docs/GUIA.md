@@ -432,6 +432,9 @@ Asedios.
 | `DailySieges()` | Cada día avanza cada asedio; sin sitiadores o sin guerra se levanta, y al completarse la provincia queda ocupada (`Occupy`). |
 | `EndSieges(condición)` | Termina los asedios que cumplen la condición: los de dos naciones que firman la paz y el de una provincia cedida. |
 
+### `Simulation/GameSession.Events.cs`
+`GameEvent` y `Happened`: lo que pasa (guerra declarada, paz, batalla, ciudad fundada, obra terminada, avance descubierto, asedio, revuelta, regalo), con la nación y la otra implicada. No cambia ninguna regla: es para quien escuche, sobre todo el sonido.
+
 ### `Simulation/GameSession.Seasons.cs`
 Estaciones y desgaste.
 
@@ -803,6 +806,21 @@ Lo que muestra cada pestaña de la pantalla de la nación, para que el cliente l
 | `SciencePage`, `InstitutionBadge`, `BranchColumn`, `TechLevel`, `TechCard` | La ciencia: puntos al día, instituciones de la era mostrada, botones de era y, por rama, prioridad, estado, niveles y tarjetas de avance. |
 | `TemplatesPage`, `TemplateSlot` | El diseñador de unidades: plantillas y sus acciones, huecos de la elegida, batallones para añadir y sus cifras (un `Document`). |
 
+### `Audio.cs`
+| Elemento | Qué hace |
+| --- | --- |
+| `SoundCue` | Los efectos: clic, confirmación, alerta, batalla, guerra, paz, obra, descubrimiento, ciudad fundada, monedas y campana. |
+| `Soundtrack` | Las pistas: medievales hasta la Edad Media y orquestales desde la era de los Descubrimientos, unas para la paz y otras para la guerra (`For(era, enGuerra)`); y la del menú (`Menu`). |
+| `AudioSettings` | Volumen de la música y de los efectos (0 a 1), guardado en `sonido.json` en la carpeta de partidas. `Buttons()` da los botones de los menús, que lo suben de cuarto en cuarto y después lo apagan. |
+
+### `GameController.Audio.cs`
+| Función | Qué hace |
+| --- | --- |
+| `Playlist` | La música del momento: la era del jugador y si está en guerra. |
+| `Play(efecto)`, `TakeSounds()` | Los sonidos pendientes (como mucho 32), que el cliente recoge cada fotograma. |
+| `Hear(evento)` | El sonido de lo que ocurre al jugador (`GameSession.Happened`): guerra (tambores), paz (fanfarria), batalla, asedio o revuelta (campana), regalo (monedas), y sus ciudades, obras y avances. `Show` añade la campanilla de confirmación a cada orden que sale bien. |
+| `ListenForAlerts()` | Cada hora de juego, si aparece una alerta grave nueva, suena. |
+
 ### `GameController.Alerts.cs`
 Las alertas bajo la barra superior.
 
@@ -881,13 +899,23 @@ Punto de entrada. Comprueba OpenGL 3.3 (`GlSupport.Ensure`), pone el formato de 
 | Función | Qué hace |
 | --- | --- |
 | `IScreen` | Interfaz de una pantalla: `Frame(dt)` actualiza y dibuja un fotograma. |
+| `IAudibleScreen` | Una pantalla con música y sonidos propios (la partida): su lista de pistas (`Playlist`) y los sonidos pendientes (`TakeSounds`). Las demás suenan con la música del menú. |
 | `ConquerApp(options)` | Crea la ventana con OpenGL 3.3: 1600×900, o menor si no cabe en el monitor (`InitialSize`), con antialiasing (MSAA 4×) si la tarjeta lo admite. |
 | `UiScale`, `ScreenSize`, `PixelScale` | Las pantallas se colocan en píxeles lógicos (`ScreenSize`). Si la ventana es menor de 1280×820, `UiScale` (< 1) encoge toda la interfaz en proporción para que nada se salga; el ratón se divide por la misma escala. `PixelScale` son los píxeles reales por píxel lógico (pantallas HiDPI por la escala). |
 | `Run()`, `Quit()`, `Show(pantalla)` | Arranca, cierra, cambia de pantalla al acabar el fotograma. |
-| `OnLoad()` | Inicia OpenGL, la fuente, la interfaz y los eventos de ratón y teclado; muestra el menú o la partida rápida. |
-| `OnRender(dt)` | Cada fotograma: limpia, dibuja la pantalla actual, la interfaz y el tooltip. |
+| `OnLoad()` | Inicia OpenGL, la fuente, la interfaz, el sonido (`AudioPlayer`) y los eventos de ratón y teclado; muestra el menú o la partida rápida. |
+| `OnRender(dt)` | Cada fotograma: limpia, dibuja la pantalla actual, la interfaz y el tooltip, y hace sonar lo que toca (`PlayAudio`: el clic de cualquier botón pulsado, los sonidos y la música de la pantalla). |
 | `CaptureIfRequested()` | Con `--screenshot`, guarda la imagen tras unos fotogramas y cierra; en los menús espera a que esté su fondo. |
 | `ReadVersion()` | Lee la versión del ejecutable (la del `.csproj`). |
+
+### `Audio/AudioPlayer.cs`
+`AudioPlayer`: el sonido, con OpenAL (OpenAL Soft, incluido para Windows, Linux y macOS) y NVorbis para leer OGG. La música y los efectos van dentro del ejecutable (`Assets/Audio`, recursos `Audio/Music/…` y `Audio/Sfx/…`). Sin dispositivo de sonido, el juego sigue en silencio (`Available`).
+
+| Función | Qué hace |
+| --- | --- |
+| `AudioPlayer()` | Abre el dispositivo, decodifica los efectos (`Decode`) y crea 8 voces para ellos y una fuente con 4 búferes para la música. |
+| `Update(dt, pistas, sonidos, ajustes)` | Cada fotograma: suena cada efecto pedido (`Ring`: el mismo no se repite antes de 0,25 s) y la música sigue (`Stream`). |
+| `Stream(...)`, `StartTrack()`, `Fill(búfer)`, `StopTrack()` | La música se lee del OGG en trozos de medio segundo. Al acabar una pista empieza otra al azar de la lista (no la misma); si la lista cambia y ya no tiene la que suena, esta se funde en 2 s y empieza otra de la nueva. |
 
 ### `Screens/MenuScreens.cs`
 | Elemento | Qué es |
@@ -1026,6 +1054,7 @@ Interfaz propia de "modo inmediato": los botones se declaran en cada fotograma y
 | `Theme` | Colores de la interfaz, con los degradados de paneles y botones (`PanelTop`/`PanelBottom`, `ButtonTop`/`ButtonBottom`, `HoverTop`…, `ActiveTop`…), el brillo superior (`Highlight`) y los radios de las esquinas (`PanelRadius`, `ButtonRadius`). `Theme.Mood(moral, normal)` colorea una moral: rojo si hay descontento, verde si está contento. `River`, `Battle`, `Strength` y `Organisation` son el azul de los ríos, el rojo de las batallas y el verde y el ámbar de las barras de hombres y organización; `Theme.Of(tinta)` da el color de un `Ink` de Conquer.Presentation: el de una nación o el del tema para su tono. |
 | `Ui.Panel`, `Text`, `TextCentered`, `Button`, `Hover`, `Tooltip` | Piezas de la interfaz. Un panel lleva sombra, cuerpo en degradado, brillo arriba y borde redondeado (`radius`: 0 para la barra superior; `opaque` para las pantallas de la nación y la ayuda). Un botón tiene relieve, se ilumina bajo el ratón con borde dorado, es dorado si está activo, se hunde al pulsarlo y su texto lleva sombra. Los tooltips tienen sombra y una línea dorada arriba. |
 | `TextField(área, texto, máximo)` | Caja de texto de una línea: añade lo tecleado en el fotograma (`InputState.Chars`) y borra con Retroceso. Solo admite caracteres que la fuente sabe dibujar. |
+| `Ui.ButtonClicked` | Si se ha pulsado algún botón en el fotograma (suena el clic). |
 | `Ui.MouseOverUi`, `Block` | Si el ratón está sobre la interfaz (para no hacer clic en el mapa a través de un panel). |
 | `BeginFrame`, `EndFrame` | Empezar el fotograma / dibujar el tooltip al final. |
 

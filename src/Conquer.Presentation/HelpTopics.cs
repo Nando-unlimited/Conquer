@@ -166,6 +166,7 @@ public static class HelpTopics
         ("Partida",
         [
             "- El menú (Esc o botón Menú) pausa el juego, guarda la partida y muestra el historial de versiones.",
+            "- Música y sonido: en el menú (y en la pantalla inicial) hay un botón para cada uno; cada pulsación sube el volumen y, después del máximo, lo apaga. La música cambia con la era y cuando estás en guerra.",
             "- La dificultad se elige al empezar: cambia cuántos yacimientos hay y su tamaño, los recursos iniciales y lo que producen los rivales.",
             "- Los rivales del ordenador se expanden, investigan, construyen y hacen la guerra por su cuenta.",
         ]),

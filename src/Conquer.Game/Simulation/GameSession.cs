@@ -400,6 +400,7 @@ public sealed partial class GameSession
         {
             if (player.Researching[(int)branch] is not Tech tech || player.ResearchProgress[(int)tech] < ResearchCost(player, tech, neighbours)) continue;
             player.Learn(tech);
+            Raise(GameEventKind.AdvanceDiscovered, player.Id);
             player.Researching[(int)branch] = null;
             if (player.IsHuman)
                 Notify(player.Id, $"Descubrimiento: {tech.Info().Name}. {tech.Info().Description} Elige el siguiente avance de {branch.Name()} (N).");
@@ -609,6 +610,7 @@ public sealed partial class GameSession
                 p.AddBuilding(built);
                 p.Constructing = null;
                 if (player.IsHuman) Notify(player.Id, $"Terminada la obra: {built.Info().Name} en {PlaceName(p)}.");
+                Raise(GameEventKind.BuildingFinished, player.Id);
             }
             else
             {
@@ -781,6 +783,7 @@ public sealed partial class GameSession
         var city = new City(_nextCityId++, name, player.Id, p.Id, Date.Hours);
         Cities.Add(city);
         p.CityId = city.Id;
+        Raise(GameEventKind.CityFounded, player.Id);
 
         bool capital = player.CapitalCityId is null;
         if (capital) player.CapitalCityId = city.Id;
