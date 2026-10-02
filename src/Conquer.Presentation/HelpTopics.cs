@@ -92,6 +92,9 @@ public static class HelpTopics
         ("Ejército",
         [
             "Las unidades de combate se forman con batallones entrenados en las ciudades (pestaña Ejército de la provincia). Los hombres salen de la ciudad.",
+            "## Reclutas",
+            $"- Solo se alistan los hombres que hay en la reserva de reclutas: {GameRules.BaseManpower:N0} más el {GameRules.ManpowerShare:P0} de tu población (Instrucción militar y Servicio militar obligatorio la agrandan). Entrenar batallones y barcos, formar cuarteles generales y reforzar unidades la gastan; licenciar una unidad devuelve sus hombres.",
+            $"- Se rellena despacio: de vacía a llena en {GameRules.ManpowerRecoveryYears:0} años. Perder un ejército duele. El Resumen de la nación y la pestaña Ejército dicen cuántos quedan.",
             "## Cuartel y taller",
             "- Solo las provincias con cuartel entrenan tropas de combate. Exploradores, ingenieros, colonos y cuarteles generales se forman en cualquier ciudad; los barcos, en los puertos.",
             "- Las máquinas de guerra (catapultas, cañones, artillería de campaña, artillería pesada, tanques y bombarderos) no salen del cuartel sino del taller, que llega con la Maquinaria de asedio. Una plantilla que mezcla soldados y máquinas pide los dos.",

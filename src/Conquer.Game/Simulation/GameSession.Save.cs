@@ -30,7 +30,7 @@ public sealed partial class GameSession
             [.. p.LastDayNet], p.IsStarving, p.FoodReserveDays, [.. p.Techs.Order()],
             [.. p.ResearchProgress], p.SpareScience, p.LastDayScience,
             [.. p.Templates.Select(t => new TemplateSave(t.Id, t.Number, [.. t.Battalions]))], [.. p.ResearchPriorities],
-            [.. p.Researching.OfType<Tech>()], [.. p.Institutions.Order()], [.. p.OfficerReserve.Select(ToSave)], p.Eliminated)).ToList(),
+            [.. p.Researching.OfType<Tech>()], [.. p.Institutions.Order()], [.. p.OfficerReserve.Select(ToSave)], p.Eliminated, p.Manpower)).ToList(),
         // Provinces nobody has touched keep their generated state, so only the rest are stored.
         Provinces = Map.Provinces.Where(Changed).Select(p => new ProvinceSave(
             p.Id, p.OwnerId, p.ControllerId, p.Population, p.CityId, p.Mood, p.Fertility, [.. p.Reserves],
@@ -175,6 +175,8 @@ public sealed partial class GameSession
             foreach (var t in s.Templates) player.Templates.Add(new RegimentTemplate(t.Id, t.Number, t.Battalions));
             foreach (var o in s.OfficerReserve ?? []) player.OfficerReserve.Add(FromSave(o));
             player.Provinces.UnionWith(save.Provinces.Where(p => p.OwnerId == s.Id).Select(p => p.Id));
+            // Before 1.75.0 there was no reserve of recruits: it starts full.
+            player.Manpower = s.Manpower ?? session.ManpowerCapacity(player);
             session.Players.Add(player);
         }
 

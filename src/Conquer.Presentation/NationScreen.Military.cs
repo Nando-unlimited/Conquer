@@ -22,7 +22,7 @@ public sealed partial class NationScreen
         var mine = Session.Units.Where(u => u.OwnerId == Player.Id && (u.CommandLevel >= 0 || u.IsFleet)).ToList();
         var regiments = mine.Where(u => u.IsMilitary).ToList();
         string title = $"{TextFormat.Plural(regiments.Count, "unidad de combate", Formations.CombatPlural)} · {Formations.BattalionCount(regiments.Sum(u => u.Battalions.Count))} · {regiments.Sum(u => u.Citizens):N0} hombres · " +
-                       $"poder militar {Session.MilitaryPower(Player.Id):0} · mantenimiento {Session.Upkeep(Player)[(int)ResourceType.Gold]:0.#} de oro/día" +
+                       $"reclutas {Player.Manpower:N0}/{Session.ManpowerCapacity(Player):N0} · poder militar {Session.MilitaryPower(Player.Id):0} · mantenimiento {Session.Upkeep(Player)[(int)ResourceType.Gold]:0.#} de oro/día" +
                        (Player.ArmyUnpaid ? " (sin pagar)" : "");
 
         var units = new List<(Unit Unit, int Depth)>();

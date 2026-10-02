@@ -46,7 +46,8 @@ public sealed partial class GameController
         bool idleScience = Human.CapitalCityId.HasValue && Techs.Branches.Any(b =>
             Human.Researching[(int)b] is null && Techs.InBranch(b).Any(t => GameSession.CanResearch(Human, t).Ok));
         return new TopBar(Human.Name, Human.Color, $"{population:N0} hab. · moral {mood:0}", Ink.Mood(mood, Tone.Dim),
-            $"{population:N0} habitantes\nMoral media: {mood:0} ({GameRules.MoodName(mood)})", Session.Date + SeasonAtHome(), speeds, resources,
+            $"{population:N0} habitantes\nMoral media: {mood:0} ({GameRules.MoodName(mood)})\n"
+            + $"Reclutas: {Human.Manpower:N0} de {Session.ManpowerCapacity(Human):N0} (+{Session.ManpowerPerDay(Human):0.#} al día)", Session.Date + SeasonAtHome(), speeds, resources,
             idleScience ? "Nación !" : "Nación",
             idleScience ? "Gestionar el país (N)\nHay ramas de la ciencia sin investigación." : "Gestionar el país (N)");
     }

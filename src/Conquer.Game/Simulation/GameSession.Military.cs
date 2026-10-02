@@ -249,6 +249,7 @@ public sealed partial class GameSession
             return CommandResult.Fail("Requiere " + string.Join(" y ", lacking.Select(b => b.For(player).Info().WithArticle)) + " en la provincia.");
         int keep = MinimumPopulation(p);
         if (p.Population - men < keep) return CommandResult.Fail($"Hacen falta {men + keep} habitantes.");
+        if (LacksManpower(player, men) is { } lack) return lack;
         if (!player.Stockpile.Has(cost)) return CommandResult.Fail($"Cuesta {cost}.");
         return CommandResult.Success();
     }
@@ -266,6 +267,7 @@ public sealed partial class GameSession
         var info = type.Info();
         Players[playerId].Stockpile.TrySpend(info.Cost);
         p.Population -= info.Men;
+        Players[playerId].Manpower -= info.Men;
         int days = TrainingDays(Players[playerId], type);
         p.Training.Add(new TrainingOrder(type, days));
         return CommandResult.Success($"{info.Name} en instrucción: {days} días.");
@@ -290,6 +292,7 @@ public sealed partial class GameSession
         var info = CommandLevels.Info(level);
         int keep = MinimumPopulation(p);
         if (p.Population - info.Staff < keep) return CommandResult.Fail($"Hacen falta {info.Staff + keep} habitantes.");
+        if (LacksManpower(Players[p.OwnerId], info.Staff) is { } lack) return lack;
         if (!Players[p.OwnerId].Stockpile.Has(info.Cost)) return CommandResult.Fail($"Cuesta {info.Cost}.");
         return CommandResult.Success();
     }
@@ -304,6 +307,7 @@ public sealed partial class GameSession
         var info = CommandLevels.Info(level);
         Players[playerId].Stockpile.TrySpend(info.Cost);
         p.Population -= info.Staff;
+        Players[playerId].Manpower -= info.Staff;
         p.Training.Add(new TrainingOrder(level));
         return CommandResult.Success($"Cuartel general de {Formations.LevelName(level).ToLowerInvariant()} en formación: {info.TrainingDays} días.");
     }
@@ -405,6 +409,7 @@ public sealed partial class GameSession
         if (!check.Ok) return check;
         Players[playerId].Stockpile.TrySpend(template.Cost);
         p.Population -= template.Men;
+        Players[playerId].Manpower -= template.Men;
         int days = TrainingDays(Players[playerId], template);
         p.Training.Add(new TrainingOrder(template, days));
         return CommandResult.Success($"{Formations.CombatName(template.Battalions.Count)} de la {template.Name} en instrucción: {days} días.");
@@ -673,6 +678,7 @@ public sealed partial class GameSession
     /// </summary>
     private void DailyMilitary(Player player)
     {
+        DailyManpower(player);
         DailyTraining(player);
         _supplied[player.Id] = ComputeSupply(player);
         var capital = player.CapitalCityId is int c && CityById(c) is { } city && !Map.Provinces[city.ProvinceId].IsOccupied
@@ -725,12 +731,13 @@ public sealed partial class GameSession
                 b.Organisation = Math.Min(b.Info.MaxOrganisation, b.Organisation + b.Info.MaxOrganisation * recovery);
                 double missing = b.Info.Men - b.Strength;
                 if (missing <= 0 || capital == null) continue;
-                double men = Math.Min(missing, Math.Min(b.Info.Men * MilitaryRules.ReinforcementRate * repair, capital.Population - GameRules.MinCityPopulation));
+                double men = Math.Min(Math.Min(missing, player.Manpower), Math.Min(b.Info.Men * MilitaryRules.ReinforcementRate * repair, capital.Population - GameRules.MinCityPopulation));
                 if (men <= 0) continue;
                 // Recruits are green: they water down the battalion's experience.
                 b.Experience = b.Experience * b.Strength / (b.Strength + men);
                 b.Strength += men;
                 capital.Population -= men;
+                player.Manpower -= men;
             }
         }
     }

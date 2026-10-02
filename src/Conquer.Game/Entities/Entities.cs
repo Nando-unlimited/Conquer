@@ -22,6 +22,8 @@ public sealed class Player
     public bool ArmyUnpaid { get; set; }
     /// <summary>Days the food stockpile would last at the last day's consumption.</summary>
     public double FoodReserveDays { get; set; }
+    /// <summary>Recruits ready to be called up: training, HQs and reinforcements draw on them (see <c>GameSession.ManpowerCapacity</c>).</summary>
+    public double Manpower { get; set; }
     /// <summary>Conquered: it lost all its land in a war and is out of the game.</summary>
     public bool Eliminated { get; set; }
 

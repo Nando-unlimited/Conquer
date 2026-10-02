@@ -106,6 +106,7 @@ public sealed partial class NationScreen
         left.Add(new Pair("Provincias", $"{stats.Provinces:N0}"));
         left.Add(new Pair("Ciudades", $"{stats.Cities:N0}"));
         left.Add(new Pair("Unidades", $"{stats.Units:N0}"));
+        left.Add(ManpowerPair());
         left.Add(new Space(10));
 
         left.Add(Title2("Ciencia"));
@@ -148,6 +149,17 @@ public sealed partial class NationScreen
             ], at));
         }
         return new SummaryPage(left, right);
+    }
+
+    /// <summary>The reserve of recruits against what it holds, in red when nearly empty, with how it works in the tooltip.</summary>
+    private Pair ManpowerPair()
+    {
+        double capacity = Session.ManpowerCapacity(Player);
+        return new Pair("Reclutas", $"{Player.Manpower:N0} / {capacity:N0}", Player.Manpower < capacity * 0.2 ? Tone.Bad : Tone.Normal,
+            $"Hombres listos para alistarse: {GameRules.BaseManpower:N0} más el {GameRules.ManpowerShare:P0} de la población" +
+            (Player.Bonuses.Manpower > 0 ? $", +{Player.Bonuses.Manpower:P0} por tus avances" : "") +
+            $". Entrenar, formar cuarteles generales y reforzar unidades los gasta; licenciar una unidad los devuelve. " +
+            $"Se recupera +{Session.ManpowerPerDay(Player):0.#} al día (de vacía a llena en {GameRules.ManpowerRecoveryYears:0} años).");
     }
 
     /// <summary>How many citizens live at each mood level, worst first.</summary>

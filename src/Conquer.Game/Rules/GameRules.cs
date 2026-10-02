@@ -221,6 +221,12 @@ public static class GameRules
     public const int BrokenPactTruceDays = 365;
     public const double AccessOpinion = 10;
     public const double AccessAcceptOpinion = 20;
+    // Manpower. A nation's reserve of recruits holds BaseManpower plus ManpowerShare of its settled people (more with
+    // advances) and refills in ManpowerRecoveryYears. Training, raising HQs and reinforcing draw on it.
+    public const double BaseManpower = 500;
+    public const double ManpowerShare = 0.06;
+    public const double ManpowerRecoveryYears = 2;
+
     // Trade. A nation sells TradeSurplusShare of what it gains of a resource each day, at its gold value
     // (ResourceValue); a computer rival keeps a margin of up to MaxTradeMargin, less the better it thinks of the
     // other. Deals last TradeDealDays and each one lifts opinion a little on both sides.

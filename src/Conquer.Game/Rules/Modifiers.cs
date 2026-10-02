@@ -26,6 +26,8 @@ public sealed record Modifiers
     public double BuildSpeed { get; init; }
     /// <summary>Share of the mood lost to distance from the capital that is avoided.</summary>
     public double DistanceMood { get; init; }
+    /// <summary>Size of the nation's reserve of recruits.</summary>
+    public double Manpower { get; init; }
 
     public static readonly Modifiers None = new();
 
@@ -43,5 +45,6 @@ public sealed record Modifiers
         Defense = a.Defense + b.Defense,
         BuildSpeed = a.BuildSpeed + b.BuildSpeed,
         DistanceMood = a.DistanceMood + b.DistanceMood,
+        Manpower = a.Manpower + b.Manpower,
     };
 }

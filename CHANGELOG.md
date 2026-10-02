@@ -2,6 +2,16 @@
 
 Todos los cambios del juego, del más reciente al más antiguo. Cada versión es un commit cuyo título es su número.
 
+## [1.75.0] - 2026-10-02
+
+### Añadido
+- **Reserva de reclutas**: los soldados siguen saliendo de la población, pero solo se alistan los que hay en la reserva.
+  - Caben **500 más el 6 % de tu población**. Instrucción militar la agranda un 25 % y Servicio militar obligatorio un 50 %.
+  - Entrenar batallones y barcos, formar cuarteles generales y reforzar unidades **gasta reclutas**. Licenciar una unidad devuelve sus hombres.
+  - **Se rellena despacio**: de vacía a llena en 2 años. Perder un ejército duele de verdad.
+  - Lo que queda se ve en el Resumen de la nación, en el título de la pestaña Ejército y en el tooltip de la población de la barra superior. Sin reclutas, el botón de entrenar lo explica.
+- Las partidas guardadas anteriores empiezan con la reserva llena.
+
 ## [1.74.0] - 2026-10-02
 
 ### Añadido

@@ -93,6 +93,7 @@ public sealed partial class GameSession
             player.Stockpile[ResourceType.Food] = GameRules.StartingFood * start;
             player.Stockpile[ResourceType.Gold] = GameRules.StartingGold * start;
             player.Stockpile[ResourceType.Wood] = GameRules.StartingWood * start;
+            player.Manpower = GameRules.BaseManpower;
             session.Players.Add(player);
             session.AddUnit(i, UnitType.Settlers, starts[i], GameRules.StartingCitizens);
             session.AddTemplate(player, [BattalionType.Warriors, BattalionType.Warriors]);
@@ -857,6 +858,8 @@ public sealed partial class GameSession
         if (UnitById(unitId) is not { } unit || unit.OwnerId != playerId) return CommandResult.Fail("Unidad no válida.");
         var p = Map.Provinces[unit.ProvinceId];
         if (p.OwnerId != playerId) return CommandResult.Fail("Solo puede asentarse en una provincia propia.");
+        // Soldiers sent home go back to the reserve.
+        if (unit.Type != UnitType.Settlers) ReturnToReserve(Players[playerId], unit.Citizens);
         // A fleet paid off in port lands what it carries first.
         foreach (var cargo in Units.Where(u => u.CarrierId == unit.Id)) cargo.CarrierId = null;
         Settle(p, unit.Citizens, GameRules.StartingMood);
