@@ -79,6 +79,10 @@ public sealed record SaveGame
     /// <summary>Trade deals; missing in saves from before 1.73.0.</summary>
     public List<TradeDeal>? Trades { get; init; }
     public int NextTradeId { get; init; }
+    /// <summary>Decisions waiting for an answer and the mood they left; missing in saves from before 1.79.0.</summary>
+    public List<Decision>? Decisions { get; init; }
+    public List<MoodEvent>? MoodEvents { get; init; }
+    public int NextDecisionId { get; init; }
     public required List<Notification> Notifications { get; init; }
     public required List<AiSave> Ais { get; init; }
     public required Dictionary<int, double> EmigrationCarry { get; init; }

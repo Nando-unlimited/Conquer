@@ -491,6 +491,20 @@ Epidemias. Usa su propio generador aleatorio (`seed ^ 0x9A6E`), así que no alte
 | `PlagueResistance(provincia)`, `PlagueDeaths(provincia)` | La parte de muertes y contagios que se evita (`Modifiers.PlagueResistance`: Medicina y Salubridad 25 %, Antibióticos 40 %, herbolario 20 %, hospital 40 %; como mucho 90 %) y la parte de su gente que muere cada día (0,1 % sin resistencia). |
 | `DailyPlague()` | Cada día: las provincias enfermas pierden gente y contagian a sus vecinas (0,5 %, 3 % por un camino) y a los puertos a menos de 2000 km (0,5 %); al terminar quedan inmunes 10 años (`PlagueImmuneUntil`). Además cada ciudad puede enfermar sola, más cuanto mayor es. |
 
+### `Simulation/GameSession.Decisions.cs`
+Eventos con decisiones. Usa su propio generador aleatorio (`seed ^ 0xDEC1`).
+
+| Elemento | Qué hace |
+| --- | --- |
+| `DecisionKind`, `Decision`, `DecisionOption`, `MoodEvent` | Los seis eventos (sequía, filón de oro, refugiados, bandidos, gran cosecha, inventor); uno pendiente con su nación, provincia, escala y plazo; una respuesta con su texto y su coste; y la moral que deja una decisión en una provincia durante un año. Todo se guarda (`Decisions`, `MoodEvents`, `NextDecisionId`). |
+| `PendingDecisions(jugador)`, `DecisionById(id)`, `DecisionScale(jugador)` | Las decisiones que esperan respuesta y lo que está en juego: la raíz cuadrada de la gente de la nación entre 20 000, como mínimo 1. |
+| `DecisionTitle`, `DecisionText`, `DecisionOptions(decisión)` | El título, el texto y las dos respuestas; la primera es la que se toma por defecto. |
+| `CanChoose`/`Choose(jugador, decisión, respuesta)` | Responder: paga el coste y aplica el efecto (`Apply`). La moral va a `AddMoodEvent` y sale en `MoodFactors` con el título del evento. |
+| `DailyDecisions()` | Cada día: caducan los efectos de moral, las decisiones sin respuesta tras 30 días toman la primera (y avisan), y cada nación con capital tiene 1,5 eventos al año de media. Los rivales responden al momento (`AiAnswer`: pagan si pueden, contentan a las provincias descontentas). |
+| `StartDecision(jugador, tipo, provincia)` | Hace que ocurra un evento (lo usan las pruebas y `--panel decision`). |
+
+La ventana está en `GameController.Decisions.cs` (`DecisionWindow`, `DecisionOpen`, que para el tiempo) y se dibuja en `GameScreen.Decisions.cs`.
+
 ### `Simulation/GameSession.Sieges.cs`
 Asedios.
 

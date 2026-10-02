@@ -175,6 +175,7 @@ public sealed partial class GameSession
         if (HasForeignCulture(p)) factors.Add(($"Cultura de {Players[p.CultureId].Name}", ForeignCultureMood(p)));
         if (HasOtherFaith(p)) factors.Add(($"Fe: {ReligionName(p.ReligionId)}", -GameRules.OtherFaithMood));
         if (IsSick(p)) factors.Add(("Epidemia", -GameRules.PlagueMood));
+        foreach (var m in MoodEventsIn(p)) factors.Add((m.Reason, m.Points));
         foreach (var tech in owner.Techs.Where(t => t.Info().Effects.Mood != 0))
             factors.Add((tech.Info().Name, tech.Info().Effects.Mood));
         foreach (var building in p.Buildings.Where(b => b.Info().Effects.Mood != 0))
@@ -243,6 +244,7 @@ public sealed partial class GameSession
             DailyCapitulations();
             DailyTrade();
             DailyPlague();
+            DailyDecisions();
         }
         if (Date.Hours % 6 == 0)
             foreach (var ai in _ais.Where(a => !Players[a.PlayerId].Eliminated)) ai.Think(dailyDecisions: Date.Hour == 0);

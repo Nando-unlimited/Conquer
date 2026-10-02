@@ -80,6 +80,7 @@ public sealed partial class GameScreen : IScreen, IAudibleScreen
         if (options.Panel == "edit" && _game.SelectedUnitId is int sample && _session.UnitById(sample) is { HasOfficer: true }) ShowSampleOfficers(sample);
         if (options.Panel == "found" && _session.UnitById(settlers.Id) != null) _game.OpenCityNaming(settlers.Id, settlers.ProvinceId);
         if (options.Panel == "battle") _game.OpenFirstBattle();
+        if (options.Panel == "decision" && Human.CapitalCityId is int city) _session.StartDecision(Human.Id, DecisionKind.Drought, _session.CityById(city)!.ProvinceId);
     }
 
     /// <summary>
@@ -151,11 +152,12 @@ public sealed partial class GameScreen : IScreen, IAudibleScreen
         if (_game.EditingUnitId.HasValue) DrawUnitEditor();
         if (_game.BattleWindowOpen) DrawBattleWindow();
         if (_game.RoadWindowOpen) DrawRoadWindow();
+        if (_game.DecisionOpen && !_game.RoadWindowOpen && !_game.Naming.HasValue && !_game.EditingUnitId.HasValue) DrawDecision();
         if (_game.MenuOpen) DrawPauseMenu();
         if (_game.ChangelogOpen && _changelog.Frame(Ui, new Rect(_app.ScreenSize.X / 2 - 380, 70, 760, _app.ScreenSize.Y - 140))) _game.ChangelogOpen = false;
         if (_game.HelpOpen && _help.Frame(Ui, new Rect(Math.Max(8, _app.ScreenSize.X / 2 - 520), 70, Math.Min(1040, _app.ScreenSize.X - 16), _app.ScreenSize.Y - 140))) _game.HelpOpen = false;
 
-        bool modal = _game.MenuOpen || _game.Naming.HasValue || _game.EditingUnitId.HasValue || _game.BattleWindowOpen || _game.RoadWindowOpen;
+        bool modal = _game.MenuOpen || _game.Naming.HasValue || _game.EditingUnitId.HasValue || _game.BattleWindowOpen || _game.RoadWindowOpen || _game.DecisionOpen;
         if (!modal && !_game.ChangelogOpen && !_game.HelpOpen && !_game.Nation.Visible) HandleMapMouse();
         if (!Ui.MouseOverUi && !modal && !_game.HelpOpen && !_game.Nation.Visible && _game.HoverProvince >= 0 && !_dragging) HoverTooltip();
     }

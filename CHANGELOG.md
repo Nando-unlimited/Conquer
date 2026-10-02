@@ -2,6 +2,20 @@
 
 Todos los cambios del juego, del más reciente al más antiguo. Cada versión es un commit cuyo título es su número.
 
+## [1.79.0] - 2026-10-02
+
+### Añadido
+- **Eventos con decisiones**: alguna vez al año pasa algo en una de tus provincias y una ventana te pide que elijas. El tiempo se para hasta que respondes.
+  - **Sequía**: guardar el grano (la provincia pierde moral y gente) o repartirlo (cuesta comida y la alegra).
+  - **Un filón de oro**: para la corona (mucho oro y descontento) o para los mineros (menos oro y contento).
+  - **Refugiados**: cerrar las puertas o acogerlos (más gente, algo menos de moral).
+  - **Bandidos**: dejarlos (se pierde gente y moral) o enviar soldados (cuesta oro).
+  - **Una gran cosecha**: vender el excedente (oro) o celebrarla (un mes de fiestas).
+  - **Un inventor**: despedirlo o financiarlo (cuesta oro y da un mes de ciencia).
+  - Lo que está en juego crece con tu nación. La moral que cambia dura un año y sale en la moral de la provincia con el nombre del evento.
+  - Si no respondes en 30 días, se elige la primera opción. Los rivales también viven estos eventos y deciden al momento.
+  - El botón "Ver en el mapa" lleva a la provincia.
+
 ## [1.78.0] - 2026-10-02
 
 ### Añadido

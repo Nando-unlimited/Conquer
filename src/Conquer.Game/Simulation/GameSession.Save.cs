@@ -58,6 +58,9 @@ public sealed partial class GameSession
         Access = _access.Order().Select(x => new AccessSave(x.Granter, x.Grantee)).ToList(),
         Trades = [.. _trades],
         NextTradeId = _nextTradeId,
+        Decisions = [.. _decisions],
+        MoodEvents = [.. _moodEvents.Where(m => m.UntilHours > Date.Hours)],
+        NextDecisionId = _nextDecisionId,
         Notifications = [.. Notifications],
         Ais = _ais.Select(ai => ai.ToSave()).ToList(),
         EmigrationCarry = new Dictionary<int, double>(_emigrationCarry),
@@ -259,6 +262,7 @@ public sealed partial class GameSession
         foreach (var x in save.Access ?? []) session._access.Add((x.Granter, x.Grantee));
         session._trades.AddRange(save.Trades ?? []);
         session._nextTradeId = save.NextTradeId;
+        session.LoadDecisions(save);
         session.Notifications.AddRange(save.Notifications);
         foreach (var (province, carry) in save.EmigrationCarry) session._emigrationCarry[province] = carry;
         foreach (var n in save.UnitNumbers)

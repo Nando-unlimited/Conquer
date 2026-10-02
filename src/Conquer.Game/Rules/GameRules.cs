@@ -245,6 +245,14 @@ public static class GameRules
     public const double PlagueImmunityYears = 10;
     public const double MaxPlagueResistance = 0.9;
 
+    // Decisions. Each nation with a city meets about DecisionsPerYear events a year, each with two choices; one left
+    // unanswered for DecisionDays takes its default. What is at stake grows with the square root of the nation's
+    // people over DecisionPeople. Mood they change lasts DecisionMoodDays.
+    public const double DecisionsPerYear = 1.5;
+    public const int DecisionDays = 30;
+    public const double DecisionPeople = 20000;
+    public const int DecisionMoodDays = 365;
+
     // Manpower. A nation's reserve of recruits holds BaseManpower plus ManpowerShare of its settled people (more with
     // advances) and refills in ManpowerRecoveryYears. Training, raising HQs and reinforcing draw on it.
     public const double BaseManpower = 500;
