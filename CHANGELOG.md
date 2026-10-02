@@ -2,6 +2,13 @@
 
 Todos los cambios del juego, del más reciente al más antiguo. Cada versión es un commit cuyo título es su número.
 
+## [1.90.0] - 2026-10-02
+
+### Cambiado
+- **Retratos pintados por rango**: el rango va en el nombre de la imagen (`renacimiento-hombre-coronel-03.png`) y el propio retrato lo muestra, así que el juego ya no le pinta insignias encima, solo un marco fino del color de la nación. Si falta el rango de un oficial, toma un retrato del rango más cercano.
+- Al ascender, el oficial pasa a un retrato de su nuevo rango.
+- `docs/RETRATOS.md` explica los rangos y sus equivalentes en la marina, cuántos retratos conviene hacer de cada rango y cómo se nota cada rango en cada época.
+
 ## [1.89.0] - 2026-10-02
 
 ### Añadido

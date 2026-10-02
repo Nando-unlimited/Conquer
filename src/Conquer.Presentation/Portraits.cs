@@ -66,17 +66,33 @@ public readonly record struct Portrait(
     public float Greying => Math.Clamp(Age * 0.5f - 0.15f + (Skill - 1) * 0.15f, 0f, 1f);
 
     /// <summary>
-    /// The groups of painted portraits (Assets/Portraits) this officer may take one of, best first: "renacimiento-marino"
-    /// for a fleet's, then "renacimiento-mujer" or "renacimiento-hombre". <see cref="Pick"/> chooses within the group.
+    /// The groups of painted portraits (Assets/Portraits) this officer may take one of, best first. The portraits show
+    /// the rank themselves, so it is in the group: "renacimiento-hombre-teniente" for a lieutenant general, then those of
+    /// the nearest ranks, then "renacimiento-hombre" (no rank); a fleet's first looks among "renacimiento-marino-…".
+    /// <see cref="Pick"/> chooses within the group, so an officer changes face only when promoted into another group.
     /// </summary>
     public IEnumerable<string> PhotoGroups
     {
         get
         {
-            if (Naval) yield return $"{EraSlug(Era)}-marino";
-            yield return $"{EraSlug(Era)}-{(IsFemale ? "mujer" : "hombre")}";
+            string[] bases = Naval
+                ? [$"{EraSlug(Era)}-marino", $"{EraSlug(Era)}-{Sex}"]
+                : [$"{EraSlug(Era)}-{Sex}"];
+            // The officer's own rank first, then the nearest ones (the lower first on a tie), then a picture without a rank.
+            int rank = Rank;
+            var ranks = Enumerable.Range(0, RankSlugs.Length).OrderBy(r => Math.Abs(r - rank)).ThenBy(r => r).ToList();
+            foreach (string group in bases)
+            {
+                foreach (int r in ranks) yield return $"{group}-{RankSlugs[r]}";
+                yield return group;
+            }
         }
     }
+
+    private string Sex => IsFemale ? "mujer" : "hombre";
+
+    /// <summary>The ranks as they are written in the portraits' file names, from colonel (0) to marshal (5).</summary>
+    public static readonly string[] RankSlugs = ["coronel", "brigadier", "division", "teniente", "general", "mariscal"];
 
     /// <summary>An era as it is written in the portraits' file names.</summary>
     public static string EraSlug(Era era) => era switch

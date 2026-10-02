@@ -32,21 +32,35 @@ public class PortraitTests
     }
 
     [Fact]
-    public void ASailorLooksForASailorsPortraitFirst()
+    public void APortraitOfTheOfficersRankComesFirstThenTheNearestRanks()
     {
-        var officer = new Officer(5, "Leonor Bazán", [OfficerTrait.Offensive], 1);
-        Assert.Equal(["renacimiento-marino", "renacimiento-mujer"], Portrait.Of(officer, Era.Renaissance, 0, naval: true).PhotoGroups);
-        Assert.Equal(["antigua-mujer"], Portrait.Of(officer, Era.Ancient, 0).PhotoGroups);
+        var teniente = new Officer(5, "Leonor Bazán", [OfficerTrait.Offensive], 1, rank: OfficerRank.LieutenantGeneral);
+        Assert.Equal(
+            ["antigua-mujer-teniente", "antigua-mujer-division", "antigua-mujer-general", "antigua-mujer-brigadier", "antigua-mujer-mariscal",
+             "antigua-mujer-coronel", "antigua-mujer"],
+            Portrait.Of(teniente, Era.Ancient, 0).PhotoGroups);
     }
 
-    /// <summary>The painted portraits in the assets are named era-group-number, so every one can be found.</summary>
+    [Fact]
+    public void ASailorLooksForASailorsPortraitFirst()
+    {
+        var colonel = new Officer(6, "Sancho Haro", [OfficerTrait.Offensive], 1);
+        var groups = Portrait.Of(colonel, Era.Renaissance, 0, naval: true).PhotoGroups.ToList();
+        Assert.Equal("renacimiento-marino-coronel", groups[0]);
+        Assert.Equal("renacimiento-marino", groups[6]);
+        Assert.Equal("renacimiento-hombre-coronel", groups[7]);
+        Assert.Equal("renacimiento-hombre", groups[^1]);
+    }
+
+    /// <summary>The painted portraits in the assets are named era-group[-rank]-number, so every one can be found.</summary>
     [Fact]
     public void ThePaintedPortraitsAreWellNamed()
     {
         var dir = new DirectoryInfo(AppContext.BaseDirectory);
         while (dir != null && !File.Exists(Path.Combine(dir.FullName, "Conquer.sln"))) dir = dir.Parent;
         var folder = Path.Combine(dir!.FullName, "src", "Conquer.Client", "Assets", "Portraits");
-        var groups = Enum.GetValues<Era>().SelectMany(e => new[] { "hombre", "mujer", "marino" }.Select(g => $"{Portrait.EraSlug(e)}-{g}")).ToHashSet();
+        var bases = Enum.GetValues<Era>().SelectMany(e => new[] { "hombre", "mujer", "marino" }.Select(g => $"{Portrait.EraSlug(e)}-{g}")).ToList();
+        var groups = bases.Concat(bases.SelectMany(b => Portrait.RankSlugs.Select(r => $"{b}-{r}"))).ToHashSet();
         foreach (var file in Directory.GetFiles(folder).Where(f => f.EndsWith(".png") || f.EndsWith(".jpg")))
         {
             string name = Path.GetFileNameWithoutExtension(file);
