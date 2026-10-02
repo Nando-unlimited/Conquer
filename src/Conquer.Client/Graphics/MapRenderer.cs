@@ -52,6 +52,9 @@ public sealed class MapRenderer : IDisposable
         uniform float uParchment;
         // Each map pixel's distance to the nearest land border between owners (BorderStep per map pixel; 255 far away).
         uniform sampler2D uBorderDistance;
+        // Each map pixel's distance to land (CoastDistance: COAST_MAX map pixels at 1).
+        uniform sampler2D uCoast;
+        const float COAST_MAX = 32.0;
         const float BORDER_STEP = 40.0;
         // TerrainColors.MaxHeight: the metres the detail texture's height channel spans.
         const float MAX_HEIGHT = 9000.0;
@@ -111,20 +114,39 @@ public sealed class MapRenderer : IDisposable
             return col * (1.0 + 0.06 * grain + 0.14 * ground.g * crowns(m) + 0.05 * ground.b * dunes);
         }
 
-        // Water coloured by its depth, smoothly from turquoise shallows to navy deeps; lighter shallows about a map pixel
-        // wide along the coast, surf breaking on it when zoomed in, and slow ripples drifting across.
-        // coastDistance: screen pixels to the coast.
+        // The sea: darker the deeper, turquoise over the shelf along the coasts, with a slow swell drifting across, sun
+        // glints up close, waves rolling in to the shore and surf breaking on it. The moving parts fade out zoomed far out.
+        // coastDistance: screen pixels to the coast when zoomed in (sharper than the coast field there).
         vec3 waterDetail(vec2 m, float coastDistance) {
             float depth = texture(uDetail, m / uMapSize).r;
-            vec3 col = depth < 0.35 ? mix(vec3(0.27, 0.52, 0.72), vec3(0.15, 0.34, 0.58), depth / 0.35)
-                                    : mix(vec3(0.15, 0.34, 0.58), vec3(0.07, 0.16, 0.34), (depth - 0.35) / 0.65);
-            col *= 1.0 + 0.22 * (1.0 - smoothstep(0.0, 1.2 * uZoom, coastDistance));
-            if (uZoom >= uSmoothZoom) {
-                float surf = 0.55 + 0.45 * sin(uTime * 1.3 + dot(m, vec2(2.1, 1.7)) + 3.0 * octave(m, 1.0));
-                col = mix(col, vec3(0.86, 0.93, 0.96), (1.0 - smoothstep(1.0, 7.0, coastDistance)) * surf * 0.45);
-            }
-            float t = uTime * 0.04;
-            float ripple = octave(m + vec2(t, 0.6 * t), 2.5) + 0.6 * octave(m - vec2(0.7 * t, -0.4 * t), 7.0);
+            float coast = texture(uCoast, m / uMapSize).r * COAST_MAX; // map pixels to land
+            vec3 col = depth < 0.35 ? mix(vec3(0.20, 0.47, 0.62), vec3(0.12, 0.29, 0.50), depth / 0.35)
+                                    : mix(vec3(0.12, 0.29, 0.50), vec3(0.06, 0.14, 0.30), (depth - 0.35) / 0.65);
+            float shelf = 1.0 - smoothstep(0.0, 6.0, coast);
+            col = mix(col, vec3(0.30, 0.66, 0.68), 0.5 * shelf * shelf);
+
+            // A slow swell of two drifting layers, stronger as the map is zoomed in.
+            float t = uTime;
+            float swell = 0.6 * noise(m / 24.0 + vec2(t * 0.02, t * 0.013), uMapSize.x / 24.0)
+                        + 0.4 * noise(m / 6.0 + vec2(-t * 0.05, t * 0.03), uMapSize.x / 6.0);
+            float detail = smoothstep(0.6, 3.0, uZoom);
+            col *= 1.0 + (swell - 0.5) * (0.06 + 0.1 * detail);
+
+            // Sun glints: small and sparse, only up close and out at sea.
+            float closeUp = smoothstep(5.0, 10.0, uZoom);
+            float glint = smoothstep(0.93, 0.99, noise(m * 5.0 + vec2(t * 0.4, -t * 0.25), uMapSize.x * 5.0) * (0.7 + 0.5 * swell));
+            col = mix(col, vec3(0.9, 0.95, 1.0), 0.35 * glint * closeUp * (1.0 - shelf));
+
+            // Waves rolling in to the shore, then surf breaking on it.
+            float wave = sin(coast * 2.2 - t * 1.6 + swell * 6.0);
+            float crest = smoothstep(0.75, 1.0, wave) * (1.0 - smoothstep(0.5, 5.0, coast));
+            col = mix(col, vec3(0.9, 0.95, 1.0), 0.28 * crest * detail);
+            float shore = uZoom >= uSmoothZoom ? 1.0 - smoothstep(1.0, 7.0, coastDistance) : 1.0 - smoothstep(0.15, 0.9, coast);
+            float surf = smoothstep(0.3, 0.7, swell + 0.25 * sin(t * 1.3 + coast * 6.0 + dot(m, vec2(2.1, 1.7))));
+            col = mix(col, vec3(0.86, 0.93, 0.96), shore * (0.15 + 0.4 * surf * detail));
+
+            float drift = t * 0.04;
+            float ripple = octave(m + vec2(drift, 0.6 * drift), 2.5) + 0.6 * octave(m - vec2(0.7 * drift, -0.4 * drift), 7.0);
             return col * (1.0 + 0.07 * ripple);
         }
 
@@ -310,7 +332,7 @@ public sealed class MapRenderer : IDisposable
     private readonly Shader _shader;
     private readonly uint _vao, _vbo;
     private readonly WorldMap _map;
-    private readonly Texture _ids, _terrain, _detail, _provColor, _provOwner, _nation, _occupier, _borderDistance;
+    private readonly Texture _ids, _terrain, _detail, _provColor, _provOwner, _nation, _occupier, _borderDistance, _coast;
     private readonly byte[] _colorData = new byte[SlotsX * SlotsY * 4];
     private readonly byte[] _ownerData = new byte[SlotsX * SlotsY * 4];
     private readonly byte[] _nationData = new byte[SlotsX * SlotsY * 4];
@@ -326,9 +348,9 @@ public sealed class MapRenderer : IDisposable
     public Func<ResourceType, bool> IsResourceKnown { get; set; } = _ => true;
 
     /// <summary>Pixel data prepared off the main thread (it takes a moment for 6.5 million pixels).</summary>
-    public sealed record Prepared(byte[] Ids, byte[] Terrain, byte[] Detail);
+    public sealed record Prepared(byte[] Ids, byte[] Terrain, byte[] Detail, byte[] Coast);
 
-    public static Prepared Prepare(WorldMap map) => new(EncodeIds(map), TerrainColors.Build(map), TerrainColors.BuildDetail(map));
+    public static Prepared Prepare(WorldMap map) => new(EncodeIds(map), TerrainColors.Build(map), TerrainColors.BuildDetail(map), CoastDistance.Build(map));
 
     public unsafe MapRenderer(GL gl, WorldMap map, Prepared prepared)
     {
@@ -345,6 +367,7 @@ public sealed class MapRenderer : IDisposable
         _occupier = new Texture(gl, SlotsX, SlotsY, _occupierData, smooth: false);
         _borderData = new byte[map.Width * map.Height];
         _borderDistance = new Texture(gl, map.Width, map.Height, _borderData, smooth: true, repeatX: true, singleChannel: true);
+        _coast = new Texture(gl, map.Width, map.Height, prepared.Coast, smooth: true, repeatX: true, singleChannel: true);
 
         float[] quad = [-1, -1, 1, -1, 1, 1, -1, -1, 1, 1, -1, 1];
         _vao = gl.GenVertexArray();
@@ -625,6 +648,8 @@ public sealed class MapRenderer : IDisposable
         _shader.Set("uOccupier", 6);
         _borderDistance.Bind(7);
         _shader.Set("uBorderDistance", 7);
+        _coast.Bind(8);
+        _shader.Set("uCoast", 8);
         // Nations' colours band their borders on the terrain and political maps (darker there, over the filled
         // colour); the data maps keep a plain shadow so their own colours read true.
         var (band, shade) = Mode switch
@@ -652,6 +677,7 @@ public sealed class MapRenderer : IDisposable
         _nation.Dispose();
         _occupier.Dispose();
         _borderDistance.Dispose();
+        _coast.Dispose();
         _gl.DeleteBuffer(_vbo);
         _gl.DeleteVertexArray(_vao);
     }

@@ -2,6 +2,14 @@
 
 Todos los cambios del juego, del más reciente al más antiguo. Cada versión es un commit cuyo título es su número.
 
+## [1.83.0] - 2026-10-02
+
+### Cambiado
+- **Un mar más vivo**, traído de la otra versión del juego:
+  - Junto a las costas, el agua se vuelve **turquesa** sobre la plataforma y se oscurece mar adentro, sin saltos entre provincias.
+  - Un **oleaje lento** recorre el mar y, de cerca, el sol brilla en el agua.
+  - Las **olas llegan a la orilla** y la espuma rompe en ella, también con el mapa más alejado.
+
 ## [1.82.0] - 2026-10-02
 
 ### Añadido
