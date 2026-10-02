@@ -514,6 +514,17 @@ El registro de estadísticas.
 | `Sample(jugador)` | Las cifras de una nación ahora mismo. |
 | `DailyHistory()` | Cada 30 días anota las de cada nación que sigue en pie. |
 
+### `Simulation/GameSession.Objectives.cs`
+Objetivos guiados para empezar (solo para el humano).
+
+| Elemento | Qué hace |
+| --- | --- |
+| `Objective`, `AllObjectives` | Los nueve, en orden: capital, elegir investigación, poner en marcha una obra, entrenar un regimiento, reclamar una provincia, descubrir un avance, segunda ciudad, 10 000 habitantes y un acuerdo (alianza, pacto, paso o comercio). |
+| `ObjectiveDone`, `ObjectivesDone`, `CurrentObjective` | Si está cumplido, cuántos lo están y el primero que falta (null cuando están todos). Se guardan en `SaveGame.ObjectivesDone`. |
+| `ObjectiveTitle`, `ObjectiveHint` | El texto de cada uno y cómo cumplirlo. |
+| `CheckObjectives()` | Cada hora: los que se cumplen ahora (`Met`) quedan cumplidos para siempre, pagan 50 de oro y avisan del siguiente. Se pueden cumplir en cualquier orden. |
+| `LoadObjectives(partida)` | En las partidas anteriores a 1.81.0, cuenta como cumplidos los que ya lo están, sin pagarlos. |
+
 ### `Simulation/GameSession.Sieges.cs`
 Asedios.
 
@@ -929,6 +940,12 @@ Lo que muestra cada pestaña de la pantalla de la nación, para que el cliente l
 | `Hear(evento)` | El sonido de lo que ocurre al jugador (`GameSession.Happened`): guerra (tambores), paz (fanfarria), batalla, asedio o revuelta (campana), regalo (monedas), y sus ciudades, obras y avances. `Show` añade la campanilla de confirmación a cada orden que sale bien. |
 | `ListenForAlerts()` | Cada hora de juego, si aparece una alerta grave nueva, suena. |
 
+
+### `GameController.Objectives.cs`
+| Elemento | Qué hace |
+| --- | --- |
+| `ObjectiveCard`, `ObjectiveCard()` | La tarjeta del objetivo actual bajo las alertas: «Objetivo n de 9», el objetivo, cómo cumplirlo, «Ir» y el botón para plegarla (`ObjectivesFolded`). Desaparece cuando se cumplen todos. |
+| `GoTo(objetivo)` | Adónde lleva «Ir»: los colonos, la pestaña Ciencia, la capital (en Edificios, Ejército o General), los exploradores, el Resumen o la Diplomacia. |
 ### `GameController.Alerts.cs`
 Las alertas bajo la barra superior.
 
@@ -1049,7 +1066,7 @@ La pantalla de juego. Clase parcial: el ejército en pantalla está en `GameScre
 | `Center` | Atajo a `GameController.Center` (para `ShowSampleArmy`). |
 | `DrawRivers()` | Dibuja los ríos con `RiverLayer` (con la vega verde solo en el modo terreno). Después, `RoadLayer` dibuja carreteras y ferrocarriles. |
 | `DrawTopBar()` | Dibuja la barra superior (`GameController.TopBar`): color y nombre de la nación, población y moral, fecha y velocidades, recursos (icono, cantidad y cambio del día) y los botones «?» (ayuda), Nación y Menú, que abren pantallas del cliente. |
-| `DrawAlerts()` | Dibuja las alertas (`GameController.Alerts`) en una columna bajo la barra superior, a la izquierda: un botón por alerta con una marca del color de su gravedad. Se ocultan con la pantalla de la nación abierta. |
+| `DrawAlerts()` | Dibuja las alertas (`GameController.Alerts`) en una columna bajo la barra superior, a la izquierda: un botón por alerta con una marca del color de su gravedad. Debajo, la tarjeta del objetivo actual (`DrawObjective`), plegada o desplegada. Se ocultan con la pantalla de la nación abierta. |
 | `DrawSidePanel()` | Dibuja el panel derecho (`GameController.SidePanel`) con `DocumentView`, con su botón de cerrar. |
 | `DrawCityNaming()` | Dibuja el diálogo de `GameController.CityNamingDialog` para nombrar una ciudad al fundarla con colonos o al construirla: propone un nombre, se puede escribir otro o pedir otro al azar, avisa si no vale y la funda o empieza la obra (Intro confirma, Esc cancela). Mientras está abierto el tiempo se para y las teclas van a la caja de texto. |
 | `Paragraph()` | Escribe un párrafo ajustado al ancho (lo usa la ventana de carreteras). |

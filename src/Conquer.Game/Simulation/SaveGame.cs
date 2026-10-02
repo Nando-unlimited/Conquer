@@ -85,6 +85,8 @@ public sealed record SaveGame
     public int NextDecisionId { get; init; }
     /// <summary>The ledger of each nation's figures; missing in saves from before 1.80.0.</summary>
     public List<HistorySample>? History { get; init; }
+    /// <summary>The objectives the human has met; missing in saves from before 1.81.0.</summary>
+    public List<Objective>? ObjectivesDone { get; init; }
     public required List<Notification> Notifications { get; init; }
     public required List<AiSave> Ais { get; init; }
     public required Dictionary<int, double> EmigrationCarry { get; init; }

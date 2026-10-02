@@ -2,6 +2,15 @@
 
 Todos los cambios del juego, del más reciente al más antiguo. Cada versión es un commit cuyo título es su número.
 
+## [1.81.0] - 2026-10-02
+
+### Añadido
+- **Objetivos para empezar**: una tarjeta bajo las alertas te guía por los primeros pasos y te dice cómo dar cada uno.
+  - Son nueve: fundar la capital, elegir qué investigar, poner en marcha una obra, entrenar un regimiento, reclamar una provincia, descubrir un avance, fundar una segunda ciudad, llegar a 10.000 habitantes y firmar un acuerdo con otra nación.
+  - Cada uno da **50 de oro**. Se pueden cumplir en cualquier orden, y la tarjeta muestra siempre el primero que falta.
+  - El botón **«Ir»** lleva adonde se cumple: los colonos, la ciencia, la capital, los exploradores o la diplomacia. Con «-» la tarjeta se pliega en una línea.
+  - En las partidas anteriores, los objetivos ya cumplidos cuentan como tales, sin pagarse.
+
 ## [1.80.0] - 2026-10-02
 
 ### Añadido

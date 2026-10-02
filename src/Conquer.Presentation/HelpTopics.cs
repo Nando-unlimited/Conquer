@@ -28,6 +28,7 @@ public static class HelpTopics
         [
             $"Empiezas con {GameRules.StartingCitizens:N0} colonos y nada de tierra. Busca una provincia fértil (mejor junto a un gran río) y pulsa «Fundar ciudad»: será tu capital.",
             "## Qué hacer después",
+            $"- Bajo las alertas, una tarjeta te propone el siguiente objetivo (fundar la capital, investigar, construir, entrenar exploradores, reclamar tierra, una segunda ciudad...) y cómo cumplirlo; «Ir» te lleva adonde se hace. Cada uno da {GameRules.ObjectiveGold:0} de oro. Puedes plegarla con «-».",
             "- En la pantalla de la nación (N), pestaña Ciencia, elige qué investigar en cada rama.",
             "- Debajo de la barra superior aparecen alertas cuando algo necesita atención (hambre, descontento, tropas sin suministro o pasando frío, obras terminadas, ciencia sin elegir...). Pasa el ratón por encima para ver qué pasa y haz clic para ir allí.",
             "- Entrena exploradores en la ciudad (baratos y rápidos) y reclama con ellos las provincias libres de alrededor: los colonos de tus ciudades irán a vivir allí solos. Solo reclaman las unidades con al menos un batallón de exploradores. Con «Explorar y reclamar», una unidad de exploradores lo hace por su cuenta: va a la mejor provincia libre junto a tus fronteras, la reclama y sigue con la siguiente.",

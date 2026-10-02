@@ -314,6 +314,32 @@ public sealed partial class GameScreen : IScreen, IAudibleScreen
             Batch.Rect(r.X + 4, r.Y + 5, 3, r.H - 10, Theme.Of(alert.Tone));
             y += 30;
         }
+        DrawObjective(y + 6);
+    }
+
+    /// <summary>The current objective under the alerts: folded, a single line; unfolded, the objective and how to meet it.</summary>
+    private void DrawObjective(float y)
+    {
+        if (_game.ObjectiveCard() is not { } card) return;
+        const float w = 300;
+        if (card.Folded)
+        {
+            var r = new Rect(8, y, Ui.Font.Measure(card.Header, FontSize.Small) + 60, 26);
+            Ui.Panel(r);
+            Ui.Text(r.X + 10, r.Y + 5, card.Header, Theme.Accent, FontSize.Small);
+            DocumentView.Press(Ui, card.Toggle, new Rect(r.Right - 30, r.Y + 2, 26, 22));
+            return;
+        }
+        float textY = y + 36, hintY = textY + 24;
+        float hintH = Ui.Font.Wrap(card.Hint, w - 24, FontSize.Small).Count() * 18;
+        var panel = new Rect(8, y, w, hintH + 72 + (card.Go != null ? 34 : 0));
+        Ui.Panel(panel);
+        Ui.Text(panel.X + 12, y + 9, card.Header, Theme.Accent, FontSize.Small, bold: true);
+        DocumentView.Press(Ui, card.Toggle, new Rect(panel.Right - 32, y + 6, 26, 22));
+        Ui.Text(panel.X + 12, textY - 4, card.Title, Theme.Text, bold: true);
+        float py = hintY;
+        Paragraph(panel.X + 12, ref py, w - 24, card.Hint, Theme.TextDim);
+        if (card.Go != null) DocumentView.Press(Ui, card.Go, new Rect(panel.X + 12, panel.Bottom - 38, 80, 28));
     }
 
     private void DrawSidePanel()

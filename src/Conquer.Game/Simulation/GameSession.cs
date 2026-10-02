@@ -227,6 +227,7 @@ public sealed partial class GameSession
         ResolveNavalBattles();
         ArriveMigrations();
         AutoClaimUnits();
+        CheckObjectives();
         if (Date.Hour == 0)
         {
             foreach (var player in Players) DailyEconomy(player);
