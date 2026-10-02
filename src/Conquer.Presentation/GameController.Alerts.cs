@@ -12,7 +12,7 @@ namespace Conquer.Presentation;
 /// </summary>
 public sealed record Alert(string Text, Tone Tone, string Tooltip, Action OnClick);
 
-/// <summary>The alerts under the top bar: hunger, unrest, troops in trouble, battles at home and idle research.</summary>
+/// <summary>The alerts under the top bar: hunger, unrest, troops in trouble, battles at home, finished works and idle research.</summary>
 public sealed partial class GameController
 {
     /// <summary>How many times each alert has been clicked, so that each click shows the next of its provinces or units.</summary>
@@ -65,9 +65,16 @@ public sealed partial class GameController
         var worn = regiments.Where(u => Session.IsInSupply(u) && Session.DailyAttrition(u) > 0).Select(u => u.Id).ToList();
         if (worn.Count > 0)
             alerts.Add(UnitAlert("Desgaste", Tone.Accent, worn,
-                "Estas unidades pierden hombres por el frío o el desierto. Refúgialas en una de tus ciudades."));
+                "Estas unidades pierden hombres por el frío, el desierto o la altura. Refúgialas en una de tus ciudades o bájalas de las cumbres."));
 
-        bool idleScience = Human.CapitalCityId.HasValue && Techs.Branches.Any(b =>
+        var finished = Session.FinishedWorks.Where(w => Map.Provinces[w.ProvinceId].OwnerId == Human.Id).Reverse().ToList();
+        if (finished.Count > 0)
+            alerts.Add(new Alert($"Obras terminadas ({finished.Count})", Tone.Good,
+                $"Obras acabadas en los últimos {GameSession.RecentWorkDays} días: puedes empezar otra allí. Haz clic para ir a cada una.\n"
+                + Listed(finished.Select(w => $"{w.Name} en {PlaceOf(Map.Provinces[w.ProvinceId])}")),
+                () => ViewProvince(finished[NextClick("Obras terminadas", finished.Count)].ProvinceId)));
+
+        bool idleScience =Human.CapitalCityId.HasValue && Techs.Branches.Any(b =>
             Human.Researching[(int)b] is null && Techs.InBranch(b).Any(t => GameSession.CanResearch(Human, t).Ok));
         if (idleScience)
             alerts.Add(new Alert("Ciencia sin elegir", Tone.Accent, "Hay ramas de la ciencia sin nada que investigar: su parte de la ciencia se pierde para ellas.",

@@ -64,8 +64,16 @@ public sealed partial class GameSession
         bool sheltered = p.CityId.HasValue && p.ControllerId == unit.OwnerId;
         double cold = sheltered ? 0 : GameRules.WinterAttrition * WinterSeverity(p);
         double heat = p.Biome == Biome.Desert ? GameRules.DesertAttrition : 0;
-        return cold + heat;
+        return cold + heat + HeightAttrition(p);
     }
+
+    /// <summary>What the thin air, the ice and the cold of the heights take each day, in any season.</summary>
+    public static double HeightAttrition(Province p) => p.Biome switch
+    {
+        Biome.Peaks or Biome.PolarIce => GameRules.PeakAttrition,
+        Biome.HighMountains => GameRules.HighMountainAttrition,
+        _ => 0,
+    };
 
     /// <summary>What the season and the land do to armies in a province, for the player: null when nothing.</summary>
     public string? SeasonEffect(Province p)
@@ -79,6 +87,8 @@ public sealed partial class GameSession
             lines.Add($"Barro: las tropas marchan un {GameRules.WinterSlowdown * mud:P0} más despacio.");
         if (p.Biome == Biome.Desert)
             lines.Add($"Desierto: las tropas pierden un {GameRules.DesertAttrition:P1} de sus hombres al día por el calor y la sed.");
+        if (HeightAttrition(p) > 0)
+            lines.Add($"{p.Info.Name}: las tropas pierden un {HeightAttrition(p):P1} de sus hombres al día por el frío y el aire enrarecido, en cualquier estación.");
         return lines.Count == 0 ? null : string.Join("\n", lines);
     }
 }

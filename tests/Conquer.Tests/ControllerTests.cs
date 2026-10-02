@@ -273,6 +273,22 @@ public class ControllerTests(WorldFixture world)
     private static Alert? AlertStarting(GameController game, string text) => game.Alerts().FirstOrDefault(a => a.Text.StartsWith(text));
 
     [Fact]
+    public void AFinishedBuildingRaisesAnAlertForAFewDays()
+    {
+        var (game, capital) = WithCapital();
+        game.Human.Stockpile[Game.Economy.ResourceType.Wood] = game.Human.Stockpile[Game.Economy.ResourceType.Gold] = 1000;
+        capital.Population = 1000;
+        Assert.True(game.Session.Build(0, capital.Id, Game.Buildings.BuildingType.Farm).Ok);
+        for (int h = 0; h < 24 * 40 && AlertStarting(game, "Obras terminadas") is null; h++) game.Session.Step();
+        var alert = AlertStarting(game, "Obras terminadas")!;
+        Assert.Equal("Obras terminadas (1)", alert.Text);
+        alert.OnClick();
+        Assert.Equal(capital.Id, game.SelectedProvince);
+        for (int h = 0; h < 24 * (GameSession.RecentWorkDays + 1); h++) game.Session.Step();
+        Assert.Null(AlertStarting(game, "Obras terminadas"));
+    }
+
+    [Fact]
     public void ANewGameHasNoAlerts() => Assert.Empty(NewGame().Alerts());
 
     [Fact]

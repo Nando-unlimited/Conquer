@@ -9,6 +9,9 @@ using Conquer.Game.World;
 
 namespace Conquer.Game.Simulation;
 
+/// <summary>A building finished in a province, and when.</summary>
+public sealed record FinishedWork(int ProvinceId, string Name, long Hours);
+
 public readonly record struct CommandResult(bool Ok, string Message)
 {
     public static CommandResult Success(string message = "") => new(true, message);
@@ -594,6 +597,13 @@ public sealed partial class GameSession
     /// <summary>What to call a place in messages: its city if it has one, otherwise the province.</summary>
     public string PlaceName(Province p) => CityIn(p)?.Name ?? p.DisplayName;
 
+    /// <summary>How long a finished building stays among <see cref="FinishedWorks"/>.</summary>
+    public const int RecentWorkDays = 3;
+    private readonly List<FinishedWork> _finishedWorks = [];
+
+    /// <summary>Buildings finished in the last <see cref="RecentWorkDays"/> days, by every nation (not saved).</summary>
+    public IReadOnlyList<FinishedWork> FinishedWorks => _finishedWorks;
+
     /// <summary>
     /// Every construction advances a day; finished buildings start working at once and finished cities are founded.
     /// Buildings the player now knows how to turn into something better (workshops into factories) become it.
@@ -601,6 +611,7 @@ public sealed partial class GameSession
     private void DailyConstruction(Player player)
     {
         UpgradeBuildings(player);
+        _finishedWorks.RemoveAll(w => Date.Hours - w.Hours > RecentWorkDays * 24);
         foreach (int id in player.Provinces)
         {
             var p = Map.Provinces[id];
@@ -614,6 +625,7 @@ public sealed partial class GameSession
                 p.Constructing = null;
                 if (player.IsHuman) Notify(player.Id, $"Terminada la obra: {built.Info().Name} en {PlaceName(p)}.");
                 Raise(GameEventKind.BuildingFinished, player.Id);
+                _finishedWorks.Add(new FinishedWork(p.Id, built.Info().Name, Date.Hours));
             }
             else
             {

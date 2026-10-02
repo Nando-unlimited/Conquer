@@ -2,6 +2,12 @@
 
 Todos los cambios del juego, del más reciente al más antiguo. Cada versión es un commit cuyo título es su número.
 
+## [1.74.0] - 2026-10-02
+
+### Añadido
+- **Desgaste en las alturas**: en cualquier estación, los regimientos pierden un 0,4 % de sus hombres al día en las cumbres y el hielo polar, y un 0,1 % en la alta montaña. El panel de la provincia lo explica, y la alerta «Desgaste» incluye a esas unidades.
+- **Alerta «Obras terminadas»**, en verde: las obras que has terminado en los últimos 3 días. Cada clic lleva a la siguiente, para empezar allí otra.
+
 ## [1.73.0] - 2026-10-02
 
 ### Añadido

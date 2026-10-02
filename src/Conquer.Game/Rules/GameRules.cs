@@ -259,6 +259,9 @@ public static class GameRules
     /// <summary>Share of its men a regiment loses each day in the harshest winter, out of its nation's cities.</summary>
     public const double WinterAttrition = 0.005;
     public const double DesertAttrition = 0.002;
+    /// <summary>Share of its men a regiment loses each day on the peaks and the polar ice, and in the high mountains, all year.</summary>
+    public const double PeakAttrition = 0.004;
+    public const double HighMountainAttrition = 0.001;
 
     // Culture and revolt. People under a foreign ruler lose ForeignCultureMood, less as they assimilate over about
     // AssimilationYears (faster when happy). A province in unrest with no garrison revolts after RevoltDays or fewer.

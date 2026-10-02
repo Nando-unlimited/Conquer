@@ -61,4 +61,16 @@ public class SeasonTests(WorldFixture world)
         var regiment = s.AddRegiment(0, desert.Id, BattalionType.Warriors);
         Assert.Equal(GameRules.DesertAttrition, s.DailyAttrition(regiment), 6);
     }
+
+    [Fact]
+    public void ThePeaksAndTheHighMountainsWearDownArmiesAllYear()
+    {
+        var s = GameSession.Create(_map, 1, seed: 7, computerRivals: false);
+        var peak = _map.Provinces.First(p => p.Biome is Biome.Peaks or Biome.PolarIce); // the test map may have no peaks
+        var regiment = s.AddRegiment(0, peak.Id, BattalionType.Warriors);
+        Assert.Equal(GameRules.PeakAttrition, GameSession.HeightAttrition(peak), 6);
+        Assert.True(s.DailyAttrition(regiment) >= GameRules.PeakAttrition);
+        Assert.Contains("aire enrarecido", s.SeasonEffect(peak));
+        Assert.Equal(GameRules.HighMountainAttrition, GameSession.HeightAttrition(_map.Provinces.First(p => p.Biome == Biome.HighMountains)), 6);
+    }
 }
