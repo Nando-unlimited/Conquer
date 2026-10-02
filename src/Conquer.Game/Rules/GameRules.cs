@@ -173,6 +173,28 @@ public static class GameRules
     public const double MaxBattleWarScore = 25;
     /// <summary>Days after a peace before the same two nations may go to war again.</summary>
     public const int TruceDays = 730;
+    // Opinion between nations (-100 to 100): what each sees now, plus memories that fade by OpinionFadePerDay.
+    public const double AllianceOpinion = 30;
+    public const double AtWarOpinion = -50;
+    public const double BorderOpinion = -10;
+    public const double CommonEnemyOpinion = 25;
+    /// <summary>Both border a nation stronger than the one judging.</summary>
+    public const double CommonRivalOpinion = 20;
+    /// <summary>Per province of its culture the other nation rules, up to <see cref="MaxRuledPeopleOpinion"/>.</summary>
+    public const double RuledProvinceOpinion = 5;
+    public const double MaxRuledPeopleOpinion = 30;
+    public const double DeclaredWarOpinion = -60;
+    /// <summary>Per province a treaty takes from the nation, remembered against the taker.</summary>
+    public const double ProvinceTakenOpinion = -5;
+    public const double BrokenAllianceOpinion = -60;
+    public const double GiftOpinion = 15;
+    public const double OpinionFadePerDay = 0.1;
+    /// <summary>A gift costs this many days of the giver's gold income, and never less than <see cref="MinGiftGold"/>.</summary>
+    public const double GiftIncomeDays = 30;
+    public const double MinGiftGold = 50;
+    /// <summary>A computer rival allies with nations it thinks this well of, at most <see cref="MaxAllies"/> at a time.</summary>
+    public const double AllianceAcceptOpinion = 40;
+    public const int MaxAllies = 3;
     /// <summary>Mood a province loses when a treaty hands it to another nation.</summary>
     public const double CededMoodPenalty = 20;
 

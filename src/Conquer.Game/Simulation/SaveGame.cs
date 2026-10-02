@@ -67,6 +67,9 @@ public sealed record SaveGame
     public List<TruceSave>? Truces { get; init; }
     /// <summary>Sieges under way; missing in saves from before 1.68.0.</summary>
     public List<SiegeSave>? Sieges { get; init; }
+    /// <summary>Alliances and what nations remember of each other; missing in saves from before 1.69.0.</summary>
+    public List<AllianceSave>? Alliances { get; init; }
+    public List<MemorySave>? Memories { get; init; }
     public required List<Notification> Notifications { get; init; }
     public required List<AiSave> Ais { get; init; }
     public required Dictionary<int, double> EmigrationCarry { get; init; }
@@ -163,6 +166,10 @@ public sealed record WarSave(int A, int B, long StartHours, int VictoriesA = 0, 
 public sealed record TruceSave(int A, int B, long UntilHours);
 
 public sealed record SiegeSave(int ProvinceId, int AttackerId, double Progress);
+
+public sealed record AllianceSave(int A, int B);
+
+public sealed record MemorySave(int From, int To, string Reason, double Value);
 
 public sealed record RoadLinkSave(int A, int B, RoadKind Kind);
 

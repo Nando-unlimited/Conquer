@@ -50,6 +50,7 @@ public sealed partial class GameSession
         if (AtWar(playerId, targetId)) return CommandResult.Fail($"Ya estás en guerra con {Players[targetId].Name}.");
         if (TruceDaysLeft(playerId, targetId) is var days and > 0)
             return CommandResult.Fail($"Hay una tregua con {Players[targetId].Name}: faltan {Math.Ceiling(days):0} días.");
+        if (AreAllied(playerId, targetId)) return CommandResult.Fail($"Sois aliados de {Players[targetId].Name}: rompe antes la alianza.");
         return CommandResult.Success();
     }
 
@@ -65,8 +66,10 @@ public sealed partial class GameSession
         var check = CanDeclareWar(playerId, targetId);
         if (!check.Ok) return check;
         _wars[WarKey(playerId, targetId)] = new War(Date.Hours);
+        Remember(targetId, playerId, "Nos declaró la guerra", GameRules.DeclaredWarOpinion);
         if (playerId == HumanPlayerId) Notify(HumanPlayerId, $"Declaramos la guerra a {Players[targetId].Name}.");
         else if (targetId == HumanPlayerId) Notify(HumanPlayerId, $"¡{Players[playerId].Name} nos declara la guerra!");
+        CallAllies(playerId, targetId);
         return CommandResult.Success();
     }
 
@@ -206,6 +209,7 @@ public sealed partial class GameSession
             Notify(HumanPlayerId, giver == HumanPlayerId ? "Hemos perdido todas nuestras tierras." : $"{Players[giver].Name} ha sido anexionada por {Players[receiver].Name}.");
         else if (ceded.Count > 0 && a != HumanPlayerId && b != HumanPlayerId)
             Notify(HumanPlayerId, $"{Players[giver].Name} cede {Provinces(ceded.Count)} a {Players[receiver].Name}.");
+        if (ceded.Count > 0) Remember(giver, receiver, "Nos quitó provincias", GameRules.ProvinceTakenOpinion * ceded.Count);
         return receiver == a ? (ceded.Count, 0) : (0, ceded.Count);
     }
 

@@ -78,7 +78,7 @@ public sealed partial class GameSession
         if (p.IsWater) return unit.Flies;
         int holder = p.IsOwned ? p.ControllerId : -1;
         if (holder < 0 || holder == unit.OwnerId) return true;
-        return unit.IsMilitary && AtWar(unit.OwnerId, holder);
+        return unit.IsMilitary && (AtWar(unit.OwnerId, holder) || AreAllied(unit.OwnerId, holder));
     }
 
     /// <summary>Navigation opens coastal seas and lakes; cartography, the open ocean too.</summary>
@@ -86,7 +86,6 @@ public sealed partial class GameSession
         ? player.Techs.Contains(Tech.Navigation)
         : player.Techs.Contains(Tech.Cartography);
 
-    /// <summary>Hours a unit needs to walk from one province to its neighbour, at its own pace.</summary>
     /// <summary>Hours a unit needs for one step: the way there at its speed, slowed on land by snow and mud.</summary>
     private double UnitStepHours(Unit unit, int from, int to) =>
         Pathfinder.StepHours(from, to) / unit.Speed * (unit.IsFleet ? 1 : SeasonSlowdown(Map.Provinces[to]));

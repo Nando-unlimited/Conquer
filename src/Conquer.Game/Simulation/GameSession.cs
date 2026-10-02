@@ -226,6 +226,7 @@ public sealed partial class GameSession
             DailyRoadWork();
             foreach (var player in Players) DailyMilitary(player);
             DailySieges();
+            DailyMemories();
         }
         if (Date.Hours % 6 == 0)
             foreach (var ai in _ais) ai.Think(dailyDecisions: Date.Hour == 0);

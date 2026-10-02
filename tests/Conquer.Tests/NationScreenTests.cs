@@ -72,7 +72,7 @@ public class NationScreenTests(WorldFixture world)
     {
         var game = Game(NationTab.Diplomacy, players: 2);
         var row = Assert.Single(((TablePage)game.Nation.Page()).Table.Rows);
-        FindButton(row, "Declarar la guerra").Press();
+        FindButton(row, "Guerra").Press();
         row = Assert.Single(((TablePage)game.Nation.Page()).Table.Rows);
         Assert.NotNull(FindButton(row, "Paz blanca"));
         // Nothing occupied yet: nothing to demand or hand over.
@@ -87,7 +87,7 @@ public class NationScreenTests(WorldFixture world)
         game.Session.DeclareWar(0, 1);
         game.Session.MakePeace(0, 1);
         var row = Assert.Single(((TablePage)game.Nation.Page()).Table.Rows);
-        Assert.False(FindButton(row, "Declarar la guerra").Enabled);
+        Assert.False(FindButton(row, "Guerra").Enabled);
         Assert.StartsWith("Tregua", Assert.IsType<TextCell>(row[1]).Text);
     }
 

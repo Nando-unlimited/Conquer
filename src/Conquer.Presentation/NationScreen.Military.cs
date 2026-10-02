@@ -156,19 +156,18 @@ public sealed partial class NationScreen
 
     // ------------------------------------------------------------------ diplomacy
     /// <summary>
-    /// Every other nation: at peace or at war, its army against ours, what each holds of the other, the war score, and
-    /// war or the three kinds of peace.
+    /// Every other nation: at peace, allied, in a truce or at war; what it thinks of us; its army against ours; what each
+    /// holds of the other and the war score; and war, alliance and gifts, or the three kinds of peace.
     /// </summary>
     private TablePage Diplomacy()
     {
         double ours = Session.MilitaryPower(Player.Id);
-        Column[] columns = [new("Nación", 170), new("Relación", 140), new("Poder militar", 150), new("Provincias", 90), new("Ocupación", 140),
-            new("Puntuación", 90), new("", 250)];
+        Column[] columns = [new("Nación", 160), new("Relación", 130), new("Opinión", 80), new("Poder militar", 140), new("Provincias", 70),
+            new("Ocupación", 130), new("Puntuación", 70), new("", 250)];
         var rows = new List<IReadOnlyList<Cell>>();
         foreach (var other in Session.Players.Where(p => p.Id != Player.Id))
         {
             bool war = Session.AtWar(Player.Id, other.Id);
-            double truce = Session.TruceDaysLeft(Player.Id, other.Id);
             double theirs = Session.MilitaryPower(other.Id);
             string ratio = ours <= 0 && theirs <= 0 ? "igual" : theirs <= 0 ? "sin ejército" : ours / theirs >= 1.2 ? "más débil que tú" : ours / theirs <= 0.8 ? "más fuerte que tú" : "parecido al tuyo";
             int taken = Session.OccupiedBy(Player.Id, other.Id).Count;
@@ -176,20 +175,68 @@ public sealed partial class NationScreen
             rows.Add(
             [
                 new TextCell(other.Name, Bold: true, Swatch: other.Color),
-                new TextCell(war ? $"En guerra ({Session.WarDays(Player.Id, other.Id):0} d)" : truce > 0 ? $"Tregua ({Math.Ceiling(truce):0} d)" : "En paz", war ? Tone.Bad : Tone.Good,
-                    Tooltip: truce > 0 ? $"Tras la última paz, ninguno de los dos puede declarar la guerra al otro durante {GameRules.TruceDays} días." : null),
+                RelationCell(other),
+                OpinionCell(other),
                 new TextCell($"{theirs:0} ({ratio})", theirs > ours * 1.2 ? Tone.Bad : Tone.Normal, TextSize.Small),
                 new TextCell($"{other.Provinces.Count:N0}", Tone.Dim),
                 new TextCell(war || taken + lost > 0 ? $"tomadas {taken} · perdidas {lost}" : "-", lost > taken ? Tone.Bad : Tone.Dim, TextSize.Small),
                 war ? WarScoreCell(other) : new TextCell("-", Tone.Dim),
-                new ButtonsCell(war ? PeaceButtons(other, taken, lost) :
-                [
-                    new Button("Declarar la guerra", () => Show(Session.DeclareWar(Player.Id, other.Id)), truce <= 0,
-                        Tooltip: "Tus ejércitos podrán entrar en sus tierras, atacar sus tropas y ocupar sus provincias.", Size: TextSize.Small),
-                ]),
+                new ButtonsCell(war ? PeaceButtons(other, taken, lost) : PeaceTimeButtons(other)),
             ]);
         }
         return new TablePage(new Table(columns, rows));
+    }
+
+    /// <summary>At war (and for how long), allied, in a truce or at peace; its allies in the tooltip.</summary>
+    private TextCell RelationCell(Player other)
+    {
+        double truce = Session.TruceDaysLeft(Player.Id, other.Id);
+        var allies = Session.AlliesOf(other.Id).Select(a => a.Name).ToList();
+        string tip = (allies.Count > 0 ? $"Aliados de {other.Name}: {string.Join(", ", allies)}. Si la atacas, entrarán en la guerra." : $"{other.Name} no tiene aliados.")
+                     + (truce > 0 ? $"\nTras la última paz, ninguno de los dos puede declarar la guerra al otro durante {GameRules.TruceDays} días." : "");
+        return Session.AtWar(Player.Id, other.Id) ? new TextCell($"En guerra ({Session.WarDays(Player.Id, other.Id):0} d)", Tone.Bad, Tooltip: tip)
+            : Session.AreAllied(Player.Id, other.Id) ? new TextCell("Aliados", Tone.Good, Bold: true, Tooltip: tip)
+            : truce > 0 ? new TextCell($"Tregua ({Math.Ceiling(truce):0} d)", Tone.Good, Tooltip: tip)
+            : new TextCell("En paz", Tone.Good, Tooltip: tip);
+    }
+
+    /// <summary>What the other nation thinks of us, with its reasons in the tooltip.</summary>
+    private TextCell OpinionCell(Player other)
+    {
+        double opinion = Session.Opinion(other.Id, Player.Id);
+        var factors = Session.OpinionFactors(other.Id, Player.Id).Select(f => $"{f.Points:+0;-0;0}  {f.Reason}").ToList();
+        string tip = $"Lo que {other.Name} piensa de nosotros (de -100 a 100). Se alía con quien piensa al menos {GameRules.AllianceAcceptOpinion:0}.\n"
+                     + (factors.Count > 0 ? string.Join("\n", factors) : "Ni bien ni mal.")
+                     + "\nLos recuerdos (guerras, provincias quitadas, regalos) se van olvidando con el tiempo.";
+        return new TextCell($"{opinion:+0;-0;0}", opinion >= GameRules.AllianceAcceptOpinion ? Tone.Good : opinion < 0 ? Tone.Bad : Tone.Normal, Bold: true, Tooltip: tip);
+    }
+
+    /// <summary>War, alliance (or breaking it) and a gift.</summary>
+    private List<Button> PeaceTimeButtons(Player other)
+    {
+        var war = Session.CanDeclareWar(Player.Id, other.Id);
+        var allies = Session.AlliesOf(other.Id).Where(a => a.Id != Player.Id && !Session.AreAllied(a.Id, Player.Id)).Select(a => a.Name).ToList();
+        string warTip = war.Ok
+            ? "Tus ejércitos podrán entrar en sus tierras, atacar sus tropas y ocupar sus provincias."
+              + (allies.Count > 0 ? $"\nSus aliados entrarán en la guerra: {string.Join(", ", allies)}." : "")
+            : war.Message;
+        bool allied = Session.AreAllied(Player.Id, other.Id);
+        var ally = Session.CanProposeAlliance(Player.Id, other.Id);
+        double gift = GameSession.GiftCost(Player);
+        return
+        [
+            new Button("Guerra", () => Show(Session.DeclareWar(Player.Id, other.Id)), war.Ok, Tooltip: warTip, Size: TextSize.Small),
+            allied
+                ? new Button("Romper", () => Show(Session.BreakAlliance(Player.Id, other.Id)),
+                    Tooltip: $"Rompes la alianza. {other.Name} no lo olvidará pronto ({GameRules.BrokenAllianceOpinion:0} de opinión).", Size: TextSize.Small)
+                : new Button("Aliarse", () => Show(Session.ProposeAlliance(Player.Id, other.Id)), ally.Ok,
+                    Tooltip: ally.Ok
+                        ? $"Si uno de los dos es atacado, el otro entra en la guerra, y vuestros ejércitos pueden cruzar las tierras del otro. "
+                          + $"Acepta si su opinión de nosotros llega a {GameRules.AllianceAcceptOpinion:0}."
+                        : ally.Message, Size: TextSize.Small),
+            new Button($"Regalo ({gift:0})", () => Show(Session.SendGift(Player.Id, other.Id)), Player.Stockpile[Game.Economy.ResourceType.Gold] >= gift,
+                Tooltip: $"Le envías {gift:0} de oro (un mes de tus ingresos): su opinión de nosotros sube {GameRules.GiftOpinion:0}.", Size: TextSize.Small),
+        ];
     }
 
     /// <summary>How the war goes for us, from -100 to 100, with what makes it up in the tooltip.</summary>

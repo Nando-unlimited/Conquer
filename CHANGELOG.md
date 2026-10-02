@@ -2,6 +2,24 @@
 
 Todos los cambios del juego, del más reciente al más antiguo. Cada versión es un commit cuyo título es su número.
 
+## [1.69.0] - 2026-10-02
+
+### Añadido
+- **Opinión entre naciones** (de −100 a 100), en una columna nueva de la pestaña Diplomacia. Dice lo que cada nación piensa de ti, y el tooltip explica por qué:
+  - **Lo que ve ahora**: alianza (+30), guerra (−50), frontera común (−10), un enemigo común en guerra (+25), un **rival común** (+20: los dos lindan con una nación más fuerte) y gente de su cultura bajo tu gobierno (−5 por provincia, hasta −30).
+  - **Lo que recuerda**: que le declaraste la guerra (−60), que le quitaste provincias en un tratado (−5 cada una), que rompiste una alianza (−60) y tus regalos (+15 cada uno). Los recuerdos se olvidan poco a poco (0,1 al día).
+- **Regalos**: envía oro a otra nación (un mes de tus ingresos de oro, al menos 50) y su opinión de ti sube 15.
+- **Alianzas** (hasta 3 por nación):
+  - **Si uno de los aliados es atacado, los demás entran en la guerra.** Te avisa quién se une y contra quién.
+  - **Los ejércitos aliados pueden cruzar las tierras del otro.**
+  - Los aliados no pueden declararse la guerra entre sí; hay que romper antes la alianza, y el otro lo recordará.
+  - Los rivales aceptan si su opinión de ti llega a 40.
+- **Los rivales también hacen diplomacia**: buscan alianza con quien comparte su rival o su enemigo, hacen regalos a quien aún no se fía de ellos, y antes de atacar cuentan el ejército de los aliados de la víctima. Una nación a la que odian les parece más débil de lo que es.
+- La relación muestra «Aliados», y su tooltip dice qué aliados tiene cada nación. El botón de guerra avisa de qué aliados entrarán en ella.
+
+### Cambiado
+- En la pestaña Diplomacia, los botones en paz son ahora **Guerra**, **Aliarse** (o **Romper**) y **Regalo**.
+
 ## [1.68.0] - 2026-10-02
 
 ### Añadido

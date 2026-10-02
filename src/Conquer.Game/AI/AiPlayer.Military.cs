@@ -319,7 +319,7 @@ internal sealed partial class AiPlayer
         if (CanInvade()) candidates = candidates.Concat(OverseasNeighbours().Select(n => (Id: n, Appetite: WarAppetite(n) - OverseasAppetitePenalty)));
         var victim = candidates
             .Where(t => t.Appetite > 0 && _session.CanDeclareWar(_player.Id, t.Id).Ok)
-            .Select(t => (t.Id, Odds: _session.MilitaryPower(t.Id) / power / t.Appetite))
+            .Select(t => (t.Id, Odds: DefendingPower(t.Id) / power / t.Appetite))
             .Where(t => t.Odds < 1)
             .OrderBy(t => t.Odds).Select(t => (int?)t.Id).FirstOrDefault();
         if (victim is int target) _session.DeclareWar(_player.Id, target);
