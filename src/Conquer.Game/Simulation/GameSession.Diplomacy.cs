@@ -13,6 +13,10 @@ public enum PeaceTerms
     TakeOccupied,
     /// <summary>The proposer hands over its provinces the enemy occupies.</summary>
     CedeOccupied,
+    /// <summary>The enemy pays the proposer part of its gold income for some years (<see cref="GameRules.ReparationsDays"/>).</summary>
+    Reparations,
+    /// <summary>The enemy becomes the proposer's vassal; occupied provinces go back to their owners.</summary>
+    Vassalize,
 }
 
 /// <summary>A war between two nations: when it began and the battles each side has won.</summary>
@@ -50,7 +54,10 @@ public sealed partial class GameSession
         if (AtWar(playerId, targetId)) return CommandResult.Fail($"Ya estás en guerra con {Players[targetId].Name}.");
         if (TruceDaysLeft(playerId, targetId) is var days and > 0)
             return CommandResult.Fail($"Hay una tregua con {Players[targetId].Name}: faltan {Math.Ceiling(days):0} días.");
+        if (Players[playerId].Eliminated || Players[targetId].Eliminated) return CommandResult.Fail($"{Players[targetId].Name} ya no existe.");
         if (AreAllied(playerId, targetId)) return CommandResult.Fail($"Sois aliados de {Players[targetId].Name}: rompe antes la alianza.");
+        if (OverlordOf(playerId) is int overlord) return CommandResult.Fail($"Eres vasallo de {Players[overlord].Name}: tu señor decide las guerras.");
+        if (IsVassalOf(targetId, playerId)) return CommandResult.Fail($"{Players[targetId].Name} es vasallo tuyo.");
         return CommandResult.Success();
     }
 
@@ -71,6 +78,7 @@ public sealed partial class GameSession
         if (playerId == HumanPlayerId) Notify(HumanPlayerId, $"Declaramos la guerra a {Players[targetId].Name}.");
         else if (targetId == HumanPlayerId) Notify(HumanPlayerId, $"¡{Players[playerId].Name} nos declara la guerra!");
         CallAllies(playerId, targetId);
+        CallVassals(playerId, targetId);
         return CommandResult.Success();
     }
 
@@ -127,8 +135,13 @@ public sealed partial class GameSession
         [.. Players[ownerId].Provinces.Select(id => Map.Provinces[id]).Where(p => p.ControllerId == occupierId)];
 
     /// <summary>War score the terms cost the proposer: keeping occupied land costs its share of the enemy's worth.</summary>
-    public double PeaceCost(int playerId, int enemyId, PeaceTerms terms) =>
-        terms == PeaceTerms.TakeOccupied ? OccupiedShare(enemyId, playerId) : 0;
+    public double PeaceCost(int playerId, int enemyId, PeaceTerms terms) => terms switch
+    {
+        PeaceTerms.TakeOccupied => OccupiedShare(enemyId, playerId),
+        PeaceTerms.Reparations => GameRules.ReparationsWarScore,
+        PeaceTerms.Vassalize => GameRules.VassalWarScore,
+        _ => 0,
+    };
 
     /// <summary>Whether a nation may propose these terms at all (not whether the enemy will accept them).</summary>
     public CommandResult CanProposePeace(int playerId, int targetId, PeaceTerms terms)
@@ -143,6 +156,14 @@ public sealed partial class GameSession
                 break;
             case PeaceTerms.CedeOccupied:
                 if (OccupiedBy(targetId, playerId).Count == 0) return CommandResult.Fail($"{Players[targetId].Name} no ocupa ninguna provincia tuya.");
+                break;
+            case PeaceTerms.Reparations or PeaceTerms.Vassalize:
+                if (terms == PeaceTerms.Vassalize && OverlordOf(playerId) is int overlord)
+                    return CommandResult.Fail($"Eres vasallo de {Players[overlord].Name}: no puedes tener vasallos.");
+                if (terms == PeaceTerms.Reparations && ReparationsDaysLeft(targetId, playerId) > 0)
+                    return CommandResult.Fail($"{Players[targetId].Name} ya nos paga reparaciones.");
+                double price = PeaceCost(playerId, targetId, terms), have = WarScore(playerId, targetId);
+                if (have < price) return CommandResult.Fail($"Cuesta {price:0} de puntuación de guerra y tienes {have:0}.");
                 break;
         }
         return CommandResult.Success();
@@ -159,7 +180,12 @@ public sealed partial class GameSession
         var ai = _ais.FirstOrDefault(a => a.PlayerId == targetId);
         if (ai == null || !ai.WouldAcceptPeace(playerId, terms)) return CommandResult.Fail($"{Players[targetId].Name} rechaza la paz.");
         var (gained, lost) = MakePeace(playerId, targetId, terms);
-        string detail = gained > 0 ? $" Ganamos {Provinces(gained)}." : lost > 0 ? $" Cedemos {Provinces(lost)}." : "";
+        string detail = terms switch
+        {
+            PeaceTerms.Reparations => $" Nos pagará reparaciones durante {GameRules.ReparationsDays / 365} años.",
+            PeaceTerms.Vassalize => $" {Players[targetId].Name} es ahora vasallo nuestro.",
+            _ => gained > 0 ? $" Ganamos {Provinces(gained)}." : lost > 0 ? $" Cedemos {Provinces(lost)}." : "",
+        };
         return CommandResult.Success($"Paz firmada con {Players[targetId].Name}.{detail}");
     }
 
@@ -201,17 +227,35 @@ public sealed partial class GameSession
             if ((unit.OwnerId == a || unit.OwnerId == b) && here.IsOwned && here.ControllerId != unit.OwnerId) SendHome(unit);
         }
 
+        if (terms == PeaceTerms.Reparations)
+        {
+            _reparations.Add(new Reparations(b, a, Date.Hours + GameRules.ReparationsDays * 24L));
+            Remember(b, a, "Nos impuso reparaciones", GameRules.ReparationsOpinion);
+        }
+        if (terms == PeaceTerms.Vassalize) MakeVassal(b, a);
+        // A vassal's wars end with its overlord's.
+        foreach (var (vassal, enemy) in VassalsOf(a).Select(v => (v.Id, b)).Concat(VassalsOf(b).Select(v => (v.Id, a))).ToList())
+            if (AtWar(vassal, enemy)) MakePeace(vassal, enemy);
+
         foreach (int id in new[] { a, b }.Where(id => id == HumanPlayerId))
         {
             int other = a == id ? b : a;
-            string detail = ceded.Count == 0 ? "" : receiver == id ? $": ganamos {Provinces(ceded.Count)}" : $": cedemos {Provinces(ceded.Count)}";
+            int years = GameRules.ReparationsDays / 365;
+            string detail = ceded.Count > 0 ? (receiver == id ? $": ganamos {Provinces(ceded.Count)}" : $": cedemos {Provinces(ceded.Count)}")
+                : terms == PeaceTerms.Reparations ? (id == a ? $": nos pagará reparaciones {years} años" : $": le pagaremos reparaciones {years} años")
+                : terms == PeaceTerms.Vassalize ? (id == a ? ": es ahora vasallo nuestro" : ": somos ahora su vasallo")
+                : "";
             Notify(id, $"Paz firmada con {Players[other].Name}{detail}.");
         }
-        if (ceded.Count > 0 && Players[giver].Provinces.Count == 0)
+        bool annexed = ceded.Count > 0 && Players[giver].Provinces.Count == 0;
+        if (annexed)
             Notify(HumanPlayerId, giver == HumanPlayerId ? "Hemos perdido todas nuestras tierras." : $"{Players[giver].Name} ha sido anexionada por {Players[receiver].Name}.");
         else if (ceded.Count > 0 && a != HumanPlayerId && b != HumanPlayerId)
             Notify(HumanPlayerId, $"{Players[giver].Name} cede {Provinces(ceded.Count)} a {Players[receiver].Name}.");
+        else if (terms == PeaceTerms.Vassalize && a != HumanPlayerId && b != HumanPlayerId)
+            Notify(HumanPlayerId, $"{Players[b].Name} pasa a ser vasallo de {Players[a].Name}.");
         if (ceded.Count > 0) Remember(giver, receiver, "Nos quitó provincias", GameRules.ProvinceTakenOpinion * ceded.Count);
+        if (annexed) Eliminate(giver);
         return receiver == a ? (ceded.Count, 0) : (0, ceded.Count);
     }
 

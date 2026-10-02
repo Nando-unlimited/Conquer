@@ -2,6 +2,21 @@
 
 Todos los cambios del juego, del más reciente al más antiguo. Cada versión es un commit cuyo título es su número.
 
+## [1.71.0] - 2026-10-02
+
+### Añadido
+- **Dos tratados de paz nuevos** en la pestaña Diplomacia, en guerra:
+  - **Tributo** (30 de puntuación de guerra): el enemigo te paga el 25 % de sus ingresos de oro durante 5 años. Lo recordará (−30 de opinión).
+  - **Vasallo** (60 de puntuación): el enemigo pasa a ser tu vasallo. Te paga el 10 % de sus ingresos de oro y entra en tus guerras; si lo atacan, entras tú en las suyas. No puede declarar guerras ni aliarse con nadie, y sus tierras están abiertas a tus ejércitos.
+  - En los dos casos, las provincias ocupadas vuelven a sus dueños. La IA los acepta en las mismas condiciones que Exigir.
+- **Vasallos**: en la Diplomacia aparecen como «Vasallo» con los años que llevan. A los 10 años puedes **anexionarlo** (sus provincias, ciudades y gente pasan a ser tuyas) o, cuando quieras, **liberarlo** (+40 de opinión). La relación de cada nación dice en el tooltip quién es su señor, quiénes sus vasallos y qué reparaciones se pagan.
+- **Capitulación**: una nación en guerra con todas sus ciudades ocupadas se rinde. Cada enemigo se queda con lo que ocupa y quien tiene su capital (o, si no, quien más ocupa) se lleva el resto.
+- **Las naciones que pierden todas sus tierras desaparecen**, por capitulación, por tratado o anexionadas por su señor. Sus ejércitos, guerras, alianzas y tratados terminan, y salen de la pestaña Diplomacia.
+- **Los rivales también lo usan entre ellos**: hacen vasallo a un enemigo con menos de la mitad de sus provincias, imponen tributos en las guerras largas que ganan y anexionan a sus vasallos en cuanto pueden.
+
+### Cambiado
+- La pantalla de la nación es más ancha (hasta 1.260 píxeles) para que quepan los botones de la diplomacia.
+
 ## [1.70.2] - 2026-10-02
 
 ### Añadido

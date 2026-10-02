@@ -163,9 +163,9 @@ public sealed partial class NationScreen
     {
         double ours = Session.MilitaryPower(Player.Id);
         Column[] columns = [new("Nación", 160), new("Relación", 130), new("Opinión", 80), new("Poder militar", 140), new("Provincias", 70),
-            new("Ocupación", 130), new("Puntuación", 70), new("", 250)];
+            new("Ocupación", 130), new("Puntuación", 70), new("", 420)];
         var rows = new List<IReadOnlyList<Cell>>();
-        foreach (var other in Session.Players.Where(p => p.Id != Player.Id))
+        foreach (var other in Session.Players.Where(p => p.Id != Player.Id && !p.Eliminated))
         {
             bool war = Session.AtWar(Player.Id, other.Id);
             double theirs = Session.MilitaryPower(other.Id);
@@ -194,7 +194,18 @@ public sealed partial class NationScreen
         var allies = Session.AlliesOf(other.Id).Select(a => a.Name).ToList();
         string tip = (allies.Count > 0 ? $"Aliados de {other.Name}: {string.Join(", ", allies)}. Si la atacas, entrarán en la guerra." : $"{other.Name} no tiene aliados.")
                      + (truce > 0 ? $"\nTras la última paz, ninguno de los dos puede declarar la guerra al otro durante {GameRules.TruceDays} días." : "");
+        if (Session.OverlordOf(other.Id) is int overlord && overlord != Player.Id)
+            tip += $"\nEs vasallo de {Session.Players[overlord].Name}: si la atacas, su señor entrará en la guerra.";
+        var vassals = Session.VassalsOf(other.Id).Select(v => v.Name).ToList();
+        if (vassals.Count > 0) tip += $"\nSus vasallos: {string.Join(", ", vassals)}. Entran en todas sus guerras.";
+        double reparations = Session.ReparationsDaysLeft(other.Id, Player.Id), owed = Session.ReparationsDaysLeft(Player.Id, other.Id);
+        if (reparations > 0) tip += $"\nNos paga reparaciones ({GameRules.ReparationsShare:P0} de sus ingresos de oro) durante {reparations:0} días más.";
+        if (owed > 0) tip += $"\nLe pagamos reparaciones ({GameRules.ReparationsShare:P0} de nuestros ingresos de oro) durante {owed:0} días más.";
         return Session.AtWar(Player.Id, other.Id) ? new TextCell($"En guerra ({Session.WarDays(Player.Id, other.Id):0} d)", Tone.Bad, Tooltip: tip)
+            : Session.IsVassalOf(other.Id, Player.Id) ? new TextCell($"Vasallo ({Session.VassalYears(other.Id):0.#} años)", Tone.Good, Bold: true,
+                Tooltip: tip + $"\nNos paga el {GameRules.VassalTributeShare:P0} de sus ingresos de oro y entra en nuestras guerras.")
+            : Session.IsVassalOf(Player.Id, other.Id) ? new TextCell("Nuestro señor", Tone.Bad, Bold: true,
+                Tooltip: tip + $"\nLe pagamos el {GameRules.VassalTributeShare:P0} de nuestros ingresos de oro y entramos en sus guerras.")
             : Session.AreAllied(Player.Id, other.Id) ? new TextCell("Aliados", Tone.Good, Bold: true, Tooltip: tip)
             : truce > 0 ? new TextCell($"Tregua ({Math.Ceiling(truce):0} d)", Tone.Good, Tooltip: tip)
             : new TextCell("En paz", Tone.Good, Tooltip: tip);
@@ -214,6 +225,18 @@ public sealed partial class NationScreen
     /// <summary>War, alliance (or breaking it) and a gift.</summary>
     private List<Button> PeaceTimeButtons(Player other)
     {
+        if (Session.IsVassalOf(other.Id, Player.Id))
+        {
+            var annex = Session.CanAnnexVassal(Player.Id, other.Id);
+            return
+            [
+                new Button("Anexionar", () => Show(Session.AnnexVassal(Player.Id, other.Id)), annex.Ok,
+                    Tooltip: $"Sus provincias, ciudades y gente pasan a ser tuyas. Hace falta que lleve {GameRules.VassalAnnexYears:0} años de vasallo."
+                             + (annex.Ok ? "" : $"\n{annex.Message}"), Size: TextSize.Small),
+                new Button("Liberar", () => Show(Session.ReleaseVassal(Player.Id, other.Id)),
+                    Tooltip: $"Deja de ser vasallo tuyo y lo agradecerá (+{GameRules.ReleasedOpinion:0} de opinión).", Size: TextSize.Small),
+            ];
+        }
         var war = Session.CanDeclareWar(Player.Id, other.Id);
         var allies = Session.AlliesOf(other.Id).Where(a => a.Id != Player.Id && !Session.AreAllied(a.Id, Player.Id)).Select(a => a.Name).ToList();
         string warTip = war.Ok
@@ -270,8 +293,22 @@ public sealed partial class NationScreen
                 Size: TextSize.Small),
             new Button($"Exigir ({taken})", () => Show(Session.ProposePeace(Player.Id, other.Id, PeaceTerms.TakeOccupied)), take.Ok,
                 Tooltip: takeTip, Size: TextSize.Small),
+            TermsButton(other, "Tributo", PeaceTerms.Reparations,
+                $"Te paga el {GameRules.ReparationsShare:P0} de sus ingresos de oro durante {GameRules.ReparationsDays / 365} años. Las provincias ocupadas vuelven a sus dueños."),
+            TermsButton(other, "Vasallo", PeaceTerms.Vassalize,
+                $"Pasa a ser vasallo tuyo: te paga el {GameRules.VassalTributeShare:P0} de sus ingresos de oro, entra en tus guerras y no puede declarar las suyas. "
+                + $"A los {GameRules.VassalAnnexYears:0} años puedes anexionarlo. Las provincias ocupadas vuelven a sus dueños."),
             new Button($"Ceder ({lost})", () => Show(Session.ProposePeace(Player.Id, other.Id, PeaceTerms.CedeOccupied)), lost > 0,
                 Tooltip: cedeTip, Size: TextSize.Small),
         ];
+    }
+
+    /// <summary>A treaty paid for with a fixed war score, explained with what it costs and what we have.</summary>
+    private Button TermsButton(Player other, string label, PeaceTerms terms, string what)
+    {
+        var can = Session.CanProposePeace(Player.Id, other.Id, terms);
+        string tip = $"{what}\nCuesta {Session.PeaceCost(Player.Id, other.Id, terms):0} de puntuación de guerra y tienes {Session.WarScore(Player.Id, other.Id):0}. "
+                     + "La IA acepta si cree que va perdiendo o si la puntuación pasa de 50." + (can.Ok ? "" : $"\n{can.Message}");
+        return new Button(label, () => Show(Session.ProposePeace(Player.Id, other.Id, terms)), can.Ok, Tooltip: tip, Size: TextSize.Small);
     }
 }

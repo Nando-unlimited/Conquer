@@ -12,6 +12,7 @@ public enum GameEventKind
     SiegeLaid,
     Revolt,
     GiftSent,
+    NationEliminated,
 }
 
 /// <summary>Something that happened to a nation, and to whom else it happened (-1 if nobody).</summary>

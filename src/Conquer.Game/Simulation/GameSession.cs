@@ -227,9 +227,11 @@ public sealed partial class GameSession
             foreach (var player in Players) DailyMilitary(player);
             DailySieges();
             DailyMemories();
+            DailyTributes();
+            DailyCapitulations();
         }
         if (Date.Hours % 6 == 0)
-            foreach (var ai in _ais) ai.Think(dailyDecisions: Date.Hour == 0);
+            foreach (var ai in _ais.Where(a => !Players[a.PlayerId].Eliminated)) ai.Think(dailyDecisions: Date.Hour == 0);
     }
 
     private void ArriveMigrations()

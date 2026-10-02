@@ -303,12 +303,22 @@ internal sealed partial class AiPlayer
         foreach (var enemy in _session.EnemiesOf(_player.Id).ToList())
         {
             if (enemy.IsHuman) continue;
+            // A vassal leaves the peace of its overlord's wars to its overlord.
+            if (_session.OverlordOf(_player.Id) is int overlord && _session.AtWar(overlord, enemy.Id)) continue;
             double days = _session.WarDays(_player.Id, enemy.Id);
             if (days >= TreatyDays && _session.CanProposePeace(_player.Id, enemy.Id, PeaceTerms.TakeOccupied).Ok
                 && _session.ProposePeace(_player.Id, enemy.Id, PeaceTerms.TakeOccupied).Ok) continue;
+            // A much smaller enemy it beats becomes its vassal; a long war it wins ends with reparations.
+            if (days >= TreatyDays && enemy.Provinces.Count * 2 < _player.Provinces.Count
+                && _session.CanProposePeace(_player.Id, enemy.Id, PeaceTerms.Vassalize).Ok
+                && _session.ProposePeace(_player.Id, enemy.Id, PeaceTerms.Vassalize).Ok) continue;
+            if (days >= TreatyDays * 2 && _session.CanProposePeace(_player.Id, enemy.Id, PeaceTerms.Reparations).Ok
+                && _session.ProposePeace(_player.Id, enemy.Id, PeaceTerms.Reparations).Ok) continue;
             if (days >= 120 && !Winning(enemy.Id))
                 _session.ProposePeace(_player.Id, enemy.Id);
         }
+        foreach (var vassal in _session.VassalsOf(_player.Id).ToList())
+            if (_session.CanAnnexVassal(_player.Id, vassal.Id).Ok) _session.AnnexVassal(_player.Id, vassal.Id);
 
         if (_session.EnemiesOf(_player.Id).Any() || _session.Date.Days < PeacefulDays || Army.Sum(u => u.Battalions.Count) < 4) return;
         if (_random.Next(WarChanceDays) != 0) return;
@@ -361,7 +371,7 @@ internal sealed partial class AiPlayer
         return terms switch
         {
             PeaceTerms.CedeOccupied => true,
-            PeaceTerms.TakeOccupied => !Winning(otherId) || _session.WarScore(otherId, _player.Id) >= 50,
+            PeaceTerms.TakeOccupied or PeaceTerms.Reparations or PeaceTerms.Vassalize => !Winning(otherId) || _session.WarScore(otherId, _player.Id) >= 50,
             _ => days >= 60 && (!Winning(otherId) || days >= 365),
         };
     }

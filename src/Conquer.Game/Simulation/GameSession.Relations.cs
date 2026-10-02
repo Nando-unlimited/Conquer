@@ -35,6 +35,8 @@ public sealed partial class GameSession
         if (from == about) return factors;
         if (AreAllied(from, about)) factors.Add(("Aliados", GameRules.AllianceOpinion));
         if (AtWar(from, about)) factors.Add(("En guerra", GameRules.AtWarOpinion));
+        if (IsVassalOf(from, about)) factors.Add(("Somos su vasallo", GameRules.VassalOpinion));
+        if (IsVassalOf(about, from)) factors.Add(("Nuestro vasallo", GameRules.OverlordOpinion));
         var borders = BorderNations(from);
         if (borders.Contains(about)) factors.Add(("Frontera común", GameRules.BorderOpinion));
         // Both border a nation stronger than us: the natural reason to ally.
@@ -90,7 +92,7 @@ public sealed partial class GameSession
     /// <summary>Sends gold to another nation, which thinks better of the sender for a while.</summary>
     public CommandResult SendGift(int playerId, int targetId)
     {
-        if (playerId == targetId || targetId < 0 || targetId >= Players.Count) return CommandResult.Fail("Nación no válida.");
+        if (playerId == targetId || targetId < 0 || targetId >= Players.Count || Players[targetId].Eliminated) return CommandResult.Fail("Nación no válida.");
         if (AtWar(playerId, targetId)) return CommandResult.Fail("No se hacen regalos al enemigo.");
         double gold = GiftCost(Players[playerId]);
         if (Players[playerId].Stockpile[ResourceType.Gold] < gold) return CommandResult.Fail($"Un regalo cuesta {gold:0} de oro.");
@@ -106,8 +108,10 @@ public sealed partial class GameSession
 
     public CommandResult CanProposeAlliance(int playerId, int targetId)
     {
-        if (playerId == targetId || targetId < 0 || targetId >= Players.Count) return CommandResult.Fail("Nación no válida.");
+        if (playerId == targetId || targetId < 0 || targetId >= Players.Count || Players[targetId].Eliminated) return CommandResult.Fail("Nación no válida.");
         if (AreAllied(playerId, targetId)) return CommandResult.Fail($"Ya sois aliados de {Players[targetId].Name}.");
+        if (OverlordOf(playerId) is int overlord) return CommandResult.Fail($"Eres vasallo de {Players[overlord].Name}: no puedes aliarte con nadie.");
+        if (OverlordOf(targetId) is int theirs) return CommandResult.Fail($"{Players[targetId].Name} es vasallo de {Players[theirs].Name}.");
         if (AtWar(playerId, targetId)) return CommandResult.Fail($"Estás en guerra con {Players[targetId].Name}.");
         if (AlliesOf(playerId).Count() >= GameRules.MaxAllies) return CommandResult.Fail($"No puedes tener más de {GameRules.MaxAllies} aliados.");
         return CommandResult.Success();

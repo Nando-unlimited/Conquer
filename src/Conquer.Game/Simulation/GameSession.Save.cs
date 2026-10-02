@@ -30,7 +30,7 @@ public sealed partial class GameSession
             [.. p.LastDayNet], p.IsStarving, p.FoodReserveDays, [.. p.Techs.Order()],
             [.. p.ResearchProgress], p.SpareScience, p.LastDayScience,
             [.. p.Templates.Select(t => new TemplateSave(t.Id, t.Number, [.. t.Battalions]))], [.. p.ResearchPriorities],
-            [.. p.Researching.OfType<Tech>()], [.. p.Institutions.Order()], [.. p.OfficerReserve.Select(ToSave)])).ToList(),
+            [.. p.Researching.OfType<Tech>()], [.. p.Institutions.Order()], [.. p.OfficerReserve.Select(ToSave)], p.Eliminated)).ToList(),
         // Provinces nobody has touched keep their generated state, so only the rest are stored.
         Provinces = Map.Provinces.Where(Changed).Select(p => new ProvinceSave(
             p.Id, p.OwnerId, p.ControllerId, p.Population, p.CityId, p.Mood, p.Fertility, [.. p.Reserves],
@@ -51,6 +51,8 @@ public sealed partial class GameSession
         Sieges = _sieges.Values.OrderBy(x => x.ProvinceId).Select(x => new SiegeSave(x.ProvinceId, x.AttackerId, x.Progress)).ToList(),
         Alliances = _alliances.Order().Select(x => new AllianceSave(x.Item1, x.Item2)).ToList(),
         Memories = _memories.OrderBy(m => m.Key).SelectMany(m => m.Value.Select(x => new MemorySave(m.Key.From, m.Key.To, x.Reason, x.Value))).ToList(),
+        Vassals = _vassals.OrderBy(v => v.Key).Select(v => new VassalSave(v.Key, v.Value.Overlord, v.Value.Since)).ToList(),
+        Reparations = [.. _reparations],
         Notifications = [.. Notifications],
         Ais = _ais.Select(ai => ai.ToSave()).ToList(),
         EmigrationCarry = new Dictionary<int, double>(_emigrationCarry),
@@ -153,7 +155,7 @@ public sealed partial class GameSession
 
         foreach (var s in save.Players)
         {
-            var player = new Player(s.Id, s.Name, s.Color, s.IsHuman) { CapitalCityId = s.CapitalCityId };
+            var player = new Player(s.Id, s.Name, s.Color, s.IsHuman) { CapitalCityId = s.CapitalCityId, Eliminated = s.Eliminated };
             foreach (var r in Resources.All) player.Stockpile[r] = s.Stockpile[(int)r];
             s.LastDayNet.CopyTo(player.LastDayNet, 0);
             player.IsStarving = s.IsStarving;
@@ -236,6 +238,8 @@ public sealed partial class GameSession
         foreach (var x in save.Sieges ?? []) session._sieges[x.ProvinceId] = new Siege(x.ProvinceId, x.AttackerId, x.Progress);
         foreach (var x in save.Alliances ?? []) session._alliances.Add((x.A, x.B));
         foreach (var x in save.Memories ?? []) session.Remember(x.From, x.To, x.Reason, x.Value);
+        foreach (var x in save.Vassals ?? []) session._vassals[x.Vassal] = (x.Overlord, x.SinceHours);
+        session._reparations.AddRange(save.Reparations ?? []);
         session.Notifications.AddRange(save.Notifications);
         foreach (var (province, carry) in save.EmigrationCarry) session._emigrationCarry[province] = carry;
         foreach (var n in save.UnitNumbers)

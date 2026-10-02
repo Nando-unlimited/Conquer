@@ -22,6 +22,8 @@ public sealed class Player
     public bool ArmyUnpaid { get; set; }
     /// <summary>Days the food stockpile would last at the last day's consumption.</summary>
     public double FoodReserveDays { get; set; }
+    /// <summary>Conquered: it lost all its land in a war and is out of the game.</summary>
+    public bool Eliminated { get; set; }
 
     /// <summary>Advances discovered so far.</summary>
     public HashSet<Tech> Techs { get; } = [];

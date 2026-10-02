@@ -249,7 +249,7 @@ public sealed partial class GameScreen : IScreen, IAudibleScreen
 
     private void RightClick() => _game.OrderMove();
 
-    private Rect NationRect => new(Math.Max(8, _app.ScreenSize.X / 2 - 540), TopBarHeight + 12, Math.Min(1080, _app.ScreenSize.X - 16), _app.ScreenSize.Y - TopBarHeight - 76);
+    private Rect NationRect => new(Math.Max(8, _app.ScreenSize.X / 2 - 630), TopBarHeight + 12, Math.Min(1260, _app.ScreenSize.X - 16), _app.ScreenSize.Y - TopBarHeight - 76);
 
     // ------------------------------------------------------------------ map markers
 

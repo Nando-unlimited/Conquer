@@ -70,6 +70,9 @@ public sealed record SaveGame
     /// <summary>Alliances and what nations remember of each other; missing in saves from before 1.69.0.</summary>
     public List<AllianceSave>? Alliances { get; init; }
     public List<MemorySave>? Memories { get; init; }
+    /// <summary>Vassals and reparations; missing in saves from before 1.71.0.</summary>
+    public List<VassalSave>? Vassals { get; init; }
+    public List<Reparations>? Reparations { get; init; }
     public required List<Notification> Notifications { get; init; }
     public required List<AiSave> Ais { get; init; }
     public required Dictionary<int, double> EmigrationCarry { get; init; }
@@ -124,7 +127,7 @@ public sealed record PlayerSave(
     double[] LastDayNet, bool IsStarving, double FoodReserveDays, List<Tech> Techs,
     double[] ResearchProgress, double SpareScience, double LastDayScience, List<TemplateSave> Templates,
     int[]? ResearchPriorities = null, List<Tech>? CurrentResearch = null, List<Institution>? Institutions = null,
-    List<OfficerSave>? OfficerReserve = null);
+    List<OfficerSave>? OfficerReserve = null, bool Eliminated = false);
 
 /// <summary>Where and when an institution was born.</summary>
 public sealed record InstitutionBirthSave(Institution Institution, int ProvinceId, long Hours);
@@ -170,6 +173,8 @@ public sealed record SiegeSave(int ProvinceId, int AttackerId, double Progress);
 public sealed record AllianceSave(int A, int B);
 
 public sealed record MemorySave(int From, int To, string Reason, double Value);
+
+public sealed record VassalSave(int Vassal, int Overlord, long SinceHours);
 
 public sealed record RoadLinkSave(int A, int B, RoadKind Kind);
 

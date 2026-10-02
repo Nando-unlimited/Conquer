@@ -197,6 +197,20 @@ public static class GameRules
     public const int MaxAllies = 3;
     /// <summary>Mood a province loses when a treaty hands it to another nation.</summary>
     public const double CededMoodPenalty = 20;
+    // Reparations and vassals. A treaty may make the loser pay ReparationsShare of its gold income for ReparationsDays,
+    // or become a vassal: it pays VassalTributeShare of its income, fights its overlord's wars and may be annexed after
+    // VassalAnnexYears. Each costs a fixed war score.
+    public const double ReparationsWarScore = 30;
+    public const double ReparationsShare = 0.25;
+    public const int ReparationsDays = 5 * 365;
+    public const double ReparationsOpinion = -30;
+    public const double VassalWarScore = 60;
+    public const double VassalTributeShare = 0.1;
+    public const double VassalAnnexYears = 10;
+    /// <summary>What a vassal thinks of its overlord for being one, and the overlord of its vassal.</summary>
+    public const double VassalOpinion = -10;
+    public const double OverlordOpinion = 10;
+    public const double ReleasedOpinion = 40;
 
     // Seasons. Winter bites from MildWinterLatitude and is at its worst from HarshWinterLatitude; spring and autumn
     // bring MudShare of its slowdown as mud. Armies lose men to cold out of their cities, and to the desert all year.
