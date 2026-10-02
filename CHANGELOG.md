@@ -2,6 +2,22 @@
 
 Todos los cambios del juego, del más reciente al más antiguo. Cada versión es un commit cuyo título es su número.
 
+## [1.72.0] - 2026-10-02
+
+### Añadido
+- **Pactos de no agresión**, con el botón **Pacto** de la pestaña Diplomacia:
+  - Mientras dure, ninguno de los dos puede declarar la guerra al otro. La relación muestra «Pacto» y la opinión sube 10.
+  - **Sin pacto** lo rompe: hay un año de tregua antes de poder atacar, y el otro lo recuerda (−30).
+  - Un aliado que tiene un pacto con el atacante no entra en la guerra.
+  - Los rivales lo firman si su opinión de ti es al menos 0, o −25 si tu ejército es más fuerte. Entre ellos, buscan un pacto con el vecino más fuerte que les da miedo.
+- **Paso militar**:
+  - **Pedir paso** deja a tus ejércitos cruzar sus tierras. Aceptan si su opinión de ti llega a 20.
+  - **Dar paso** deja a los suyos cruzar las tuyas, y su opinión de ti sube 10. **Cerrar paso** lo retira y sus tropas vuelven a casa.
+  - El tooltip de la relación dice quién deja pasar a quién. Una guerra entre los dos acaba con el paso y con el pacto.
+
+### Cambiado
+- Al romper una alianza, las tropas que estaban en tierras del otro vuelven a casa.
+
 ## [1.71.0] - 2026-10-02
 
 ### Añadido

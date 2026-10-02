@@ -45,6 +45,8 @@ public sealed partial class GameSession
     {
         foreach (var v in VassalsOf(vassalId).ToList()) _vassals.Remove(v.Id);
         _alliances.RemoveWhere(a => a.Item1 == vassalId || a.Item2 == vassalId);
+        _pacts.RemoveWhere(a => a.Item1 == vassalId || a.Item2 == vassalId);
+        _access.RemoveWhere(a => a.Granter == vassalId || a.Grantee == vassalId);
         _vassals[vassalId] = (overlordId, Date.Hours);
         foreach (var friend in AlliesOf(overlordId).Concat(VassalsOf(overlordId)).Where(f => AtWar(f.Id, vassalId)).ToList())
             MakePeace(friend.Id, vassalId);
@@ -61,8 +63,8 @@ public sealed partial class GameSession
             .Concat(OverlordOf(defenderId) is int o ? [(o, attackerId)] : []);
         foreach (var (id, enemy) in joining.ToList())
         {
-            if (id == enemy || AtWar(id, enemy) || AreAllied(id, enemy) || InVassalage(id, enemy) || Players[id].Eliminated) continue;
-            _wars[WarKey(id, enemy)] = new War(Date.Hours);
+            if (id == enemy || AtWar(id, enemy) || AreAllied(id, enemy) || InVassalage(id, enemy) || HavePact(id, enemy) || Players[id].Eliminated) continue;
+            StartWar(id, enemy);
             Raise(GameEventKind.WarDeclared, id, enemy);
             if (id == HumanPlayerId) Notify(HumanPlayerId, $"Entramos en guerra con {Players[enemy].Name} por el vasallaje que nos une a {Players[enemy == attackerId ? defenderId : attackerId].Name}.");
             else if (enemy == HumanPlayerId) Notify(HumanPlayerId, $"¡{Players[id].Name} entra en la guerra contra nosotros!");
@@ -197,6 +199,8 @@ public sealed partial class GameSession
         }
         EndSieges(s => s.AttackerId == playerId);
         _alliances.RemoveWhere(a => a.Item1 == playerId || a.Item2 == playerId);
+        _pacts.RemoveWhere(a => a.Item1 == playerId || a.Item2 == playerId);
+        _access.RemoveWhere(a => a.Granter == playerId || a.Grantee == playerId);
         _vassals.Remove(playerId);
         foreach (var v in VassalsOf(playerId).ToList()) _vassals.Remove(v.Id);
         _reparations.RemoveAll(r => r.PayerId == playerId || r.ReceiverId == playerId);

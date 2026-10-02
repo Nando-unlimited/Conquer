@@ -78,7 +78,7 @@ public sealed partial class GameSession
         if (p.IsWater) return unit.Flies;
         int holder = p.IsOwned ? p.ControllerId : -1;
         if (holder < 0 || holder == unit.OwnerId) return true;
-        return unit.IsMilitary && (AtWar(unit.OwnerId, holder) || AreAllied(unit.OwnerId, holder) || InVassalage(unit.OwnerId, holder));
+        return unit.IsMilitary && (AtWar(unit.OwnerId, holder) || MayCross(unit.OwnerId, holder));
     }
 
     /// <summary>Navigation opens coastal seas and lakes; cartography, the open ocean too.</summary>

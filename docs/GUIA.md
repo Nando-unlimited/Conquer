@@ -387,7 +387,7 @@ Guerra, puntuación de guerra y tratados de paz.
 | `PeaceTerms` | Lo que firma quien propone la paz: `White` (paz blanca), `TakeOccupied` (se queda con las provincias enemigas que ocupa), `CedeOccupied` (entrega las suyas que ocupa el enemigo), `Reparations` (el enemigo le paga reparaciones) o `Vassalize` (el enemigo pasa a ser su vasallo). |
 | `War` | Una guerra: cuándo empezó y cuántas batallas ha ganado cada bando (`Victories`). Se guarda en `WarSave`. |
 | `AtWar(a, b)`, `EnemiesOf(jugador)`, `WarDays(a, b)`, `WarVictories(jugador, enemigo)` | Si dos naciones están en guerra, sus enemigos, cuánto dura la guerra y las batallas ganadas (en tierra y en el mar; las cuenta `RecordVictory`). |
-| `CanDeclareWar`/`DeclareWar`, `TruceDaysLeft(a, b)` | Declara la guerra a otra nación (no a un aliado ni durante la tregua); la víctima lo recuerda (`Remember`) y sus aliados entran en la guerra (`CallAllies`). La tregua: tras cada paz, 730 días (`GameRules.TruceDays`) sin guerra entre las dos. Las treguas se guardan en `TruceSave`. |
+| `CanDeclareWar`/`DeclareWar`, `StartWar`, `TruceDaysLeft(a, b)` | Declara la guerra a otra nación (no a un aliado, ni con un pacto, ni durante la tregua, ni siendo vasallo); `StartWar` la empieza y acaba con los pactos y el paso entre las dos; la víctima lo recuerda (`Remember`) y sus aliados entran en la guerra (`CallAllies`). La tregua: tras cada paz, 730 días (`GameRules.TruceDays`) sin guerra entre las dos. Las treguas se guardan en `TruceSave`. |
 | `ProvinceValue(provincia)` | Lo que vale en la mesa de paz: 1, más 1 por cada 2.000 habitantes (hasta 5), más 2 si tiene ciudad o 6 si es la capital (`GameRules`). |
 | `WarScore(jugador, enemigo)` | De -100 a 100: la parte del valor del enemigo que ocupa, menos la parte del suyo que le ocupan, más 2 por batalla ganada y menos 2 por perdida (hasta ±25). |
 | `OccupiedBy(ocupante, dueño)`, `PeaceCost(jugador, enemigo, términos)` | Las provincias de una nación que ocupa otra, y lo que cuesta cada tratado: quedárselas, la parte del valor del enemigo que suponen; las reparaciones, 30; el vasallaje, 60. |
@@ -408,6 +408,16 @@ Reparaciones, vasallos y capitulación.
 | `CanAnnexVassal`/`AnnexVassal`, `ReleaseVassal` | A los 10 años de vasallaje, y sin guerras, el señor se queda con todo; liberarlo deja buen recuerdo (+40). |
 | `DailyCapitulations()`, `Capitulate(nación)` | Una nación en guerra con todas sus ciudades ocupadas capitula: cada enemigo se queda lo que ocupa, quien tiene su capital (o el que más ocupa) se lleva el resto, y desaparece. |
 | `Eliminate(nación)` | La saca de la partida (`Player.Eliminated`): terminan sus guerras, batallas, asedios, alianzas, vasallajes y reparaciones, y desaparecen sus unidades y migrantes. También al quedarse sin tierras en un tratado o al ser anexionada. |
+
+### `Simulation/GameSession.Pacts.cs`
+Pactos de no agresión y paso militar.
+
+| Elemento | Qué hace |
+| --- | --- |
+| `HavePact(a, b)`, `CanProposePact`/`ProposePact`, `BreakPact` | Pacto de no agresión: ninguno de los dos puede declarar la guerra al otro (`CanDeclareWar`) y un aliado con un pacto con el atacante no entra en la guerra. La IA decide con `AiPlayer.WouldSignPact`. Romperlo deja una tregua de 365 días y un recuerdo de −30. Se guardan en `SaveGame.Pacts`. |
+| `GivesAccess(quien da, a quien)`, `CanAskAccess`/`AskAccess`, `CanGrantAccess`/`GrantAccess`, `RevokeAccess` | Paso militar, en un sentido: los ejércitos de uno cruzan las tierras del otro. Pedirlo lo decide la IA con `AiPlayer.WouldGrantAccess`; darlo sube 10 la opinión del que lo recibe. Al retirarlo, sus tropas vuelven a casa (`Evict`). Se guarda en `AccessSave`. |
+| `MayCross(jugador, dueño)` | Si los ejércitos de una nación pueden cruzar en paz las tierras de otra: aliados, señor y vasallo, o con paso (lo usa `CanUnitEnter`). |
+| `CanAgree`, `Evict(invitado, anfitrión)`, `EndAgreements(a, b)` | Lo que piden todos estos acuerdos (no estar en guerra, ni ser vasallo); las tropas que ya no pueden estar en tierra ajena vuelven a casa (también al romper una alianza); la guerra (`StartWar`) acaba con los pactos y el paso entre los dos. |
 
 ### `Simulation/GameSession.Relations.cs`
 Opinión entre naciones, regalos y alianzas.
@@ -560,6 +570,7 @@ Los amigos del rival.
 | `WouldAlly(otro)` | Firma una alianza si su opinión del otro llega a 40, tiene sitio para otro aliado y el otro no es aliado de sus enemigos. |
 | `SeekAlliances()` | Cada 60 días de media, ofrece la alianza al rival que mejor ve (al menos 15); si este aún no le ve lo bastante bien pero no le es hostil, le hace un regalo si le sobra oro. |
 | `DefendingPower(víctima)` | El ejército al que se enfrentaría: el de la víctima más el de sus aliados, y menos cuanto peor la ve (una nación odiada parece más débil). |
+| `WouldSignPact(otro)`, `WouldGrantAccess(otro)`, `SeekPacts()` | Firma un pacto si su opinión del otro llega a 0, o a −25 si su ejército es más fuerte; deja pasar a quien ve con al menos 20. Cada 60 días de media busca un pacto con el vecino más fuerte que le da miedo (un ejército un 20 % mayor). |
 
 ### `AI/AiPlayer.Naval.cs`
 Invasiones por mar. No guarda nada entre días: cada paso sale de dónde están las tropas y los barcos.
@@ -808,7 +819,7 @@ La pantalla de la nación (botón «Nación» o tecla N) como datos: `Visible`, 
 | --- | --- |
 | `Army()`, `UnitActivity(...)` | Orden de batalla, con el mantenimiento diario del ejército (en rojo si no se paga): cada cuartel con sus unidades en árbol, después las unidades sin cuartel y las flotas, con ubicación, hombres, organización, suministro, estado y «Ver». |
 | `Templates()` | Diseñador de unidades: tus plantillas a la izquierda (nueva, duplicar, borrar); a la derecha los batallones de la elegida (hasta 12, con «Quitar»), botones para añadir los que conoces y lo que cuesta, su mantenimiento y cómo lucha una unidad de ese diseño (con `TextFormat.UpkeepText` y `TextFormat.TrainingDaysText`). |
-| `Diplomacy()`, `RelationCell`, `OpinionCell`, `PeaceTimeButtons`, `WarScoreCell`, `PeaceButtons`, `TermsButton` | Cada nación que sigue en la partida: relación (en guerra y desde cuándo, vasallo o señor, aliados, tregua o paz; en el tooltip sus aliados, su señor, sus vasallos y las reparaciones), lo que piensa de nosotros (con sus razones), su poder militar frente al tuyo, provincias, lo tomado y perdido, la puntuación de guerra (con su desglose) y los botones: en paz, guerra, alianza (o romperla) y regalo; con un vasallo, anexionarlo o liberarlo; en guerra, paz blanca, exigir lo ocupado, tributo, vasallo y ceder lo ocupado. |
+| `Diplomacy()`, `RelationCell`, `OpinionCell`, `PeaceTimeButtons`, `WarScoreCell`, `PeaceButtons`, `TermsButton` | Cada nación que sigue en la partida: relación (en guerra y desde cuándo, vasallo o señor, aliados, tregua o paz; en el tooltip sus aliados, su señor, sus vasallos y las reparaciones), lo que piensa de nosotros (con sus razones), su poder militar frente al tuyo, provincias, lo tomado y perdido, la puntuación de guerra (con su desglose) y los botones: en paz, guerra, alianza (o romperla), pacto (o romperlo), pedir paso, dar paso (o cerrarlo) y regalo (`PactButton`, `Agreement`); con un vasallo, anexionarlo o liberarlo; en guerra, paz blanca, exigir lo ocupado, tributo, vasallo y ceder lo ocupado. |
 
 ### `NationPages.cs`
 Lo que muestra cada pestaña de la pantalla de la nación, para que el cliente lo dibuje.

@@ -37,6 +37,8 @@ public sealed partial class GameSession
         if (AtWar(from, about)) factors.Add(("En guerra", GameRules.AtWarOpinion));
         if (IsVassalOf(from, about)) factors.Add(("Somos su vasallo", GameRules.VassalOpinion));
         if (IsVassalOf(about, from)) factors.Add(("Nuestro vasallo", GameRules.OverlordOpinion));
+        if (HavePact(from, about)) factors.Add(("Pacto de no agresión", GameRules.PactOpinion));
+        if (GivesAccess(about, from)) factors.Add(("Nos deja pasar", GameRules.AccessOpinion));
         var borders = BorderNations(from);
         if (borders.Contains(about)) factors.Add(("Frontera común", GameRules.BorderOpinion));
         // Both border a nation stronger than us: the natural reason to ally.
@@ -140,6 +142,8 @@ public sealed partial class GameSession
         if (!AreAllied(playerId, targetId)) return CommandResult.Fail($"No sois aliados de {Players[targetId].Name}.");
         _alliances.Remove(WarKey(playerId, targetId));
         Remember(targetId, playerId, "Rompió la alianza", GameRules.BrokenAllianceOpinion);
+        Evict(playerId, targetId);
+        Evict(targetId, playerId);
         if (targetId == HumanPlayerId) Notify(HumanPlayerId, $"{Players[playerId].Name} rompe su alianza con nosotros.");
         return CommandResult.Success($"Alianza con {Players[targetId].Name} rota.");
     }
@@ -153,7 +157,8 @@ public sealed partial class GameSession
         var joined = new List<Player>();
         foreach (var ally in AlliesOf(defenderId).ToList())
         {
-            if (ally.Id == attackerId || AtWar(ally.Id, attackerId)) continue;
+            // A pact with the attacker keeps it out of the war.
+            if (ally.Id == attackerId || AtWar(ally.Id, attackerId) || HavePact(ally.Id, attackerId)) continue;
             if (AreAllied(ally.Id, attackerId))
             {
                 // Allied with both: it stays out, and the attacker loses it as an ally.
@@ -161,7 +166,7 @@ public sealed partial class GameSession
                 Remember(ally.Id, attackerId, "Atacó a nuestro aliado", GameRules.BrokenAllianceOpinion / 2);
                 continue;
             }
-            _wars[WarKey(ally.Id, attackerId)] = new War(Date.Hours);
+            StartWar(ally.Id, attackerId);
             Remember(attackerId, ally.Id, "Nos declaró la guerra", GameRules.DeclaredWarOpinion / 2);
             joined.Add(ally);
             Raise(GameEventKind.WarDeclared, ally.Id, attackerId);

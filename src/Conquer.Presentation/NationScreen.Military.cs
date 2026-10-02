@@ -162,8 +162,8 @@ public sealed partial class NationScreen
     private TablePage Diplomacy()
     {
         double ours = Session.MilitaryPower(Player.Id);
-        Column[] columns = [new("Nación", 160), new("Relación", 130), new("Opinión", 80), new("Poder militar", 140), new("Provincias", 70),
-            new("Ocupación", 130), new("Puntuación", 70), new("", 420)];
+        Column[] columns = [new("Nación", 150), new("Relación", 120), new("Opinión", 70), new("Poder militar", 130), new("Provincias", 60),
+            new("Ocupación", 120), new("Puntuación", 70), new("", 480)];
         var rows = new List<IReadOnlyList<Cell>>();
         foreach (var other in Session.Players.Where(p => p.Id != Player.Id && !p.Eliminated))
         {
@@ -201,6 +201,8 @@ public sealed partial class NationScreen
         double reparations = Session.ReparationsDaysLeft(other.Id, Player.Id), owed = Session.ReparationsDaysLeft(Player.Id, other.Id);
         if (reparations > 0) tip += $"\nNos paga reparaciones ({GameRules.ReparationsShare:P0} de sus ingresos de oro) durante {reparations:0} días más.";
         if (owed > 0) tip += $"\nLe pagamos reparaciones ({GameRules.ReparationsShare:P0} de nuestros ingresos de oro) durante {owed:0} días más.";
+        if (Session.GivesAccess(other.Id, Player.Id)) tip += $"\n{other.Name} deja pasar a nuestros ejércitos por sus tierras.";
+        if (Session.GivesAccess(Player.Id, other.Id)) tip += $"\nDejamos pasar a los ejércitos de {other.Name} por nuestras tierras.";
         return Session.AtWar(Player.Id, other.Id) ? new TextCell($"En guerra ({Session.WarDays(Player.Id, other.Id):0} d)", Tone.Bad, Tooltip: tip)
             : Session.IsVassalOf(other.Id, Player.Id) ? new TextCell($"Vasallo ({Session.VassalYears(other.Id):0.#} años)", Tone.Good, Bold: true,
                 Tooltip: tip + $"\nNos paga el {GameRules.VassalTributeShare:P0} de sus ingresos de oro y entra en nuestras guerras.")
@@ -208,6 +210,8 @@ public sealed partial class NationScreen
                 Tooltip: tip + $"\nLe pagamos el {GameRules.VassalTributeShare:P0} de nuestros ingresos de oro y entramos en sus guerras.")
             : Session.AreAllied(Player.Id, other.Id) ? new TextCell("Aliados", Tone.Good, Bold: true, Tooltip: tip)
             : truce > 0 ? new TextCell($"Tregua ({Math.Ceiling(truce):0} d)", Tone.Good, Tooltip: tip)
+            : Session.HavePact(Player.Id, other.Id) ? new TextCell("Pacto", Tone.Good, Bold: true,
+                Tooltip: tip + "\nTenéis un pacto de no agresión: ninguno de los dos puede declarar la guerra al otro mientras dure.")
             : new TextCell("En paz", Tone.Good, Tooltip: tip);
     }
 
@@ -257,10 +261,33 @@ public sealed partial class NationScreen
                         ? $"Si uno de los dos es atacado, el otro entra en la guerra, y vuestros ejércitos pueden cruzar las tierras del otro. "
                           + $"Acepta si su opinión de nosotros llega a {GameRules.AllianceAcceptOpinion:0}."
                         : ally.Message, Size: TextSize.Small),
+            PactButton(other),
+            Session.GivesAccess(other.Id, Player.Id)
+                ? new Button("Con paso", null, false, Tooltip: $"{other.Name} ya deja pasar a nuestros ejércitos por sus tierras.", Size: TextSize.Small)
+                : Agreement("Pedir paso", Session.CanAskAccess(Player.Id, other.Id), () => Session.AskAccess(Player.Id, other.Id),
+                    $"Pides que tus ejércitos puedan cruzar sus tierras. Acepta si su opinión de nosotros llega a {GameRules.AccessAcceptOpinion:0}."),
+            Session.GivesAccess(Player.Id, other.Id)
+                ? new Button("Cerrar paso", () => Show(Session.RevokeAccess(Player.Id, other.Id)),
+                    Tooltip: "Retiras el permiso: sus tropas en tus tierras vuelven a las suyas.", Size: TextSize.Small)
+                : Agreement("Dar paso", Session.CanGrantAccess(Player.Id, other.Id), () => Session.GrantAccess(Player.Id, other.Id),
+                    $"Sus ejércitos podrán cruzar tus tierras. Su opinión de nosotros sube {GameRules.AccessOpinion:0} mientras dure."),
             new Button($"Regalo ({gift:0})", () => Show(Session.SendGift(Player.Id, other.Id)), Player.Stockpile[Game.Economy.ResourceType.Gold] >= gift,
                 Tooltip: $"Le envías {gift:0} de oro (un mes de tus ingresos): su opinión de nosotros sube {GameRules.GiftOpinion:0}.", Size: TextSize.Small),
         ];
     }
+
+    /// <summary>A non-aggression pact, or breaking the one we have.</summary>
+    private Button PactButton(Player other) => Session.HavePact(Player.Id, other.Id)
+        ? new Button("Sin pacto", () => Show(Session.BreakPact(Player.Id, other.Id)),
+            Tooltip: $"Rompes el pacto de no agresión: podréis declararos la guerra dentro de {GameRules.BrokenPactTruceDays} días. "
+                     + $"{other.Name} lo recordará ({GameRules.BrokenPactOpinion:0} de opinión).", Size: TextSize.Small)
+        : Agreement("Pacto", Session.CanProposePact(Player.Id, other.Id), () => Session.ProposePact(Player.Id, other.Id),
+            $"Pacto de no agresión: ninguno de los dos puede declarar la guerra al otro hasta que uno lo rompa. Acepta si su opinión de nosotros "
+            + $"llega a {GameRules.PactAcceptOpinion:0}, o a {GameRules.FearedPactOpinion:0} si nuestro ejército es más fuerte.");
+
+    /// <summary>A button for an agreement: enabled when it can be offered, with the reason in the tooltip when not.</summary>
+    private Button Agreement(string label, CommandResult can, Func<CommandResult> act, string what) =>
+        new(label, () => Show(act()), can.Ok, Tooltip: can.Ok ? what : $"{what}\n{can.Message}", Size: TextSize.Small);
 
     /// <summary>How the war goes for us, from -100 to 100, with what makes it up in the tooltip.</summary>
     private TextCell WarScoreCell(Player other)

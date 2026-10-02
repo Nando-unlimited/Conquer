@@ -211,6 +211,16 @@ public static class GameRules
     public const double VassalOpinion = -10;
     public const double OverlordOpinion = 10;
     public const double ReleasedOpinion = 40;
+    // Non-aggression pacts and military access. A computer rival signs a pact with nations it thinks at least
+    // PactAcceptOpinion of (FearedPactOpinion if their army is stronger), and lets armies through if it thinks
+    // AccessAcceptOpinion of them. Breaking a pact leaves a truce of BrokenPactTruceDays.
+    public const double PactOpinion = 10;
+    public const double PactAcceptOpinion = 0;
+    public const double FearedPactOpinion = -25;
+    public const double BrokenPactOpinion = -30;
+    public const int BrokenPactTruceDays = 365;
+    public const double AccessOpinion = 10;
+    public const double AccessAcceptOpinion = 20;
 
     // Seasons. Winter bites from MildWinterLatitude and is at its worst from HarshWinterLatitude; spring and autumn
     // bring MudShare of its slowdown as mud. Armies lose men to cold out of their cities, and to the desert all year.

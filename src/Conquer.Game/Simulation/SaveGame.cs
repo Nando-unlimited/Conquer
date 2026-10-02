@@ -73,6 +73,9 @@ public sealed record SaveGame
     /// <summary>Vassals and reparations; missing in saves from before 1.71.0.</summary>
     public List<VassalSave>? Vassals { get; init; }
     public List<Reparations>? Reparations { get; init; }
+    /// <summary>Non-aggression pacts and military access; missing in saves from before 1.72.0.</summary>
+    public List<AllianceSave>? Pacts { get; init; }
+    public List<AccessSave>? Access { get; init; }
     public required List<Notification> Notifications { get; init; }
     public required List<AiSave> Ais { get; init; }
     public required Dictionary<int, double> EmigrationCarry { get; init; }
@@ -175,6 +178,8 @@ public sealed record AllianceSave(int A, int B);
 public sealed record MemorySave(int From, int To, string Reason, double Value);
 
 public sealed record VassalSave(int Vassal, int Overlord, long SinceHours);
+
+public sealed record AccessSave(int Granter, int Grantee);
 
 public sealed record RoadLinkSave(int A, int B, RoadKind Kind);
 

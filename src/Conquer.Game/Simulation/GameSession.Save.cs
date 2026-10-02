@@ -53,6 +53,8 @@ public sealed partial class GameSession
         Memories = _memories.OrderBy(m => m.Key).SelectMany(m => m.Value.Select(x => new MemorySave(m.Key.From, m.Key.To, x.Reason, x.Value))).ToList(),
         Vassals = _vassals.OrderBy(v => v.Key).Select(v => new VassalSave(v.Key, v.Value.Overlord, v.Value.Since)).ToList(),
         Reparations = [.. _reparations],
+        Pacts = _pacts.Order().Select(x => new AllianceSave(x.Item1, x.Item2)).ToList(),
+        Access = _access.Order().Select(x => new AccessSave(x.Granter, x.Grantee)).ToList(),
         Notifications = [.. Notifications],
         Ais = _ais.Select(ai => ai.ToSave()).ToList(),
         EmigrationCarry = new Dictionary<int, double>(_emigrationCarry),
@@ -240,6 +242,8 @@ public sealed partial class GameSession
         foreach (var x in save.Memories ?? []) session.Remember(x.From, x.To, x.Reason, x.Value);
         foreach (var x in save.Vassals ?? []) session._vassals[x.Vassal] = (x.Overlord, x.SinceHours);
         session._reparations.AddRange(save.Reparations ?? []);
+        foreach (var x in save.Pacts ?? []) session._pacts.Add((x.A, x.B));
+        foreach (var x in save.Access ?? []) session._access.Add((x.Granter, x.Grantee));
         session.Notifications.AddRange(save.Notifications);
         foreach (var (province, carry) in save.EmigrationCarry) session._emigrationCarry[province] = carry;
         foreach (var n in save.UnitNumbers)

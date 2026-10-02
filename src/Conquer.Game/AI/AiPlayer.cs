@@ -107,6 +107,7 @@ internal sealed partial class AiPlayer
             OrganiseArmy();
             Diplomacy();
             SeekAlliances();
+            SeekPacts();
             Construct();
         }
     }

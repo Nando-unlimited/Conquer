@@ -56,6 +56,7 @@ public sealed partial class GameSession
             return CommandResult.Fail($"Hay una tregua con {Players[targetId].Name}: faltan {Math.Ceiling(days):0} días.");
         if (Players[playerId].Eliminated || Players[targetId].Eliminated) return CommandResult.Fail($"{Players[targetId].Name} ya no existe.");
         if (AreAllied(playerId, targetId)) return CommandResult.Fail($"Sois aliados de {Players[targetId].Name}: rompe antes la alianza.");
+        if (HavePact(playerId, targetId)) return CommandResult.Fail($"Tenéis un pacto de no agresión con {Players[targetId].Name}: rómpelo antes.");
         if (OverlordOf(playerId) is int overlord) return CommandResult.Fail($"Eres vasallo de {Players[overlord].Name}: tu señor decide las guerras.");
         if (IsVassalOf(targetId, playerId)) return CommandResult.Fail($"{Players[targetId].Name} es vasallo tuyo.");
         return CommandResult.Success();
@@ -72,7 +73,7 @@ public sealed partial class GameSession
     {
         var check = CanDeclareWar(playerId, targetId);
         if (!check.Ok) return check;
-        _wars[WarKey(playerId, targetId)] = new War(Date.Hours);
+        StartWar(playerId, targetId);
         Remember(targetId, playerId, "Nos declaró la guerra", GameRules.DeclaredWarOpinion);
         Raise(GameEventKind.WarDeclared, playerId, targetId);
         if (playerId == HumanPlayerId) Notify(HumanPlayerId, $"Declaramos la guerra a {Players[targetId].Name}.");
@@ -80,6 +81,13 @@ public sealed partial class GameSession
         CallAllies(playerId, targetId);
         CallVassals(playerId, targetId);
         return CommandResult.Success();
+    }
+
+    /// <summary>The two nations are at war from now on; any pact or access between them ends.</summary>
+    private void StartWar(int a, int b)
+    {
+        _wars[WarKey(a, b)] = new War(Date.Hours);
+        EndAgreements(a, b);
     }
 
     /// <summary>Counts a battle won in the war between the winner and the loser.</summary>
