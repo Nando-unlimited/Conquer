@@ -175,6 +175,25 @@ public sealed unsafe class Batch2D : IDisposable
         }
     }
 
+    /// <summary>An ellipse, filled or (with <paramref name="thickness"/>) as a ring of that width inwards.</summary>
+    public void Ellipse(Vector2 centre, float rx, float ry, Rgba color, float thickness = 0, int segments = 28)
+    {
+        for (int i = 0; i < segments; i++)
+        {
+            float a0 = MathF.Tau * i / segments, a1 = MathF.Tau * (i + 1) / segments;
+            var d0 = new Vector2(MathF.Cos(a0), MathF.Sin(a0));
+            var d1 = new Vector2(MathF.Cos(a1), MathF.Sin(a1));
+            Vector2 Outer(Vector2 d) => centre + new Vector2(d.X * rx, d.Y * ry);
+            if (thickness <= 0) Triangle(centre, Outer(d0), Outer(d1), color);
+            else
+            {
+                Vector2 Inner(Vector2 d) => centre + new Vector2(d.X * (rx - thickness), d.Y * (ry - thickness));
+                Triangle(Inner(d0), Outer(d0), Outer(d1), color);
+                Triangle(Inner(d0), Outer(d1), Inner(d1), color);
+            }
+        }
+    }
+
     /// <summary>A rectangle with rounded corners; with <paramref name="bottom"/>, shading down to it.</summary>
     public void RoundedRect(float x, float y, float w, float h, float radius, Rgba color, Rgba? bottom = null)
     {

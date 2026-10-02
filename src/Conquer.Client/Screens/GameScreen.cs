@@ -31,6 +31,7 @@ public sealed partial class GameScreen : IScreen, IAudibleScreen
     private readonly ChangelogView _changelog = new();
     private readonly HelpView _help = new();
     private readonly NationView _nation;
+    private readonly SpriteAtlas _sprites;
     private readonly List<(int UnitId, Rect Bounds)> _unitHitBoxes = [];
 
     private bool _mapDirty = true, _dragging;
@@ -52,6 +53,7 @@ public sealed partial class GameScreen : IScreen, IAudibleScreen
         _game = new GameController(session, loaded);
         _game.Camera.Screen = app.ScreenSize;
         _renderer = new MapRenderer(app.Gl, session.Map, pixels);
+        _sprites = new SpriteAtlas(app.Gl);
         _rivers = new RiverLayer(session.Map);
         _roads = new RoadLayer(session.Map);
         session.OwnershipChanged += _ => _mapDirty = true;
@@ -503,5 +505,9 @@ public sealed partial class GameScreen : IScreen, IAudibleScreen
         if (Ui.Button(new Rect(x + bw + 12, by, bw, 40), dialog.Confirm, dialog.Error == null)) _game.ConfirmCityName();
     }
 
-    public void Dispose() => _renderer.Dispose();
+    public void Dispose()
+    {
+        _renderer.Dispose();
+        _sprites.Dispose();
+    }
 }

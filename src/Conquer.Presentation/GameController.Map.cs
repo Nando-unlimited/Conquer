@@ -8,7 +8,8 @@ using Conquer.Game.Simulation;
 namespace Conquer.Presentation;
 
 /// <summary>A city on screen: houses with roofs of its nation's colour (more of them the more it holds), a tower if it is the capital, and its name when there is room.</summary>
-public sealed record CityMarker(Vector2 Screen, float Scale, uint Color, int Population, bool Capital, string? Name, int Id = 0, bool Industry = false);
+public sealed record CityMarker(Vector2 Screen, float Scale, uint Color, int Population, bool Capital, string? Name, int Id = 0, bool Industry = false,
+    IReadOnlyList<string>? Buildings = null);
 
 /// <summary>A nation's name over the middle of its land, as large as the land looks and fading when zoomed in close.</summary>
 public sealed record NationLabel(Vector2 Screen, string Name, TextSize Size, float Alpha, uint Color);
@@ -28,7 +29,7 @@ public enum CounterKind
 public sealed record UnitCounter(int UnitId, Vector2 Screen, float Scale, uint Color, bool Selected, CounterKind Kind, UnitFunction Function,
     string Symbol, int Aboard, string Echelon, double Strength, double Organisation,
     IReadOnlyList<Vector2>? Path, (Vector2 To, bool InRange)? Command, (Vector2 From, Vector2 To)? Attack,
-    bool Moving = false, bool Fighting = false, Vector2 Heading = default);
+    bool Moving = false, bool Fighting = false, Vector2 Heading = default, string? Model = null);
 
 /// <summary>Crossed swords over a battle; <see cref="Battle"/> is null at sea. The tooltip is worked out only when hovered.</summary>
 public sealed record BattleMarker(int ProvinceId, Battle? Battle, Vector2 Screen, Func<string> Tooltip);
@@ -56,7 +57,8 @@ public sealed partial class GameController
             float scale = Math.Clamp(Camera.Zoom / 4.5f, 0.6f, 1.5f);
             bool named = Camera.Zoom >= 2.5f || (capital && Camera.Zoom >= 1);
             cities.Add(new CityMarker(s, scale, Session.Players[city.OwnerId].Color, (int)Map.Provinces[city.ProvinceId].Population, capital, named ? city.Name : null,
-                city.Id, Map.Provinces[city.ProvinceId].Buildings.Any(b => b is BuildingType.Workshop or BuildingType.Factory)));
+                city.Id, Map.Provinces[city.ProvinceId].Buildings.Any(b => b is BuildingType.Workshop or BuildingType.Factory),
+                Camera.Zoom >= 5 ? [.. Map.Provinces[city.ProvinceId].Buildings.Select(Models.Of).OfType<string>().Distinct()] : null));
         }
         return cities;
     }
@@ -98,7 +100,7 @@ public sealed partial class GameController
         return labels;
     }
 
-    /// <summary>NATO-style counters, stacked a little up and to the right when several share a province. Units aboard show in their fleet's panel.</summary>
+    /// <summary>The units on the map: counters stacked a little up and to the right when several share a province, or figures side by side. Units aboard show in their fleet's panel.</summary>
     private List<UnitCounter> Counters()
     {
         var counters = new List<UnitCounter>();
@@ -112,7 +114,11 @@ public sealed partial class GameController
             if (!OnScreen(s)) continue;
             int stack = stackIndex.GetValueOrDefault(unit.ProvinceId);
             stackIndex[unit.ProvinceId] = stack + 1;
-            s += new Vector2(stack * 5, -stack * 7 - 14);
+            float scale = unit.Id == SelectedUnitId ? 1 : Math.Clamp(Camera.Zoom / 3, 0.45f, 1);
+            // Figures stand side by side, to the right of a city; counters stack up and to the right.
+            s += DisplaySettings.Current.UnitModels
+                ? new Vector2(((!unit.IsMoving && Map.Provinces[unit.ProvinceId].CityId.HasValue ? 1.4f : 0) + stack * 1.1f) * 30 * scale, -4)
+                : new Vector2(stack * 5, -stack * 7 - 14);
 
             bool selected = unit.Id == SelectedUnitId;
             var path = selected || (unit.OwnerId == Human.Id && Camera.Zoom >= 1.5f) ? Route(unit, pos) : null;
@@ -121,9 +127,9 @@ public sealed partial class GameController
             (Vector2, Vector2)? attack = unit.AttackingProvinceId is int target
                 ? (Camera.MapToScreen(pos), Camera.MapToScreen(Between(unit.ProvinceId, target, 1))) : null;
             var kind = unit.IsMilitary ? CounterKind.Military : unit.IsFleet ? CounterKind.Fleet : unit.IsHeadquarters ? CounterKind.Headquarters : CounterKind.Settlers;
-            counters.Add(new UnitCounter(unit.Id, s, selected ? 1 : Math.Clamp(Camera.Zoom / 3, 0.45f, 1), Session.Players[unit.OwnerId].Color, selected,
+            counters.Add(new UnitCounter(unit.Id, s, scale, Session.Players[unit.OwnerId].Color, selected,
                 kind, unit.Function, unit.Symbol, unit.IsFleet ? Session.CargoOf(unit).Count() : 0, unit.Echelon, unit.StrengthShare, unit.OrganisationShare,
-                path, command, attack, unit.IsMoving, Fighting(unit), Heading(unit)));
+                path, command, attack, unit.IsMoving, Fighting(unit), Heading(unit), Models.Of(unit)));
         }
         return counters;
     }

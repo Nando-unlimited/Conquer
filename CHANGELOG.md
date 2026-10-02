@@ -2,6 +2,18 @@
 
 Todos los cambios del juego, del más reciente al más antiguo. Cada versión es un commit cuyo título es su número.
 
+## [1.85.0] - 2026-10-02
+
+### Añadido
+- **Maquetas isométricas en el mapa**, traídas de la otra versión del juego:
+  - **Unidades**: cada regimiento es una figurita sobre una peana del color de su nación, que mira hacia donde marcha. Los soldados visten según su época: casco de bronce y lanza, tricornio y mosquete, casco de acero y fusil. También hay jinetes, catapultas, cañones, obuses, ingenieros, camiones y tanques, y los colonos van en carreta. Uniformes y banderas se pintan del color de la nación.
+  - **Flotas**: su barco más fuerte, del trirreme al portaaviones.
+  - **Ciudades**: un castillo en la capital y un pueblo en las demás, sobre una mancha del color de su dueño.
+  - **Edificios**: de cerca, bajo el nombre de la ciudad, una fila de maquetas con lo que hay construido (granja, taller, biblioteca, mercado, fuerte y puerto).
+  - Las unidades de una provincia se ponen en fila, a la derecha de la ciudad si la hay. Los cuarteles generales siguen con su ficha.
+- En el menú de pausa, **«Mapa: figuras 3D / fichas»** vuelve a las fichas OTAN y las casitas de siempre.
+- Las maquetas de ciudades y edificios salen del Hexagon Kit de Kenney (dominio público); las de unidades se hicieron para la otra versión al estilo de esos kits. Se citan en el README.
+
 ## [1.84.0] - 2026-10-02
 
 ### Añadido

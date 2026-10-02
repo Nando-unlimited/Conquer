@@ -937,8 +937,11 @@ Lo que muestra cada pestaña de la pantalla de la nación, para que el cliente l
 | `StatisticsPage`, `ChartSeries`, `ChartTick` | Las estadísticas: botones de cifra, título, una línea por nación (puntos de 0 a 1, color, última cifra, si es la del jugador) y las marcas de los ejes. |
 
 
+
+### `Models.cs`
+`Models`: qué maqueta representa cada cosa en el mapa, por su nombre. `Of(tipo de batallón)`: soldados vestidos según su época (guerreros, legionarios y ballesteros con casco de bronce, arcabuceros y mosqueteros con tricornio, fusileros con casco de acero), jinetes, catapultas, cañones y obuses, ingenieros, camiones, tanques, bombarderos y cada barco. `Of(unidad)`: los colonos, su carreta; una flota, su barco más fuerte; un regimiento, su batallón más numeroso; los cuarteles, ninguna (siguen con su ficha). `Of(edificio)`: granja y granero un molino, taller y fábrica una forja, biblioteca y universidad una torre, mercado y banco un mercado, murallas y castillo un fuerte, puerto y dique un puerto. `City(capital)`: castillo o pueblo.
 ### `Display.cs`
-`DisplaySettings`: opciones de pantalla guardadas en `pantalla.json`, en la carpeta de partidas. De momento, si los iconos del mapa se mueven (`Animations`); `Buttons()` da el botón del menú de pausa, junto a los de volumen (`AudioSettings`).
+`DisplaySettings`: opciones de pantalla guardadas en `pantalla.json`, en la carpeta de partidas: si los iconos del mapa se mueven (`Animations`) y si unidades, ciudades y edificios se dibujan como maquetas 3D o como fichas y casitas (`UnitModels`). `Buttons()` da sus botones del menú de pausa, junto a los de volumen (`AudioSettings`).
 ### `Audio.cs`
 | Elemento | Qué hace |
 | --- | --- |
@@ -1095,6 +1098,9 @@ La pantalla de juego. Clase parcial: el ejército en pantalla está en `GameScre
 | `DrawPauseMenu()` | Dibuja el menú de pausa (`GameController.PauseMenu`) con la versión del juego. |
 
 
+
+### `Graphics/SpriteAtlas.cs`
+`SpriteAtlas`: carga las imágenes incrustadas `Sprites/*.png` (las maquetas isométricas de `Assets/Sprites`) en una sola textura con mipmaps, colocadas por filas, y extiende el color de los bordes a los píxeles transparentes de alrededor (`Bleed`) para que no se oscurezcan al reducirse. `Draw(lote, nombre, pie, caja, color)` dibuja una maqueta tan grande como quepa en la caja, de pie en ese punto, y encima su imagen `-team` teñida del color de la nación; puede dibujarla en espejo para que mire a la izquierda.
 ### `Graphics/Motion.cs`
 `Motion`: movimientos pequeños en bucle para los iconos del mapa (`Wave`, una oscilación; `Hop`, un salto; `Cycle`, de 0 a 1 una y otra vez). Cada cosa va desfasada de las demás según su id (ángulo áureo). Solo se dibujan; se apagan con «Animaciones» en el menú de pausa (`DisplaySettings`).
 ### `Screens/GameScreen.Markers.cs`
@@ -1103,9 +1109,10 @@ Dibuja los marcadores de `GameController.Markers`.
 | Función | Qué hace |
 | --- | --- |
 | `DrawMarkers()` | Ciudades, nombres de naciones, fichas y batallas, en ese orden; guarda dónde quedan las fichas y las espadas para los clics. |
-| `DrawCity(...)`, `DrawNationName(...)` | Las casas de una ciudad (`MapIcons.City`: torre con bandera dorada en la capital) con su nombre debajo; el nombre de una nación con sombra, en un tono claro de su color. |
+| `DrawCity(...)`, `DrawNationName(...)` | La ciudad con su nombre debajo: con figuras 3D, un castillo (capital) o un pueblo sobre una mancha del color de su dueño y, de cerca, las maquetas de sus edificios en fila bajo el nombre; con fichas, sus casas (`MapIcons.City`: torre con bandera dorada en la capital); el nombre de una nación con sombra, en un tono claro de su color. |
 | `DrawCounter(...)`, `DrawEchelon(...)`, `Bar(...)` | Fichas OTAN: la ruta como flecha verde (`PathArrow`), la línea al cuartel (verde si está a su alcance), la flecha roja del ataque y la ficha: dentro del marco, el símbolo de su arma (`MapIcons.NatoSymbol`: aspa para infantería, aspa con raya vertical para la motorizada, aspa con óvalo para la mecanizada, barra diagonal para caballería y exploradores, óvalo para blindados, punto para artillería, puente para ingenieros y alas para aviación); encima, las marcas de tamaño (III regimiento, X brigada, XX división, XXX cuerpo, XXXX ejército, XXXXX grupo de ejércitos); los cuarteles, con «HQ»; los colonos, un carromato (`MapIcons.Settlers`); las flotas, un casco bajo la letra de su barco y un punto por cada unidad a bordo. Barras de hombres (verde) y organización (ámbar). Cada ficha lleva sombra, y el marco de la seleccionada late. Con las animaciones (`CounterMotion`), las fichas que marchan saltan, la seleccionada se balancea, las que combaten tiemblan y las flotas se mecen y dejan una estela (`Wake`). |
 | `Smoke(...)`, `Bursts(...)` | Con las animaciones, humo que sube de las ciudades de más de 2000 habitantes (más oscuro y espeso si tienen taller o fábrica) y explosiones que se hinchan y se apagan alrededor de cada batalla. |
+| `DrawFigure(...)` | Con figuras 3D, una unidad como maqueta (`Models`) sobre una peana del color de su nación, mirando hacia donde va, con sus marcas de tamaño encima, sus barras debajo y un anillo que late si está seleccionada. Las unidades de una provincia se ponen en fila, a la derecha de la ciudad si la hay. |
 | `DrawBattleMark(...)` | Las espadas cruzadas, que laten; al pasar el ratón, su resumen; al hacer clic, la ventana de la batalla. |
 
 ### `Screens/GameScreen.UnitEditor.cs`

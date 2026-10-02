@@ -1,0 +1,19 @@
+City and building sprites rendered from the Hexagon Kit by Kenney (https://www.kenney.nl),
+licensed under Creative Commons Zero (CC0, https://creativecommons.org/publicdomain/zero/1.0/).
+They were rendered in isometric view with tools/IsoSprites (in conquerTEST, the other version of the game); the airfield is built from Kenney's
+grass tile with a runway, a control tower, a hangar and a plane made of boxes.
+
+File                     Model
+city-capital.png         building-castle
+city-town.png            building-village
+building-farm.png        building-mill
+building-workshop.png    building-smelter
+building-library.png     building-wizard-tower
+building-market.png      building-market
+building-fort.png        building-walls
+building-port.png        building-port
+building-airfield.png    grass + boxes (see tools/IsoSprites)
+
+The unit, ship and aircraft sprites in Units/ are made for this game: modeled in code in
+tools/IsoSprites/Units.cs, in the style of Kenney's kits, and rendered with the same tool
+("units" mode). Each name-team.png holds, in grey, the parts the game paints in the country's color.

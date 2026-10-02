@@ -10,7 +10,7 @@
     <!-- No ICU dependency, so it runs on minimal Linux systems; Program.cs sets the Spanish number format. -->
     <InvariantGlobalization>true</InvariantGlobalization>
     <RootNamespace>Conquer.Client</RootNamespace>
-    <Version>1.84.0</Version>
+    <Version>1.85.0</Version>
   </PropertyGroup>
 
   <ItemGroup>
@@ -27,6 +27,7 @@
     <PackageReference Include="Silk.NET.OpenGL" Version="2.23.0" />
     <PackageReference Include="Silk.NET.Windowing" Version="2.23.0" />
     <PackageReference Include="StbTrueTypeSharp" Version="1.26.13" />
+    <PackageReference Include="StbImageSharp" Version="2.30.15" />
   </ItemGroup>
 
   <ItemGroup>
@@ -35,6 +36,8 @@
     <EmbeddedResource Include="Assets\Cinzel.ttf" LogicalName="Conquer.Client.Assets.Cinzel.ttf" />
     <EmbeddedResource Include="Assets\Audio\Music\*.ogg" LogicalName="Audio/Music/%(Filename)%(Extension)" />
     <EmbeddedResource Include="Assets\Audio\Sfx\*.ogg" LogicalName="Audio/Sfx/%(Filename)%(Extension)" />
+    <EmbeddedResource Include="Assets\Sprites\*.png" LogicalName="Sprites/%(Filename)%(Extension)" />
+    <EmbeddedResource Include="Assets\Sprites\Units\*.png" LogicalName="Sprites/%(Filename)%(Extension)" />
   </ItemGroup>
 
 </Project>

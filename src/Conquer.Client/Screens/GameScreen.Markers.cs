@@ -24,17 +24,47 @@ public sealed partial class GameScreen
         foreach (var battle in markers.Battles) DrawBattleMark(battle);
     }
 
-    /// <summary>Houses whose bases stand on the province's centre, and the name under them.</summary>
+    /// <summary>
+    /// The city and its name under it: a little castle or village standing on a patch of its owner's colour, with the
+    /// models of its buildings in a row under the name when close in; or, with counters, houses.
+    /// </summary>
     private void DrawCity(CityMarker city)
     {
         var s = city.Screen;
-        if (Motion.Enabled && (city.Industry || city.Population >= 2000)) Smoke(s + new Vector2(6 * city.Scale, -10 * city.Scale), city.Id, city.Scale, city.Industry);
-        float below = MapIcons.City(Batch, s + new Vector2(0, 5 * city.Scale), new Rgba(city.Color), MapIcons.Houses(city.Population), city.Capital, city.Scale);
-        if (city.Name == null) return;
-        float w = Ui.Font.Measure(city.Name, FontSize.Small, true);
-        float ty = s.Y + 5 * city.Scale + below;
-        Ui.Text(s.X - w / 2 + 1, ty + 1, city.Name, Rgba.Black, FontSize.Small, bold: true);
-        Ui.Text(s.X - w / 2, ty, city.Name, Rgba.White, FontSize.Small, bold: true);
+        float sc = city.Scale, below;
+        string model = Models.City(city.Capital);
+        bool models = DisplaySettings.Current.UnitModels && _sprites.Has(model);
+        if (models)
+        {
+            var foot = s + new Vector2(0, 8 * sc);
+            Batch.Ellipse(foot + new Vector2(0, 2), 21 * sc, 8 * sc, Rgba.Black.WithAlpha(0.35f));
+            Batch.Ellipse(foot, 20 * sc, 7.5f * sc, new Rgba(city.Color).WithAlpha(0.9f));
+            var size = _sprites.Draw(Batch, model, foot + new Vector2(0, 5 * sc), new Vector2(42, 42) * sc, new Rgba(city.Color));
+            if (Motion.Enabled && (city.Industry || city.Population >= 2000))
+                Smoke(foot + new Vector2(8 * sc, -size.Y + 4 * sc), city.Id, sc, city.Industry);
+            below = 10 * sc;
+        }
+        else
+        {
+            if (Motion.Enabled && (city.Industry || city.Population >= 2000)) Smoke(s + new Vector2(6 * sc, -10 * sc), city.Id, sc, city.Industry);
+            below = MapIcons.City(Batch, s + new Vector2(0, 5 * sc), new Rgba(city.Color), MapIcons.Houses(city.Population), city.Capital, sc);
+        }
+        float ty = s.Y + 5 * sc + below;
+        if (city.Name != null)
+        {
+            float w = Ui.Font.Measure(city.Name, FontSize.Small, true);
+            Ui.Text(s.X - w / 2 + 1, ty + 1, city.Name, Rgba.Black, FontSize.Small, bold: true);
+            Ui.Text(s.X - w / 2, ty, city.Name, Rgba.White, FontSize.Small, bold: true);
+            ty += 20;
+        }
+        if (!models || city.Buildings is not { Count: > 0 } buildings) return;
+        // The buildings in a row, each a model as tall as fits.
+        float each = 22 * sc, x = s.X - (buildings.Count - 1) * each / 2;
+        foreach (var building in buildings)
+        {
+            _sprites.Draw(Batch, building, new Vector2(x, ty + each), new Vector2(each, each), new Rgba(city.Color));
+            x += each;
+        }
     }
 
     private void DrawNationName(NationLabel label)
@@ -58,6 +88,11 @@ public sealed partial class GameScreen
         if (c.Attack is var (from, to)) PathArrow.Draw(Batch, [from, to], Theme.Battle, _game.Now, 5);
         s += CounterMotion(c);
         if (c.Kind == CounterKind.Fleet && c.Moving) Wake(s, c.Heading, c.Scale, c.UnitId);
+        if (DisplaySettings.Current.UnitModels && c.Model is { } model && _sprites.Has(model))
+        {
+            DrawFigure(c, s, model);
+            return;
+        }
 
         float W = 28 * c.Scale, H = 19 * c.Scale;
         var r = new Rect(s.X - W / 2, s.Y - H / 2, W, H);
@@ -98,6 +133,38 @@ public sealed partial class GameScreen
             Bar(new Rect(r.X - 2, r.Bottom + 7, r.W + 4, 3), c.Organisation, Theme.Organisation);
         }
         if (c.Echelon.Length > 0) DrawEchelon(r, c.Echelon, c.Scale);
+        _unitHitBoxes.Add((c.UnitId, r));
+    }
+
+    /// <summary>
+    /// A unit as a little 3D model on a patch of its nation's colour, facing the way it goes, with its size marks
+    /// above and its strength and organisation bars under the patch.
+    /// </summary>
+    private void DrawFigure(UnitCounter c, Vector2 s, string model)
+    {
+        float sc = c.Scale;
+        bool ship = c.Kind == CounterKind.Fleet;
+        var color = new Rgba(c.Color);
+        var foot = s + new Vector2(0, 9 * sc);
+        float rx = (ship ? 19 : 14) * sc, ry = (ship ? 7 : 5.5f) * sc;
+        Batch.Ellipse(foot + new Vector2(1.5f, 2), rx + 1.5f, ry + 1, Rgba.Black.WithAlpha(0.4f));
+        Batch.Ellipse(foot, rx, ry, color.Scale(0.55f).WithAlpha(1));
+        Batch.Ellipse(foot, rx - 1.5f, ry - 1.2f, color);
+        if (c.Selected)
+        {
+            float pulse = 0.5f + 0.5f * MathF.Sin((float)_game.Now * 5);
+            Batch.Ellipse(foot, rx + 5, ry + 4, Theme.Accent.WithAlpha(0.5f + 0.4f * pulse), thickness: 2.5f);
+        }
+        var box = ship ? new Vector2(48, 32) * sc : new Vector2(30, 38) * sc;
+        var size = _sprites.Draw(Batch, model, foot + new Vector2(0, ry * 0.5f), box, color, mirrored: c.Heading.X < -0.1f);
+        var r = new Rect(s.X - Math.Max(size.X, 2 * rx) / 2, foot.Y + ry * 0.5f - size.Y, Math.Max(size.X, 2 * rx), size.Y + ry);
+        if (c.Kind is CounterKind.Military or CounterKind.Fleet)
+        {
+            Bar(new Rect(foot.X - rx, foot.Y + ry + 3, 2 * rx, 3), c.Strength, Theme.Strength);
+            Bar(new Rect(foot.X - rx, foot.Y + ry + 7, 2 * rx, 3), c.Organisation, Theme.Organisation);
+        }
+        if (ship) for (int i = 0; i < c.Aboard; i++) Batch.Rect(foot.X + rx + 3, foot.Y - ry - i * 5, 3, 3, Rgba.White);
+        if (c.Echelon.Length > 0) DrawEchelon(r, c.Echelon, sc);
         _unitHitBoxes.Add((c.UnitId, r));
     }
 
