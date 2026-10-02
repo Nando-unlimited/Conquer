@@ -2,6 +2,11 @@
 
 Todos los cambios del juego, del más reciente al más antiguo. Cada versión es un commit cuyo título es su número.
 
+## [1.70.1] - 2026-10-02
+
+### Cambiado
+- **Nueva música en la pantalla inicial**: «The Britons», de Kevin MacLeod (FreePD.com, dominio público).
+
 ## [1.70.0] - 2026-10-02
 
 ### Añadido

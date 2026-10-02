@@ -34,8 +34,8 @@ public static class Soundtrack
     public static IReadOnlyList<string> For(Era era, bool atWar) =>
         era < Era.Renaissance ? atWar ? EarlyWar : EarlyPeace : atWar ? LateWar : LatePeace;
 
-    /// <summary>The music of the title and menu screens.</summary>
-    public static IReadOnlyList<string> Menu => ["fantasy_orchestral"];
+    /// <summary>The music of the title and menu screens: «The Britons», by Kevin MacLeod.</summary>
+    public static IReadOnlyList<string> Menu => ["the_britons"];
 }
 
 /// <summary>How loud the music and the sound effects play, from 0 to 1; kept in a file beside the saved games.</summary>

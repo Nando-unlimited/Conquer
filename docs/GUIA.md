@@ -810,7 +810,7 @@ Lo que muestra cada pestaña de la pantalla de la nación, para que el cliente l
 | Elemento | Qué hace |
 | --- | --- |
 | `SoundCue` | Los efectos: clic, confirmación, alerta, batalla, guerra, paz, obra, descubrimiento, ciudad fundada, monedas y campana. |
-| `Soundtrack` | Las pistas: medievales hasta la Edad Media y orquestales desde la era de los Descubrimientos, unas para la paz y otras para la guerra (`For(era, enGuerra)`); y la del menú (`Menu`). |
+| `Soundtrack` | Las pistas: medievales hasta la Edad Media y orquestales desde la era de los Descubrimientos, unas para la paz y otras para la guerra (`For(era, enGuerra)`); y la del menú (`Menu`: «The Britons», de Kevin MacLeod). |
 | `AudioSettings` | Volumen de la música y de los efectos (0 a 1), guardado en `sonido.json` en la carpeta de partidas. `Buttons()` da los botones de los menús, que lo suben de cuarto en cuarto y después lo apagan. |
 
 ### `GameController.Audio.cs`

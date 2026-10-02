@@ -16,3 +16,6 @@ Música (Music), de OpenGameArt.org:
 - cinematic_calm: Wolfgang_ («At Home - Orchestral»).
 - new_sunrise: nene («New Sunrise»).
 - determined_pursuit, orchestral_battle: Emma_MA («Determined Pursuit», «QaziJamJam Orchestral Battle Theme»).
+
+Música del menú principal:
+- the_britons: Kevin MacLeod, «The Britons» (FreePD.com, dominio público).
