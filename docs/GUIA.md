@@ -944,13 +944,13 @@ Lo que muestra cada pestaña de la pantalla de la nación, para que el cliente l
 ### `Models.cs`
 `Models`: qué maqueta representa cada cosa en el mapa, por su nombre. `Of(tipo de batallón)`: soldados vestidos según su época (guerreros, legionarios y ballesteros con casco de bronce, arcabuceros y mosqueteros con tricornio, fusileros con casco de acero), jinetes, catapultas, cañones y obuses, ingenieros, camiones, tanques, bombarderos y cada barco. `Of(unidad)`: los colonos, su carreta; una flota, su barco más fuerte; un regimiento, su batallón más numeroso; los cuarteles, ninguna (siguen con su ficha). `Of(edificio)`: granja y granero un molino, taller y fábrica una forja, biblioteca y universidad una torre, mercado y banco un mercado, murallas y castillo un fuerte, puerto y dique un puerto. `City(capital)`: castillo o pueblo.
 ### `Display.cs`
-`DisplaySettings`: opciones de pantalla guardadas en `pantalla.json`, en la carpeta de partidas: si los iconos del mapa se mueven (`Animations`) y si unidades, ciudades y edificios se dibujan como maquetas 3D o como fichas y casitas (`UnitModels`). `Buttons()` da sus botones del menú de pausa, junto a los de volumen (`AudioSettings`).
+`DisplaySettings`: opciones de pantalla guardadas en `pantalla.json`, en la carpeta de partidas: si los iconos del mapa se mueven (`Animations`) y si unidades, ciudades y edificios se dibujan como maquetas 3D o como fichas y casitas (`UnitModels`). `SetAnimations` y `SetUnitModels` los cambian y los guardan; se eligen en las opciones (`SettingsMenu`).
 ### `Audio.cs`
 | Elemento | Qué hace |
 | --- | --- |
 | `SoundCue` | Los efectos: clic, confirmación, alerta, batalla, guerra, paz, obra, descubrimiento, ciudad fundada, monedas y campana. |
 | `Soundtrack` | Las pistas: medievales hasta la Edad Media y orquestales desde la era de los Descubrimientos, unas para la paz y otras para la guerra (`For(era, enGuerra)`); y la del menú (`Menu`: «The Britons», de Kevin MacLeod). |
-| `AudioSettings` | Volumen de la música y de los efectos (0 a 1), guardado en `sonido.json` en la carpeta de partidas. `Buttons()` da los botones de los menús, que lo suben de cuarto en cuarto y después lo apagan. |
+| `AudioSettings` | Volumen de la música y de los efectos (0 a 1), guardado en `sonido.json` en la carpeta de partidas. `ChangeMusic` y `ChangeSounds` lo suben o bajan de cuarto en cuarto (entre silencio y el máximo) y lo guardan; `Label` lo escribe («50 %», «No»). Se eligen en las opciones (`SettingsMenu`). |
 
 ### `GameController.Audio.cs`
 | Función | Qué hace |
@@ -1021,7 +1021,8 @@ Los menús fuera de la partida como datos. Para cambiar de pantalla piden a un `
 
 | Elemento | Qué es |
 | --- | --- |
-| `MainMenu` | Pantalla inicial: "Continuar" (carga la última partida guardada), "Nueva partida", "Cargar partida", historial de versiones y salir. |
+| `MainMenu` | Pantalla inicial: "Continuar" (carga la última partida guardada), "Nueva partida", "Cargar partida", opciones (`Settings`, un `SettingsMenu`), historial de versiones y salir; mientras hay una ventana abierta, los demás botones no hacen nada. |
+| `SettingsMenu` | Las opciones, iguales desde la pantalla inicial y desde el menú de pausa (`GameController.Settings`, que para el tiempo y se cierra con Esc): volumen de la música y del sonido (un valor entre - y +), animaciones (sí o no) y mapa (figuras 3D o fichas), como `OptionRow`, y «Cerrar». |
 | `NewGameMenu`, `OptionRow` | Nueva partida, fila a fila: tipo de mapa, tamaño (solo en el aleatorio), semilla, número de jugadores, dificultad (con su descripción y los recursos con los que empiezas), "Comenzar" y "Volver". |
 | `LoadGameMenu`, `SaveRow` | Lista de partidas guardadas, de la más reciente a la más antigua, para cargar o borrar (pide confirmación). |
 | `LoadingJob` | Genera el mundo en segundo plano para una partida nueva o una guardada, diciendo qué hace en cada momento; lo que el cliente necesita para dibujar el mapa lo prepara en el mismo hilo (una función que recibe). Da la partida al terminar, o el error. |
@@ -1071,7 +1072,8 @@ Punto de entrada. Comprueba OpenGL 3.3 (`GlSupport.Ensure`), pone el formato de 
 | Elemento | Qué es |
 | --- | --- |
 | `MenuNavigator` | El `IMenuNavigator` del cliente: cambia de pantalla o cierra el juego. |
-| `MainMenuScreen`, `NewGameScreen`, `LoadGameScreen` | Dibujan `MainMenu`, `NewGameMenu` y `LoadGameMenu` sobre el fondo del mapa (`MenuBackground`); la lista de partidas guardadas se desplaza con la rueda. Esc cierra el historial o vuelve al menú principal. |
+| `MainMenuScreen`, `NewGameScreen`, `LoadGameScreen` | Dibujan `MainMenu`, `NewGameMenu` y `LoadGameMenu` sobre el fondo del mapa (`MenuBackground`); la lista de partidas guardadas se desplaza con la rueda. Esc cierra el historial o las opciones, o vuelve al menú principal. |
+| `SettingsView` | Dibuja las opciones (`SettingsMenu`) en el centro, sobre un fondo oscurecido: una fila por opción y «Cerrar» abajo. La usan la pantalla inicial y la partida. |
 | `LoadingScreen` | Muestra cómo va un `LoadingJob` (con `MapRenderer.Prepare` para los píxeles del mapa) y, al terminar, abre `GameScreen`; si falla, dice por qué. |
 
 ### `Screens/GameScreen.cs`

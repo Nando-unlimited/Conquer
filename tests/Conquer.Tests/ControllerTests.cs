@@ -268,13 +268,16 @@ public class ControllerTests(WorldFixture world)
     }
 
     [Fact]
-    public void ThePauseMenuSwitchesTheAnimationsAndTheVolumes()
+    public void ThePauseMenuOpensTheOptionsAndStopsTime()
     {
         var game = NewGame();
-        var menu = game.PauseMenu(new NoNavigator(), "test");
-        Assert.Contains(menu, b => b.Text.StartsWith("Música"));
-        Assert.Contains(menu, b => b.Text.StartsWith("Sonido"));
-        Assert.Contains(menu, b => b.Text.StartsWith("Animaciones"));
+        game.MenuOpen = true;
+        game.PauseMenu(new NoNavigator(), "test").Single(b => b.Text == "Opciones").Press();
+        Assert.True(game.Settings.Open);
+        Assert.False(game.MenuOpen);
+        Assert.True(game.TimeStopped);
+        game.Escape();
+        Assert.False(game.Settings.Open);
     }
 
     [Fact]

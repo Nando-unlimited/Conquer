@@ -25,6 +25,41 @@ public class MenuTests(WorldFixture world)
         public void Quit() => Last = "quit";
     }
 
+
+    [Fact]
+    public void TheTitleScreenOpensTheOptions()
+    {
+        var nav = new FakeNavigator();
+        var menu = new MainMenu(nav);
+        menu.Other().Single(b => b.Text == "Opciones").Press();
+        Assert.True(menu.Settings.Open);
+        // While the options are open, the other buttons do nothing.
+        menu.Main()[1].Press();
+        Assert.Equal("", nav.Last);
+        menu.Settings.Close.Press();
+        Assert.False(menu.Settings.Open);
+        menu.Main()[1].Press();
+        Assert.Equal("new", nav.Last);
+    }
+
+    [Fact]
+    public void TheOptionsChangeTheVolumesAndTheMap()
+    {
+        var settings = new SettingsMenu();
+        double music = AudioSettings.Current.Music;
+        bool models = DisplaySettings.Current.UnitModels;
+        var volume = settings.Rows().Single(r => r.Label == "Música");
+        Assert.Equal(AudioSettings.Label(music), volume.Value);
+        (music > 0 ? volume.Buttons[0] : volume.After![0]).Press();
+        Assert.NotEqual(music, AudioSettings.Current.Music);
+        settings.Rows().Single(r => r.Label == "Mapa").Buttons[models ? 1 : 0].Press();
+        Assert.Equal(!models, DisplaySettings.Current.UnitModels);
+
+        // Back as they were.
+        AudioSettings.Current.ChangeMusic((int)Math.Round((music - AudioSettings.Current.Music) * 4));
+        DisplaySettings.Current.SetUnitModels(models);
+        Assert.Equal(music, AudioSettings.Current.Music);
+    }
     [Fact]
     public void TheNewGameMenuStartsTheChosenGame()
     {
@@ -50,10 +85,12 @@ public class MenuTests(WorldFixture world)
     {
         var nav = new FakeNavigator();
         var menu = new MainMenu(nav);
-        menu.Other()[0].Press();
+        menu.Other().Single(b => b.Text == "Historial de versiones").Press();
         Assert.True(menu.ChangelogOpen);
         menu.Main()[1].Press();
-        menu.Other()[1].Press();
+        menu.Other().Single(b => b.Text == "Salir").Press();
+        menu.Other().Single(b => b.Text == "Opciones").Press();
+        Assert.False(menu.Settings.Open);
         Assert.Equal("", nav.Last);
         menu.ChangelogOpen = false;
         menu.Main()[1].Press();

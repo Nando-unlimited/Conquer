@@ -73,27 +73,21 @@ public sealed class AudioSettings
         }
     }
 
-    /// <summary>Steps a volume up by a quarter, back to silence after the loudest.</summary>
-    private static double Next(double volume) => volume >= 0.99 ? 0 : Math.Round(volume * 4 + 1) / 4;
+    /// <summary>A volume a quarter up or down, between silence and the loudest.</summary>
+    private static double Step(double volume, int quarters) => Math.Clamp(Math.Round(volume * 4) + quarters, 0, 4) / 4;
 
-    public void NextMusic()
+    public void ChangeMusic(int quarters)
     {
-        Music = Next(Music);
+        Music = Step(Music, quarters);
         Save();
     }
 
-    public void NextSounds()
+    public void ChangeSounds(int quarters)
     {
-        Sounds = Next(Sounds);
+        Sounds = Step(Sounds, quarters);
         Save();
     }
 
-    public static string Label(string what, double volume) => volume <= 0 ? $"{what}: no" : $"{what}: {volume:P0}";
-
-    /// <summary>The menu buttons that step the music and the sound volume.</summary>
-    public IReadOnlyList<Button> Buttons() =>
-    [
-        new(Label("Música", Music), NextMusic, Tooltip: "Volumen de la música: pulsa para subirlo; después del máximo, se apaga."),
-        new(Label("Sonido", Sounds), NextSounds, Tooltip: "Volumen de los efectos: pulsa para subirlo; después del máximo, se apagan."),
-    ];
+    /// <summary>A volume as the options show it: "No" when silent.</summary>
+    public static string Label(double volume) => volume <= 0 ? "No" : $"{volume:P0}";
 }

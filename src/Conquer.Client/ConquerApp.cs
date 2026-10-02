@@ -144,6 +144,7 @@ public sealed class ConquerApp
             { Load: { } path } => new LoadingScreen(this, new SaveFile(Path.GetFullPath(path), Path.GetFileNameWithoutExtension(path), File.GetLastWriteTime(path))),
             { Menu: "new" } => new NewGameScreen(this),
             { Menu: "load" } => new LoadGameScreen(this),
+            { Menu: "opciones" } => new MainMenuScreen(this, settingsOpen: true),
             _ => new MainMenuScreen(this),
         };
     }

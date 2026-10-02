@@ -15,26 +15,29 @@ public interface IMenuNavigator
     void Quit();
 }
 
-/// <summary>The title screen: carry on the latest game, start a new one, load a saved one, see the changelog or quit.</summary>
+/// <summary>The title screen: carry on the latest game, start a new one, load a saved one, change the options, see the changelog or quit.</summary>
 public sealed class MainMenu(IMenuNavigator navigator)
 {
     private readonly SaveFile? _latest = SaveFiles.List().FirstOrDefault();
 
     public bool ChangelogOpen { get; set; }
 
-    /// <summary>The three big buttons on top: Continuar, Nueva partida and Cargar partida. They do nothing while the changelog is open.</summary>
+    /// <summary>The three big buttons on top: Continuar, Nueva partida and Cargar partida. They do nothing while a window is open.</summary>
     public IReadOnlyList<Button> Main() =>
     [
-        new("Continuar", () => { if (!ChangelogOpen) navigator.LoadSavedGame(_latest!); }, _latest != null, Tooltip: _latest?.Name, Size: TextSize.Large),
-        new("Nueva partida", () => { if (!ChangelogOpen) navigator.ShowNewGame(); }, Size: TextSize.Large),
-        new("Cargar partida", () => { if (!ChangelogOpen) navigator.ShowLoadGame(); }, _latest != null, Size: TextSize.Large),
+        new("Continuar", () => { if (!ChangelogOpen && !Settings.Open) navigator.LoadSavedGame(_latest!); }, _latest != null, Tooltip: _latest?.Name, Size: TextSize.Large),
+        new("Nueva partida", () => { if (!ChangelogOpen && !Settings.Open) navigator.ShowNewGame(); }, Size: TextSize.Large),
+        new("Cargar partida", () => { if (!ChangelogOpen && !Settings.Open) navigator.ShowLoadGame(); }, _latest != null, Size: TextSize.Large),
     ];
 
-    /// <summary>The smaller ones below: the changelog, the music and sound volumes, and Salir.</summary>
+    public SettingsMenu Settings { get; } = new();
+
+    /// <summary>The smaller ones below: the options, the changelog and Salir. They do nothing while a window is open.</summary>
     public IReadOnlyList<Button> Other() =>
     [
-        new("Historial de versiones", () => ChangelogOpen = true),
-        new("Salir", () => { if (!ChangelogOpen) navigator.Quit(); }),
+        new("Opciones", () => { if (!ChangelogOpen) Settings.Open = true; }, Tooltip: "Música, sonido, animaciones y aspecto del mapa."),
+        new("Historial de versiones", () => { if (!Settings.Open) ChangelogOpen = true; }),
+        new("Salir", () => { if (!ChangelogOpen && !Settings.Open) navigator.Quit(); }),
     ];
 }
 

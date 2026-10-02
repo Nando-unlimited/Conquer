@@ -2,6 +2,14 @@
 
 Todos los cambios del juego, del más reciente al más antiguo. Cada versión es un commit cuyo título es su número.
 
+## [1.89.0] - 2026-10-02
+
+### Añadido
+- **Opciones en la pantalla inicial**: un botón «Opciones» abre una ventana con el volumen de la música y del sonido (con - y +, de cuarto en cuarto), las animaciones (sí o no) y el aspecto del mapa (figuras 3D o fichas). Los cambios se aplican al momento y se recuerdan entre partidas.
+
+### Cambiado
+- El menú de pausa abre esa misma ventana con su botón «Opciones», en lugar de tener un botón para cada ajuste. Mientras está abierta, el tiempo se para; Esc la cierra.
+
 ## [1.88.0] - 2026-10-02
 
 ### Añadido

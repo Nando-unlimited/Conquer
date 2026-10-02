@@ -17,10 +17,10 @@ public sealed class MenuNavigator(ConquerApp app) : IMenuNavigator
 }
 
 /// <summary>Draws the title screen (<see cref="MainMenu"/>) over the moving map.</summary>
-public sealed class MainMenuScreen(ConquerApp app) : IScreen
+public sealed class MainMenuScreen(ConquerApp app, bool settingsOpen = false) : IScreen
 {
     private readonly ChangelogView _changelog = new();
-    private readonly MainMenu _menu = new(new MenuNavigator(app));
+    private readonly MainMenu _menu = new(new MenuNavigator(app)) { Settings = { Open = settingsOpen } };
 
     public void Frame(double dt)
     {
@@ -47,7 +47,8 @@ public sealed class MainMenuScreen(ConquerApp app) : IScreen
             y += 50;
         }
 
-        if (ui.Input.KeysPressed.Contains(Silk.NET.Input.Key.Escape)) _menu.ChangelogOpen = false;
+        if (ui.Input.KeysPressed.Contains(Silk.NET.Input.Key.Escape)) _menu.ChangelogOpen = _menu.Settings.Open = false;
+        SettingsView.Frame(ui, s, _menu.Settings);
         if (_menu.ChangelogOpen && _changelog.Frame(ui, new Rect(cx - 380, 60, 760, s.Y - 120))) _menu.ChangelogOpen = false;
     }
 
