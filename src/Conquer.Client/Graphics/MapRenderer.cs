@@ -1,4 +1,5 @@
 using Conquer.Game.Economy;
+using Conquer.Game.Rules;
 using Conquer.Game.Science;
 using Conquer.Game.Simulation;
 using Conquer.Game.World;
@@ -452,6 +453,11 @@ public sealed class MapRenderer : IDisposable
                 case MapMode.Culture:
                     // The fill is the people's culture and the border band their ruler: a mismatch is foreign land.
                     if (p.IsOwned && p.Population >= 1 && p.CultureId >= 0) color = new Rgba(players[p.CultureId].Color).WithAlpha(0.85f);
+                    else if (p.IsClaimable) color = new Rgba(0xFF808080).WithAlpha(0.55f);
+                    break;
+                case MapMode.Religion:
+                    // Each faith in its colour; the border band still tells whose land it is.
+                    if (p.IsOwned && p.Population >= 1 && p.ReligionId >= 0) color = new Rgba(Religions.Colors[p.ReligionId]).WithAlpha(0.85f);
                     else if (p.IsClaimable) color = new Rgba(0xFF808080).WithAlpha(0.55f);
                     break;
             }

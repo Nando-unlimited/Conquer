@@ -37,6 +37,24 @@ public sealed partial class GameController
 
     private static Heading Section(string text, float height = 26) => new(text, Tone.Normal, Height: height);
 
+    /// <summary>The people's faith, and how far they have come toward their ruler's if it is another.</summary>
+    private void AddFaith(Document doc, Province p)
+    {
+        if (p.ReligionId < 0 || p.Population < 1) return;
+        var ink = Ink.Nation(Religions.Colors[p.ReligionId]);
+        string name = GameSession.ReligionName(p.ReligionId);
+        if (!Session.HasOtherFaith(p))
+        {
+            doc.Add(new Info("Religión", name, ink, "Su gente sigue la fe de su nación."));
+            return;
+        }
+        string ruler = GameSession.ReligionName(Session.Players[p.OwnerId].ReligionId);
+        doc.Add(new Info("Religión", $"{name} · {p.Conversion:P0} convertida", ink,
+            $"Su gente no sigue la fe de su nación ({ruler}): pierde {GameRules.OtherFaithMood:0} de moral hasta convertirse.\n" +
+            $"Al ritmo actual lo hará en unos {Session.YearsToConvert(p):0} años; va más deprisa con moral alta, con un templo (el doble) y con la Teología.\n" +
+            "Los migrantes de tus otras provincias que se instalan aquí también ayudan."));
+    }
+
     /// <summary>Whose culture the people share and how far they have assimilated; how close the province is to revolt, if at all.</summary>
     private void AddCultureAndRevolt(Document doc, Province p)
     {
@@ -51,6 +69,7 @@ public sealed partial class GameController
         }
         else
             doc.Add(new Info("Cultura", culture.Name, Ink.Nation(culture.Color), "Su gente comparte la cultura de su nación."));
+        AddFaith(doc, p);
 
         if (p.RevoltProgress <= 0 && p.Mood >= GameRules.UnrestMood) return;
         bool garrison = Session.IsGarrisoned(p);

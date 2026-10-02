@@ -340,7 +340,7 @@ internal sealed partial class AiPlayer
 
     /// <summary>
     /// How strong a neighbour may be, against its own army, for it to attack: its temperament (80 to 110 %), more if
-    /// it has no free land left to claim, if the neighbour is already fighting someone else or if it rules people of
+    /// its culture or if it follows another faith.
     /// its culture.
     /// </summary>
     private double WarAppetite(int neighbourId)
@@ -350,6 +350,8 @@ internal sealed partial class AiPlayer
         if (_session.EnemiesOf(neighbourId).Any()) appetite += 0.3;
         if (_session.Players[neighbourId].Provinces.Any(id => Map.Provinces[id].CultureId == _player.Id && Map.Provinces[id].Population >= 1))
             appetite += 0.2;
+        // Infidels make easier enemies.
+        if (_session.Players[neighbourId].ReligionId != _player.ReligionId) appetite += 0.1;
         return appetite;
     }
 

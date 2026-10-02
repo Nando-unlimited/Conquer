@@ -48,6 +48,10 @@ public sealed class Province
     public int CultureId { get; set; } = -1;
     /// <summary>0 to 1: how far foreign people have come toward adopting their ruler's culture.</summary>
     public double Assimilation { get; set; }
+    /// <summary>The faith of its people (see <see cref="Religions"/>); -1 while nobody lives there.</summary>
+    public int ReligionId { get; set; } = -1;
+    /// <summary>0 to 1: how far people of another faith have come toward their ruler's.</summary>
+    public double Conversion { get; set; }
     /// <summary>Days of unrest without a garrison, which lead to revolt at <see cref="GameRules.RevoltDays"/>.</summary>
     public double RevoltProgress { get; set; }
     /// <summary>Institutions that have reached the province.</summary>

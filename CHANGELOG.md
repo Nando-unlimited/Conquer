@@ -2,6 +2,19 @@
 
 Todos los cambios del juego, del más reciente al más antiguo. Cada versión es un commit cuyo título es su número.
 
+## [1.77.0] - 2026-10-02
+
+### Añadido
+- **Religiones**: cada nación sigue una de cinco fes, el Culto del Sol, la Fe del Río, los Antiguos Dioses, el Camino de los Astros y la Madre Tierra. La gente de cada provincia conserva la fe de quien la pobló.
+  - **Otra fe**: bajo un dueño de otra religión, la provincia pierde 10 de moral hasta convertirse. Tarda unos 25 años: más deprisa con moral alta, el doble con un templo y un 50 % más con la Teología. Los migrantes de tus otras provincias también ayudan.
+  - **Opinión**: las naciones de la misma fe se ven mejor (+10) y las de otra, peor (−10). Los rivales atacan con algo más de ganas a los de otra fe.
+  - **Nuevo modo de mapa, Religión**: cada provincia, del color de su fe.
+  - Tu religión sale en el Resumen de la nación, la de cada nación en el tooltip de su relación, y la de cada provincia en su panel, con lo convertida que está y los años que le faltan.
+- En las partidas guardadas anteriores, cada nación recibe una fe según su número, y su gente la comparte.
+
+### Cambiado
+- En la pestaña Diplomacia, las columnas Provincias y Ocupación ya no se pisan.
+
 ## [1.76.0] - 2026-10-02
 
 ### Añadido

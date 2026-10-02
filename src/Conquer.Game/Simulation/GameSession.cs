@@ -83,6 +83,8 @@ public sealed partial class GameSession
         ResetProvinces(map);
         var session = new GameSession(map, seed) { _computerRivals = computerRivals };
         var names = PlayerNames.Pick(playerCount, session._random);
+        // Faiths come from a generator of their own, so the rest of the game stays as it was.
+        var faiths = new Random(seed ^ 0x7E11);
         var starts = session.PickStartProvinces(playerCount);
 
         for (int i = 0; i < playerCount; i++)
@@ -94,6 +96,7 @@ public sealed partial class GameSession
             player.Stockpile[ResourceType.Gold] = GameRules.StartingGold * start;
             player.Stockpile[ResourceType.Wood] = GameRules.StartingWood * start;
             player.Manpower = GameRules.BaseManpower;
+            player.ReligionId = faiths.Next(Religions.Count);
             session.Players.Add(player);
             session.AddUnit(i, UnitType.Settlers, starts[i], GameRules.StartingCitizens);
             session.AddTemplate(player, [BattalionType.Warriors, BattalionType.Warriors]);
@@ -117,8 +120,8 @@ public sealed partial class GameSession
             p.Mood = GameRules.StartingMood;
             p.Fertility = 1;
             p.Institutions.Clear();
-            p.CultureId = -1;
-            p.Assimilation = p.RevoltProgress = 0;
+            p.CultureId = p.ReligionId = -1;
+            p.Assimilation = p.RevoltProgress = p.Conversion = 0;
             p.Name = "";
             p.ClearBuildings();
             foreach (var r in Resources.Deposits)
@@ -168,6 +171,7 @@ public sealed partial class GameSession
         if (owner.IsStarving) factors.Add(("Hambre", GameRules.StarvingMood));
         if (p.IsOccupied) factors.Add(("Ocupada por el enemigo", MilitaryRules.OccupiedMood));
         if (HasForeignCulture(p)) factors.Add(($"Cultura de {Players[p.CultureId].Name}", ForeignCultureMood(p)));
+        if (HasOtherFaith(p)) factors.Add(($"Fe: {ReligionName(p.ReligionId)}", -GameRules.OtherFaithMood));
         foreach (var tech in owner.Techs.Where(t => t.Info().Effects.Mood != 0))
             factors.Add((tech.Info().Name, tech.Info().Effects.Mood));
         foreach (var building in p.Buildings.Where(b => b.Info().Effects.Mood != 0))
@@ -223,6 +227,7 @@ public sealed partial class GameSession
         {
             foreach (var player in Players) DailyEconomy(player);
             foreach (var player in Players) DailyUnrest(player);
+            foreach (var player in Players) DailyFaith(player);
             foreach (var player in Players) DailyMigration(player);
             foreach (var player in Players) DailyScience(player);
             DailyInstitutions();
@@ -249,9 +254,11 @@ public sealed partial class GameSession
             var target = Map.Provinces[m.ToProvinceId];
             if (target.OwnerId == m.OwnerId && !target.IsOccupied)
             {
-                // Settlers of the ruler's culture count as assimilated people.
+                // Settlers of the ruler's culture and faith count as assimilated and converted people.
                 if (HasForeignCulture(target))
                     target.Assimilation = Math.Min(1, (target.Assimilation * target.Population + m.People) / (target.Population + m.People));
+                if (HasOtherFaith(target))
+                    target.Conversion = Math.Min(1, (target.Conversion * target.Population + m.People) / (target.Population + m.People));
                 Settle(target, m.People, m.Mood);
                 if (m.Forced && m.OwnerId == HumanPlayerId)
                     Notify(m.OwnerId, $"{m.People} ciudadanos han llegado a su nuevo hogar.");
@@ -926,9 +933,10 @@ public sealed partial class GameSession
         {
             p.PlannedCityName = null;
             // People keep their culture and start assimilating afresh; empty land takes its new ruler's.
-            p.Assimilation = p.RevoltProgress = 0;
+            p.Assimilation = p.RevoltProgress = p.Conversion = 0;
         }
         if (p.CultureId < 0 || p.Population < 1) p.CultureId = playerId;
+        if (p.ReligionId < 0 || p.Population < 1) p.ReligionId = Players[playerId].ReligionId;
         p.OwnerId = p.ControllerId = playerId;
         Players[playerId].Provinces.Add(p.Id);
         NameProvince(p);

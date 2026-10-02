@@ -162,8 +162,8 @@ public sealed partial class NationScreen
     private TablePage Diplomacy()
     {
         double ours = Session.MilitaryPower(Player.Id);
-        Column[] columns = [new("Nación", 150), new("Relación", 120), new("Opinión", 70), new("Poder militar", 130), new("Provincias", 60),
-            new("Ocupación", 120), new("Puntuación", 70), new("", 480)];
+        Column[] columns = [new("Nación", 150), new("Relación", 120), new("Opinión", 70), new("Poder militar", 120), new("Provincias", 75),
+            new("Ocupación", 125), new("Puntuación", 75), new("", 465)];
         var rows = new List<IReadOnlyList<Cell>>();
         foreach (var other in Session.Players.Where(p => p.Id != Player.Id && !p.Eliminated))
         {
@@ -201,6 +201,7 @@ public sealed partial class NationScreen
         double reparations = Session.ReparationsDaysLeft(other.Id, Player.Id), owed = Session.ReparationsDaysLeft(Player.Id, other.Id);
         if (reparations > 0) tip += $"\nNos paga reparaciones ({GameRules.ReparationsShare:P0} de sus ingresos de oro) durante {reparations:0} días más.";
         if (owed > 0) tip += $"\nLe pagamos reparaciones ({GameRules.ReparationsShare:P0} de nuestros ingresos de oro) durante {owed:0} días más.";
+        tip += $"\nReligión: {GameSession.ReligionName(other.ReligionId)}" + (other.ReligionId == Player.ReligionId ? " (la nuestra)." : ".");
         if (Session.GivesAccess(other.Id, Player.Id)) tip += $"\n{other.Name} deja pasar a nuestros ejércitos por sus tierras.";
         if (Session.GivesAccess(Player.Id, other.Id)) tip += $"\nDejamos pasar a los ejércitos de {other.Name} por nuestras tierras.";
         return Session.AtWar(Player.Id, other.Id) ? new TextCell($"En guerra ({Session.WarDays(Player.Id, other.Id):0} d)", Tone.Bad, Tooltip: tip)

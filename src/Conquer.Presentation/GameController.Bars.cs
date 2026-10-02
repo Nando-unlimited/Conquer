@@ -24,7 +24,7 @@ public sealed record CityNamingDialog(string Title, string Detail, string? Error
 /// <summary>The bars around the map, the map's tooltip and the city naming dialog.</summary>
 public sealed partial class GameController
 {
-    public static readonly string[] ModeNames = ["Terreno", "Político", "Población", "Moral", "Fertilidad", "Recursos", "Instituciones", "Cultura"];
+    public static readonly string[] ModeNames = ["Terreno", "Político", "Población", "Moral", "Fertilidad", "Recursos", "Instituciones", "Cultura", "Religión"];
 
     public TopBar TopBar()
     {
@@ -108,6 +108,8 @@ public sealed partial class GameController
             text += GameSession.HasForeignCulture(p) ? $"\nCultura de {culture.Name} ({p.Assimilation:P0} asimilada)" : $"\nCultura de {culture.Name}";
             if (p.RevoltProgress > 0) text += $"\nRebelión {GameSession.RevoltRisk(p):P0}";
         }
+        if (Mode == MapMode.Religion && p.IsOwned && p.ReligionId >= 0 && p.Population >= 1)
+            text += Session.HasOtherFaith(p) ? $"\n{GameSession.ReligionName(p.ReligionId)} ({p.Conversion:P0} convertida)" : $"\n{GameSession.ReligionName(p.ReligionId)}";
         if (ChoosingMigrationTarget) text += "\nClic para enviar aquí a los migrantes";
         return text;
     }

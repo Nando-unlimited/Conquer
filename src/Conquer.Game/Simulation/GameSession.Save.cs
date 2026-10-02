@@ -30,12 +30,12 @@ public sealed partial class GameSession
             [.. p.LastDayNet], p.IsStarving, p.FoodReserveDays, [.. p.Techs.Order()],
             [.. p.ResearchProgress], p.SpareScience, p.LastDayScience,
             [.. p.Templates.Select(t => new TemplateSave(t.Id, t.Number, [.. t.Battalions]))], [.. p.ResearchPriorities],
-            [.. p.Researching.OfType<Tech>()], [.. p.Institutions.Order()], [.. p.OfficerReserve.Select(ToSave)], p.Eliminated, p.Manpower)).ToList(),
+            [.. p.Researching.OfType<Tech>()], [.. p.Institutions.Order()], [.. p.OfficerReserve.Select(ToSave)], p.Eliminated, p.Manpower, p.ReligionId)).ToList(),
         // Provinces nobody has touched keep their generated state, so only the rest are stored.
         Provinces = Map.Provinces.Where(Changed).Select(p => new ProvinceSave(
             p.Id, p.OwnerId, p.ControllerId, p.Population, p.CityId, p.Mood, p.Fertility, [.. p.Reserves],
             [.. p.Buildings.Order()], p.Constructing, p.ConstructionDaysLeft, p.PlannedCityName, [.. p.Institutions.Order()], p.Name,
-            p.Training.Count == 0 ? null : [.. p.Training.Select(ToSave)], p.CultureId, p.Assimilation, p.RevoltProgress)).ToList(),
+            p.Training.Count == 0 ? null : [.. p.Training.Select(ToSave)], p.CultureId, p.Assimilation, p.RevoltProgress, p.ReligionId, p.Conversion)).ToList(),
         Cities = Cities.Select(c => new CitySave(c.Id, c.Name, c.OwnerId, c.ProvinceId, c.FoundedHours, c.FestivalUntilHours)).ToList(),
         Units = Units.Select(u => new UnitSave(
             u.Id, u.OwnerId, u.Type, u.ProvinceId, u.Type is UnitType.Regiment or UnitType.Fleet ? 0 : u.Citizens, u.Number, u.HeadquartersLevel,
@@ -107,7 +107,7 @@ public sealed partial class GameSession
     private static bool Changed(Province p) =>
         p.OwnerId != -1 || p.ControllerId != -1 || p.Population != 0 || p.CityId.HasValue
         || p.Mood != GameRules.StartingMood || p.Fertility != 1 || p.Buildings.Count > 0 || p.Constructing.HasValue || p.PlannedCityName != null
-        || p.Institutions.Count > 0 || p.Name.Length > 0 || p.Training.Count > 0 || p.CultureId != -1 || p.RevoltProgress != 0
+        || p.Institutions.Count > 0 || p.Name.Length > 0 || p.Training.Count > 0 || p.CultureId != -1 || p.RevoltProgress != 0 || p.ReligionId != -1
         || Resources.Deposits.Any(r => p.Reserves[(int)r] != p.DepositSizes[(int)r] * GameRules.DepositSizeMultiplier);
 
     /// <summary>
@@ -155,11 +155,14 @@ public sealed partial class GameSession
             p.CultureId = ps.CultureId ?? (p.Population >= 1 ? p.OwnerId : -1);
             p.Assimilation = ps.Assimilation;
             p.RevoltProgress = ps.RevoltProgress;
+            p.ReligionId = ps.ReligionId ?? -1;
+            p.Conversion = ps.Conversion;
         }
 
         foreach (var s in save.Players)
         {
-            var player = new Player(s.Id, s.Name, s.Color, s.IsHuman) { CapitalCityId = s.CapitalCityId, Eliminated = s.Eliminated };
+            // Before 1.77.0 there were no faiths: each nation gets one by its number, and its people share it.
+            var player = new Player(s.Id, s.Name, s.Color, s.IsHuman) { CapitalCityId = s.CapitalCityId, Eliminated = s.Eliminated, ReligionId = s.ReligionId ?? s.Id % Religions.Count };
             foreach (var r in Resources.All) player.Stockpile[r] = s.Stockpile[(int)r];
             s.LastDayNet.CopyTo(player.LastDayNet, 0);
             player.IsStarving = s.IsStarving;
@@ -179,6 +182,9 @@ public sealed partial class GameSession
             player.Manpower = s.Manpower ?? session.ManpowerCapacity(player);
             session.Players.Add(player);
         }
+
+        foreach (var ps in save.Provinces.Where(ps => ps.ReligionId is null && ps.Population >= 1 && ps.OwnerId >= 0))
+            map.Provinces[ps.Id].ReligionId = session.Players[ps.OwnerId].ReligionId;
 
         foreach (var c in save.Cities)
         {

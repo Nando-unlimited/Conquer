@@ -31,7 +31,7 @@ public class TradeTests(WorldFixture world)
         CopperForGold(s);
         var offer = s.TradeOffer(0, 1, ResourceType.Copper, ResourceType.Gold)!;
         Assert.Equal(5, offer.GoodsPerDay, 6);
-        double price = 5 * GameRules.ResourceValue(ResourceType.Copper) * (1 + GameRules.TradeMargin(0));
+        double price = 5 * GameRules.ResourceValue(ResourceType.Copper) * (1 + GameRules.TradeMargin(s.Opinion(1, 0)));
         Assert.Equal(Math.Round(price, 2), offer.PaymentPerDay, 6);
 
         // Gold it would rather keep for itself: the human can spare only half its income, so the deal shrinks to fit.

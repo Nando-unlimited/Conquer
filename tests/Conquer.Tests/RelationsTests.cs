@@ -30,8 +30,8 @@ public class RelationsTests(WorldFixture world)
         var factors = s.OpinionFactors(1, 0);
         Assert.Contains(factors, f => f.Reason == "Nos declaró la guerra" && f.Points == GameRules.DeclaredWarOpinion);
         Assert.Contains(factors, f => f.Reason == "En guerra" && f.Points == GameRules.AtWarOpinion);
-        Assert.Equal(Math.Max(-100, GameRules.DeclaredWarOpinion + GameRules.AtWarOpinion), s.Opinion(1, 0), 6);
-        Assert.Equal(GameRules.AtWarOpinion, s.Opinion(0, 1), 6); // the aggressor holds nothing against its victim but the war
+        Assert.Equal(Math.Max(-100, GameRules.DeclaredWarOpinion + GameRules.AtWarOpinion + s.FaithOpinion(1, 0)), s.Opinion(1, 0), 6);
+        Assert.Equal(GameRules.AtWarOpinion + s.FaithOpinion(0, 1), s.Opinion(0, 1), 6); // the aggressor holds nothing against its victim but the war (and its faith)
     }
 
     [Fact]
@@ -44,9 +44,9 @@ public class RelationsTests(WorldFixture world)
 
         Assert.True(s.SendGift(0, 1).Ok);
         Assert.Equal(500 - cost, s.Human.Stockpile[ResourceType.Gold]);
-        Assert.Equal(GameRules.GiftOpinion, s.Opinion(1, 0), 6);
+        Assert.Equal(GameRules.GiftOpinion + s.FaithOpinion(1, 0), s.Opinion(1, 0), 6);
         for (int h = 0; h < 24 * 10; h++) s.Step();
-        Assert.Equal(GameRules.GiftOpinion - 10 * GameRules.OpinionFadePerDay, s.Opinion(1, 0), 6);
+        Assert.Equal(GameRules.GiftOpinion - 10 * GameRules.OpinionFadePerDay + s.FaithOpinion(1, 0), s.Opinion(1, 0), 6);
     }
 
     [Fact]
@@ -88,7 +88,8 @@ public class RelationsTests(WorldFixture world)
     {
         var s = GameSession.Create(_map, 3, seed: 7);
         s.Human.Stockpile[ResourceType.Gold] = 10_000;
-        Assert.True(s.ProposePact(0, 1).Ok); // nobody dislikes anyone yet
+        s.Players[1].ReligionId = s.Human.ReligionId;
+        Assert.True(s.ProposePact(0, 1).Ok); // one faith, and nothing else between them
         Assert.True(s.HavePact(0, 1));
         Assert.False(s.CanDeclareWar(0, 1).Ok);
         Assert.False(s.CanDeclareWar(1, 0).Ok);

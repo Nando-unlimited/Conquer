@@ -103,6 +103,8 @@ public sealed partial class NationScreen
         left.Add(Title2("Territorio"));
         string capital = Player.CapitalCityId is int id && Session.CityById(id) is { } c ? c.Name : "Ninguna";
         left.Add(new Pair("Capital", capital));
+        left.Add(new Pair("Religión", GameSession.ReligionName(Player.ReligionId), Ink.Nation(Religions.Colors[Player.ReligionId]),
+            "La fe de tu nación. Tu gente de otra fe pierde moral hasta convertirse; las naciones de tu misma fe te ven mejor, y las de otra, peor."));
         left.Add(new Pair("Provincias", $"{stats.Provinces:N0}"));
         left.Add(new Pair("Ciudades", $"{stats.Cities:N0}"));
         left.Add(new Pair("Unidades", $"{stats.Units:N0}"));

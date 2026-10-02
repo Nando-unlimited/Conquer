@@ -221,6 +221,15 @@ public static class GameRules
     public const int BrokenPactTruceDays = 365;
     public const double AccessOpinion = 10;
     public const double AccessAcceptOpinion = 20;
+    // Religion. People of another faith than their ruler's lose OtherFaithMood until they convert, in about
+    // ConversionYears (faster when happy, with a temple and with Theology). Nations of one faith get on better.
+    public const double OtherFaithMood = 10;
+    public const double ConversionYears = 25;
+    public const double TempleConversion = 1;
+    public const double TheologyConversion = 0.5;
+    public const double SameFaithOpinion = 10;
+    public const double OtherFaithOpinion = -10;
+
     // Manpower. A nation's reserve of recruits holds BaseManpower plus ManpowerShare of its settled people (more with
     // advances) and refills in ManpowerRecoveryYears. Training, raising HQs and reinforcing draw on it.
     public const double BaseManpower = 500;

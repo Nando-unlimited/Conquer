@@ -11,4 +11,5 @@ public enum MapMode
     Resources,
     Institutions,
     Culture,
+    Religion,
 }

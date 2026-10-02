@@ -37,6 +37,7 @@ public sealed partial class GameSession
         if (AtWar(from, about)) factors.Add(("En guerra", GameRules.AtWarOpinion));
         if (IsVassalOf(from, about)) factors.Add(("Somos su vasallo", GameRules.VassalOpinion));
         if (IsVassalOf(about, from)) factors.Add(("Nuestro vasallo", GameRules.OverlordOpinion));
+        factors.Add((FaithOpinion(from, about) > 0 ? "Misma fe" : "Otra fe", FaithOpinion(from, about)));
         if (HavePact(from, about)) factors.Add(("Pacto de no agresión", GameRules.PactOpinion));
         if (GivesAccess(about, from)) factors.Add(("Nos deja pasar", GameRules.AccessOpinion));
         int deals = _trades.Count(t => t.Involves(from) && t.Involves(about));
