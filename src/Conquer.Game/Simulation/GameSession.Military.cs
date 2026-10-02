@@ -184,7 +184,10 @@ public sealed partial class GameSession
         if (unit.IsFleet) SyncCargo(unit);
         if (!unit.IsMilitary) return;
         var p = Map.Provinces[provinceId];
-        if (p.IsOwned && p.ControllerId != unit.OwnerId && AtWar(unit.OwnerId, p.ControllerId)) Occupy(p, unit.OwnerId);
+        if (!p.IsOwned || p.ControllerId == unit.OwnerId || !AtWar(unit.OwnerId, p.ControllerId)) return;
+        // Walls and castles hold out: the province has to be besieged.
+        if (IsFortified(p)) LaySiege(p, unit.OwnerId);
+        else Occupy(p, unit.OwnerId);
     }
 
     /// <summary>
@@ -647,7 +650,12 @@ public sealed partial class GameSession
         }
     }
 
-    public bool IsInSupply(Unit unit) => IsSupplied(unit.OwnerId, unit.ProvinceId);
+    /// <summary>
+    /// Whether the unit is in supply where it stands; besiegers also draw it from any supplied province next to the one
+    /// they besiege.
+    /// </summary>
+    public bool IsInSupply(Unit unit) => IsSupplied(unit.OwnerId, unit.ProvinceId)
+        || IsBesieging(unit) && Map.Provinces[unit.ProvinceId].Neighbors.Any(n => IsSupplied(unit.OwnerId, n));
 
     /// <summary>Whether a nation's units in this province would be in supply.</summary>
     public bool IsSupplied(int playerId, int provinceId)

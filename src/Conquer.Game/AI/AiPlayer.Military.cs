@@ -213,6 +213,8 @@ internal sealed partial class AiPlayer
     private void GuideSoldier(Unit unit)
     {
         if (GoHomeIfCutOff(unit) || unit.OrganisationShare < ReadyOrganisation) return;
+        // Besiegers stay until the walls fall.
+        if (_session.IsBesieging(unit)) return;
         var threatened = _session.Battles.Where(b => b.DefenderId == _player.Id && Map.Provinces[b.ProvinceId].CityId.HasValue)
             .OrderBy(b => Map.DistanceKm(Map.Provinces[b.ProvinceId], Map.Provinces[unit.ProvinceId])).FirstOrDefault();
         if (threatened != null && threatened.ProvinceId != unit.ProvinceId

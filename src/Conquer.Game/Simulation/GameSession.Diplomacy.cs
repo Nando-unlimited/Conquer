@@ -178,6 +178,7 @@ public sealed partial class GameSession
         int giver = receiver == a ? b : a;
         _wars.Remove(WarKey(a, b));
         _truces[WarKey(a, b)] = Date.Hours + GameRules.TruceDays * 24;
+        EndSieges(s => WarKey(s.AttackerId, Map.Provinces[s.ProvinceId].ControllerId) == WarKey(a, b));
         foreach (var battle in _battles.Where(x => WarKey(x.AttackerId, x.DefenderId) == WarKey(a, b)).ToList())
         {
             foreach (var unit in battle.Attackers.Select(UnitById).OfType<Unit>()) unit.AttackingProvinceId = null;
@@ -215,6 +216,7 @@ public sealed partial class GameSession
     private void Cede(Province p, int receiverId)
     {
         var giver = Players[p.OwnerId];
+        EndSieges(s => s.ProvinceId == p.Id);
         p.Training.Clear();
         p.Constructing = null;
         p.ConstructionDaysLeft = 0;

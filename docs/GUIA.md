@@ -125,6 +125,7 @@ Cifras del ejército. El combate se mide por hora; el resto, por día.
 | `OfficerCost`, `MaxUnitNameLength` | Reclutar un oficial para la reserva cuesta 40 de oro; el nombre que el jugador da a una unidad tiene como mucho 30 letras. |
 | `SupplyRangeHours` | El suministro llega hasta 10 días de marcha por tierra propia o libre desde una ciudad o desde las carreteras y ferrocarriles unidos a ella. |
 | `OutOfSupplyEfficiency`, `OutOfSupplyOrganisationLoss`, `OutOfSupplyAttrition` | Sin suministro se lucha al 75 % y se pierde cada día un 5 % de organización y un 1 % de hombres. |
+| `SiegeDaysPerDefense`, `SiegeAttackPerDay` | Días de asedio por punto de defensa de las fortificaciones (60: 30 con murallas, 60 con castillo) y ataque de artillería que suma un día de asedio al día (12: un batallón de catapultas). |
 | `OrganisationRecovery`, `ReinforcementRate` | Con suministro y fuera de combate se recupera un 20 % de organización al día y un 5 % de hombres, que salen de la capital. |
 | `OccupiedMood` | −30 de moral en una provincia ocupada por el enemigo. |
 
@@ -310,7 +311,7 @@ El ejército dentro de la partida.
 | `EnemyRegimentsIn(provincia, jugador)` | Regimientos de naciones en guerra con el jugador en una provincia (los embarcados no cuentan). |
 | `CanUnitEnter(unidad, provincia)`, `CanSail(jugador, mar)` | Tierra libre y propia siempre; la de otra nación solo para regimientos en guerra con ella; el agua solo para los aviones (las tropas van en barco). Una flota navega por el mar costero y los lagos con Navegación a vela, por el océano con Cartografía, y entra en sus puertos. |
 | `MoveUnit(...)`, `UnitStepHours(...)` | Orden de mover (la ruta evita tierras vedadas; el tiempo depende de la velocidad de la unidad y, en tierra, de la nieve y el barro: `SeasonSlowdown`). Una unidad embarcada desembarca; una en tierra que apunta a una flota suya en el mar de al lado embarca. |
-| `MoveUnits()` | Cada hora cada unidad avanza; un regimiento que entra donde hay tropas enemigas ataca, y si no las hay la ocupa (`EnterProvince`); una flota lleva su carga consigo y se detiene a combatir si encuentra barcos enemigos. |
+| `MoveUnits()` | Cada hora cada unidad avanza; un regimiento que entra donde hay tropas enemigas ataca, y si no las hay la ocupa (`EnterProvince`), o la sitia si tiene murallas o castillo (`LaySiege`); una flota lleva su carga consigo y se detiene a combatir si encuentra barcos enemigos. |
 | `Occupy(provincia, jugador)` | La provincia pasa a manos del jugador (o vuelve a su dueño) y los civiles, cuarteles y flotas enemigos huyen (los embarcados, con su flota). |
 | `CanTrainIn`, `CanTrain`/`Train`, `CanTrainTemplate`/`TrainTemplate`, `CanRaiseHeadquarters`/`RaiseHeadquarters`, `CanRaiseTroops(...)`, `MinimumPopulation` | Pagan y ponen en instrucción, en una provincia con ciudad, cuartel o taller (`CanTrainIn`; se pasan ids de provincia), un batallón, un barco (solo en ciudades con puerto, y los más avanzados con dique seco; forma una flota nueva) o un cuartel general; los hombres salen de la provincia, que conserva el mínimo de una ciudad o, sin ciudad, el de una provincia poblada. `CanRaiseTroops` comprueba ciudad, cuartel o taller, avances, los edificios que piden los batallones (cuartel para las tropas de combate, taller o fábrica para las máquinas de guerra), ocupación, habitantes y coste. |
 | `TrainingSpeed(jugador, tipo)`, `TrainingDays(jugador, tipo o plantilla)` | Cuánto más rápido entrena el jugador un batallón (un 25 % por cada avance que lo estudia) y los días que le cuesta; una plantilla tarda lo que su batallón más lento. |
@@ -325,7 +326,7 @@ El ejército dentro de la partida.
 | `AssignOfficer`, `RelieveOfficer`, `RetireOfficer`, `Promote(unidad)` | Poner al mando de una unidad de combate o un cuartel a un oficial de la reserva (el anterior vuelve a ella), relevarlo o retirarlo para siempre. Un oficial asciende solo al rango que pide el tamaño de su unidad, y nunca baja. |
 | `CanAttach`/`Attach`, `Detach` | Ponen una unidad bajo el mando de un cuartel del nivel superior (5 como mucho) o la quitan. |
 | `InCommandRange(unidad)`, `CommandBonus(unidad)` | Si su cuartel la alcanza, y la bonificación de toda la cadena enlazada. |
-| `ComputeSupply(jugador)`, `IsInSupply(unidad)`, `IsSupplied(jugador, provincia)` | Provincias abastecidas: todo lo que sus carreteras y ferrocarriles unen a sus ciudades (`SupplyNetwork`), y desde ahí hasta 10 días de marcha por tierra propia o libre (nunca por mar), y una más allá (el frente). Se recalcula cada día y al terminar un tramo. |
+| `ComputeSupply(jugador)`, `IsInSupply(unidad)`, `IsSupplied(jugador, provincia)` | Los sitiadores también reciben suministro si la provincia sitiada linda con una abastecida. Provincias abastecidas: todo lo que sus carreteras y ferrocarriles unen a sus ciudades (`SupplyNetwork`), y desde ahí hasta 10 días de marcha por tierra propia o libre (nunca por mar), y una más allá (el frente). Se recalcula cada día y al terminar un tramo. |
 | `InBattle(unidad)` | Si ataca o defiende. |
 | `DailyMilitary(jugador)` | Cada día: instrucción, suministro, desgaste por frío o desierto (`DailyAttrition`: la unidad que se queda sin hombres muere de frío o de sed), recuperación de organización, refuerzos desde la capital (los reclutas diluyen la experiencia), desgaste sin suministro (la unidad que se queda sin hombres se dispersa) y, si no se pagó el mantenimiento, pérdida de organización y deserciones sin recuperación; los oficiales y generales organizadores aceleran la recuperación y los desorganizados la frenan. Las tropas embarcadas ni se desgastan ni se recuperan; las flotas solo se reparan y completan su tripulación en puerto, el doble de rápido con dique seco. |
 | `StartAttack(...)`, `CancelAttack(...)` | El regimiento se detiene en la frontera y ataca (se une a la batalla o la abre), o la abandona. |
@@ -392,7 +393,7 @@ Guerra, puntuación de guerra y tratados de paz.
 | `OccupiedBy(ocupante, dueño)`, `PeaceCost(jugador, enemigo, términos)` | Las provincias de una nación que ocupa otra, y lo que cuesta quedárselas: la parte del valor del enemigo que suponen. |
 | `CanProposePeace`/`ProposePeace(jugador, otro, términos)` | Propone la paz. Quedarse con lo ocupado pide puntuación suficiente. La IA decide con `AiPlayer.WouldAcceptPeace`; a un humano no se le impone nunca. |
 | `MakePeace(a, b, términos)` | Firma la paz: terminan las batallas, las provincias del tratado cambian de dueño (`Cede`), las demás ocupadas vuelven a sus dueños y los ejércitos regresan a su provincia más cercana. Avisa si una nación se queda sin tierras (anexionada). |
-| `Cede(provincia, receptor)` | Pasa una provincia con su ciudad y edificios: se pierde lo que se entrenaba o construía allí, su moral baja 20 y, si era la capital, el antiguo dueño pasa la capital a su ciudad más poblada. |
+| `Cede(provincia, receptor)` | Pasa una provincia con su ciudad y edificios (y termina su asedio): se pierde lo que se entrenaba o construía allí, su moral baja 20 y, si era la capital, el antiguo dueño pasa la capital a su ciudad más poblada. |
 
 ### `Simulation/GameSession.Culture.cs`
 Culturas y rebeliones.
@@ -405,6 +406,18 @@ Culturas y rebeliones.
 | `DailyUnrest(jugador)` | Cada día: la tierra vacía toma la cultura del dueño, la gente extranjera se asimila (al terminar adopta la del dueño), y las provincias por debajo de 25 de moral sin guarnición se acercan a la rebelión (1 a 2 días por día, según la moral); con moral alta se calman (2 por día). Avisa al llegar a la mitad. |
 | `Revolt(provincia)` | La provincia se subleva: se une a la nación de su cultura (`Cede`, con moral al menos 60, y las tropas del antiguo dueño vuelven a casa si no están en guerra) o, si no puede, hay una revuelta: muere el 10 % de la gente, arde un edificio al azar y la moral sube al menos a 35. |
 | `SendHome(unidad)` | Una unidad en tierra que su nación ya no controla vuelve a su provincia más cercana, o se disuelve si no tiene ninguna. También la usa `MakePeace`. |
+
+### `Simulation/GameSession.Sieges.cs`
+Asedios.
+
+| Elemento | Qué hace |
+| --- | --- |
+| `Siege`, `Sieges`, `SiegeAt(provincia)` | Un asedio en curso: provincia, quién la sitia y cuántos días de trabajo lleva. Se guardan en `SiegeSave`. |
+| `IsFortified(provincia)`, `SiegeDays(provincia)` | Si sus murallas o su castillo resisten (defensa de edificios mayor que 0) y cuántos días de asedio pide sin artillería. |
+| `DailySiegeWork(asedio)`, `IsBesieging(unidad)` | Días de trabajo de un día: 1 más lo que suma la artillería por su ataque (`SiegeAttackPerDay`), según sus hombres. Si una unidad está sitiando donde está. |
+| `LaySiege(provincia, atacante)` | Un regimiento entra en una provincia enemiga fortificada: empieza el asedio (o se suma al suyo) y avisa. |
+| `DailySieges()` | Cada día avanza cada asedio; sin sitiadores o sin guerra se levanta, y al completarse la provincia queda ocupada (`Occupy`). |
+| `EndSieges(condición)` | Termina los asedios que cumplen la condición: los de dos naciones que firman la paz y el de una provincia cedida. |
 
 ### `Simulation/GameSession.Seasons.cs`
 Estaciones y desgaste.
@@ -502,7 +515,7 @@ El ejército de un rival.
 | `OrganiseArmy()`, `RaiseAndAttach(...)`, `HighestHeadquarters` | Une unidades pequeñas (hasta 6 batallones), forma cuarteles de cuerpo y ejército cuando hacen falta y asigna a todos. |
 | `StaffArmy()` | Una vez al día pone oficial a su mayor unidad sin él: el mejor de la reserva (más virtudes y estrellas, menos defectos) o uno nuevo si la reserva está vacía y le sobra el oro. |
 | `FollowTroops(cuartel)` | El cuartel va adonde están sus unidades si alguna queda fuera de alcance. |
-| `GuideSoldier(unidad)` | En guerra: acude a sus ciudades atacadas, ataca la provincia enemiga vecina más débil (si supera 1,3 veces su defensa) o marcha hacia tierra enemiga que su suministro alcance; descansa si está desorganizada. |
+| `GuideSoldier(unidad)` | En guerra: si sitia una provincia, se queda hasta tomarla; si no, acude a sus ciudades atacadas, ataca la provincia enemiga vecina más débil (si supera 1,3 veces su defensa) o marcha hacia tierra enemiga que su suministro alcance; descansa si está desorganizada. |
 | `GoHomeIfCutOff(unidad)`, `IsEnemyLand(provincia)` | Un regimiento sin suministro vuelve a la capital. |
 | `TakeWinterQuarters(unidad)` | En paz, un regimiento que pierde hombres por el frío o el desierto se refugia en su ciudad más cercana, salvo si guarda una provincia descontenta. |
 | `KeepOrder()`, `GarrisonedRevoltRisk` | En paz, manda el regimiento libre más cercano de su ejército a cada provincia sin guarnición que pasa del 25 % de rebelión; los que ya guardan una provincia descontenta se quedan. |
@@ -695,7 +708,7 @@ La partida en pantalla, sin pantalla: lo que se ve, lo seleccionado, los diálog
 | Función | Qué hace |
 | --- | --- |
 | `SidePanel()` | El panel derecho como `Document`: el de la unidad seleccionada o el de la provincia, con `ClearSelection` como botón de cerrar; null si no hay nada seleccionado. |
-| `ProvincePanel`, `GeneralTab` | Nombre y pestañas General, Edificios y Ejército (esta solo donde se entrenan tropas o queda algo en instrucción). En General: terreno, superficie, altitud, estación (con lo que la nieve, el barro o el desierto hacen a las tropas), río (con lo que da al pasar el ratón), dueño, población, moral (`MoodTooltip`: sus causas y su efecto en la producción), fertilidad, nacimientos, migrantes, recursos y yacimientos con lo que les queda; en tus ciudades, fiestas y colonos. |
+| `ProvincePanel`, `GeneralTab` | Nombre y pestañas General, Edificios y Ejército (esta solo donde se entrenan tropas o queda algo en instrucción). En General: terreno, superficie, altitud, asedio en curso (quién, cuánto lleva y cuándo caerá) o días de asedio si está fortificada, estación (con lo que la nieve, el barro o el desierto hacen a las tropas), río (con lo que da al pasar el ratón), dueño, población, moral (`MoodTooltip`: sus causas y su efecto en la producción), fertilidad, nacimientos, migrantes, recursos y yacimientos con lo que les queda; en tus ciudades, fiestas y colonos. |
 | `AddCultureAndRevolt(documento, provincia)` | En General, la cultura de su gente (con lo asimilada que está y los años que le faltan) y, si está descontenta o camino de la rebelión, el porcentaje, si tiene guarnición y qué pasará al sublevarse. |
 | `ForcedMigration` | Migración forzada: cuánta gente (−100, −10, +10, +100 y «Máx.», sin pasar de la que puede salir), su coste en oro y el botón para elegir el destino en el mapa. |
 | `BuildingsTab`, `TrainingImprovements`, `IsBuildingKnown` | Pestaña Edificios: la obra en curso (edificio o ciudad) con su barra, los edificios terminados (bajo el cuartel y el taller o la fábrica, las tropas que tus avances instruyen más rápido allí) y, en tus provincias, «Ciudad» y un botón por cada edificio que puedes levantar; los que solo necesitan ciudad o yacimiento dicen qué les falta, y los de avances sin descubrir no aparecen. El taller deja de ofrecerse cuando ya se construyen fábricas. |
@@ -774,7 +787,7 @@ Las alertas bajo la barra superior.
 | Elemento | Qué hace |
 | --- | --- |
 | `Alert` | Una alerta: texto corto, gravedad (`Tone`), explicación con la lista de lo afectado (hasta 5) y qué hace al pulsarla. |
-| `Alerts()` | Las que se cumplen ahora, de más a menos urgente: hambre (o comida para menos de 30 días si se come más de lo que se cosecha), ejército sin paga, provincias atacadas, provincias descontentas o camino de la rebelión, unidades sin suministro, unidades que pierden hombres por el frío o el desierto, y ramas de la ciencia sin elegir. Las de comida, paga y ciencia abren la pestaña de la nación que toca. |
+| `Alerts()` | Las que se cumplen ahora, de más a menos urgente: hambre (o comida para menos de 30 días si se come más de lo que se cosecha), ejército sin paga, provincias atacadas, provincias sitiadas, provincias descontentas o camino de la rebelión, unidades sin suministro, unidades que pierden hombres por el frío o el desierto, y ramas de la ciencia sin elegir. Las de comida, paga y ciencia abren la pestaña de la nación que toca. |
 | `ProvinceAlert(...)`, `UnitAlert(...)`, `NextClick(...)` | Alertas sobre provincias o unidades: cada clic centra el mapa en la siguiente (`ViewProvince`, `ViewUnit`). |
 
 ### `GameController.Dialogs.cs`

@@ -108,6 +108,12 @@ public static class MilitaryRules
     /// <summary>Share of full strength a battalion in supply gets back each day, taken from the capital's people.</summary>
     public const double ReinforcementRate = 0.05;
 
+    // Sieges
+    /// <summary>Days to take a fortified province per point of its defence: 30 for walls (+50 %), 60 for a castle (+100 %).</summary>
+    public const double SiegeDaysPerDefense = 60;
+    /// <summary>A full artillery battalion adds a day of siege work per day for every this much attack (catapults: one).</summary>
+    public const double SiegeAttackPerDay = 12;
+
     // Upkeep, every day
     /// <summary>Share of its gold cost each battalion, ship or HQ costs every day.</summary>
     public const double UpkeepGoldShare = 0.02;

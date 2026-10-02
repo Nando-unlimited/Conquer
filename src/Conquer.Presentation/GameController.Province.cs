@@ -104,6 +104,16 @@ public sealed partial class GameController
             doc.Add(new Info("Río", p.HasRiver ? "Gran río" : "Arroyo", p.HasRiver ? Tone.River : Tone.Dim, p.HasRiver
                 ? $"Tierra fértil: +{GameRules.RiverFertility - 1:P0} de comida y de capacidad.\nQuien ataque debe cruzarlo: el defensor dispara un {MilitaryRules.RiverDefense - 1:P0} más."
                 : "Un arroyo: no cambia nada. Solo los grandes ríos fertilizan la tierra y protegen de los ataques."));
+        if (Session.SiegeAt(p.Id) is { } siege)
+        {
+            double days = GameSession.SiegeDays(p), work = Session.DailySiegeWork(siege);
+            doc.Add(new Info("Asedio", $"{Session.Players[siege.AttackerId].Name} · {Math.Min(1, siege.Progress / days):P0}", Tone.Bad,
+                $"{Session.Players[siege.AttackerId].Name} sitia la provincia. Lleva {siege.Progress:0} de {days:0} días de trabajo y avanza {work:0.#} al día " +
+                $"(la artillería lo acelera): caerá en unos {Math.Ceiling(Math.Max(0, days - siege.Progress) / work):0} días si los sitiadores siguen allí."));
+        }
+        else if (GameSession.IsFortified(p) && p.IsOwned)
+            doc.Add(new Info("Fortificada", $"{GameSession.SiegeDays(p):0} días de asedio", Tone.Normal,
+                "Sus murallas o su castillo resisten: el enemigo que entra no la ocupa, tiene que sitiarla. La artillería acorta el asedio."));
         if (!p.IsWater)
         {
             string? effect = Session.SeasonEffect(p);

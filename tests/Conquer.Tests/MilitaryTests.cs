@@ -452,6 +452,49 @@ public class MilitaryTests(WorldFixture world)
     }
 
     [Fact]
+    public void WallsHaveToBeBesiegedAndFallInTime()
+    {
+        var (s, a, b) = TwoNations();
+        b.AddBuilding(BuildingType.Walls);
+        var regiment = s.AddRegiment(0, a.Id, BattalionType.Warriors);
+        s.DeclareWar(0, 1);
+        s.MoveUnit(0, regiment.Id, b.Id);
+        RunUntil(s, () => regiment.ProvinceId == b.Id, 24 * 5);
+
+        // Marching in does not take it: the regiment lays siege, and stays in supply from home next door.
+        Assert.False(b.IsOccupied);
+        var siege = Assert.IsType<Siege>(s.SiegeAt(b.Id));
+        Assert.Equal(0, siege.AttackerId);
+        Assert.True(s.IsBesieging(regiment));
+        Assert.True(s.IsInSupply(regiment));
+        Assert.Equal(1, s.DailySiegeWork(siege), 6);
+
+        RunHours(s, 24 * (int)(GameSession.SiegeDays(b) - 3));
+        Assert.False(b.IsOccupied);
+        RunHours(s, 24 * 5);
+        Assert.True(b.IsOccupied);
+        Assert.Null(s.SiegeAt(b.Id));
+    }
+
+    [Fact]
+    public void ArtilleryShortensTheSiegeAndLeavingLiftsIt()
+    {
+        var (s, a, b) = TwoNations();
+        b.AddBuilding(BuildingType.Castle);
+        var regiment = s.AddRegiment(0, a.Id, BattalionType.Warriors, BattalionType.Catapults);
+        s.DeclareWar(0, 1);
+        s.MoveUnit(0, regiment.Id, b.Id);
+        RunUntil(s, () => s.SiegeAt(b.Id) != null, 24 * 5);
+        Assert.Equal(1 + BattalionType.Catapults.Info().Attack / MilitaryRules.SiegeAttackPerDay, s.DailySiegeWork(s.SiegeAt(b.Id)!), 6);
+
+        s.MoveUnit(0, regiment.Id, a.Id);
+        RunUntil(s, () => regiment.ProvinceId == a.Id, 24 * 5);
+        RunHours(s, 24);
+        Assert.Null(s.SiegeAt(b.Id));
+        Assert.False(b.IsOccupied);
+    }
+
+    [Fact]
     public void PeaceStartsATruceThatOutlastsASave()
     {
         var (s, _, _) = TwoNations();

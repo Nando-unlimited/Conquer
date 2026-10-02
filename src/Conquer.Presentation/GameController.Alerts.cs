@@ -41,6 +41,13 @@ public sealed partial class GameController
             alerts.Add(ProvinceAlert("Atacados", Tone.Bad, attacked,
                 "El enemigo ataca estas provincias. Haz clic para ir a cada una.", p => PlaceOf(p)));
 
+        var besieged = Session.Sieges.Where(x => Map.Provinces[x.ProvinceId].ControllerId == Human.Id).OrderByDescending(x => x.Progress)
+            .Select(x => x.ProvinceId).ToList();
+        if (besieged.Count > 0)
+            alerts.Add(ProvinceAlert("Sitiadas", Tone.Bad, besieged,
+                "El enemigo sitia estas provincias: caerán si no lo echas a tiempo.",
+                p => $"{PlaceOf(p)}: {Math.Min(1, Session.SiegeAt(p.Id)!.Progress / GameSession.SiegeDays(p)):P0}"));
+
         var restless = Human.Provinces.Select(id => Map.Provinces[id])
             .Where(p => p.Population >= 1 && (p.Mood < GameRules.UnrestMood || p.RevoltProgress > 0))
             .OrderByDescending(p => p.RevoltProgress).ThenBy(p => p.Mood).Select(p => p.Id).ToList();

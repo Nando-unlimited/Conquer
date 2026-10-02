@@ -2,6 +2,18 @@
 
 Todos los cambios del juego, del más reciente al más antiguo. Cada versión es un commit cuyo título es su número.
 
+## [1.68.0] - 2026-10-02
+
+### Añadido
+- **Asedios**: una provincia con murallas o castillo ya no se ocupa con solo entrar sin defensores. Las tropas que entran la **sitian**, y cae a los **30 días si tiene murallas** o a los **60 si tiene castillo**.
+  - **La artillería lo acelera**: cada batallón completo de catapultas suma un día de asedio al día, y los cañones y la artillería, más según su ataque.
+  - **Si los sitiadores se van, el asedio se levanta.** También termina con la paz o si la provincia se cede.
+  - **Los sitiadores reciben suministro** si la provincia sitiada linda con una tuya abastecida.
+  - El panel de la provincia muestra quién la sitia, cuánto lleva y cuándo caerá. En las fortificadas que no están sitiadas, cuántos días de asedio aguantan. El tooltip del mapa también lo dice.
+  - **Alerta «Sitiadas»** cuando el enemigo sitia provincias tuyas.
+  - Los rivales se quedan a terminar sus asedios en lugar de seguir de largo.
+- Las murallas y el castillo explican en su descripción cuántos días de asedio piden.
+
 ## [1.67.0] - 2026-10-02
 
 ### Añadido

@@ -125,6 +125,7 @@ public static class HelpTopics
             $"- Si el atacante lleva ingenieros, el río no le frena y la ventaja del terreno del defensor se queda en la {MilitaryRules.EngineeredTerrainDefense:P0}.",
             $"- Armas combinadas: cada tipo de tropa distinto (infantería, caballería, artillería, blindados, aviación, ingenieros) suma +{MilitaryRules.CombinedArmsBonus:P0} de fuego, hasta +{MilitaryRules.MaxCombinedArmsBonus:P0}.",
             "- Defender es más fácil en montañas, bosques, ríos y detrás de murallas o castillos. La caballería rinde menos en terreno difícil.",
+            $"- Asedios: una provincia con murallas o castillo no se ocupa al entrar; hay que sitiarla {MilitaryRules.SiegeDaysPerDefense / 2:0} días (murallas) o {MilitaryRules.SiegeDaysPerDefense:0} (castillo). Catapultas, cañones y artillería lo acortan. Si los sitiadores se van, el asedio se levanta; mientras sitian, reciben suministro si la provincia linda con una tuya abastecida.",
         ]),
         ("Flotas y mar",
         [

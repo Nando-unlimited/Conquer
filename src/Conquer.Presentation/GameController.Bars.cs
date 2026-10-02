@@ -92,6 +92,8 @@ public sealed partial class GameController
             + (p.Name.Length > 0 ? $"  ·  {p.Info.Name.ToLowerInvariant()}" : "") + $"  ·  {owner}";
         if (p.HasRiver) text += "  ·  gran río";
         if (p.IsClaimable && Session.SeasonEffect(p) is { } season) text += "\n" + season;
+        if (Session.SiegeAt(p.Id) is { } siege)
+            text += $"\nSitiada por {Session.Players[siege.AttackerId].Name}: {Math.Min(1, siege.Progress / GameSession.SiegeDays(p)):P0}";
         if (p.IsOwned) text += $"\n{p.Population:N0} habitantes";
         if (p.IsOwned && p.Population >= 1) text += $"\nMoral {p.Mood:0} ({GameRules.MoodName(p.Mood)})  ·  Fertilidad {p.Fertility:P0}";
         if (Mode == MapMode.Resources)
