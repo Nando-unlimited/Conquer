@@ -81,7 +81,7 @@ public static class HelpTopics
             "- Una rama sin nada elegido cede su parte a las demás; si ninguna investiga, la ciencia se guarda para el siguiente avance que elijas.",
             "## Niveles y eras",
             "- Cada nivel se abre al conocer uno de los avances del nivel anterior de su rama. Algunos avances piden otros concretos.",
-            "- Los niveles se agrupan en eras: Antigüedad, Clásica, Medieval, Renacimiento, Industrial y Moderna. Arriba de la pestaña hay un botón por era.",
+            "- Los niveles se agrupan en eras: Antigüedad, Clásica, Medieval, Descubrimientos, Industrial y Moderna. Arriba de la pestaña hay un botón por era.",
             $"- Cada nación vecina que ya conoce un avance te lo abarata un {GameRules.NeighbourResearchDiscount:P0}.",
             "## Instituciones",
             $"- Cada era nueva tiene una institución (Urbanismo, Feudalismo, Humanismo, Industrialización, Electrificación) que nace en algún lugar del mundo y se extiende de provincia en provincia.",

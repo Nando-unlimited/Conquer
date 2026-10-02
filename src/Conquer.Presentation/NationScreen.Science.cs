@@ -54,7 +54,7 @@ public sealed partial class NationScreen
         string text = adopted ? $"{info.Name}: adoptado" : born ? $"{info.Name}: {Session.InstitutionShare(Player, institution):P0} de tu población"
             : $"{info.Name}: aún no ha nacido";
         return new InstitutionBadge(text, adopted ? Tone.Good : born ? Tone.Accent : Tone.Dim,
-            $"{info.Birth}\n{info.Description}\nMientras no lo adoptes, los avances de la era {info.Opens.Name()} cuestan un " +
+            $"{info.Birth}\n{info.Description}\nMientras no lo adoptes, los avances de {info.Opens.The()} cuestan un " +
             $"{GameRules.InstitutionPenalty:P0} más. Se adopta al llegar a la {GameRules.InstitutionAdoptionShare:P0} de tu población, o antes pagando oro.", adopt);
     }
 

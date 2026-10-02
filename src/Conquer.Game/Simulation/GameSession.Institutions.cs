@@ -104,7 +104,7 @@ public sealed partial class GameSession
         player.Adopt(institution);
         var info = institution.Info();
         if (player.IsHuman)
-            Notify(player.Id, $"Tu nación adopta {info.The}. {info.Description} Los avances de la era {info.Opens.Name()} ya no te cuestan más.");
+            Notify(player.Id, $"Tu nación adopta {info.The}. {info.Description} Los avances de {info.Opens.The()} ya no te cuestan más.");
     }
 
     /// <summary>Gold to adopt it now: so much per citizen who does not have it yet, with a minimum.</summary>

@@ -53,7 +53,7 @@ public class GameplayTests(WorldFixture world)
             Assert.Equal(GameRules.StartingGold, player.Stockpile[ResourceType.Gold]);
             Assert.Equal(GameRules.StartingWood, player.Stockpile[ResourceType.Wood]);
         }
-        Assert.Equal("1 ene 4000 a.C., 00:00", s.Date.ToString());
+        Assert.Equal("1 ene, año 1, 00:00", s.Date.ToString());
     }
 
     [Fact]

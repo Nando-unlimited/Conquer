@@ -2,6 +2,13 @@
 
 Todos los cambios del juego, del más reciente al más antiguo. Cada versión es un commit cuyo título es su número.
 
+## [1.66.0] - 2026-10-02
+
+### Cambiado
+- **Calendario propio**: la partida empieza el 1 de enero del **año 1**, y la fecha se muestra como «12 mar, año 37». Los años cuentan la vida de tu civilización, no la historia real: las eras son etapas de desarrollo, no fechas. Antes empezaba en el 4000 a. C. y, con el ritmo del juego, se llegaba a la era Moderna antes del 3900 a. C.
+- **El Renacimiento pasa a llamarse era de los Descubrimientos**, que describe mejor una etapa en la que llegan la Cartografía y los barcos que cruzan el océano.
+- Las partidas guardadas se cargan igual; solo cambia cómo se muestra la fecha.
+
 ## [1.65.0] - 2026-10-01
 
 ### Añadido

@@ -268,12 +268,21 @@ public static class Techs
         _ => branch.ToString(),
     };
 
+
+    /// <summary>The era with its article, to use inside a sentence: «la era Clásica», «la era de los Descubrimientos».</summary>
+    public static string The(this Era era) => era switch
+    {
+        Era.Ancient => "la Antigüedad",
+        Era.Renaissance => "la era de los Descubrimientos",
+        _ => $"la era {era.Name()}",
+    };
+
     public static string Name(this Era era) => era switch
     {
         Era.Ancient => "Antigüedad",
         Era.Classical => "Clásica",
         Era.Medieval => "Medieval",
-        Era.Renaissance => "Renacimiento",
+        Era.Renaissance => "Descubrimientos",
         Era.Industrial => "Industrial",
         Era.Modern => "Moderna",
         _ => era.ToString(),
