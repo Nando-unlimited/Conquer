@@ -133,6 +133,7 @@ public sealed partial class GameScreen : IScreen
         DrawMarkers();
 
         DrawTopBar();
+        if (!_game.Nation.Visible) DrawAlerts();
         if (!_game.Nation.Visible) DrawSidePanel();
         DrawBottomBar();
         _nation.Frame(Ui, NationRect);
@@ -289,6 +290,19 @@ public sealed partial class GameScreen : IScreen
             _game.Nation.Visible = !_game.Nation.Visible;
         if (Ui.Button(new Rect(s.X - 230, 12, 34, 32), "?", active: _game.HelpOpen, tooltip: "Ayuda (F1)")) _game.HelpOpen = !_game.HelpOpen;
         if (Ui.Button(new Rect(s.X - 90, 12, 78, 32), "Menú")) _game.MenuOpen = true;
+    }
+
+    /// <summary>The alerts in a column under the top bar, each a button with a mark of its colour on the left.</summary>
+    private void DrawAlerts()
+    {
+        float y = TopBarHeight + 8;
+        foreach (var alert in _game.Alerts())
+        {
+            var r = new Rect(8, y, Ui.Font.Measure(alert.Text, FontSize.Small) + 30, 26);
+            if (Ui.Button(r, alert.Text, tooltip: alert.Tooltip, size: FontSize.Small)) alert.OnClick();
+            Batch.Rect(r.X + 4, r.Y + 5, 3, r.H - 10, Theme.Of(alert.Tone));
+            y += 30;
+        }
     }
 
     private void DrawSidePanel()

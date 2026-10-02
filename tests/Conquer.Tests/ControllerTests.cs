@@ -259,4 +259,64 @@ public class ControllerTests(WorldFixture world)
         foreach (var _ in Enum.GetValues<MapMode>()) game.CycleMode();
         Assert.Equal(MapMode.Terrain, game.Mode);
     }
+
+    /// <summary>A game with its capital founded from the starting settlers.</summary>
+    private (GameController Game, Province Capital) WithCapital()
+    {
+        var game = NewGame();
+        var settlers = game.SelectedUnit!;
+        game.OpenCityNaming(settlers.Id, settlers.ProvinceId);
+        game.ConfirmCityName();
+        return (game, _map.Provinces[settlers.ProvinceId]);
+    }
+
+    private static Alert? AlertStarting(GameController game, string text) => game.Alerts().FirstOrDefault(a => a.Text.StartsWith(text));
+
+    [Fact]
+    public void ANewGameHasNoAlerts() => Assert.Empty(NewGame().Alerts());
+
+    [Fact]
+    public void IdleResearchAndHungerRaiseAlertsThatOpenTheNationScreen()
+    {
+        var (game, _) = WithCapital();
+        var science = AlertStarting(game, "Ciencia sin elegir")!;
+        science.OnClick();
+        Assert.True(game.Nation.Visible);
+        Assert.Equal(NationTab.Science, game.Nation.Tab);
+
+        game.Human.IsStarving = true;
+        var hunger = Assert.IsType<Alert>(AlertStarting(game, "Hambre"));
+        Assert.Equal(Tone.Bad, hunger.Tone);
+        Assert.Same(hunger.Text, game.Alerts()[0].Text); // the most urgent first
+    }
+
+    [Fact]
+    public void EachClickOnAnAlertShowsTheNextUnit()
+    {
+        var (game, capital) = WithCapital();
+        var far = _map.Provinces.Where(p => p.IsClaimable && _map.DistanceKm(p, capital) > 6000).Take(2).ToList();
+        var first = game.Session.AddRegiment(0, far[0].Id, BattalionType.Warriors);
+        var second = game.Session.AddRegiment(0, far[1].Id, BattalionType.Warriors);
+
+        var alert = AlertStarting(game, "Sin suministro")!;
+        Assert.Equal("Sin suministro (2)", alert.Text);
+        Assert.Contains(first.Name, alert.Tooltip);
+        alert.OnClick();
+        Assert.Equal(first.Id, game.SelectedUnitId);
+        AlertStarting(game, "Sin suministro")!.OnClick();
+        Assert.Equal(second.Id, game.SelectedUnitId);
+    }
+
+    [Fact]
+    public void RestlessProvincesRaiseAnAlertThatLeadsToThem()
+    {
+        var (game, capital) = WithCapital();
+        capital.Mood = 10;
+        capital.RevoltProgress = GameRules.RevoltDays / 2;
+        var alert = AlertStarting(game, "Descontento")!;
+        Assert.Equal("Descontento (1)", alert.Text);
+        Assert.Contains("rebelión 50", alert.Tooltip);
+        alert.OnClick();
+        Assert.Equal(capital.Id, game.SelectedProvince);
+    }
 }

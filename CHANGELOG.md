@@ -2,6 +2,19 @@
 
 Todos los cambios del juego, del más reciente al más antiguo. Cada versión es un commit cuyo título es su número.
 
+## [1.67.0] - 2026-10-02
+
+### Añadido
+- **Alertas** bajo la barra superior, a la izquierda, cuando algo necesita atención. Al pasar el ratón explican qué ocurre y dónde (hasta 5 lugares o unidades), y al hacer clic te llevan allí:
+  - **Hambre**, o **comida para pocos días** cuando se come más de lo que se cosecha.
+  - **Sin paga**: el ejército no cobra.
+  - **Atacados**: provincias tuyas donde el enemigo ataca.
+  - **Descontento**: provincias con la moral por debajo de 25 o camino de la rebelión, con su porcentaje y si tienen guarnición.
+  - **Sin suministro** y **Desgaste**: unidades que pierden hombres fuera del suministro, o por el frío o el desierto.
+  - **Ciencia sin elegir**: ramas sin nada que investigar.
+- En las alertas de provincias y unidades, cada clic centra el mapa en la siguiente. Las de comida, paga y ciencia abren la pestaña de la nación que corresponde.
+- La marca de cada alerta es roja si es grave y dorada si es un aviso.
+
 ## [1.66.0] - 2026-10-02
 
 ### Cambiado

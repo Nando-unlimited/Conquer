@@ -29,6 +29,7 @@ public static class HelpTopics
             $"Empiezas con {GameRules.StartingCitizens:N0} colonos y nada de tierra. Busca una provincia fértil (mejor junto a un gran río) y pulsa «Fundar ciudad»: será tu capital.",
             "## Qué hacer después",
             "- En la pantalla de la nación (N), pestaña Ciencia, elige qué investigar en cada rama.",
+            "- Debajo de la barra superior aparecen alertas cuando algo necesita atención (hambre, descontento, tropas sin suministro o pasando frío, ciencia sin elegir...). Pasa el ratón por encima para ver qué pasa y haz clic para ir allí.",
             "- Entrena exploradores en la ciudad (baratos y rápidos) y reclama con ellos las provincias libres de alrededor: los colonos de tus ciudades irán a vivir allí solos. Solo reclaman las unidades con al menos un batallón de exploradores. Con «Explorar y reclamar», una unidad de exploradores lo hace por su cuenta: va a la mejor provincia libre junto a tus fronteras, la reclama y sigue con la siguiente.",
             $"- El mar, el hielo polar y las cumbres (por encima de {GameRules.PeakElevation:N0} m, una sola provincia por cordillera) no se pueden reclamar. Las tropas cruzan el hielo y las cumbres, despacio.",
             "- Construye granjas y aserraderos, y una ciudad nueva donde haya 500 habitantes.",

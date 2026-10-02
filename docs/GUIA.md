@@ -768,6 +768,15 @@ Lo que muestra cada pestaña de la pantalla de la nación, para que el cliente l
 | `SciencePage`, `InstitutionBadge`, `BranchColumn`, `TechLevel`, `TechCard` | La ciencia: puntos al día, instituciones de la era mostrada, botones de era y, por rama, prioridad, estado, niveles y tarjetas de avance. |
 | `TemplatesPage`, `TemplateSlot` | El diseñador de unidades: plantillas y sus acciones, huecos de la elegida, batallones para añadir y sus cifras (un `Document`). |
 
+### `GameController.Alerts.cs`
+Las alertas bajo la barra superior.
+
+| Elemento | Qué hace |
+| --- | --- |
+| `Alert` | Una alerta: texto corto, gravedad (`Tone`), explicación con la lista de lo afectado (hasta 5) y qué hace al pulsarla. |
+| `Alerts()` | Las que se cumplen ahora, de más a menos urgente: hambre (o comida para menos de 30 días si se come más de lo que se cosecha), ejército sin paga, provincias atacadas, provincias descontentas o camino de la rebelión, unidades sin suministro, unidades que pierden hombres por el frío o el desierto, y ramas de la ciencia sin elegir. Las de comida, paga y ciencia abren la pestaña de la nación que toca. |
+| `ProvinceAlert(...)`, `UnitAlert(...)`, `NextClick(...)` | Alertas sobre provincias o unidades: cada clic centra el mapa en la siguiente (`ViewProvince`, `ViewUnit`). |
+
 ### `GameController.Dialogs.cs`
 La ventana para editar una unidad tuya (botón «Editar unidad» de su panel) y la de construir una carretera o un ferrocarril (botón de los ingenieros en una ciudad o cuartel): su estado, lo que muestran y sus órdenes. El tiempo se para mientras alguna está abierta.
 
@@ -869,6 +878,7 @@ La pantalla de juego. Clase parcial: el ejército en pantalla está en `GameScre
 | `Center` | Atajo a `GameController.Center` (para `ShowSampleArmy`). |
 | `DrawRivers()` | Dibuja los ríos con `RiverLayer` (con la vega verde solo en el modo terreno). Después, `RoadLayer` dibuja carreteras y ferrocarriles. |
 | `DrawTopBar()` | Dibuja la barra superior (`GameController.TopBar`): color y nombre de la nación, población y moral, fecha y velocidades, recursos (icono, cantidad y cambio del día) y los botones «?» (ayuda), Nación y Menú, que abren pantallas del cliente. |
+| `DrawAlerts()` | Dibuja las alertas (`GameController.Alerts`) en una columna bajo la barra superior, a la izquierda: un botón por alerta con una marca del color de su gravedad. Se ocultan con la pantalla de la nación abierta. |
 | `DrawSidePanel()` | Dibuja el panel derecho (`GameController.SidePanel`) con `DocumentView`, con su botón de cerrar. |
 | `DrawCityNaming()` | Dibuja el diálogo de `GameController.CityNamingDialog` para nombrar una ciudad al fundarla con colonos o al construirla: propone un nombre, se puede escribir otro o pedir otro al azar, avisa si no vale y la funda o empieza la obra (Intro confirma, Esc cancela). Mientras está abierto el tiempo se para y las teclas van a la caja de texto. |
 | `Paragraph()` | Escribe un párrafo ajustado al ancho (lo usa la ventana de carreteras). |
