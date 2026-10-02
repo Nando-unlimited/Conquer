@@ -2,7 +2,8 @@ namespace Conquer.Game.Military;
 
 /// <summary>
 /// An officer's rank, set by the size of what they lead: a colonel a regiment, a brigadier a brigade, a major general
-/// a division, then a lieutenant general a corps, a general an army and a marshal an army group.
+/// a division, then a lieutenant general a corps, a general an army and a marshal an army group. The navy and the air
+/// force call them otherwise (<see cref="Officer.RankName(OfficerRank, OfficerBranch)"/>).
 /// </summary>
 public enum OfficerRank
 {
@@ -12,6 +13,17 @@ public enum OfficerRank
     LieutenantGeneral,
     General,
     Marshal,
+}
+
+/// <summary>
+/// The arm an officer serves in, from recruitment: the army leads regiments and HQs, the navy fleets and the air force
+/// regiments of aircraft. Each has its own names for the same six ranks.
+/// </summary>
+public enum OfficerBranch
+{
+    Army,
+    Navy,
+    Air,
 }
 
 /// <summary>
@@ -73,8 +85,10 @@ public sealed class Officer
     public int Victories { get; set; }
     /// <summary>Rises on its own when the officer is put at the head of something bigger; it never falls.</summary>
     public OfficerRank Rank { get; set; }
+    public OfficerBranch Branch { get; }
 
-    public Officer(int id, string name, IReadOnlyList<OfficerTrait> traits, int startingSkill, int victories = 0, OfficerRank rank = OfficerRank.Colonel)
+    public Officer(int id, string name, IReadOnlyList<OfficerTrait> traits, int startingSkill, int victories = 0, OfficerRank rank = OfficerRank.Colonel,
+        OfficerBranch branch = OfficerBranch.Army)
     {
         Id = id;
         Name = name;
@@ -82,6 +96,7 @@ public sealed class Officer
         StartingSkill = startingSkill;
         Victories = victories;
         Rank = rank;
+        Branch = branch;
     }
 
     public int Skill => Math.Min(MaxSkill, StartingSkill + Victories / VictoriesPerStar);
@@ -89,6 +104,9 @@ public sealed class Officer
     public static bool IsFlaw(OfficerTrait trait) => (int)trait >= 6;
 
     private bool Has(OfficerTrait trait) => Traits.Contains(trait);
+
+    /// <summary>Extra fire of the fleet they lead: at sea nobody attacks or defends, so half of each.</summary>
+    public double NavalFireBonus => (FireBonus(true) + FireBonus(false)) / 2;
 
     /// <summary>Extra fire (negative for less) of the units they lead: attacking or defending.</summary>
     public double FireBonus(bool attacking) => attacking
@@ -143,19 +161,37 @@ public sealed class Officer
         _ => "",
     };
 
-    public static string RankName(OfficerRank rank) => rank switch
+    private static readonly string[] ArmyRanks = ["Coronel", "Brigadier", "General de división", "Teniente general", "General", "Mariscal"];
+    private static readonly string[] NavyRanks = ["Capitán de navío", "Comodoro", "Contraalmirante", "Vicealmirante", "Almirante", "Gran almirante"];
+    private static readonly string[] AirRanks =
+        ["Coronel de aviación", "General de brigada aérea", "General de división aérea", "Teniente general del aire", "General del aire", "Mariscal del aire"];
+
+    /// <summary>A rank's name in an arm: the navy's and the air force's are the equals of the army's, rank for rank.</summary>
+    public static string RankName(OfficerRank rank, OfficerBranch branch = OfficerBranch.Army) => branch switch
     {
-        OfficerRank.Colonel => "Coronel",
-        OfficerRank.Brigadier => "Brigadier",
-        OfficerRank.MajorGeneral => "General de división",
-        OfficerRank.LieutenantGeneral => "Teniente general",
-        OfficerRank.General => "General",
-        OfficerRank.Marshal => "Mariscal",
-        _ => rank.ToString(),
+        OfficerBranch.Navy => NavyRanks[(int)rank],
+        OfficerBranch.Air => AirRanks[(int)rank],
+        _ => ArmyRanks[(int)rank],
     };
 
-    /// <summary>"Coronel Hernán Ulloa".</summary>
-    public string Title => $"{RankName(Rank)} {Name}";
+    /// <summary>"un oficial de marina": who serves in an arm, for messages.</summary>
+    public static string BranchOfficer(OfficerBranch branch) => branch switch
+    {
+        OfficerBranch.Navy => "un oficial de marina",
+        OfficerBranch.Air => "un oficial de aviación",
+        _ => "un oficial del ejército",
+    };
+
+    /// <summary>The arm's name: "Ejército", "Armada", "Aviación".</summary>
+    public static string BranchName(OfficerBranch branch) => branch switch
+    {
+        OfficerBranch.Navy => "Armada",
+        OfficerBranch.Air => "Aviación",
+        _ => "Ejército",
+    };
+
+    /// <summary>"Coronel Hernán Ulloa", "Capitán de navío Leonor Bazán".</summary>
+    public string Title => $"{RankName(Rank, Branch)} {Name}";
 
     /// <summary>"Ofensivo, Lento **": the traits and the stars, in characters the font can draw.</summary>
     public string Summary => $"{string.Join(", ", Traits.Select(TraitName))} {new string('*', Skill)}";
@@ -180,8 +216,8 @@ public sealed class Officer
         "Osorio", "Pacheco", "Quiñones", "Ribera", "Salcedo", "Téllez", "Ulloa", "Velasco", "Zúñiga", "de Mena", "Bazán", "Cortés",
     ];
 
-    /// <summary>A new officer: a random name, 1 to 3 stars, one virtue, sometimes a second, and sometimes a flaw that does not undo a virtue.</summary>
-    public static Officer Recruit(int id, Random random, OfficerRank rank = OfficerRank.Colonel)
+    /// <summary>A new officer of an arm: a random name, 1 to 3 stars, one virtue, sometimes a second, and sometimes a flaw that does not undo a virtue.</summary>
+    public static Officer Recruit(int id, Random random, OfficerRank rank = OfficerRank.Colonel, OfficerBranch branch = OfficerBranch.Army)
     {
         var traits = new List<OfficerTrait> { (OfficerTrait)random.Next(6) };
         if (random.NextDouble() < 0.4)
@@ -194,6 +230,6 @@ public sealed class Officer
             var flaw = (OfficerTrait)(6 + random.Next(6));
             if (traits.All(t => (int)t != (int)flaw - 6)) traits.Add(flaw);
         }
-        return new Officer(id, $"{FirstNames[random.Next(FirstNames.Length)]} {Surnames[random.Next(Surnames.Length)]}", traits, 1 + random.Next(3), rank: rank);
+        return new Officer(id, $"{FirstNames[random.Next(FirstNames.Length)]} {Surnames[random.Next(Surnames.Length)]}", traits, 1 + random.Next(3), rank: rank, branch: branch);
     }
 }

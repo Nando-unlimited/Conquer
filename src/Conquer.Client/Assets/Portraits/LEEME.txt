@@ -3,7 +3,7 @@ Retratos pintados de los oficiales.
 Deja aquí imágenes cuadradas (PNG o JPG, 256 px o más) llamadas época-grupo-rango-número, por ejemplo
 renacimiento-hombre-coronel-03.png. El retrato muestra el rango; el juego no le pinta insignias.
 Épocas: antigua, clasica, medieval, renacimiento, industrial, moderna.
-Grupos: hombre, mujer, marino.
+Grupos: hombre, mujer, marino (oficiales de marina), aviador (oficiales de aviación).
 Rangos: coronel, brigadier, division, teniente, general, mariscal.
 Si falta un rango se usa el más cercano; las épocas sin imágenes usan el retrato dibujado. Cómo crearlas: docs/RETRATOS.md.
 

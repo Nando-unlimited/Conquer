@@ -38,17 +38,17 @@ public enum FacialHair
 /// <param name="Bareheaded">Painted without headgear.</param>
 /// <param name="Accent">Picks the background tint.</param>
 /// <param name="Rank">0 for a colonel, up to 5 for a marshal.</param>
-/// <param name="Naval">Commands a fleet: a sailor's uniform.</param>
+/// <param name="Branch">The arm they serve in: a sailor's uniform for the navy, an airman's for the air force.</param>
 /// <param name="Pick">Chooses among the painted portraits of its group, when there are any.</param>
 public readonly record struct Portrait(
     bool IsFemale, int SkinTone, int HairColor, HairStyle Hair, FacialHair Beard, float FaceWidth, float JawWidth, float Age,
-    float BrowTilt, float NoseSize, bool Bareheaded, int Accent, int Skill, int Rank, Era Era, bool Naval, uint Color, int Pick = 0)
+    float BrowTilt, float NoseSize, bool Bareheaded, int Accent, int Skill, int Rank, Era Era, OfficerBranch Branch, uint Color, int Pick = 0)
 {
     public const int SkinTones = 6;
     public const int HairColors = 5;
 
     /// <summary>The portrait of an officer of a nation of this colour, in this era.</summary>
-    public static Portrait Of(Officer officer, Era era, uint color, bool naval = false)
+    public static Portrait Of(Officer officer, Era era, uint color)
     {
         var random = new Random(StableHash(officer.Name) ^ (officer.Id * 7919));
         bool female = officer.IsFemale;
@@ -59,8 +59,11 @@ public readonly record struct Portrait(
         if (!female && random.NextSingle() < 0.35f) beard = FacialHair.None; // many are clean-shaven
         return new Portrait(female, random.Next(SkinTones), random.Next(HairColors), hair, beard, random.NextSingle(),
             female ? random.NextSingle() * 0.5f : random.NextSingle(), random.NextSingle(), random.NextSingle() * 2f - 1f,
-            random.NextSingle(), random.NextSingle() < 0.25f, random.Next(4), officer.Skill, (int)officer.Rank, era, naval, color, random.Next(1 << 20));
+            random.NextSingle(), random.NextSingle() < 0.25f, random.Next(4), officer.Skill, (int)officer.Rank, era, officer.Branch, color, random.Next(1 << 20));
     }
+
+    public bool Naval => Branch == OfficerBranch.Navy;
+    public bool Air => Branch == OfficerBranch.Air;
 
     /// <summary>How grey the hair is, 0 to 1: some with age, more as skill (and years of service) grows.</summary>
     public float Greying => Math.Clamp(Age * 0.5f - 0.15f + (Skill - 1) * 0.15f, 0f, 1f);
@@ -68,16 +71,20 @@ public readonly record struct Portrait(
     /// <summary>
     /// The groups of painted portraits (Assets/Portraits) this officer may take one of, best first. The portraits show
     /// the rank themselves, so it is in the group: "renacimiento-hombre-teniente" for a lieutenant general, then those of
-    /// the nearest ranks, then "renacimiento-hombre" (no rank); a fleet's first looks among "renacimiento-marino-…".
+    /// the nearest ranks, then "renacimiento-hombre" (no rank); a sailor first looks among "renacimiento-marino-…" and an
+    /// airman among "renacimiento-aviador-…".
     /// <see cref="Pick"/> chooses within the group, so an officer changes face only when promoted into another group.
     /// </summary>
     public IEnumerable<string> PhotoGroups
     {
         get
         {
-            string[] bases = Naval
-                ? [$"{EraSlug(Era)}-marino", $"{EraSlug(Era)}-{Sex}"]
-                : [$"{EraSlug(Era)}-{Sex}"];
+            string[] bases = Branch switch
+            {
+                OfficerBranch.Navy => [$"{EraSlug(Era)}-marino", $"{EraSlug(Era)}-{Sex}"],
+                OfficerBranch.Air => [$"{EraSlug(Era)}-aviador", $"{EraSlug(Era)}-{Sex}"],
+                _ => [$"{EraSlug(Era)}-{Sex}"],
+            };
             // The officer's own rank first, then the nearest ones (the lower first on a tie), then a picture without a rank.
             int rank = Rank;
             var ranks = Enumerable.Range(0, RankSlugs.Length).OrderBy(r => Math.Abs(r - rank)).ThenBy(r => r).ToList();

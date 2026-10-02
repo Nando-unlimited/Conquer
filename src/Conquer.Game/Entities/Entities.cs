@@ -187,9 +187,11 @@ public sealed class Unit
     /// <summary>Men a fleet can carry: the sum of its ships' holds.</summary>
     public int Capacity => IsFleet ? Battalions.Sum(b => b.Info.Capacity) : 0;
     public bool CanFoundCity => Type == UnitType.Settlers;
-    /// <summary>Combat units and HQs are led by an officer; settlers and fleets are not.</summary>
-    public bool HasOfficer => Type is UnitType.Regiment or UnitType.Headquarters;
-    /// <summary>The rank that goes with its size: colonel to major general for combat units, lieutenant general up for HQs.</summary>
+    /// <summary>Combat units, HQs and fleets are led by an officer; settlers are not.</summary>
+    public bool HasOfficer => Type is UnitType.Regiment or UnitType.Headquarters or UnitType.Fleet;
+    /// <summary>The arm of the officer it needs: the navy for a fleet, the air force for a regiment of aircraft, the army otherwise.</summary>
+    public OfficerBranch OfficerBranch => IsFleet ? OfficerBranch.Navy : Flies ? OfficerBranch.Air : OfficerBranch.Army;
+    /// <summary>The rank that goes with its size: colonel to major general for combat units and fleets (by battalions or ships), lieutenant general up for HQs.</summary>
     public OfficerRank RequiredRank => Type == UnitType.Headquarters
         ? OfficerRank.MajorGeneral + HeadquartersLevel
         : Battalions.Count <= 3 ? OfficerRank.Colonel : Battalions.Count <= 6 ? OfficerRank.Brigadier : OfficerRank.MajorGeneral;

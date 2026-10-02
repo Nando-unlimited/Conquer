@@ -99,9 +99,9 @@ public sealed partial class GameSession
         }
     }
 
-    private static OfficerSave ToSave(Officer o) => new(o.Id, o.Name, [.. o.Traits], o.StartingSkill, o.Victories, o.Rank);
+    private static OfficerSave ToSave(Officer o) => new(o.Id, o.Name, [.. o.Traits], o.StartingSkill, o.Victories, o.Rank, o.Branch);
 
-    private static Officer FromSave(OfficerSave o) => new(o.Id, o.Name, o.Traits, o.StartingSkill, o.Victories, o.Rank);
+    private static Officer FromSave(OfficerSave o) => new(o.Id, o.Name, o.Traits, o.StartingSkill, o.Victories, o.Rank, o.Branch);
 
     /// <summary>Whether the province differs from how <see cref="ResetProvinces"/> leaves it.</summary>
     private static TrainingSave ToSave(TrainingOrder o) =>

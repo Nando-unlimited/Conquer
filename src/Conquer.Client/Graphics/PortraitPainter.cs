@@ -21,7 +21,7 @@ public static class PortraitPainter
     private static readonly Rgba[] Ribbons = [Hex(0xb0302a), Hex(0x2a5aa8), Hex(0xe0c040), Hex(0x2e8a4a), Hex(0x6a3a8a), Hex(0xe0e0e0)];
     private static readonly Rgba Grey = Hex(0xcfcfcf), Gold = Hex(0xd9b44a), DarkGold = Hex(0x9c7a24), Ink = Hex(0x1a1410),
         Lips = Hex(0x7a3a30), FemaleLips = Hex(0xa8453a), Bronze = Hex(0x8f6a28), Steel = Hex(0x9aa0a8), Crest = Hex(0xa8281e),
-        HatBlack = Hex(0x161616), NavyBlue = Hex(0x1c2740), White = Hex(0xe8e4d8), Backdrop = Hex(0x20252e);
+        HatBlack = Hex(0x161616), NavyBlue = Hex(0x1c2740), AirBlue = Hex(0x4a5a70), White = Hex(0xe8e4d8), Backdrop = Hex(0x20252e);
 
     private static SpriteAtlas? _photos;
     private static Dictionary<string, string[]> _groups = [];
@@ -217,6 +217,7 @@ public static class PortraitPainter
         void Headgear()
         {
             var era = face.Era;
+            if (face.Air) era = Era.Modern; // airmen wear the peaked cap whatever the age
             if (!face.Naval && era <= Era.Classical)
             {
                 // Crested bronze helmet with cheek guards
@@ -272,7 +273,7 @@ public static class PortraitPainter
         }
     }
 
-    private static Rgba UniformColor(Portrait face, Rgba country) => face.Naval
+    private static Rgba UniformColor(Portrait face, Rgba country) => face.Air ? AirBlue : face.Naval
         ? face.Era <= Era.Classical ? White : NavyBlue
         : face.Era switch
         {

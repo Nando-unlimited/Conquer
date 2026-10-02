@@ -165,18 +165,21 @@ internal sealed partial class AiPlayer
     }
 
     /// <summary>
-    /// Puts an officer at the head of the biggest unit without one: the best in the reserve (most virtues and stars,
+    /// Puts an officer of its arm at the head of the biggest unit or fleet without one: the best in the reserve (most virtues and stars,
     /// fewest flaws), or a newly recruited one when the reserve is empty and it can spare the gold. One a day.
     /// </summary>
     private void StaffArmy()
     {
-        if (Army.Where(u => u.Officer == null).OrderByDescending(u => u.Battalions.Count).FirstOrDefault() is not { } unit) return;
-        if (_player.OfficerReserve.Count == 0)
+        var unstaffed = Army.Concat(_session.Units.Where(u => u.OwnerId == _player.Id && u.IsFleet)).Where(u => u.Officer == null);
+        if (unstaffed.OrderByDescending(u => u.Battalions.Count).FirstOrDefault() is not { } unit) return;
+        var branch = unit.OfficerBranch;
+        if (!_player.OfficerReserve.Any(o => o.Branch == branch))
         {
             if (_player.Stockpile[ResourceType.Gold] - MilitaryRules.OfficerCost < GoldKeptForRecruiting) return;
-            _session.RecruitOfficer(_player.Id);
+            if (!_session.RecruitOfficer(_player.Id, branch).Ok) return;
         }
-        var best = _player.OfficerReserve.OrderByDescending(o => o.Traits.Count(t => !Officer.IsFlaw(t)) * o.Skill - 2 * o.Traits.Count(Officer.IsFlaw)).First();
+        var best = _player.OfficerReserve.Where(o => o.Branch == branch)
+            .OrderByDescending(o => o.Traits.Count(t => !Officer.IsFlaw(t)) * o.Skill - 2 * o.Traits.Count(Officer.IsFlaw)).First();
         _session.AssignOfficer(_player.Id, unit.Id, best.Id);
     }
 

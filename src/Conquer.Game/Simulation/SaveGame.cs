@@ -174,7 +174,9 @@ public sealed record BattalionSave(BattalionType Type, double Strength, double O
 /// <summary>An HQ's general as saves before officers (1.32.0) wrote it: one trait, no rank; loaded as an officer.</summary>
 public sealed record GeneralSave(string Name, OfficerTrait Trait, int StartingSkill, int Victories);
 
-public sealed record OfficerSave(int Id, string Name, List<OfficerTrait> Traits, int StartingSkill, int Victories, OfficerRank Rank);
+/// <summary>An officer; <see cref="Branch"/> is missing in saves from before 1.91.0, when every officer was of the army.</summary>
+public sealed record OfficerSave(int Id, string Name, List<OfficerTrait> Traits, int StartingSkill, int Victories, OfficerRank Rank,
+    OfficerBranch Branch = OfficerBranch.Army);
 
 public sealed record MigrationSave(int Id, int OwnerId, int From, int To, int People, long DepartHours, long ArriveHours, bool Forced, double Mood);
 

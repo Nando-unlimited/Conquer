@@ -180,6 +180,8 @@ public sealed partial class GameController
             doc.Add(new Info("Velocidad en el mar", $"{unit.Speed * GameRules.SailingSpeed * GameRules.CitizenSpeedKmh:0.#} km/h"));
             bool port = Session.IsPort(Map.Provinces[unit.ProvinceId], unit.OwnerId);
             doc.Add(new Info("Reparaciones", port ? "En puerto" : "Solo en puerto", port ? Tone.Good : Tone.Dim));
+            doc.Add(OfficerLine("Oficial", unit.Officer, "Manda esta flota: sus rasgos y su habilidad afectan al fuego de sus barcos."));
+            doc.Add(PortraitsOf(unit, ("Oficial", unit.Officer)));
             if (unit.Capacity > 0)
             {
                 doc.Add(new Info("Carga", $"{Session.CargoMen(unit):N0} / {unit.Capacity:N0} hombres"));
@@ -246,7 +248,7 @@ public sealed partial class GameController
     {
         var owner = Session.Players[unit.OwnerId];
         var shown = officers.Where(o => o.Officer != null)
-            .Select(o => (Portrait.Of(o.Officer!, owner.Era, owner.Color, unit.IsFleet), o.Role, OfficerTooltip(o.Officer!))).ToList();
+            .Select(o => (Portrait.Of(o.Officer!, owner.Era, owner.Color), o.Role, OfficerTooltip(o.Officer!))).ToList();
         return shown.Count == 0 ? new Space(0) : new Portraits(shown);
     }
     private static Info OfficerLine(string label, Officer? officer, string role) =>

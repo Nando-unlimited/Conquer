@@ -4,7 +4,7 @@ El juego puede usar retratos pintados (creados con una IA de imágenes como Recr
 los dibujados con formas. Basta con dejar las imágenes en `src/Conquer.Client/Assets/Portraits` y compilar.
 
 Los retratos **muestran el rango ellos mismos**: el juego los dibuja tal cual, solo con un marco fino del color de la
-nación. Cada oficial toma uno de su época, su sexo (o de marino si manda una flota) y su rango, siempre el mismo
+nación. Cada oficial toma uno de su época, su sexo (o de marino o aviador según su arma) y su rango, siempre el mismo
 mientras no cambie de rango; al ascender pasa a uno del nuevo rango, así que cambia de cara.
 
 No hace falta tenerlo todo: si falta su rango, el oficial toma uno del rango más cercano (el inferior si hay empate), y
@@ -32,25 +32,27 @@ si su época no tiene ninguno, el retrato dibujado. Se pueden ir añadiendo poco
 | --- | --- |
 | Oficiales hombres | `hombre` |
 | Oficiales mujeres | `mujer` |
-| Quien manda una flota | `marino` |
+| Oficiales de marina (mandan flotas) | `marino` |
+| Oficiales de aviación (mandan aviones) | `aviador` |
 
-| Rango | En el nombre | Equivalente en la marina | Qué manda |
-| --- | --- | --- | --- |
-| Coronel | `coronel` | Capitán de navío | Un regimiento pequeño |
-| Brigadier | `brigadier` | Comodoro | Un regimiento de 4 a 6 batallones |
-| General de división | `division` | Contraalmirante | Un regimiento de 7 o más batallones |
-| Teniente general | `teniente` | Vicealmirante | Un cuerpo de ejército |
-| General | `general` | Almirante | Un ejército |
-| Mariscal | `mariscal` | Gran almirante | Un grupo de ejércitos |
+| Rango | En el nombre | En la armada | En la aviación | Qué manda |
+| --- | --- | --- | --- | --- |
+| Coronel | `coronel` | Capitán de navío | Coronel de aviación | Un regimiento pequeño |
+| Brigadier | `brigadier` | Comodoro | General de brigada aérea | Un regimiento (o flota) de 4 a 6 batallones (o barcos) |
+| General de división | `division` | Contraalmirante | General de división aérea | Un regimiento (o flota) de 7 o más |
+| Teniente general | `teniente` | Vicealmirante | Teniente general del aire | Un cuerpo de ejército |
+| General | `general` | Almirante | General del aire | Un ejército |
+| Mariscal | `mariscal` | Gran almirante | Mariscal del aire | Un grupo de ejércitos |
 
 Casi todos los oficiales son coroneles (los reclutados lo son, y la mayoría de regimientos son pequeños); los cuarteles
-generales tienen tenientes generales, generales y mariscales. Por eso conviene tener más coroneles:
+generales tienen tenientes generales, generales y mariscales, y son siempre del ejército: los marinos y los aviadores
+solo llegan hasta `division`. Por eso conviene tener más coroneles:
 
-| Rango | Por época, para hombres | Para mujeres | Para marinos |
+| Rango | Por época, para hombres | Para mujeres | Para marinos y aviadores |
 | --- | --- | --- | --- |
 | `coronel` | 6 | 3 | 2 |
 | `brigadier`, `division` | 2 cada uno | 1 cada uno | 1 cada uno |
-| `teniente`, `general`, `mariscal` | 2 cada uno | 1 cada uno | 1 cada uno |
+| `teniente`, `general`, `mariscal` | 2 cada uno | 1 cada uno | — |
 
 Unas 30 imágenes por época. Con menos también funciona.
 
@@ -85,7 +87,9 @@ joven; un mariscal, un veterano canoso cargado de honores.
 | `mariscal` | the most splendid gilded armor, purple cloak, a commander's baton | marshal's baton, grand sash, orders and stars | five stars or a marshal's insignia, a baton, many decorations |
 
 Para los marinos, lo mismo con sus equivalentes: *ship captain, commodore, rear admiral, vice admiral, admiral, grand
-admiral*, con los galones en las mangas en las épocas industrial y moderna.
+admiral*, con los galones en las mangas en las épocas industrial y moderna. Para los aviadores (solo existen desde la
+Aviación, en las épocas industrial y moderna): *air force colonel, air commodore, air vice-marshal*, uniforme azul
+grisáceo, gorra de plato con el emblema de alas y las alas de piloto en el pecho.
 
 ## Personajes por época
 

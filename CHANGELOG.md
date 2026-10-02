@@ -2,6 +2,20 @@
 
 Todos los cambios del juego, del más reciente al más antiguo. Cada versión es un commit cuyo título es su número.
 
+## [1.91.0] - 2026-10-02
+
+### Añadido
+- **Tres armas para los oficiales**: ejército, armada y aviación. Cada oficial pertenece a una desde que se recluta, y cada arma tiene sus nombres para los mismos seis rangos:
+  - **Ejército**: coronel, brigadier, general de división, teniente general, general y mariscal.
+  - **Armada**: capitán de navío, comodoro, contraalmirante, vicealmirante, almirante y gran almirante.
+  - **Aviación**: coronel de aviación, general de brigada aérea, general de división aérea, teniente general del aire, general del aire y mariscal del aire.
+- **Las flotas tienen oficial**, de marina. Sus rasgos y su habilidad afectan al fuego de los barcos en las batallas navales, y gana estrellas con las victorias en el mar. Asciende con el tamaño de la flota, como en tierra.
+- Los regimientos de aviones los mandan oficiales de aviación; el resto de regimientos y los cuarteles generales, los del ejército. Solo un oficial del arma de la unidad puede mandarla.
+- En el editor de la unidad, la reserva muestra los oficiales de su arma y el botón recluta uno de esa arma. Los de marina piden una flota o un puerto; los de aviación, la Aviación.
+- Los rivales también ponen oficiales de marina al frente de sus flotas.
+- Los retratos de los aviadores llevan uniforme azul grisáceo y gorra de plato. Los retratos pintados aceptan el grupo `aviador`.
+- En las partidas guardadas anteriores, todos los oficiales son del ejército.
+
 ## [1.90.0] - 2026-10-02
 
 ### Cambiado

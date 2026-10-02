@@ -489,22 +489,35 @@ public sealed partial class GameSession
 
     // ------------------------------------------------------------------ officers
 
-    public CommandResult CanRecruitOfficer(Player player) =>
-        player.Stockpile[Economy.ResourceType.Gold] < MilitaryRules.OfficerCost
+    /// <summary>Whether the nation can recruit an officer of an arm: it needs the gold, a fleet or a port for the navy, and aviation for the air force.</summary>
+    public CommandResult CanRecruitOfficer(Player player, OfficerBranch branch = OfficerBranch.Army)
+    {
+        if (branch == OfficerBranch.Navy && !Units.Any(u => u.OwnerId == player.Id && u.IsFleet)
+            && !player.Provinces.Any(id => Map.Provinces[id].Buildings.Contains(Buildings.BuildingType.Port)))
+            return CommandResult.Fail("Hace falta una flota o un puerto para reclutar oficiales de marina.");
+        if (branch == OfficerBranch.Air && !player.Techs.Contains(Science.Tech.Aviation))
+            return CommandResult.Fail("Hace falta la Aviación para reclutar oficiales de aviación.");
+        return player.Stockpile[Economy.ResourceType.Gold] < MilitaryRules.OfficerCost
             ? CommandResult.Fail($"Hacen falta {MilitaryRules.OfficerCost:0} de oro.")
             : CommandResult.Success();
+    }
 
-    /// <summary>A new officer, with random traits, joins the nation's reserve for gold.</summary>
-    public CommandResult RecruitOfficer(int playerId)
+    /// <summary>A new officer of an arm, with random traits, joins the nation's reserve for gold.</summary>
+    public CommandResult RecruitOfficer(int playerId, OfficerBranch branch = OfficerBranch.Army)
     {
         var player = Players[playerId];
-        var check = CanRecruitOfficer(player);
+        var check = CanRecruitOfficer(player, branch);
         if (!check.Ok) return check;
         player.Stockpile[Economy.ResourceType.Gold] -= MilitaryRules.OfficerCost;
-        var officer = NewOfficer(player, OfficerRank.Colonel);
+        var officer = NewOfficer(player, OfficerRank.Colonel, branch);
         player.OfficerReserve.Add(officer);
         return CommandResult.Success($"{officer.Title} se une a la reserva: {officer.Summary}.");
     }
+
+    /// <summary>Whether the officer may lead the unit: only one of its arm (the navy for fleets, the air force for aircraft).</summary>
+    public static CommandResult CanLead(Officer officer, Unit unit) => officer.Branch == unit.OfficerBranch
+        ? CommandResult.Success()
+        : CommandResult.Fail($"{unit.Name} necesita {Officer.BranchOfficer(unit.OfficerBranch)}.");
 
     /// <summary>
     /// Puts an officer from the reserve at the head of a combat unit or HQ; whoever led it goes back to the reserve.
@@ -515,6 +528,7 @@ public sealed partial class GameSession
         if (UnitById(unitId) is not { } unit || unit.OwnerId != playerId || !unit.HasOfficer) return CommandResult.Fail("Unidad no válida.");
         var reserve = Players[playerId].OfficerReserve;
         if (reserve.FirstOrDefault(o => o.Id == officerId) is not { } officer) return CommandResult.Fail("Ese oficial no está en la reserva.");
+        if (CanLead(officer, unit) is { Ok: false } wrongArm) return wrongArm;
         reserve.Remove(officer);
         if (unit.Officer is { } previous) reserve.Add(previous);
         unit.Officer = officer;
@@ -542,11 +556,11 @@ public sealed partial class GameSession
     }
 
     /// <summary>A newly recruited officer whose name no other officer of the nation already has (if a few tries find one).</summary>
-    private Officer NewOfficer(Player player, OfficerRank rank)
+    private Officer NewOfficer(Player player, OfficerRank rank, OfficerBranch branch = OfficerBranch.Army)
     {
         var taken = Units.Where(u => u.OwnerId == player.Id).Select(u => u.Officer?.Name).Concat(player.OfficerReserve.Select(o => o.Name)).ToHashSet();
-        var officer = Officer.Recruit(_nextOfficerId++, _random, rank);
-        for (int i = 0; i < 10 && taken.Contains(officer.Name); i++) officer = Officer.Recruit(officer.Id, _random, rank);
+        var officer = Officer.Recruit(_nextOfficerId++, _random, rank, branch);
+        for (int i = 0; i < 10 && taken.Contains(officer.Name); i++) officer = Officer.Recruit(officer.Id, _random, rank, branch);
         return officer;
     }
 
@@ -555,7 +569,7 @@ public sealed partial class GameSession
     {
         if (unit.Officer is not { } officer || officer.Rank >= unit.RequiredRank) return;
         officer.Rank = unit.RequiredRank;
-        if (unit.OwnerId == HumanPlayerId) Notify(HumanPlayerId, $"{officer.Name} asciende a {Officer.RankName(officer.Rank).ToLowerInvariant()} al frente de {unit.Name}.");
+        if (unit.OwnerId == HumanPlayerId) Notify(HumanPlayerId, $"{officer.Name} asciende a {Officer.RankName(officer.Rank, officer.Branch).ToLowerInvariant()} al frente de {unit.Name}.");
     }
 
     public CommandResult CanAttach(Unit unit, Unit hq)

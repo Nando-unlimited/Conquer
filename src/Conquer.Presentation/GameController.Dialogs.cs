@@ -127,34 +127,49 @@ public sealed partial class GameController
         return new UnitEditorWindow($"Editar {unit.Name}", rename, automatic, battalionsTitle, battalions, split, merges, unit.HasOfficer ? OfficerColumn(unit) : null);
     }
 
-    /// <summary>Who leads the unit, the reserve to choose a replacement from and the button to recruit another.</summary>
+    /// <summary>
+    /// Who leads the unit, the reserve of its arm to choose a replacement from (the army's, the navy's or the air
+    /// force's: only they may lead it) and the button to recruit another of that arm.
+    /// </summary>
     private OfficerColumn OfficerColumn(Unit unit)
     {
+        var branch = unit.OfficerBranch;
         string role = unit.IsHeadquarters ? "General" : "Oficial";
-        var reserve = Human.OfficerReserve.Select(officer => new ReserveOfficer(officer.Title, officer.Summary,
+        string rank = Officer.RankName(unit.RequiredRank, branch).ToLowerInvariant();
+        var reserve = Human.OfficerReserve.Where(o => o.Branch == branch).Select(officer => new ReserveOfficer(officer.Title, officer.Summary,
             officer.Traits.Any(Officer.IsFlaw) ? Tone.Dim : Tone.Good, OfficerTooltip(officer),
             new Button("Asignar", () => Show(Session.AssignOfficer(Human.Id, unit.Id, officer.Id)),
-                Tooltip: officer.Rank < unit.RequiredRank ? $"Ascenderá a {Officer.RankName(unit.RequiredRank).ToLowerInvariant()}." : null, Size: TextSize.Small),
-            new Button("Retirar", () => Show(Session.RetireOfficer(Human.Id, officer.Id)), Tooltip: "Deja el ejército para siempre.", Size: TextSize.Small),
-            PortraitOf(officer, unit.IsFleet))).ToList();
-        var can = Session.CanRecruitOfficer(Human);
-        return new OfficerColumn($"{role} (rango: {Officer.RankName(unit.RequiredRank).ToLowerInvariant()})",
-            unit.Officer is { } current ? OfficerCard(current, unit.IsFleet) : null,
+                Tooltip: officer.Rank < unit.RequiredRank ? $"Ascenderá a {rank}." : null, Size: TextSize.Small),
+            new Button("Retirar", () => Show(Session.RetireOfficer(Human.Id, officer.Id)), Tooltip: "Deja el servicio para siempre.", Size: TextSize.Small),
+            PortraitOf(officer))).ToList();
+        int others = Human.OfficerReserve.Count(o => o.Branch != branch);
+        var can = Session.CanRecruitOfficer(Human, branch);
+        string recruit = branch switch
+        {
+            OfficerBranch.Navy => "Reclutar oficial de marina",
+            OfficerBranch.Air => "Reclutar oficial de aviación",
+            _ => "Reclutar oficial",
+        };
+        return new OfficerColumn($"{role} (rango: {rank})",
+            unit.Officer is { } current ? OfficerCard(current) : null,
             unit.Officer is null ? null : new Button("Relevar del mando", () => Show(Session.RelieveOfficer(Human.Id, unit.Id)),
                 Tooltip: "Vuelve a la reserva; la unidad se queda sin oficial.", Size: TextSize.Small),
             unit.Officer is null ? "Sin oficial: ni ventajas ni defectos." : null,
-            $"Reserva ({reserve.Count})", reserve.Count == 0 ? "No hay oficiales en la reserva." : null, reserve, "y {0} más",
-            new Button($"Reclutar oficial ({MilitaryRules.OfficerCost:0} de oro)", () => Show(Session.RecruitOfficer(Human.Id)), can.Ok,
+            $"Reserva: {Officer.BranchName(branch)} ({reserve.Count})",
+            reserve.Count == 0 ? $"No hay oficiales de {(branch switch { OfficerBranch.Navy => "marina", OfficerBranch.Air => "aviación", _ => "ejército" })} en la reserva."
+                                 + (others > 0 ? $" ({others} de otras armas no pueden mandarla.)" : "") : null,
+            reserve, "y {0} más",
+            new Button($"{recruit} ({MilitaryRules.OfficerCost:0} de oro)", () => Show(Session.RecruitOfficer(Human.Id, branch)), can.Ok,
                 Tooltip: can.Ok ? "Se une a la reserva con rasgos al azar: una o dos virtudes, y a veces un defecto." : can.Message, Size: TextSize.Small));
     }
 
-    private OfficerCard OfficerCard(Officer officer, bool naval) =>
+    private OfficerCard OfficerCard(Officer officer) =>
         new(officer.Title, new string('*', officer.Skill), OfficerTooltip(officer),
             officer.Traits.Select(t => ($"{Officer.TraitName(t)}: {Officer.TraitDescription(t)}", (Ink)(Officer.IsFlaw(t) ? Tone.Bad : Tone.Good))).ToList(),
-            PortraitOf(officer, naval));
+            PortraitOf(officer));
 
     /// <summary>The officer's portrait in the player's colour and era.</summary>
-    public Portrait PortraitOf(Officer officer, bool naval = false) => Portrait.Of(officer, Human.Era, Human.Color, naval);
+    public Portrait PortraitOf(Officer officer) => Portrait.Of(officer, Human.Era, Human.Color);
 
     // ------------------------------------------------------------------ road window
 

@@ -118,7 +118,9 @@ public sealed partial class GameSession
                 Damage([.. fleets.Where(f => AtWar(f.OwnerId, owner))], shots);
             foreach (var fleet in fleets.Where(Broken))
             {
-                foreach (int winner in fleets.Where(f => AtWar(f.OwnerId, fleet.OwnerId) && !Broken(f)).Select(f => f.OwnerId).Distinct())
+                var victors = fleets.Where(f => AtWar(f.OwnerId, fleet.OwnerId) && !Broken(f)).ToList();
+                foreach (var officer in victors.Select(f => f.Officer).OfType<Officer>()) officer.Victories++;
+                foreach (int winner in victors.Select(f => f.OwnerId).Distinct())
                     RecordVictory(winner, fleet.OwnerId);
                 FleeOrSink(fleet);
             }
@@ -128,9 +130,9 @@ public sealed partial class GameSession
     /// <summary>A fleet's fire in an hour: its ships' guns, scaled by their crews and organisation, and a little luck.</summary>
     private double NavalFire(Unit fleet) => ExpectedNavalFire(fleet) * (1 + (_random.NextDouble() * 2 - 1) * MilitaryRules.CombatRandomness);
 
-    /// <summary>A fleet's fire in an hour before luck: its ships' guns, scaled by their crews and organisation.</summary>
+    /// <summary>A fleet's fire in an hour before luck: its ships' guns, scaled by their crews and organisation, and by its officer's skill and traits.</summary>
     public static double ExpectedNavalFire(Unit fleet) =>
-        fleet.Battalions.Sum(b => b.Info.Attack * b.StrengthShare * (0.5 + 0.5 * b.OrganisationShare));
+        fleet.Battalions.Sum(b => b.Info.Attack * b.StrengthShare * (0.5 + 0.5 * b.OrganisationShare)) * Math.Max(0, 1 + (fleet.Officer?.NavalFireBonus ?? 0));
 
     /// <summary>
     /// The fleet runs to a neighbouring sea (or its own port) with no enemy ships; with nowhere to go, or no
