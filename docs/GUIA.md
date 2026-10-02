@@ -346,6 +346,15 @@ La reserva de reclutas.
 | `DailyManpower(jugador)` | Cada día (al empezar `DailyMilitary`) la rellena, sin pasar de lo que cabe. |
 | `LacksManpower(jugador, hombres)`, `ReturnToReserve(jugador, hombres)` | Por qué no hay hombres para entrenar o formar un cuartel general (`CanRaiseTroops`, `CanRaiseHeadquarters`); licenciar una unidad (`Disband`) devuelve sus hombres. Los refuerzos de `DailyMilitary` también la gastan. |
 
+### `Simulation/GameSession.Vision.cs`
+La niebla de guerra.
+
+| Elemento | Qué hace |
+| --- | --- |
+| `SharesVision(jugador, otro)` | Las naciones que comparten lo que ven: la misma, sus aliados, su señor y sus vasallos. |
+| `VisibleProvinces(jugador)` | Lo que ve: las provincias suyas o que ocupa (y las de quienes comparten su vista) con una provincia alrededor, y alrededor de sus unidades una provincia (dos con exploradores) y la siguiente de su ruta. Se calcula de nuevo cada hora o cuando aparecen o desaparecen unidades. |
+| `CanSee(jugador, unidad)` | Si ve una unidad: las propias y de quienes comparten su vista siempre; las demás solo en una provincia que ve (las embarcadas, si ve su flota). |
+
 ### `Simulation/GameSession.Institutions.cs`
 Las instituciones dentro de la partida.
 
@@ -767,7 +776,8 @@ La partida en pantalla, sin pantalla: lo que se ve, lo seleccionado, los diálog
 | `Show(resultado)` | Muestra el resultado de una orden. |
 | `Nation` | La pantalla de la nación (`NationScreen`). |
 | `Center`, `Between`, `CenterOnHome`, `CycleMode` | Centro de una provincia, punto entre dos cruzando el borde del mapa por el lado corto, centrar la vista en la capital y pasar al siguiente modo de mapa. |
-| `SelectedUnit`, `SelectedUnitId`, `SelectedProvince`, `HoverProvince`, `HasSelection` | Selección (una unidad o una provincia; la unidad que ya no existe se deselecciona sola) y provincia bajo el ratón. |
+| `SelectedUnit`, `SelectedUnitId`, `SelectedProvince`, `HoverProvince`, `HasSelection` | Selección (una unidad o una provincia; la unidad que ya no existe o que se pierde en la niebla se deselecciona sola) y provincia bajo el ratón. |
+| `VisibleProvinces`, `FogSignature` | Lo que ve el jugador (`GameSession.VisibleProvinces`) y un número que cambia cuando cambia, para que el cliente vuelva a dibujar la niebla. |
 | `SelectUnit`, `SelectProvince`, `ClearSelection`, `ViewUnit`, `ViewProvince` | Cambiar la selección; las dos últimas además centran la vista (desde la pantalla de la nación). |
 | `ChoosingMigrationTarget`, `MigrationAmount` | Migración forzada: si el próximo clic elige el destino, y cuánta gente. |
 | `ClickProvince()` | Clic en el mapa sin marcador: envía la migración forzada si se estaba eligiendo destino, o selecciona la provincia. |
@@ -914,8 +924,8 @@ Lo que se dibuja sobre las provincias, ya en posiciones de pantalla (con la cám
 | --- | --- |
 | `Cities()`, `CityMarker` | Cada ciudad, con el color de su nación, su población (más casas cuanto más poblada), si es la capital, un poco más grande con zoom, y su nombre si hay sitio (con zoom, o la capital desde más lejos). |
 | `NationLabels()`, `NationLabel` | El nombre de cada nación sobre su tierra: en su centro (media circular de las longitudes), del tamaño que ocupa en pantalla, oculto si se ve muy pequeña y desvanecido al acercarse mucho. |
-| `Counters()`, `CounterKind`, `UnitCounter` | Cada unidad que no va embarcada: dónde está (a mitad de camino si marcha; varias en una provincia se escalonan), su color, si está seleccionada, su tipo (combate, flota, cuartel o colonos), su arma (`Unit.Function`), su letra, cuántas van a bordo, sus marcas de tamaño (`Unit.Echelon`), sus barras y, con ella, su ruta (`Route`: entera para la seleccionada y para tus demás unidades en marcha si hay zoom, cruzando el borde del mapa por el lado corto), la línea a su cuartel (si está seleccionada) y la flecha de su ataque. Se encogen con el zoom lejano. |
-| `Battles()`, `BattleMarker`, `BattleSummary(...)`, `NavalBattleSummary(...)` | Espadas cruzadas sobre cada batalla, en tierra o en el mar; su tooltip (los dos bandos, su organización y el terreno) solo se calcula al pasar el ratón. |
+| `Counters()`, `CounterKind`, `UnitCounter` | Cada unidad que no va embarcada y que el jugador ve (`GameSession.CanSee`; la niebla oculta las demás): dónde está (a mitad de camino si marcha; varias en una provincia se escalonan), su color, si está seleccionada, su tipo (combate, flota, cuartel o colonos), su arma (`Unit.Function`), su letra, cuántas van a bordo, sus marcas de tamaño (`Unit.Echelon`), sus barras y, con ella, su ruta (`Route`: entera para la seleccionada y para tus demás unidades en marcha si hay zoom, cruzando el borde del mapa por el lado corto), la línea a su cuartel (si está seleccionada) y la flecha de su ataque. Se encogen con el zoom lejano. |
+| `Battles()`, `BattleMarker`, `BattleSummary(...)`, `NavalBattleSummary(...)` | Espadas cruzadas sobre cada batalla que el jugador ve, en tierra o en el mar; su tooltip (los dos bandos, su organización y el terreno) solo se calcula al pasar el ratón. |
 
 ### `Menus.cs`
 Los menús fuera de la partida como datos. Para cambiar de pantalla piden a un `IMenuNavigator` (lo pone el cliente) que muestre el menú principal, el de nueva partida o el de cargar, que empiece o cargue una partida o que salga.
@@ -1034,7 +1044,7 @@ Dibuja el mapa entero con un único shader.
 | `Prepare(mapa)` | Prepara (fuera del hilo principal) los píxeles de ids, colores del terreno y detalle. |
 | `ProvinceAt(mapa, punto, zoom)` | Provincia que se ve en un punto, con la misma regla que el shader (para los clics). |
 | `SmoothZoom` | Zoom a partir del cual las fronteras se suavizan. |
-| `Refresh(partida)` | Recalcula el color de cada provincia según el modo (en el de cultura, el color de la nación de su gente; en el de terreno, la nieve del invierno), su dueño, el color de su dueño y, si está ocupada, el del ocupante (texturas pequeñas de 256×128). Si ha cambiado algún dueño, vuelve a calcular las distancias a la frontera (`BuildBorderDistances`: crece píxel a píxel desde las fronteras entre tierras de distinto dueño, hasta 5; las costas no cuentan). |
+| `Refresh(partida, visibles)` | Recalcula la niebla de guerra (las provincias fuera de `visibles` se dibujan en gris y más oscuras; va en el canal azul de la textura de dueños) y el color de cada provincia según el modo (en el de cultura, el color de la nación de su gente; en el de terreno, la nieve del invierno), su dueño, el color de su dueño y, si está ocupada, el del ocupante (texturas pequeñas de 256×128). Si ha cambiado algún dueño, vuelve a calcular las distancias a la frontera (`BuildBorderDistances`: crece píxel a píxel desde las fronteras entre tierras de distinto dueño, hasta 5; las costas no cuentan). |
 | `PopulationColor(densidad)` | Escala de color del modo población. |
 | `ScaleColor(valor)` | Rojo-amarillo-verde de 0 a 1, para los modos moral y fertilidad. |
 | `DepositColor(provincia)` | Color del modo recursos: el del yacimiento principal que queda de los conocidos, o con filtro ese recurso más intenso cuanto más queda. Gris si no hay nada. |

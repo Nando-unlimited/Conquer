@@ -2,6 +2,15 @@
 
 Todos los cambios del juego, del más reciente al más antiguo. Cada versión es un commit cuyo título es su número.
 
+## [1.76.0] - 2026-10-02
+
+### Añadido
+- **Niebla de guerra**: solo ves las tropas y las batallas ajenas donde llega tu vista:
+  - En tus tierras y en las que ocupas, en las de tus aliados, tu señor y tus vasallos, y en una provincia alrededor de todas ellas.
+  - Alrededor de cada una de tus unidades, una provincia. **Los exploradores ven dos**, así que sirven para algo más que reclamar tierra.
+  - Lo que no ves se dibuja **en gris y más oscuro**. Las unidades que entran en la niebla desaparecen del mapa y, si estaban seleccionadas, se deseleccionan.
+  - Los aliados, el señor y los vasallos comparten lo que ven.
+
 ## [1.75.0] - 2026-10-02
 
 ### Añadido

@@ -291,6 +291,9 @@ public sealed class MapRenderer : IDisposable
             col = mix(col, pc.rgb, pc.a);
             col = mix(col, vec3(0.08, 0.08, 0.08), provinceLine * uProvinceBorders);
             col = nationBorder(col, id, sea, ownerDistance, m);
+            // The fog of war: land and sea out of sight are greyed and darkened.
+            float fog = texelFetch(uProvOwner, slot(id), 0).b;
+            col = mix(col, vec3(dot(col, vec3(0.299, 0.587, 0.114))) * 0.7, fog * 0.6);
 
             if (uParchment > 0.0) col = parchment(col, m, frag);
             if (id == uSelected) col = mix(col, vec3(1.0, 1.0, 0.85), 0.35);
@@ -400,8 +403,8 @@ public sealed class MapRenderer : IDisposable
         return data;
     }
 
-    /// <summary>Recomputes every province's overlay colour and owner for the current mode.</summary>
-    public void Refresh(GameSession session)
+    /// <summary>Recomputes every province's overlay colour, owner and fog (outside <paramref name="visible"/>, if given) for the current mode.</summary>
+    public void Refresh(GameSession session, IReadOnlySet<int>? visible = null)
     {
         var players = session.Players;
         foreach (var p in _map.Provinces)
@@ -409,6 +412,7 @@ public sealed class MapRenderer : IDisposable
             int o = p.Id * 4;
             _ownerData[o] = (byte)(p.OwnerId + 1);
             _ownerData[o + 1] = p.IsWater ? (byte)255 : (byte)0; // for the coastline
+            _ownerData[o + 2] = visible == null || visible.Contains(p.Id) ? (byte)0 : (byte)255; // the fog of war
             _ownerData[o + 3] = 255;
             // The owner's colour bands its borders; occupied land is striped with the occupier's (see the shader).
             SetColor(_nationData, o, p.IsOwned ? new Rgba(players[p.OwnerId].Color) : new Rgba(0));

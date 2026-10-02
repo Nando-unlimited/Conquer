@@ -102,7 +102,8 @@ public sealed partial class GameController
         var stackIndex = new Dictionary<int, int>();
         foreach (var unit in Session.Units)
         {
-            if (unit.IsAboard) continue;
+            // The fog of war hides units the player cannot see.
+            if (unit.IsAboard || !Session.CanSee(Human.Id, unit)) continue;
             var pos = unit.IsMoving && !unit.AttackingProvinceId.HasValue ? Between(unit.ProvinceId, unit.Path[0], unit.StepProgress) : Center(unit.ProvinceId);
             var s = Camera.MapToScreen(pos);
             if (!OnScreen(s)) continue;
@@ -154,8 +155,9 @@ public sealed partial class GameController
             var s = Camera.MapToScreen(Center(provinceId));
             if (OnScreen(s)) marks.Add(new BattleMarker(provinceId, battle, s, () => summary() + "\nClic para ver la batalla en detalle."));
         }
-        foreach (var battle in Session.Battles) Add(battle.ProvinceId, battle, () => BattleSummary(battle));
-        foreach (int sea in Session.NavalBattleProvinces()) Add(sea, null, () => NavalBattleSummary(sea));
+        var visible = Session.VisibleProvinces(Human.Id);
+        foreach (var battle in Session.Battles.Where(b => visible.Contains(b.ProvinceId))) Add(battle.ProvinceId, battle, () => BattleSummary(battle));
+        foreach (int sea in Session.NavalBattleProvinces().Where(visible.Contains)) Add(sea, null, () => NavalBattleSummary(sea));
         return marks;
     }
 

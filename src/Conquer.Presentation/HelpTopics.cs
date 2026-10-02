@@ -170,6 +170,7 @@ public static class HelpTopics
             "- Recursos: los yacimientos que conoces, con un filtro por recurso.",
             "- Instituciones: por dónde se han extendido.",
             "- Cultura: de qué nación es la gente de cada provincia. Si el color no es el de la franja de su frontera, la gente es extranjera.",
+            "Niebla de guerra: solo ves las tropas ajenas en tus tierras y las que ocupas, en las de tus aliados, tu señor y tus vasallos, en una provincia alrededor de todo ello y alrededor de tus unidades (los exploradores ven una más). Lo que no ves queda en gris.",
             "Al pasar el ratón por una provincia verás sus datos. Las espadas rojas marcan batallas, en tierra o en el mar: haz clic en ellas para ver la batalla en detalle.",
         ]),
         ("Partida",

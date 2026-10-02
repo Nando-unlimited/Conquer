@@ -129,16 +129,38 @@ public sealed partial class GameController
 
     // ------------------------------------------------------------------ selection
 
-    /// <summary>The selected unit, if it still exists; one that is gone is deselected.</summary>
+    /// <summary>The selected unit, if it still exists and can be seen; one that is gone or lost in the fog is deselected.</summary>
     public Unit? SelectedUnit
     {
         get
         {
             var unit = SelectedUnitId is int id ? Session.UnitById(id) : null;
+            if (unit != null && !Session.CanSee(Human.Id, unit)) unit = null;
             if (unit == null) SelectedUnitId = null;
             return unit;
         }
     }
+
+    /// <summary>The provinces the player can see; the rest lie under the fog of war.</summary>
+    public IReadOnlySet<int> VisibleProvinces => Session.VisibleProvinces(Human.Id);
+
+    /// <summary>A number that changes when what the player sees changes, so the client knows when to redraw the fog.</summary>
+    public int FogSignature
+    {
+        get
+        {
+            var visible = Session.VisibleProvinces(Human.Id);
+            if (!ReferenceEquals(visible, _fogFor))
+            {
+                _fogFor = visible;
+                _fogSignature = visible.Aggregate(visible.Count, (hash, id) => hash ^ (id * 397) ^ (id << 11));
+            }
+            return _fogSignature;
+        }
+    }
+
+    private IReadOnlySet<int>? _fogFor;
+    private int _fogSignature;
 
     public bool HasSelection => SelectedUnitId.HasValue || SelectedProvince >= 0;
 

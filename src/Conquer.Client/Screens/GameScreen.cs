@@ -35,6 +35,7 @@ public sealed partial class GameScreen : IScreen, IAudibleScreen
 
     private bool _mapDirty = true, _dragging;
     private long _lastRefreshDay = -1;
+    private int _lastFog;
     /// <summary>The month the map was last coloured in: the terrain map shows the winter snow.</summary>
     private int _lastRefreshMonth = -1;
 
@@ -118,10 +119,15 @@ public sealed partial class GameScreen : IScreen, IAudibleScreen
             _renderer.ResourceFilter = _game.ResourceFilter;
             _mapDirty = true;
         }
+        if (_game.FogSignature != _lastFog)
+        {
+            _lastFog = _game.FogSignature;
+            _mapDirty = true;
+        }
         if (_mapDirty || (_game.Mode >= MapMode.Population && _session.Date.Days != _lastRefreshDay)
             || (_game.Mode == MapMode.Terrain && _session.Date.MonthAndDay.Month != _lastRefreshMonth))
         {
-            _renderer.Refresh(_session);
+            _renderer.Refresh(_session, _game.VisibleProvinces);
             _mapDirty = false;
             _lastRefreshDay = _session.Date.Days;
             _lastRefreshMonth = _session.Date.MonthAndDay.Month;
