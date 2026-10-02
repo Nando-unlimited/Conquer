@@ -260,6 +260,14 @@ public static class GameRules
     public const double ObjectiveGold = 50;
     public const double ObjectivePeople = 10000;
 
+    // Victory: by domination, by science or, at the start of ScoreVictoryYear, by score (one point per ScorePeople
+    // people, plus ScorePerProvince, ScorePerCity and ScorePerTech for each province, city and advance).
+    public const int ScoreVictoryYear = 300;
+    public const double ScorePeople = 1000;
+    public const double ScorePerProvince = 5;
+    public const double ScorePerCity = 20;
+    public const double ScorePerTech = 10;
+
     // Manpower. A nation's reserve of recruits holds BaseManpower plus ManpowerShare of its settled people (more with
     // advances) and refills in ManpowerRecoveryYears. Training, raising HQs and reinforcing draw on it.
     public const double BaseManpower = 500;

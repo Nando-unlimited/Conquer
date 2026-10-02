@@ -194,6 +194,11 @@ public static class HelpTopics
             "- La dificultad se elige al empezar: cambia cuántos yacimientos hay y su tamaño, los recursos iniciales y lo que producen los rivales.",
             "- Los rivales del ordenador se expanden, investigan, construyen y hacen la guerra por su cuenta.",
             $"- Estadísticas (pestaña de la nación): cada {GameRules.HistoryDays} días se anotan la población, el ejército, el oro y la ciencia al día y las provincias de cada nación; la gráfica muestra cómo han cambiado desde el principio de la partida.",
+            "## Victoria y derrota",
+            "- Dominación: gana quien haga caer a todas las demás naciones o las convierta en sus vasallas.",
+            "- Ciencia: gana quien descubra todos los avances.",
+            $"- Puntuación: si nadie ha ganado antes, al empezar el año {GameRules.ScoreVictoryYear} gana la nación con más puntos (uno por cada {GameRules.ScorePeople:N0} habitantes, {GameRules.ScorePerProvince:0} por provincia, {GameRules.ScorePerCity:0} por ciudad y {GameRules.ScorePerTech:0} por avance).",
+            "- Pierdes si gana otra nación o si la tuya cae. En los dos casos puedes seguir jugando (o mirando). El Resumen de la nación muestra tu puntuación y lo cerca que estás de cada victoria.",
         ]),
     ];
 

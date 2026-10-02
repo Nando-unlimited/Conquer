@@ -41,7 +41,7 @@ public sealed partial class GameSession
     /// The nation becomes the other's vassal: its own vassals go free, it leaves its alliances and makes peace with its
     /// new overlord's allies and vassals.
     /// </summary>
-    private void MakeVassal(int vassalId, int overlordId)
+    internal void MakeVassal(int vassalId, int overlordId)
     {
         foreach (var v in VassalsOf(vassalId).ToList()) _vassals.Remove(v.Id);
         _alliances.RemoveWhere(a => a.Item1 == vassalId || a.Item2 == vassalId);
@@ -187,7 +187,7 @@ public sealed partial class GameSession
     /// Takes a nation out of the game: its remaining wars, alliances, vassalage and reparations end, and its units and
     /// migrants vanish.
     /// </summary>
-    private void Eliminate(int playerId)
+    internal void Eliminate(int playerId)
     {
         var player = Players[playerId];
         player.Eliminated = true;

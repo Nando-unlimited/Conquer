@@ -87,6 +87,8 @@ public sealed record SaveGame
     public List<HistorySample>? History { get; init; }
     /// <summary>The objectives the human has met; missing in saves from before 1.81.0.</summary>
     public List<Objective>? ObjectivesDone { get; init; }
+    /// <summary>Who won the game, if anyone has; missing in saves from before 1.82.0.</summary>
+    public GameOutcome? Outcome { get; init; }
     public required List<Notification> Notifications { get; init; }
     public required List<AiSave> Ais { get; init; }
     public required Dictionary<int, double> EmigrationCarry { get; init; }

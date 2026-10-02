@@ -30,7 +30,7 @@ namespace Conquer.Client
     /// <c>--days N</c> founds the player's capital and fast-forwards N days;
     /// <c>--zoom Z</c>, <c>--at longitude,latitude</c> and <c>--mode terrain|political|population|mood|fertility</c> set the view;
     /// <c>--nation summary|cities|provinces|science</c> opens the nation screen on that tab;
-    /// <c>--panel buildings|army</c> shows that tab of the selected province, and <c>--panel regiment</c> a sample regiment (<c>--panel march</c> sends it a few provinces away, <c>--panel edit</c> opens its editor with officers in the reserve), <c>--panel found</c> the dialog to name the first city and <c>--panel battle</c> the window of the first battle under way and <c>--panel decision</c> a drought to decide on;
+    /// <c>--panel buildings|army</c> shows that tab of the selected province, and <c>--panel regiment</c> a sample regiment (<c>--panel march</c> sends it a few provinces away, <c>--panel edit</c> opens its editor with officers in the reserve), <c>--panel found</c> the dialog to name the first city and <c>--panel battle</c> the window of the first battle under way and <c>--panel decision</c> a drought to decide on and <c>--panel victory</c> the end of the game;
     /// <c>--load file.conquer</c> carries on a saved game; <c>--menu new|load</c> opens that menu screen;
     /// <c>--screenshot file.png</c> saves the first frames to a PNG and exits.
     /// </summary>

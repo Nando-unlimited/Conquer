@@ -8,7 +8,7 @@ public sealed partial class GameController
     public bool ChangelogOpen { get; set; }
 
     /// <summary>Whether a window that stops time is open: the menu, the help, the changelog or a dialog (battles do not stop it).</summary>
-    public bool TimeStopped => MenuOpen || ChangelogOpen || HelpOpen || Naming.HasValue || EditingUnitId.HasValue || RoadWindowOpen || DecisionOpen;
+    public bool TimeStopped => MenuOpen || ChangelogOpen || HelpOpen || Naming.HasValue || EditingUnitId.HasValue || RoadWindowOpen || DecisionOpen || GameOverOpen;
 
     /// <summary>Esc closes the topmost window, then cancels the migration target, then the selection, and otherwise opens or closes the menu.</summary>
     public void Escape()

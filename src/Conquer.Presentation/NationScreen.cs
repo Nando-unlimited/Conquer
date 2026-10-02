@@ -152,7 +152,28 @@ public sealed partial class NationScreen
                 new(mined ? TextFormat.Compact(stats.Reserves[(int)res]) : "-", mined && stats.Reserves[(int)res] > 0 ? Tone.Normal : Tone.Dim),
             ], at));
         }
+        right.Add(new Space(10));
+        right.Add(Title2("Victoria"));
+        foreach (var e in VictoryProgress()) right.Add(e);
         return new SummaryPage(left, right);
+    }
+
+    /// <summary>The victory conditions and how near the player is to each, for the nation's summary.</summary>
+    private IEnumerable<Element> VictoryProgress()
+    {
+        var ranking = Session.Ranking;
+        int place = ranking.ToList().FindIndex(p => p.Id == Player.Id) + 1;
+        yield return new Pair("Puntuación", place > 0 ? $"{Session.Score(Player):N0} · {place}.º de {ranking.Count}" : "-", place == 1 ? Tone.Good : Tone.Normal,
+            $"Una por cada {GameRules.ScorePeople:N0} habitantes, {GameRules.ScorePerProvince:0} por provincia, {GameRules.ScorePerCity:0} por ciudad y {GameRules.ScorePerTech:0} por avance. " +
+            $"Si nadie ha ganado antes, al empezar el año {GameRules.ScoreVictoryYear} gana la nación con más puntos.");
+        yield return new Pair("Ciencia", $"{Player.Techs.Count} de {Techs.All.Length} avances", Tone.Normal,
+            "Gana quien descubra todos los avances.");
+        int rivals = Session.RivalsLeft(Player.Id);
+        yield return new Pair("Dominación", rivals == 0 ? "Ninguna nación libre" : $"Quedan {rivals} naciones libres", Tone.Normal,
+            "Gana quien haga caer a todas las demás naciones o las convierta en sus vasallas.");
+        if (Session.Outcome is { } o)
+            yield return new Pair("Ganador", $"{Session.Players[o.WinnerId].Name} ({GameSession.VictoryName(o.Kind).ToLowerInvariant()})",
+                o.WinnerId == Player.Id ? Tone.Good : Tone.Bad);
     }
 
     /// <summary>The reserve of recruits against what it holds, in red when nearly empty, with how it works in the tooltip.</summary>

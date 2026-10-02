@@ -525,6 +525,17 @@ Objetivos guiados para empezar (solo para el humano).
 | `CheckObjectives()` | Cada hora: los que se cumplen ahora (`Met`) quedan cumplidos para siempre, pagan 50 de oro y avisan del siguiente. Se pueden cumplir en cualquier orden. |
 | `LoadObjectives(partida)` | En las partidas anteriores a 1.81.0, cuenta como cumplidos los que ya lo están, sin pagarlos. |
 
+### `Simulation/GameSession.Victory.cs`
+Victoria y derrota.
+
+| Elemento | Qué hace |
+| --- | --- |
+| `VictoryKind`, `GameOutcome`, `Outcome` | Las tres victorias (dominación, ciencia, puntuación) y quién ganó, cómo y cuándo. Se guarda en `SaveGame.Outcome`. |
+| `Score(nación)`, `Ranking` | Puntuación: uno por cada 1000 habitantes, 5 por provincia, 20 por ciudad y 10 por avance (0 si está eliminada); y las naciones en pie de más a menos puntos. |
+| `RivalsLeft(nación)` | Cuántas naciones le quedan por hacer caer o convertir en vasallas. |
+| `DailyVictory()`, `Win(nación, tipo)` | Cada día, mientras nadie haya ganado: gana la primera nación (el humano antes que nadie) que sabe todos los avances, que no tiene rivales libres (con capital y en partidas de más de uno) o, al empezar el año 300, la de más puntos. Avisa de la victoria o la derrota. La partida sigue. |
+| `HumanDefeated`, `VictoryName`, `VictoryText` | Si el humano ha perdido (ganó otro o su nación cayó), el nombre de cada victoria y la frase que la cuenta. |
+
 ### `Simulation/GameSession.Sieges.cs`
 Asedios.
 
@@ -885,8 +896,8 @@ La pantalla de la nación (botón «Nación» o tecla N) como datos: `Visible`, 
 
 | Elemento | Qué es |
 | --- | --- |
-| `NationTab` | Pestañas: `Summary` (Resumen), `Cities` (Ciudades), `Provinces` (Provincias), `Science` (Ciencia), `Army` (Ejército), `Templates` (Plantillas), `Diplomacy` (Diplomacia) y `Trade` (Comercio). |
-| `Summary(...)` | Resumen: población (total, asentada, en unidades, migrando), fertilidad media, moral media con su reparto por niveles (`MoodDistribution`), territorio, ciencia por día y, por rama, su parte y el avance en curso, cada institución (adoptada, cuánto de tu población la tiene o sin nacer), comida con sus días de reserva y el resto de recursos conocidos con su almacén, balance diario y lo que queda en sus bolsas. |
+| `NationTab` | Pestañas: `Summary` (Resumen), `Cities` (Ciudades), `Provinces` (Provincias), `Science` (Ciencia), `Army` (Ejército), `Templates` (Plantillas), `Diplomacy` (Diplomacia), `Trade` (Comercio) y `Statistics` (Estadísticas). |
+| `Summary(...)` | Resumen: población (total, asentada, en unidades, migrando), fertilidad media, moral media con su reparto por niveles (`MoodDistribution`), territorio, ciencia por día y, por rama, su parte y el avance en curso, cada institución (adoptada, cuánto de tu población la tiene o sin nacer), comida con sus días de reserva y el resto de recursos conocidos con su almacén, balance diario y lo que queda en sus bolsas; al final, la victoria (`VictoryProgress`): tu puntuación y puesto, los avances que sabes, las naciones libres que quedan y, si ya hay, el ganador. |
 | `Cities(...)` | Tabla de ciudades: población / capacidad, moral, fertilidad, fiestas, enviar colonos o entrenar guerreros y «Ver». |
 | `Provinces(...)`, `Work(...)` | Tabla de todas las provincias: población, moral, fertilidad, terreno, migrantes en camino, lo que tiene en curso (la obra y lo que entrena su ciudad: la primera con sus días y su barra, cuántas más hay y todas en el tooltip) y «Ver». |
 | `ProvinceCells(...)` | Celdas de población, moral (con tooltip de causas) y fertilidad, comunes a las dos tablas. |
@@ -946,6 +957,11 @@ Lo que muestra cada pestaña de la pantalla de la nación, para que el cliente l
 | --- | --- |
 | `ObjectiveCard`, `ObjectiveCard()` | La tarjeta del objetivo actual bajo las alertas: «Objetivo n de 9», el objetivo, cómo cumplirlo, «Ir» y el botón para plegarla (`ObjectivesFolded`). Desaparece cuando se cumplen todos. |
 | `GoTo(objetivo)` | Adónde lleva «Ir»: los colonos, la pestaña Ciencia, la capital (en Edificios, Ejército o General), los exploradores, el Resumen o la Diplomacia. |
+
+### `GameController.Victory.cs`
+| Elemento | Qué hace |
+| --- | --- |
+| `GameOverWindow`, `GameOverOpen`, `GameOver(navegador)` | La ventana del final, que se abre una vez cuando alguien gana o cae la nación del jugador y para el tiempo: «¡Victoria!» o «Derrota», cómo ha sido, la clasificación final y los botones «Seguir jugando» (o «Seguir mirando») y «Menú principal». Se dibuja en `GameScreen.Victory.cs`. |
 ### `GameController.Alerts.cs`
 Las alertas bajo la barra superior.
 

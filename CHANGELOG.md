@@ -2,6 +2,17 @@
 
 Todos los cambios del juego, del más reciente al más antiguo. Cada versión es un commit cuyo título es su número.
 
+## [1.82.0] - 2026-10-02
+
+### Añadido
+- **Victoria**: hay tres formas de ganar la partida, y los rivales también pueden ganarla.
+  - **Dominación**: haz caer a todas las demás naciones o conviértelas en tus vasallas.
+  - **Ciencia**: descubre todos los avances.
+  - **Puntuación**: si nadie ha ganado antes, al empezar el año 300 gana la nación con más puntos. Se gana un punto por cada 1.000 habitantes, 5 por provincia, 20 por ciudad y 10 por avance.
+- **Derrota**: pierdes si gana otra nación o si cae la tuya.
+- Al decidirse la partida se abre una ventana con el resultado y la clasificación final. Puedes **seguir jugando** (o mirando, si tu nación ha caído) o volver al menú principal.
+- El Resumen de la nación tiene una nueva sección **Victoria**: tu puntuación y tu puesto, los avances que te faltan, las naciones libres que quedan y, si lo hay, el ganador.
+
 ## [1.81.0] - 2026-10-02
 
 ### Añadido
