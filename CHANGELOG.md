@@ -2,6 +2,20 @@
 
 Todos los cambios del juego, del más reciente al más antiguo. Cada versión es un commit cuyo título es su número.
 
+## [1.84.0] - 2026-10-02
+
+### Añadido
+- **Animaciones en el mapa**, traídas de la otra versión del juego:
+  - Las unidades **saltan** al marchar, la seleccionada **se balancea** y las que combaten **tiemblan**.
+  - Alrededor de cada batalla **estallan proyectiles**.
+  - Las flotas **se mecen** con el oleaje y dejan una **estela** de espuma al navegar.
+  - Sale **humo** de las ciudades, más oscuro y espeso de las que tienen taller o fábrica.
+  - Cada cosa se mueve a su ritmo, desfasada de las demás.
+- En el menú de pausa, un botón **«Animaciones»** las apaga o las enciende. Se recuerda entre partidas.
+
+### Corregido
+- Los botones de volumen de la música y del sonido vuelven a estar en el menú de pausa, como decía la ayuda.
+
 ## [1.83.0] - 2026-10-02
 
 ### Cambiado

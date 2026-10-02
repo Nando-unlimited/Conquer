@@ -936,6 +936,9 @@ Lo que muestra cada pestaña de la pantalla de la nación, para que el cliente l
 | `TemplatesPage`, `TemplateSlot` | El diseñador de unidades: plantillas y sus acciones, huecos de la elegida, batallones para añadir y sus cifras (un `Document`). |
 | `StatisticsPage`, `ChartSeries`, `ChartTick` | Las estadísticas: botones de cifra, título, una línea por nación (puntos de 0 a 1, color, última cifra, si es la del jugador) y las marcas de los ejes. |
 
+
+### `Display.cs`
+`DisplaySettings`: opciones de pantalla guardadas en `pantalla.json`, en la carpeta de partidas. De momento, si los iconos del mapa se mueven (`Animations`); `Buttons()` da el botón del menú de pausa, junto a los de volumen (`AudioSettings`).
 ### `Audio.cs`
 | Elemento | Qué hace |
 | --- | --- |
@@ -1091,6 +1094,9 @@ La pantalla de juego. Clase parcial: el ejército en pantalla está en `GameScre
 | `DrawMessages()`, `HoverTooltip()` | Mensajes (`MessageLog`) en tiras redondeadas con una marca dorada (roja si algo falló) (más arriba si está abierto el filtro de recursos; con la pantalla de la nación abierta, solo el último, en la franja junto a los modos de mapa, con `DrawLatestMessageInStrip`) y tooltip de la provincia bajo el ratón (`GameController.MapTooltip`). |
 | `DrawPauseMenu()` | Dibuja el menú de pausa (`GameController.PauseMenu`) con la versión del juego. |
 
+
+### `Graphics/Motion.cs`
+`Motion`: movimientos pequeños en bucle para los iconos del mapa (`Wave`, una oscilación; `Hop`, un salto; `Cycle`, de 0 a 1 una y otra vez). Cada cosa va desfasada de las demás según su id (ángulo áureo). Solo se dibujan; se apagan con «Animaciones» en el menú de pausa (`DisplaySettings`).
 ### `Screens/GameScreen.Markers.cs`
 Dibuja los marcadores de `GameController.Markers`.
 
@@ -1098,7 +1104,8 @@ Dibuja los marcadores de `GameController.Markers`.
 | --- | --- |
 | `DrawMarkers()` | Ciudades, nombres de naciones, fichas y batallas, en ese orden; guarda dónde quedan las fichas y las espadas para los clics. |
 | `DrawCity(...)`, `DrawNationName(...)` | Las casas de una ciudad (`MapIcons.City`: torre con bandera dorada en la capital) con su nombre debajo; el nombre de una nación con sombra, en un tono claro de su color. |
-| `DrawCounter(...)`, `DrawEchelon(...)`, `Bar(...)` | Fichas OTAN: la ruta como flecha verde (`PathArrow`), la línea al cuartel (verde si está a su alcance), la flecha roja del ataque y la ficha: dentro del marco, el símbolo de su arma (`MapIcons.NatoSymbol`: aspa para infantería, aspa con raya vertical para la motorizada, aspa con óvalo para la mecanizada, barra diagonal para caballería y exploradores, óvalo para blindados, punto para artillería, puente para ingenieros y alas para aviación); encima, las marcas de tamaño (III regimiento, X brigada, XX división, XXX cuerpo, XXXX ejército, XXXXX grupo de ejércitos); los cuarteles, con «HQ»; los colonos, un carromato (`MapIcons.Settlers`); las flotas, un casco bajo la letra de su barco y un punto por cada unidad a bordo. Barras de hombres (verde) y organización (ámbar). Cada ficha lleva sombra, y el marco de la seleccionada late. |
+| `DrawCounter(...)`, `DrawEchelon(...)`, `Bar(...)` | Fichas OTAN: la ruta como flecha verde (`PathArrow`), la línea al cuartel (verde si está a su alcance), la flecha roja del ataque y la ficha: dentro del marco, el símbolo de su arma (`MapIcons.NatoSymbol`: aspa para infantería, aspa con raya vertical para la motorizada, aspa con óvalo para la mecanizada, barra diagonal para caballería y exploradores, óvalo para blindados, punto para artillería, puente para ingenieros y alas para aviación); encima, las marcas de tamaño (III regimiento, X brigada, XX división, XXX cuerpo, XXXX ejército, XXXXX grupo de ejércitos); los cuarteles, con «HQ»; los colonos, un carromato (`MapIcons.Settlers`); las flotas, un casco bajo la letra de su barco y un punto por cada unidad a bordo. Barras de hombres (verde) y organización (ámbar). Cada ficha lleva sombra, y el marco de la seleccionada late. Con las animaciones (`CounterMotion`), las fichas que marchan saltan, la seleccionada se balancea, las que combaten tiemblan y las flotas se mecen y dejan una estela (`Wake`). |
+| `Smoke(...)`, `Bursts(...)` | Con las animaciones, humo que sube de las ciudades de más de 2000 habitantes (más oscuro y espeso si tienen taller o fábrica) y explosiones que se hinchan y se apagan alrededor de cada batalla. |
 | `DrawBattleMark(...)` | Las espadas cruzadas, que laten; al pasar el ratón, su resumen; al hacer clic, la ventana de la batalla. |
 
 ### `Screens/GameScreen.UnitEditor.cs`

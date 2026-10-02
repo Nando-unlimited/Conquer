@@ -23,13 +23,15 @@ public sealed partial class GameController
         else MenuOpen = !MenuOpen;
     }
 
-    /// <summary>The pause menu's buttons: carry on, save, help, music and sound volumes, changelog, back to the title screen or quit.</summary>
+    /// <summary>The pause menu's buttons: carry on, save, help, changelog, music and sound volumes, animations, back to the title screen or quit.</summary>
     public IReadOnlyList<Button> PauseMenu(IMenuNavigator navigator, string version) =>
     [
         new("Continuar", () => MenuOpen = false),
         new("Guardar partida", () => { if (Save(version)) MenuOpen = false; }, Tooltip: $"Se guarda en {SaveFiles.Folder}"),
         new("Ayuda", () => { HelpOpen = true; MenuOpen = false; }),
         new("Historial de versiones", () => { ChangelogOpen = true; MenuOpen = false; }),
+        .. AudioSettings.Current.Buttons(),
+        .. DisplaySettings.Current.Buttons(),
         new("Menú principal", navigator.ShowMainMenu),
         new("Salir del juego", navigator.Quit),
     ];

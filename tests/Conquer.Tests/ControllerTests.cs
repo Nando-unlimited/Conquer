@@ -253,6 +253,31 @@ public class ControllerTests(WorldFixture world)
     }
 
     [Fact]
+    public void AMarchingCounterSaysWhereItIsGoingSoItCanHop()
+    {
+        var game = NewGame();
+        game.Camera.Screen = new System.Numerics.Vector2(1600, 900);
+        var settlers = game.SelectedUnit!;
+        Assert.False(Assert.Single(game.Markers().Units).Moving);
+        var target = game.Map.Provinces[settlers.ProvinceId].Neighbors.First(n => !game.Map.Provinces[n].IsWater);
+        Assert.True(game.Session.MoveUnit(0, settlers.Id, target).Ok);
+        var counter = Assert.Single(game.Markers().Units);
+        Assert.True(counter.Moving);
+        Assert.False(counter.Fighting);
+        Assert.Equal(1, counter.Heading.Length(), 3);
+    }
+
+    [Fact]
+    public void ThePauseMenuSwitchesTheAnimationsAndTheVolumes()
+    {
+        var game = NewGame();
+        var menu = game.PauseMenu(new NoNavigator(), "test");
+        Assert.Contains(menu, b => b.Text.StartsWith("Música"));
+        Assert.Contains(menu, b => b.Text.StartsWith("Sonido"));
+        Assert.Contains(menu, b => b.Text.StartsWith("Animaciones"));
+    }
+
+    [Fact]
     public void TheMapModeCyclesBackToTerrain()
     {
         var game = NewGame();

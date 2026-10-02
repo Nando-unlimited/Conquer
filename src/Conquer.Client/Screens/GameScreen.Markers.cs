@@ -9,9 +9,12 @@ namespace Conquer.Client.Screens;
 public sealed partial class GameScreen
 {
     private static readonly Rgba MoveColor = new(0xFF62B83E);
+    private static readonly Rgba TownSmoke = new(0xFFC0C0C0), SootSmoke = new(0xFF595959);
+    private static readonly Rgba BurstFire = new(0xFFFFBF4D), BurstFlash = new(0xFFFFFFD9);
 
     private void DrawMarkers()
     {
+        Motion.Time = (float)(_game.Now % 3600);
         var markers = _game.Markers();
         foreach (var city in markers.Cities) DrawCity(city);
         foreach (var label in markers.Nations) DrawNationName(label);
@@ -25,6 +28,7 @@ public sealed partial class GameScreen
     private void DrawCity(CityMarker city)
     {
         var s = city.Screen;
+        if (Motion.Enabled && (city.Industry || city.Population >= 2000)) Smoke(s + new Vector2(6 * city.Scale, -10 * city.Scale), city.Id, city.Scale, city.Industry);
         float below = MapIcons.City(Batch, s + new Vector2(0, 5 * city.Scale), new Rgba(city.Color), MapIcons.Houses(city.Population), city.Capital, city.Scale);
         if (city.Name == null) return;
         float w = Ui.Font.Measure(city.Name, FontSize.Small, true);
@@ -52,6 +56,8 @@ public sealed partial class GameScreen
         var s = c.Screen;
         if (c.Command is var (hq, inRange)) Batch.Line(s, hq, (inRange ? Theme.Good : Theme.Bad).WithAlpha(0.8f), 1.5f);
         if (c.Attack is var (from, to)) PathArrow.Draw(Batch, [from, to], Theme.Battle, _game.Now, 5);
+        s += CounterMotion(c);
+        if (c.Kind == CounterKind.Fleet && c.Moving) Wake(s, c.Heading, c.Scale, c.UnitId);
 
         float W = 28 * c.Scale, H = 19 * c.Scale;
         var r = new Rect(s.X - W / 2, s.Y - H / 2, W, H);
@@ -123,9 +129,67 @@ public sealed partial class GameScreen
         Batch.Rect(s.X - size - 2, s.Y - size - 2, 2 * size + 4, 2 * size + 4, Rgba.Black.WithAlpha(0.6f));
         Batch.Line(new(s.X - size, s.Y - size), new(s.X + size, s.Y + size), Theme.Battle, 3);
         Batch.Line(new(s.X - size, s.Y + size), new(s.X + size, s.Y - size), Theme.Battle, 3);
+        if (Motion.Enabled) Bursts(s, mark.ProvinceId);
         var bounds = new Rect(s.X - 11, s.Y - 11, 22, 22);
         _battleHitBoxes.Add((mark.ProvinceId, mark.Battle, bounds));
         if (Ui.Hover(bounds)) Ui.Tooltip(mark.Tooltip());
+    }
+
+    /// <summary>
+    /// How far the counter is moved this frame: marching units hop, the selected one bobs, units in battle shake and
+    /// fleets ride the swell.
+    /// </summary>
+    private static Vector2 CounterMotion(UnitCounter c)
+    {
+        var offset = Vector2.Zero;
+        if (c.Kind == CounterKind.Fleet) offset.Y += Motion.Wave(1.6f, c.UnitId, 1.6f * c.Scale);
+        else if (c.Moving && !c.Fighting) offset.Y -= Motion.Hop(7f, c.UnitId, 3.5f * c.Scale);
+        if (c.Selected) offset.Y -= Motion.Wave(3f, c.UnitId, 1.5f);
+        if (c.Fighting) offset += new Vector2(Motion.Wave(37f, c.UnitId, 1.4f), Motion.Wave(29f, c.UnitId + 7, 0.8f));
+        return offset;
+    }
+
+    /// <summary>A fading V of foam behind a sailing fleet.</summary>
+    private void Wake(Vector2 s, Vector2 heading, float scale, int id)
+    {
+        if (heading == Vector2.Zero || !Motion.Enabled) return;
+        var back = -heading;
+        var side = new Vector2(-heading.Y, heading.X);
+        var stern = s + back * 14 * scale + new Vector2(0, 6 * scale);
+        float flicker = 0.75f + 0.25f * Motion.Wave(4f, id, 1f);
+        for (int i = 0; i < 4; i++)
+        {
+            float t = (i + Motion.Cycle(1.2f, id)) / 4f;
+            var foam = Rgba.White.WithAlpha((1 - t) * 0.55f * flicker);
+            var along = stern + back * t * 26 * scale;
+            Batch.Line(along + side * t * 9 * scale, along + side * (t * 9 + 3) * scale, foam, 1.5f);
+            Batch.Line(along - side * t * 9 * scale, along - side * (t * 9 + 3) * scale, foam, 1.5f);
+        }
+    }
+
+    /// <summary>Puffs of smoke rising from a town, darker and thicker from its workshops.</summary>
+    private void Smoke(Vector2 chimney, int id, float scale, bool industry)
+    {
+        int puffs = industry ? 4 : 3;
+        for (int i = 0; i < puffs; i++)
+        {
+            float t = Motion.Cycle(0.3f, id, i / (float)puffs);
+            var at = chimney + new Vector2(MathF.Sin(t * 5 + id) * 3 * scale + t * 6 * scale, -t * 26 * scale);
+            Batch.Circle(at, (2 + t * 5) * scale, (industry ? SootSmoke : TownSmoke).WithAlpha((1 - t) * (industry ? 0.55f : 0.35f)), segments: 12);
+        }
+    }
+
+    /// <summary>Shells bursting about a battle: flashes that swell and fade, each in its own spot.</summary>
+    private void Bursts(Vector2 centre, int id)
+    {
+        for (int i = 0; i < 3; i++)
+        {
+            float t = Motion.Cycle(0.9f, id * 3 + i, i / 3f);
+            float angle = (id * 7 + i * 2.1f + MathF.Floor(Motion.Time * 0.9f + i / 3f)) * 2.39996f;
+            var at = centre + new Vector2(MathF.Cos(angle), MathF.Sin(angle)) * 18;
+            Batch.Circle(at, 2 + t * 7, BurstFire.WithAlpha((1 - t) * 0.8f), segments: 12);
+            Batch.Circle(at, 1 + t * 4, BurstFlash.WithAlpha((1 - t) * (1 - t)), segments: 10);
+        }
     }
 
     private void Bar(Rect r, double share, Rgba color)

@@ -1,4 +1,5 @@
 using System.Numerics;
+using Conquer.Game.Buildings;
 using Conquer.Game.Entities;
 using Conquer.Game.Military;
 using Conquer.Game.Rules;
@@ -7,7 +8,7 @@ using Conquer.Game.Simulation;
 namespace Conquer.Presentation;
 
 /// <summary>A city on screen: houses with roofs of its nation's colour (more of them the more it holds), a tower if it is the capital, and its name when there is room.</summary>
-public sealed record CityMarker(Vector2 Screen, float Scale, uint Color, int Population, bool Capital, string? Name);
+public sealed record CityMarker(Vector2 Screen, float Scale, uint Color, int Population, bool Capital, string? Name, int Id = 0, bool Industry = false);
 
 /// <summary>A nation's name over the middle of its land, as large as the land looks and fading when zoomed in close.</summary>
 public sealed record NationLabel(Vector2 Screen, string Name, TextSize Size, float Alpha, uint Color);
@@ -26,7 +27,8 @@ public enum CounterKind
 /// </summary>
 public sealed record UnitCounter(int UnitId, Vector2 Screen, float Scale, uint Color, bool Selected, CounterKind Kind, UnitFunction Function,
     string Symbol, int Aboard, string Echelon, double Strength, double Organisation,
-    IReadOnlyList<Vector2>? Path, (Vector2 To, bool InRange)? Command, (Vector2 From, Vector2 To)? Attack);
+    IReadOnlyList<Vector2>? Path, (Vector2 To, bool InRange)? Command, (Vector2 From, Vector2 To)? Attack,
+    bool Moving = false, bool Fighting = false, Vector2 Heading = default);
 
 /// <summary>Crossed swords over a battle; <see cref="Battle"/> is null at sea. The tooltip is worked out only when hovered.</summary>
 public sealed record BattleMarker(int ProvinceId, Battle? Battle, Vector2 Screen, Func<string> Tooltip);
@@ -53,7 +55,8 @@ public sealed partial class GameController
             // Houses grow a little as the map is zoomed in.
             float scale = Math.Clamp(Camera.Zoom / 4.5f, 0.6f, 1.5f);
             bool named = Camera.Zoom >= 2.5f || (capital && Camera.Zoom >= 1);
-            cities.Add(new CityMarker(s, scale, Session.Players[city.OwnerId].Color, (int)Map.Provinces[city.ProvinceId].Population, capital, named ? city.Name : null));
+            cities.Add(new CityMarker(s, scale, Session.Players[city.OwnerId].Color, (int)Map.Provinces[city.ProvinceId].Population, capital, named ? city.Name : null,
+                city.Id, Map.Provinces[city.ProvinceId].Buildings.Any(b => b is BuildingType.Workshop or BuildingType.Factory)));
         }
         return cities;
     }
@@ -120,9 +123,22 @@ public sealed partial class GameController
             var kind = unit.IsMilitary ? CounterKind.Military : unit.IsFleet ? CounterKind.Fleet : unit.IsHeadquarters ? CounterKind.Headquarters : CounterKind.Settlers;
             counters.Add(new UnitCounter(unit.Id, s, selected ? 1 : Math.Clamp(Camera.Zoom / 3, 0.45f, 1), Session.Players[unit.OwnerId].Color, selected,
                 kind, unit.Function, unit.Symbol, unit.IsFleet ? Session.CargoOf(unit).Count() : 0, unit.Echelon, unit.StrengthShare, unit.OrganisationShare,
-                path, command, attack));
+                path, command, attack, unit.IsMoving, Fighting(unit), Heading(unit)));
         }
         return counters;
+    }
+
+    /// <summary>Whether the unit is attacking, or defending a province under attack, so its counter shakes.</summary>
+    private bool Fighting(Unit unit) =>
+        unit.AttackingProvinceId.HasValue
+        || (unit.IsMilitary && Session.Battles.Any(b => b.ProvinceId == unit.ProvinceId && b.DefenderId == unit.OwnerId));
+
+    /// <summary>The way the unit is going on screen, of length 1, or zero when it is not moving.</summary>
+    private Vector2 Heading(Unit unit)
+    {
+        if (!unit.IsMoving) return Vector2.Zero;
+        var d = Camera.MapToScreen(Between(unit.ProvinceId, unit.Path[0], 1)) - Camera.MapToScreen(Center(unit.ProvinceId));
+        return d.LengthSquared() > 0.01f ? Vector2.Normalize(d) : Vector2.Zero;
     }
 
     /// <summary>
