@@ -2,6 +2,12 @@
 
 Todos los cambios del juego, del más reciente al más antiguo. Cada versión es un commit cuyo título es su número.
 
+## [1.86.0] - 2026-10-02
+
+### Cambiado
+- **Nueva tipografía**, la de la otra versión del juego: **Lilita One**, redonda y robusta, para toda la interfaz, y **Cinzel Bold**, en capitales romanas, para los títulos de las ventanas, los encabezados, el nombre del juego y los de las naciones en el mapa.
+- **Fichas en relieve**: con «Mapa: fichas», cada ficha OTAN es un bloque como las piezas de un wargame de tablero, iluminado desde arriba a la izquierda, con su grosor, un bisel, una sombra y la cara sombreada de clara a oscura.
+
 ## [1.85.0] - 2026-10-02
 
 ### Añadido

@@ -97,16 +97,22 @@ public sealed partial class GameScreen
         float W = 28 * c.Scale, H = 19 * c.Scale;
         var r = new Rect(s.X - W / 2, s.Y - H / 2, W, H);
         var color = new Rgba(c.Color);
-        // A soft shadow lifts the counter off the map; the selected one's frame pulses.
-        Batch.Shadow(r.X - 2, r.Y, r.W + 4, r.H + 4, 3, spread: 5, strength: 0.5f);
+        // A raised block, like the pieces of a board wargame, lit from the upper left: a shadow cast down and to the
+        // right, its thickness below, a bevel on the face and the face shaded from light to dark.
+        float depth = 4 * c.Scale;
+        Batch.Shadow(r.X, r.Y + depth, r.W + 6, r.H + 4, 3, spread: 6, strength: 0.55f);
         if (c.Selected)
         {
             float pulse = 0.5f + 0.5f * MathF.Sin((float)_game.Now * 5);
-            Batch.Rect(r.X - 4, r.Y - 4, r.W + 8, r.H + 8, Theme.Accent.WithAlpha(0.25f + 0.35f * pulse));
+            Batch.Rect(r.X - 4, r.Y - 4, r.W + 8, r.H + 8 + depth, Theme.Accent.WithAlpha(0.25f + 0.35f * pulse));
         }
-        Batch.Rect(r.X - 2, r.Y - 2, r.W + 4, r.H + 4, c.Selected ? Theme.Accent : Rgba.Black);
-        Batch.Rect(r.X, r.Y, r.W, r.H, color.Scale(0.55f).WithAlpha(1));
-        Batch.Rect(r.X + 2, r.Y + 2, r.W - 4, r.H - 4, color);
+        Batch.Rect(r.X - 2, r.Y - 2, r.W + 4, r.H + 4 + depth, c.Selected ? Theme.Accent : Rgba.Black);
+        Batch.Gradient(r.X, r.Y + r.H, r.W, depth, color.Scale(0.5f).WithAlpha(1), color.Scale(0.3f).WithAlpha(1));
+        Batch.Gradient(r.X, r.Y, r.W, r.H, color.Scale(1.15f).WithAlpha(1), color.Scale(0.8f).WithAlpha(1));
+        Batch.Rect(r.X, r.Y, r.W, 1.5f, Rgba.White.WithAlpha(0.5f));
+        Batch.Rect(r.X, r.Y, 1.5f, r.H, Rgba.White.WithAlpha(0.35f));
+        Batch.Rect(r.Right - 1.5f, r.Y, 1.5f, r.H, Rgba.Black.WithAlpha(0.3f));
+        Batch.Rect(r.X, r.Bottom - 1.5f, r.W, 1.5f, Rgba.Black.WithAlpha(0.35f));
         switch (c.Kind)
         {
             case CounterKind.Military:
@@ -129,8 +135,8 @@ public sealed partial class GameScreen
         }
         if (c.Kind is CounterKind.Military or CounterKind.Fleet)
         {
-            Bar(new Rect(r.X - 2, r.Bottom + 3, r.W + 4, 3), c.Strength, Theme.Strength);
-            Bar(new Rect(r.X - 2, r.Bottom + 7, r.W + 4, 3), c.Organisation, Theme.Organisation);
+            Bar(new Rect(r.X - 2, r.Bottom + depth + 3, r.W + 4, 3), c.Strength, Theme.Strength);
+            Bar(new Rect(r.X - 2, r.Bottom + depth + 7, r.W + 4, 3), c.Organisation, Theme.Organisation);
         }
         if (c.Echelon.Length > 0) DrawEchelon(r, c.Echelon, c.Scale);
         _unitHitBoxes.Add((c.UnitId, r));

@@ -1110,7 +1110,7 @@ Dibuja los marcadores de `GameController.Markers`.
 | --- | --- |
 | `DrawMarkers()` | Ciudades, nombres de naciones, fichas y batallas, en ese orden; guarda dónde quedan las fichas y las espadas para los clics. |
 | `DrawCity(...)`, `DrawNationName(...)` | La ciudad con su nombre debajo: con figuras 3D, un castillo (capital) o un pueblo sobre una mancha del color de su dueño y, de cerca, las maquetas de sus edificios en fila bajo el nombre; con fichas, sus casas (`MapIcons.City`: torre con bandera dorada en la capital); el nombre de una nación con sombra, en un tono claro de su color. |
-| `DrawCounter(...)`, `DrawEchelon(...)`, `Bar(...)` | Fichas OTAN: la ruta como flecha verde (`PathArrow`), la línea al cuartel (verde si está a su alcance), la flecha roja del ataque y la ficha: dentro del marco, el símbolo de su arma (`MapIcons.NatoSymbol`: aspa para infantería, aspa con raya vertical para la motorizada, aspa con óvalo para la mecanizada, barra diagonal para caballería y exploradores, óvalo para blindados, punto para artillería, puente para ingenieros y alas para aviación); encima, las marcas de tamaño (III regimiento, X brigada, XX división, XXX cuerpo, XXXX ejército, XXXXX grupo de ejércitos); los cuarteles, con «HQ»; los colonos, un carromato (`MapIcons.Settlers`); las flotas, un casco bajo la letra de su barco y un punto por cada unidad a bordo. Barras de hombres (verde) y organización (ámbar). Cada ficha lleva sombra, y el marco de la seleccionada late. Con las animaciones (`CounterMotion`), las fichas que marchan saltan, la seleccionada se balancea, las que combaten tiemblan y las flotas se mecen y dejan una estela (`Wake`). |
+| `DrawCounter(...)`, `DrawEchelon(...)`, `Bar(...)` | Fichas OTAN: la ruta como flecha verde (`PathArrow`), la línea al cuartel (verde si está a su alcance), la flecha roja del ataque y la ficha: dentro del marco, el símbolo de su arma (`MapIcons.NatoSymbol`: aspa para infantería, aspa con raya vertical para la motorizada, aspa con óvalo para la mecanizada, barra diagonal para caballería y exploradores, óvalo para blindados, punto para artillería, puente para ingenieros y alas para aviación); encima, las marcas de tamaño (III regimiento, X brigada, XX división, XXX cuerpo, XXXX ejército, XXXXX grupo de ejércitos); los cuarteles, con «HQ»; los colonos, un carromato (`MapIcons.Settlers`); las flotas, un casco bajo la letra de su barco y un punto por cada unidad a bordo. Barras de hombres (verde) y organización (ámbar). Cada ficha es un bloque en relieve, como las piezas de un wargame de tablero: sombra hacia abajo a la derecha, su grosor debajo, bisel en la cara y la cara sombreada de clara a oscura; el marco de la seleccionada late. Con las animaciones (`CounterMotion`), las fichas que marchan saltan, la seleccionada se balancea, las que combaten tiemblan y las flotas se mecen y dejan una estela (`Wake`). |
 | `Smoke(...)`, `Bursts(...)` | Con las animaciones, humo que sube de las ciudades de más de 2000 habitantes (más oscuro y espeso si tienen taller o fábrica) y explosiones que se hinchan y se apagan alrededor de cada batalla. |
 | `DrawFigure(...)` | Con figuras 3D, una unidad como maqueta (`Models`) sobre una peana del color de su nación, mirando hacia donde va, con sus marcas de tamaño encima, sus barras debajo y un anillo que late si está seleccionada. Las unidades de una provincia se ponen en fila, a la derecha de la ciudad si la hay. |
 | `DrawBattleMark(...)` | Las espadas cruzadas, que laten; al pasar el ratón, su resumen; al hacer clic, la ventana de la batalla. |
@@ -1185,7 +1185,7 @@ Dibuja el mapa entero con un único shader.
 ### `Graphics/Font.cs`
 | Función | Qué hace |
 | --- | --- |
-| `Font(gl)` | Genera una textura con las letras en 4 tamaños: Fira Sans (normal y negrita), clara y con cifras regulares, para la interfaz y Cinzel, capitales romanas, para el tamaño de título (el nombre del juego y las naciones en el mapa); incluye acentos y ñ (Latin-1). |
+| `Font(gl)` | Genera una textura con las letras en 4 tamaños: Lilita One, redonda y robusta, para la interfaz (tiene un solo peso, así que la negrita es igual), y Cinzel Bold, capitales romanas, para la negrita del tamaño grande (títulos de ventana y encabezados) y el tamaño de título (el nombre del juego y las naciones en el mapa); incluye acentos y ñ (Latin-1). |
 | `Draw(...)` | Escribe texto. |
 | `Measure(...)`, `LineHeight(...)` | Ancho de un texto y alto de línea. |
 | `Wrap(...)` | Parte un texto en líneas que caben en un ancho. |
@@ -1226,7 +1226,7 @@ Interfaz propia de "modo inmediato": los botones se declaran en cada fotograma y
 `HelpView`: la ayuda durante la partida (F1, el botón «?» de la barra superior o el menú de pausa; abierta según `GameController.HelpOpen`, y `Frame` dice si se pulsó «Cerrar»). Temas a la izquierda y el texto del elegido a la derecha, con desplazamiento. El texto está en `HelpTopics` (Conquer.Presentation); `Layout` ajusta el tema al ancho.
 
 ### `Assets/`
-Fuentes Fira Sans (normal y negrita) y Cinzel (variable; se usa su peso por defecto), de Google Fonts, con sus licencias `OFL-FiraSans.txt` y `OFL-Cinzel.txt`.
+Fuentes Lilita One y Cinzel Bold, de Google Fonts (traídas de la otra versión del juego), con sus licencias `OFL-LilitaOne.txt` y `OFL-Cinzel.txt`.
 
 ---
 
