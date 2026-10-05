@@ -318,9 +318,12 @@ public sealed partial class GameScreen : IScreen, IAudibleScreen
         float y = TopBarHeight + 8;
         foreach (var alert in _game.Alerts())
         {
-            var r = new Rect(8, y, Ui.Font.Measure(alert.Text, FontSize.Small) + 30, 26);
-            if (Ui.Button(r, alert.Text, tooltip: alert.Tooltip, size: FontSize.Small)) alert.OnClick();
+            // An alert with a picture (science) makes room for it after the coloured mark.
+            bool picture = alert.Icon is ScienceIcon && Icons.HasPicture(ScienceIcon.Name);
+            var r = new Rect(8, y, Ui.Font.Measure(alert.Text, FontSize.Small) + (picture ? 52 : 30), 26);
+            if (Ui.Button(r, picture ? "      " + alert.Text : alert.Text, tooltip: alert.Tooltip, size: FontSize.Small)) alert.OnClick();
             Batch.Rect(r.X + 4, r.Y + 5, 3, r.H - 10, Theme.Of(alert.Tone));
+            if (picture) Icons.Picture(Batch, ScienceIcon.Name, new Vector2(r.X + 22, r.Y + r.H / 2), 20);
             y += 30;
         }
         DrawObjective(y + 6);

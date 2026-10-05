@@ -368,6 +368,7 @@ public class ControllerTests(WorldFixture world)
     {
         var (game, _) = WithCapital();
         var science = AlertStarting(game, "Ciencia sin elegir")!;
+        Assert.IsType<ScienceIcon>(science.Icon);
         science.OnClick();
         Assert.True(game.Nation.Visible);
         Assert.Equal(NationTab.Science, game.Nation.Tab);

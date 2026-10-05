@@ -8,9 +8,9 @@ namespace Conquer.Presentation;
 
 /// <summary>
 /// Something that needs the player's attention, shown under the top bar: a short label, how serious it is, what it is
-/// about, and where a click takes the player.
+/// about, where a click takes the player and, for some, an icon.
 /// </summary>
-public sealed record Alert(string Text, Tone Tone, string Tooltip, Action OnClick);
+public sealed record Alert(string Text, Tone Tone, string Tooltip, Action OnClick, Icon? Icon = null);
 
 /// <summary>The alerts under the top bar: hunger, unrest, troops in trouble, battles at home, finished works and idle research.</summary>
 public sealed partial class GameController
@@ -85,7 +85,7 @@ public sealed partial class GameController
             Human.Researching[(int)b] is null && Techs.InBranch(b).Any(t => GameSession.CanResearch(Human, t).Ok));
         if (idleScience)
             alerts.Add(new Alert("Ciencia sin elegir", Tone.Accent, "Hay ramas de la ciencia sin nada que investigar: su parte de la ciencia se pierde para ellas.",
-                () => OpenNation(NationTab.Science)));
+                () => OpenNation(NationTab.Science), new ScienceIcon()));
         return alerts;
     }
 

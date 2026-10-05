@@ -20,7 +20,13 @@ public sealed class NationView(NationScreen screen)
         ui.Text(area.X + 20, area.Y + 14, screen.Title, Theme.Accent, FontSize.Large, bold: true);
         float tx = area.X + 40 + ui.Font.Measure(screen.Title, FontSize.Large, true);
         for (int i = 0; i < NationScreen.TabNames.Length; i++)
-            if (ui.Button(new Rect(tx + i * 108, area.Y + 12, 102, 32), NationScreen.TabNames[i], active: (int)screen.Tab == i)) screen.Tab = (NationTab)i;
+        {
+            // The science tab carries its picture, if there is one, and its name moves over to make room.
+            var tab = new Rect(tx + i * 108, area.Y + 12, 102, 32);
+            bool picture = (NationTab)i == NationTab.Science && Icons.HasPicture(ScienceIcon.Name);
+            if (ui.Button(tab, picture ? "     " + NationScreen.TabNames[i] : NationScreen.TabNames[i], active: (int)screen.Tab == i)) screen.Tab = (NationTab)i;
+            if (picture) Icons.Picture(ui.Batch, ScienceIcon.Name, new Vector2(tab.X + 18, tab.Y + tab.H / 2), 22);
+        }
         if (ui.Button(new Rect(area.Right - 120, area.Y + 12, 100, 32), "Cerrar", tooltip: "Cerrar (N o Esc)")) screen.Visible = false;
 
         var content = new Rect(area.X + 20, area.Y + 60, area.W - 40, area.H - 76);
@@ -203,9 +209,14 @@ public sealed class NationView(NationScreen screen)
     /// <summary>The points per day, the institutions of the age shown on the right, a button per age and the three branches side by side.</summary>
     private static void Science(Ui ui, Rect r, SciencePage page)
     {
-        float y = r.Y;
-        ui.Text(r.X, y, page.Points, Theme.Of(page.PointsInk), FontSize.Normal, bold: true);
-        if (ui.Hover(new Rect(r.X, y, ui.Font.Measure(page.Points, FontSize.Normal, true), 24))) ui.Tooltip(page.PointsTooltip);
+        float y = r.Y, px = r.X;
+        if (Icons.HasPicture(ScienceIcon.Name))
+        {
+            Icons.Picture(ui.Batch, ScienceIcon.Name, new Vector2(r.X + 12, y + 10), 24);
+            px += 30;
+        }
+        ui.Text(px, y, page.Points, Theme.Of(page.PointsInk), FontSize.Normal, bold: true);
+        if (ui.Hover(new Rect(r.X, y, px - r.X + ui.Font.Measure(page.Points, FontSize.Normal, true), 24))) ui.Tooltip(page.PointsTooltip);
         float ix = r.Right;
         foreach (var badge in page.Institutions) ix = InstitutionBadge(ui, ix, y - 4, badge) - 24;
         y += 30;

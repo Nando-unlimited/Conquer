@@ -2,6 +2,11 @@
 
 Todos los cambios del juego, del más reciente al más antiguo. Cada versión es un commit cuyo título es su número.
 
+## [1.99.0] - 2026-10-05
+
+### Añadido
+- **Icono de la ciencia**: en el aviso «Ciencia sin elegir», en la pestaña Ciencia de la pantalla de la nación y junto a los puntos de ciencia al día.
+
 ## [1.98.0] - 2026-10-05
 
 ### Añadido

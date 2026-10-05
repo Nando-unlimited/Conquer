@@ -18,6 +18,15 @@ public static class Icons
 
     public static void Load(Silk.NET.OpenGL.GL gl) => _pictures ??= new SpriteAtlas(gl, "ResourceIcons", maxSize: 64);
 
+    /// <summary>Whether there is a picture of that name beside the resources' (such as <see cref="ScienceIcon.Name"/>).</summary>
+    public static bool HasPicture(string name) => _pictures?.Has(name) == true;
+
+    /// <summary>The picture of that name, <paramref name="size"/> pixels across, centred on <paramref name="c"/>, if there is one.</summary>
+    public static void Picture(Batch2D b, string name, Vector2 c, float size)
+    {
+        if (HasPicture(name)) _pictures!.DrawCover(b, name, c - new Vector2(size / 2), c + new Vector2(size / 2));
+    }
+
     /// <summary>The icon of a resource, <paramref name="size"/> pixels across, centred on <paramref name="c"/>: its picture if there is one, or drawn.</summary>
     public static void Resource(Batch2D b, ResourceType type, Vector2 c, float size)
     {

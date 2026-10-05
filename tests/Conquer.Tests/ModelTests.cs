@@ -80,6 +80,6 @@ public class ModelTests
 
         var folder = Path.Combine(Path.GetDirectoryName(Sprites)!, "ResourceIcons");
         foreach (var file in Directory.GetFiles(folder).Where(f => f.EndsWith(".png") || f.EndsWith(".jpg")))
-            Assert.Contains(Path.GetFileNameWithoutExtension(file), slugs);
+            Assert.Contains(Path.GetFileNameWithoutExtension(file), slugs.Append(ScienceIcon.Name));
     }
 }

@@ -79,6 +79,12 @@ public sealed record ResourceIcon(ResourceType Resource) : Icon
 
 public sealed record BattalionIcon(BattalionType Battalion) : Icon;
 
+/// <summary>Science's picture, ciencia.png beside the resources' icons in Assets/ResourceIcons; nothing is drawn without it.</summary>
+public sealed record ScienceIcon : Icon
+{
+    public const string Name = "ciencia";
+}
+
 /// <summary>
 /// A building's picture, when Assets/BuildingIcons has one (the client draws nothing otherwise). Its file is named after
 /// the building: <see cref="Slug"/>, so «Central eléctrica» is central-electrica.png.
