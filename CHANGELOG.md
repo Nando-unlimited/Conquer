@@ -2,6 +2,11 @@
 
 Todos los cambios del juego, del más reciente al más antiguo. Cada versión es un commit cuyo título es su número.
 
+## [1.100.0] - 2026-10-05
+
+### Cambiado
+- **Unidades apiladas de lejos, desplegadas de cerca**: con el mapa alejado, las unidades de una provincia están unas encima de otras en su centro, sobre la ciudad si la hay, con la seleccionada encima. Al acercar el zoom se despliegan en círculo alrededor del centro de la provincia, sin taparse entre ellas ni el nombre de la ciudad. Las que marchan siguen en su camino.
+
 ## [1.99.0] - 2026-10-05
 
 ### Añadido

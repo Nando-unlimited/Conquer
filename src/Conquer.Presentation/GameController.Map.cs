@@ -151,25 +151,44 @@ public sealed partial class GameController
         return labels;
     }
 
-    /// <summary>The units on the map: counters stacked a little up and to the right when several share a province, or figures side by side. Units aboard show in their fleet's panel.</summary>
+    /// <summary>From this zoom on, the units in a province deploy around its centre; further out they sit on top of each other.</summary>
+    public const float UnitSpreadZoom = 6f;
+
+    /// <summary>
+    /// The units on the map. Zoomed out, those standing in a province are piled on top of each other on its centre (over
+    /// its city), the selected one on top; zoomed in from <see cref="UnitSpreadZoom"/>, they deploy in a ring around it,
+    /// wider the more there are. Units on the march are where their route has got them. Units aboard show in their
+    /// fleet's panel.
+    /// </summary>
     private List<UnitCounter> Counters()
     {
         var counters = new List<UnitCounter>();
-        var stackIndex = new Dictionary<int, int>();
-        foreach (var unit in Session.Units)
+        bool spread = Camera.Zoom >= UnitSpreadZoom;
+        // The fog of war hides units the player cannot see.
+        var shown = Session.Units.Where(u => !u.IsAboard && Session.CanSee(Human.Id, u)).ToList();
+        bool Standing(Unit u) => !u.IsMoving || u.AttackingProvinceId.HasValue;
+        var standing = shown.Where(Standing).GroupBy(u => u.ProvinceId).ToDictionary(g => g.Key, g => g.Select(u => u.Id).ToList());
+        // The selected unit goes last, so it is drawn (and clicked) on top of the pile.
+        foreach (var unit in shown.OrderBy(u => u.Id == SelectedUnitId))
         {
-            // The fog of war hides units the player cannot see.
-            if (unit.IsAboard || !Session.CanSee(Human.Id, unit)) continue;
-            var pos = unit.IsMoving && !unit.AttackingProvinceId.HasValue ? Between(unit.ProvinceId, unit.Path[0], unit.StepProgress) : Center(unit.ProvinceId);
+            var pos = Standing(unit) ? Center(unit.ProvinceId) : Between(unit.ProvinceId, unit.Path[0], unit.StepProgress);
             var s = Camera.MapToScreen(pos);
             if (!OnScreen(s)) continue;
-            int stack = stackIndex.GetValueOrDefault(unit.ProvinceId);
-            stackIndex[unit.ProvinceId] = stack + 1;
             float scale = unit.Id == SelectedUnitId ? 1 : Math.Clamp(Camera.Zoom / 3, 0.45f, 1);
-            // Figures stand side by side, to the right of a city; counters stack up and to the right.
-            s += DisplaySettings.Current.UnitModels
-                ? new Vector2(((!unit.IsMoving && Map.Provinces[unit.ProvinceId].CityId.HasValue ? 1.4f : 0) + stack * 1.1f) * 30 * scale, -4)
-                : new Vector2(stack * 5, -stack * 7 - 14);
+            if (spread && Standing(unit))
+            {
+                var here = standing[unit.ProvinceId];
+                bool city = Map.Provinces[unit.ProvinceId].CityId.HasValue;
+                if (here.Count > 1 || city)
+                {
+                    // Evenly round a ring that clears the city and leaves each unit room (about 36 pixels apart).
+                    float radius = Math.Max(city ? 34 : 22, here.Count * 36 / MathF.Tau) * Math.Clamp(Camera.Zoom / 6, 1, 1.6f);
+                    // From the top, or for an even number half a step round, so none stands right under the city's name.
+                    float step = MathF.Tau / here.Count;
+                    float angle = -MathF.PI / 2 + (here.Count % 2 == 0 ? step / 2 : 0) + here.IndexOf(unit.Id) * step;
+                    s += new Vector2(MathF.Cos(angle), MathF.Sin(angle)) * radius;
+                }
+            }
 
             bool selected = unit.Id == SelectedUnitId;
             var path = selected || (unit.OwnerId == Human.Id && Camera.Zoom >= 1.5f) ? Route(unit, pos) : null;

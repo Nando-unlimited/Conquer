@@ -176,6 +176,28 @@ public class ControllerTests(WorldFixture world)
     }
 
     [Fact]
+    public void UnitsPileUpOnTheCityFarOutAndDeployCloseIn()
+    {
+        var game = GameWithCapital();
+        game.Camera.Screen = new System.Numerics.Vector2(1600, 900);
+        int home = game.SelectedProvince;
+        var ids = Enumerable.Range(0, 3).Select(_ => game.Session.AddRegiment(0, home, BattalionType.Warriors).Id).ToList();
+        game.SelectUnit(ids[0]);
+        List<UnitCounter> Here() => [.. game.Markers().Units.Where(c => ids.Contains(c.UnitId))];
+
+        game.Camera.LookAt(game.Center(home), 2);
+        var far = Here();
+        Assert.Equal(3, far.Count);
+        Assert.All(far, c => Assert.Equal(game.Camera.MapToScreen(game.Center(home)), c.Screen));
+        Assert.Equal(ids[0], far[^1].UnitId); // the selected one on top
+
+        game.Camera.LookAt(game.Center(home), 8);
+        var near = Here();
+        Assert.Equal(3, near.Select(c => c.Screen).Distinct().Count());
+        Assert.All(near, c => Assert.True(System.Numerics.Vector2.Distance(c.Screen, game.Camera.MapToScreen(game.Center(home))) > 30));
+    }
+
+    [Fact]
     public void TheTopBarSpeedButtonsSetTheClock()
     {
         var game = NewGame();
