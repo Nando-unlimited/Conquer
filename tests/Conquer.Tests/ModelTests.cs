@@ -51,10 +51,23 @@ public class ModelTests
         var slugs = Buildings.All.Select(BuildingIcon.Slug).ToList();
         Assert.Equal(slugs.Count, slugs.Distinct().Count());
 
-        // Every picture in the folder belongs to a building, so none is left unused by a typo.
+        // Every picture in the folder belongs to a building or is a city's, so none is left unused by a typo.
         var folder = Path.Combine(Path.GetDirectoryName(Sprites)!, "BuildingIcons");
         foreach (var file in Directory.GetFiles(folder).Where(f => f.EndsWith(".png") || f.EndsWith(".jpg")))
-            Assert.Contains(Path.GetFileNameWithoutExtension(file), slugs);
+            Assert.Contains(Path.GetFileNameWithoutExtension(file), slugs.Concat(Models.CityIcons));
+    }
+
+    [Fact]
+    public void ACitysIconGrowsWithItAndModernisesInTheModernEra()
+    {
+        Assert.Equal("cabana", Models.CityIcon(500, capital: false, modern: false));
+        Assert.Equal("pueblo", Models.CityIcon(5000, capital: false, modern: false));
+        Assert.Equal("capital", Models.CityIcon(20_000, capital: false, modern: false));
+        Assert.Equal("capital", Models.CityIcon(500, capital: true, modern: false));
+        Assert.Equal("pueblo", Models.CityIcon(5000, capital: false, modern: true));
+        Assert.Equal("ciudad-moderna", Models.CityIcon(20_000, capital: false, modern: true));
+        Assert.Equal("ciudad-moderna", Models.CityIcon(500, capital: true, modern: true));
+        Assert.All([500.0, 5000, 20_000], population => Assert.Contains(Models.CityIcon(population, false, false), Models.CityIcons));
     }
 
     [Fact]

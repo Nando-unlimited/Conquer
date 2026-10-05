@@ -8,9 +8,12 @@ using Conquer.Game.Simulation;
 
 namespace Conquer.Presentation;
 
-/// <summary>A city on screen: houses with roofs of its nation's colour (more of them the more it holds), a tower if it is the capital, and its name when there is room.</summary>
+/// <summary>
+/// A city on screen: its icon (<see cref="Models.CityIcon"/>), or else houses with roofs of its nation's colour (more of
+/// them the more it holds) and a tower if it is the capital; its name when there is room, and its buildings close in.
+/// </summary>
 public sealed record CityMarker(Vector2 Screen, float Scale, uint Color, int Population, bool Capital, string? Name, int Id = 0, bool Industry = false,
-    IReadOnlyList<string>? Buildings = null);
+    IReadOnlyList<BuildingType>? Buildings = null, string Icon = "cabana");
 
 /// <summary>A nation's name over the middle of its land, as large as the land looks and fading when zoomed in close.</summary>
 public sealed record NationLabel(Vector2 Screen, string Name, TextSize Size, float Alpha, uint Color);
@@ -100,9 +103,12 @@ public sealed partial class GameController
             // Houses grow a little as the map is zoomed in.
             float scale = Math.Clamp(Camera.Zoom / 4.5f, 0.6f, 1.5f);
             bool named = Camera.Zoom >= 2.5f || (capital && Camera.Zoom >= 1);
-            cities.Add(new CityMarker(s, scale, Session.Players[city.OwnerId].Color, (int)Map.Provinces[city.ProvinceId].Population, capital, named ? city.Name : null,
-                city.Id, Map.Provinces[city.ProvinceId].Buildings.Any(b => b is BuildingType.Workshop or BuildingType.Factory),
-                Camera.Zoom >= 5 ? [.. Map.Provinces[city.ProvinceId].Buildings.Select(Models.Of).OfType<string>().Distinct()] : null));
+            var owner = Session.Players[city.OwnerId];
+            var p = Map.Provinces[city.ProvinceId];
+            cities.Add(new CityMarker(s, scale, owner.Color, (int)p.Population, capital, named ? city.Name : null,
+                city.Id, p.Buildings.Any(b => b is BuildingType.Workshop or BuildingType.Factory),
+                Camera.Zoom >= 5 ? [.. Buildings.All.Where(p.Buildings.Contains)] : null,
+                Models.CityIcon(p.Population, capital, owner.Era >= Conquer.Game.Science.Era.Modern)));
         }
         return cities;
     }

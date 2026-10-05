@@ -1,6 +1,7 @@
 using System.Numerics;
 using Conquer.Client.Graphics;
 using Conquer.Client.UI;
+using Conquer.Game.Buildings;
 using Conquer.Presentation;
 
 namespace Conquer.Client.Screens;
@@ -45,7 +46,20 @@ public sealed partial class GameScreen
         float sc = city.Scale, below;
         string model = Models.City(city.Capital);
         bool models = DisplaySettings.Current.UnitModels && _sprites.Has(model);
-        if (models)
+        if (BuildingIcons.Has(city.Icon))
+        {
+            // Its icon standing on a disc of its nation's colour, ringed in gold for the capital.
+            float size = 44 * sc;
+            var foot = s + new Vector2(0, 10 * sc);
+            Batch.Ellipse(foot + new Vector2(0, 2), 21 * sc, 8 * sc, Rgba.Black.WithAlpha(0.35f));
+            if (city.Capital) Batch.Ellipse(foot, 22 * sc, 9 * sc, new Rgba(0xFFE0B656));
+            Batch.Ellipse(foot, 20 * sc, 7.5f * sc, new Rgba(city.Color).WithAlpha(0.9f));
+            BuildingIcons.Draw(Batch, city.Icon, s.X - size / 2, foot.Y - size + 6 * sc, size);
+            if (Motion.Enabled && (city.Industry || city.Population >= 2000))
+                Smoke(foot + new Vector2(10 * sc, -size + 8 * sc), city.Id, sc, city.Industry);
+            below = 12 * sc;
+        }
+        else if (models)
         {
             var foot = s + new Vector2(0, 8 * sc);
             Batch.Ellipse(foot + new Vector2(0, 2), 21 * sc, 8 * sc, Rgba.Black.WithAlpha(0.35f));
@@ -68,12 +82,19 @@ public sealed partial class GameScreen
             Ui.Text(s.X - w / 2, ty, city.Name, Rgba.White, FontSize.Small, bold: true);
             ty += 20;
         }
-        if (!models || city.Buildings is not { Count: > 0 } buildings) return;
-        // The buildings in a row, each a model as tall as fits.
-        float each = 22 * sc, x = s.X - (buildings.Count - 1) * each / 2;
-        foreach (var building in buildings)
+        if (city.Buildings is not { Count: > 0 } all) return;
+        // The buildings in a row: their icons, or with the 3D figures their models (one of each, for those without an icon).
+        var shown = new List<(BuildingType Type, string? Model)>();
+        foreach (var type in all)
         {
-            _sprites.Draw(Batch, building, new Vector2(x, ty + each), new Vector2(each, each), new Rgba(city.Color));
+            if (BuildingIcons.Has(type)) shown.Add((type, null));
+            else if (models && Models.Of(type) is { } m && _sprites.Has(m) && !shown.Any(b => b.Model == m)) shown.Add((type, m));
+        }
+        float each = 22 * sc, x = s.X - (shown.Count - 1) * each / 2;
+        foreach (var (type, buildingModel) in shown)
+        {
+            if (buildingModel == null) BuildingIcons.Draw(Batch, type, x - each / 2, ty, each);
+            else _sprites.Draw(Batch, buildingModel, new Vector2(x, ty + each), new Vector2(each, each), new Rgba(city.Color));
             x += each;
         }
     }

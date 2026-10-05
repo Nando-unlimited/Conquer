@@ -64,4 +64,17 @@ public static class Models
 
     /// <summary>A city's model: a castle for a capital, a village otherwise.</summary>
     public static string City(bool capital) => capital ? "city-capital" : "city-town";
+
+    /// <summary>The city icons of Assets/BuildingIcons, from a hut to a modern city.</summary>
+    public static readonly string[] CityIcons = ["cabana", "pueblo", "capital", "ciudad-moderna"];
+
+    /// <summary>
+    /// A city's icon, growing with it: a hut under 2,000 people, a village under 10,000, then a city (the capital's
+    /// icon, which a capital always has); in the modern era, capitals and cities of 10,000 or more are modern cities.
+    /// </summary>
+    public static string CityIcon(double population, bool capital, bool modern) =>
+        modern && (capital || population >= 10_000) ? "ciudad-moderna"
+        : capital || population >= 10_000 ? "capital"
+        : population >= 2000 ? "pueblo"
+        : "cabana";
 }

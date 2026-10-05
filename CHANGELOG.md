@@ -2,6 +2,16 @@
 
 Todos los cambios del juego, del más reciente al más antiguo. Cada versión es un commit cuyo título es su número.
 
+## [1.98.0] - 2026-10-05
+
+### Añadido
+- **Iconos propios de edificios y recursos**: 21 edificios y 11 recursos con su icono, en los paneles, la barra superior, el filtro de recursos y el mapa.
+- **Ciudades con icono que crece**: en el mapa, una ciudad es una cabaña con menos de 2.000 habitantes, un pueblo con menos de 10.000 y una ciudad desde ahí; la capital siempre es una ciudad, con un aro dorado en su base. En la época moderna, la capital y las grandes son ciudades modernas.
+- De cerca, bajo el nombre de cada ciudad, los iconos de sus edificios (antes solo con figuras 3D).
+
+### Cambiado
+- Los iconos van reducidos a 128 píxeles (0,6 MB en lugar de 19); los originales se guardan aparte, en `originales/`, que no entra en el juego ni en git.
+
 ## [1.97.0] - 2026-10-05
 
 ### Añadido

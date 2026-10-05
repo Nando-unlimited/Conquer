@@ -1,13 +1,16 @@
 Iconos de los recursos.
 
-Deja aquí una imagen por recurso (PNG o JPG, cuadrada, con fondo transparente si es PNG), llamada como el recurso
-en minúsculas y sin tildes. Sustituye al icono dibujado en todas partes: la barra superior, los paneles, los botones
-del modo de mapa Recursos y, en ese modo, los iconos de los yacimientos de cada provincia. El recurso que no tiene
-la suya sigue con el dibujado. El juego los reduce a 64 px: no hace falta que sean más grandes de 128 px.
-Se ven pequeños (de 14 a 26 px): mejor siluetas claras con buen contraste que detalles finos.
+Deja aquí una imagen por recurso (PNG con fondo transparente, cuadrada), llamada como el recurso en minúsculas y
+sin tildes. Sustituye al icono dibujado en todas partes: la barra superior, los paneles, los botones del modo de
+mapa Recursos y, en ese modo, los iconos de los yacimientos de cada provincia. El recurso que no tiene la suya sigue
+con el dibujado. Se ven pequeños (de 14 a 26 px): mejor siluetas claras con buen contraste que detalles finos.
 
 comida.png     madera.png     carbon.png     hierro.png     cobre.png      silicio.png
 petroleo.png   aluminio.png   caucho.png     oro.png        plata.png
 
+Van reducidos a 128 px. Los originales a tamaño completo están en originales/ (no se compilan ni se suben a git),
+junto con los que el juego todavía no usa porque no son recursos: acero, ciencia, electricidad, piedra, polvora y
+uranio.
+
 Origen y licencia de las imágenes:
-- (aún no hay ninguna)
+- Recursos (11 iconos, 2026-10-05): herramienta y plan pendientes de anotar.

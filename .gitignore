@@ -7,3 +7,5 @@ publish/
 
 # Full-size originals of the painted portraits; the game embeds the scaled-down copies beside them.
 src/Conquer.Client/Assets/Portraits/originales/
+src/Conquer.Client/Assets/BuildingIcons/originales/
+src/Conquer.Client/Assets/ResourceIcons/originales/
