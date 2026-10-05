@@ -1,0 +1,15 @@
+Iconos de los edificios.
+
+Deja aquí una imagen por edificio (PNG o JPG, cuadrada, con fondo transparente si es PNG), llamada como el edificio
+en minúsculas, sin tildes y con guiones en lugar de espacios. El juego la muestra junto a su nombre en la pestaña
+Edificios de la provincia (construidos y para construir); el edificio que no tiene la suya sale sin icono.
+El juego los reduce a 64 px: no hace falta que sean más grandes de 128 px.
+
+granja.png             cuartel.png            mercado.png            muralla.png            fabrica.png
+granero.png            templo.png             acueducto.png          universidad.png        hospital.png
+aserradero.png         biblioteca.png         herbolario.png         banco.png              central-electrica.png
+mina.png               taller.png             anfiteatro.png         castillo.png           puerto.png
+dique-seco.png
+
+Origen y licencia de las imágenes:
+- (aún no hay ninguna)

@@ -55,6 +55,7 @@ public sealed partial class GameScreen : IScreen, IAudibleScreen
         _renderer = new MapRenderer(app.Gl, session.Map, pixels);
         _sprites = new SpriteAtlas(app.Gl);
         PortraitPainter.LoadPhotos(app.Gl);
+        BuildingIcons.Load(app.Gl);
         _rivers = new RiverLayer(session.Map);
         _roads = new RoadLayer(session.Map);
         session.OwnershipChanged += _ => _mapDirty = true;

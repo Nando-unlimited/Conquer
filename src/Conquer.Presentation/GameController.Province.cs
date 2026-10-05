@@ -289,7 +289,7 @@ public sealed partial class GameController
         if (p.Buildings.Count == 0) doc.Add(new Label("Ninguno todavía.", Tone.Dim));
         foreach (var built in Buildings.All.Where(p.Buildings.Contains))
         {
-            doc.Add(new Label(built.Info().Name, Tone.Good, TextSize.Normal));
+            doc.Add(new Label(built.Info().Name, Tone.Good, TextSize.Normal, Icon: new BuildingIcon(built)));
             doc.Add(new Label(built.Info().Description, Tone.Dim, Height: 24, Indent: 10));
             // Barracks, and the workshop or the factory it became, list the troops they train faster.
             var trains = built == BuildingType.Factory ? BuildingType.Workshop : built;
@@ -327,7 +327,7 @@ public sealed partial class GameController
             var can = Session.CanBuild(Human.Id, p, type);
             string tip = $"{info.Description}\nCoste: {info.Cost}. Tarda {info.Days} días." + (can.Ok ? "" : "\n" + can.Message);
             doc.Add(new Button($"{info.Name}  ·  {info.Cost}  ·  {info.Days} d", () => Show(Session.Build(Human.Id, p.Id, type)), can.Ok,
-                Tooltip: tip, Size: TextSize.Small, Height: 30, Gap: 4));
+                Tooltip: tip, Size: TextSize.Small, Height: 30, Gap: 4, Icon: new BuildingIcon(type)));
         }
         if (missing.Count == 0) return;
         doc.Add(new Space(6));

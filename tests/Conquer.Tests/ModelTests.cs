@@ -40,4 +40,19 @@ public class ModelTests
         foreach (var type in Battalions.All)
             Assert.True(File.Exists(Path.Combine(Sprites, "Units", Models.Of(type) + "-team.png")), Models.Of(type));
     }
+
+    [Fact]
+    public void BuildingIconsAreNamedAfterTheirBuilding()
+    {
+        Assert.Equal("granja", BuildingIcon.Slug(BuildingType.Farm));
+        Assert.Equal("central-electrica", BuildingIcon.Slug(BuildingType.PowerPlant));
+        Assert.Equal("fabrica", BuildingIcon.Slug(BuildingType.Factory));
+        var slugs = Buildings.All.Select(BuildingIcon.Slug).ToList();
+        Assert.Equal(slugs.Count, slugs.Distinct().Count());
+
+        // Every picture in the folder belongs to a building, so none is left unused by a typo.
+        var folder = Path.Combine(Path.GetDirectoryName(Sprites)!, "BuildingIcons");
+        foreach (var file in Directory.GetFiles(folder).Where(f => f.EndsWith(".png") || f.EndsWith(".jpg")))
+            Assert.Contains(Path.GetFileNameWithoutExtension(file), slugs);
+    }
 }

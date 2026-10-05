@@ -1,3 +1,5 @@
+using System.Text;
+using Conquer.Game.Buildings;
 using Conquer.Game.Economy;
 using Conquer.Game.Military;
 using Conquer.Game.Rules;
@@ -49,10 +51,29 @@ public readonly record struct Ink(Tone Tone, uint Color = 0)
         mood < GameRules.UnrestMood ? Tone.Bad : GameRules.MoodLevel(mood) == 3 ? Tone.Good : normal;
 }
 
-/// <summary>A small picture before a label: a resource or a kind of battalion.</summary>
+/// <summary>A small picture before a label: a resource, a kind of battalion or a building.</summary>
 public abstract record Icon;
 public sealed record ResourceIcon(ResourceType Resource) : Icon;
 public sealed record BattalionIcon(BattalionType Battalion) : Icon;
+
+/// <summary>
+/// A building's picture, when Assets/BuildingIcons has one (the client draws nothing otherwise). Its file is named after
+/// the building: <see cref="Slug"/>, so «Central eléctrica» is central-electrica.png.
+/// </summary>
+public sealed record BuildingIcon(BuildingType Building) : Icon
+{
+    /// <summary>
+    /// The building's name in lower case, without accents and with hyphens for spaces. The accents are swapped by hand:
+    /// the client runs without culture data, where <see cref="string.Normalize()"/> is not to be relied on.
+    /// </summary>
+    public static string Slug(BuildingType building)
+    {
+        var text = new StringBuilder();
+        foreach (char c in building.Info().Name.ToLowerInvariant())
+            text.Append(c switch { 'á' => 'a', 'é' => 'e', 'í' => 'i', 'ó' => 'o', 'ú' or 'ü' => 'u', 'ñ' => 'n', ' ' => '-', _ => c });
+        return text.ToString();
+    }
+}
 
 /// <summary>
 /// One piece of a <see cref="Document"/>, stacked top to bottom. Heights and gaps are in interface pixels, so every
@@ -64,7 +85,8 @@ public abstract record Element;
 public sealed record Heading(string Text, Ink Ink, TextSize Size = TextSize.Normal, float Height = 26) : Element;
 
 /// <summary>One line of text that is not wrapped.</summary>
-public sealed record Label(string Text, Ink Ink, TextSize Size = TextSize.Small, bool Bold = false, float Height = 22, float Indent = 0, string? Tooltip = null) : Element;
+public sealed record Label(string Text, Ink Ink, TextSize Size = TextSize.Small, bool Bold = false, float Height = 22, float Indent = 0, string? Tooltip = null,
+    Icon? Icon = null) : Element;
 
 /// <summary>Text wrapped to the width (less <paramref name="Indent"/>), followed by <paramref name="After"/> pixels.</summary>
 public sealed record Paragraph(string Text, Ink Ink, TextSize Size = TextSize.Small, float After = 0, float Indent = 0) : Element;

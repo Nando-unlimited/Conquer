@@ -2,6 +2,11 @@
 
 Todos los cambios del juego, del más reciente al más antiguo. Cada versión es un commit cuyo título es su número.
 
+## [1.96.0] - 2026-10-05
+
+### Añadido
+- **Preparado para iconos de edificios**: si en `Assets/BuildingIcons` hay una imagen con el nombre de un edificio (`granja.png`, `cuartel.png`, `central-electrica.png`...), sale junto a su nombre en la pestaña Edificios de la provincia, en los construidos y en los botones para construir. Los edificios sin imagen se ven como antes. La lista de nombres está en el `LEEME.txt` de esa carpeta.
+
 ## [1.95.0] - 2026-10-05
 
 ### Añadido

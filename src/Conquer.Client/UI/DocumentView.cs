@@ -30,7 +30,14 @@ public static class DocumentView
                     y += h.Height;
                     break;
                 case Label l:
-                    ui.Text(x + l.Indent, y, l.Text, Theme.Of(l.Ink), Size(l.Size), l.Bold);
+                    float indent = l.Indent;
+                    if (l.Icon is BuildingIcon icon && BuildingIcons.Has(icon.Building))
+                    {
+                        // The building's picture before its name.
+                        BuildingIcons.Draw(ui.Batch, icon.Building, x + indent, y - 1, 20);
+                        indent += 26;
+                    }
+                    ui.Text(x + indent, y, l.Text, Theme.Of(l.Ink), Size(l.Size), l.Bold);
                     if (l.Tooltip != null && ui.Hover(new Rect(x, y, w, l.Height))) ui.Tooltip(l.Tooltip);
                     y += l.Height;
                     break;
@@ -149,13 +156,19 @@ public static class DocumentView
     /// <summary>Draws the button and runs its action if it was pressed this frame.</summary>
     public static void Press(Ui ui, Button b, Rect r)
     {
-        // A resource's icon sits at the left of the label, which moves over to make room; a battalion's goes in the corner.
-        string text = b.Icon is ResourceIcon ? "     " + b.Text : b.Text;
+        // A resource's icon sits at the left of the label, which moves over to make room; so does a building's, when it has
+        // one; a battalion's goes in the corner.
+        bool building = b.Icon is BuildingIcon icon && BuildingIcons.Has(icon.Building);
+        string text = b.Icon is ResourceIcon || building ? "     " + b.Text : b.Text;
         bool pressed = ui.Button(r, text, b.Enabled, b.Active, b.Tooltip, Size(b.Size));
         switch (b.Icon)
         {
             case ResourceIcon resource: Icons.Resource(ui.Batch, resource.Resource, new Vector2(r.X + 14, r.Y + 16), 16); break;
             case BattalionIcon battalion: MapIcons.Battalion(ui.Batch, r.X + 7, r.Y + 7, battalion.Battalion); break;
+            case BuildingIcon built:
+                float size = r.H - 6;
+                BuildingIcons.Draw(ui.Batch, built.Building, r.X + 4, r.Y + 3, size);
+                break;
         }
         if (pressed) b.Press();
     }

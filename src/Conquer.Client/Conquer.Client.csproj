@@ -10,7 +10,7 @@
     <!-- No ICU dependency, so it runs on minimal Linux systems; Program.cs sets the Spanish number format. -->
     <InvariantGlobalization>true</InvariantGlobalization>
     <RootNamespace>Conquer.Client</RootNamespace>
-    <Version>1.95.0</Version>
+    <Version>1.96.0</Version>
   </PropertyGroup>
 
   <ItemGroup>
@@ -38,6 +38,7 @@
     <EmbeddedResource Include="Assets\Sprites\*.png" LogicalName="Sprites/%(Filename)%(Extension)" />
     <EmbeddedResource Include="Assets\Sprites\Units\*.png" LogicalName="Sprites/%(Filename)%(Extension)" />
     <EmbeddedResource Include="Assets\Portraits\*.png;Assets\Portraits\*.jpg" LogicalName="Portraits/%(Filename)%(Extension)" />
+    <EmbeddedResource Include="Assets\BuildingIcons\*.png;Assets\BuildingIcons\*.jpg" LogicalName="BuildingIcons/%(Filename)%(Extension)" />
   </ItemGroup>
 
 </Project>
