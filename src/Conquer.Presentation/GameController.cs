@@ -144,7 +144,20 @@ public sealed partial class GameController
     /// <summary>The provinces the player can see; the rest lie under the fog of war.</summary>
     public IReadOnlySet<int> VisibleProvinces => Session.VisibleProvinces(Human.Id);
 
-    /// <summary>A number that changes when what the player sees changes, so the client knows when to redraw the fog.</summary>
+    /// <summary>The provinces the player has ever seen; the rest of the world is unknown and drawn black.</summary>
+    public IReadOnlySet<int> ExploredProvinces
+    {
+        get
+        {
+            Session.VisibleProvinces(Human.Id); // what the player sees now counts as explored
+            return Human.Explored;
+        }
+    }
+
+    /// <summary>Whether the player has explored a province, as of the last look at <see cref="ExploredProvinces"/>.</summary>
+    public bool IsExplored(int provinceId) => Human.Explored.Contains(provinceId);
+
+    /// <summary>A number that changes when what the player sees or has explored changes, so the client knows when to redraw the fog.</summary>
     public int FogSignature
     {
         get
@@ -155,7 +168,7 @@ public sealed partial class GameController
                 _fogFor = visible;
                 _fogSignature = visible.Aggregate(visible.Count, (hash, id) => hash ^ (id * 397) ^ (id << 11));
             }
-            return _fogSignature;
+            return _fogSignature ^ (Human.Explored.Count * 7919);
         }
     }
 
@@ -170,10 +183,11 @@ public sealed partial class GameController
         SelectedProvince = -1;
     }
 
+    /// <summary>Selects a province; one still unexplored cannot be, so clicking it clears the selection.</summary>
     public void SelectProvince(int provinceId)
     {
         SelectedUnitId = null;
-        SelectedProvince = provinceId;
+        SelectedProvince = provinceId >= 0 && ExploredProvinces.Contains(provinceId) ? provinceId : -1;
     }
 
     public void ClearSelection()

@@ -14,6 +14,8 @@ public sealed class Player
     public bool IsHuman { get; }
     public Stockpile Stockpile { get; } = new();
     public HashSet<int> Provinces { get; } = [];
+    /// <summary>Provinces the nation has ever seen; the rest of the world is unknown to it (see <c>GameSession.VisibleProvinces</c>).</summary>
+    public HashSet<int> Explored { get; } = [];
     public int? CapitalCityId { get; set; }
     /// <summary>Net change of each resource over the last day, for display.</summary>
     public double[] LastDayNet { get; } = new double[Resources.All.Length];

@@ -23,7 +23,6 @@ public class ModelTests
     public void EveryBattalionAndShipHasAModel()
     {
         foreach (var type in Battalions.All) Assert.True(Exists(Models.Of(type)), $"{type}: {Models.Of(type)}");
-        Assert.True(Exists("unit-settlers"));
     }
 
     [Fact]

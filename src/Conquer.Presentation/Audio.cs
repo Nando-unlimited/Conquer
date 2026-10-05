@@ -36,6 +36,12 @@ public static class Soundtrack
 
     /// <summary>The music of the title and menu screens: «The Britons», by Kevin MacLeod.</summary>
     public static IReadOnlyList<string> Menu => ["the_britons"];
+
+    /// <summary>
+    /// The music while a game is made or loaded: «Lord of the Land», by Kevin MacLeod. It is also music of the early ages
+    /// in peace, so a game starting then carries on with it.
+    /// </summary>
+    public static IReadOnlyList<string> Loading => ["lord_of_the_land"];
 }
 
 /// <summary>How loud the music and the sound effects play, from 0 to 1; kept in a file beside the saved games.</summary>

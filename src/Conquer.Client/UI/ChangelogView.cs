@@ -3,18 +3,20 @@ using Conquer.Presentation;
 
 namespace Conquer.Client.UI;
 
-/// <summary>Shows the <see cref="Changelog"/> as a scrollable panel.</summary>
-public sealed class ChangelogView
+/// <summary>Shows the <see cref="Changelog"/>, or other text in the same markup (the <see cref="Credits"/>), as a scrollable panel.</summary>
+public sealed class ChangelogView(string title, IReadOnlyList<MarkupLine> text)
 {
     private readonly List<(string Text, FontSize Size, bool Bold, Rgba Color, float Indent)> _lines = [];
     private float _scroll;
     private float _wrappedFor = -1;
 
+    public ChangelogView() : this("Historial de versiones", Changelog.Lines) { }
+
     /// <summary>Draws the panel; true when its Close button was pressed.</summary>
     public bool Frame(Ui ui, Rect area)
     {
         ui.Panel(area);
-        ui.Text(area.X + 20, area.Y + 14, "Historial de versiones", Theme.Accent, FontSize.Large, bold: true);
+        ui.Text(area.X + 20, area.Y + 14, title, Theme.Accent, FontSize.Large, bold: true);
         bool closed = ui.Button(new Rect(area.Right - 120, area.Y + 12, 100, 32), "Cerrar");
 
         var content = new Rect(area.X + 20, area.Y + 60, area.W - 40, area.H - 76);
@@ -39,7 +41,7 @@ public sealed class ChangelogView
     {
         _wrappedFor = width;
         _lines.Clear();
-        foreach (var line in Changelog.Lines)
+        foreach (var line in text)
         {
             switch (line.Kind)
             {

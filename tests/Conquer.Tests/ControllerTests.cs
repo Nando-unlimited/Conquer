@@ -132,6 +132,24 @@ public class ControllerTests(WorldFixture world)
     }
 
     [Fact]
+    public void ForcedMigrantsShowInTheirDestinationsPopulationOnTheWay()
+    {
+        var game = GameWithCapital();
+        var s = game.Session;
+        int from = game.SelectedProvince;
+        var to = _map.Provinces[from].Neighbors.Select(n => _map.Provinces[n]).First(p => p.IsClaimable && !p.IsOwned);
+        Assert.True(s.Claim(0, s.AddRegiment(0, to.Id, BattalionType.Scouts).Id).Ok);
+        s.Human.Stockpile[ResourceType.Gold] = 1000;
+        Assert.True(s.ForceMigration(0, from, to.Id, 50).Ok);
+
+        game.SelectProvince(to.Id);
+        var population = game.SidePanel()!.Elements.OfType<Info>().Single(i => i.Label == "Población");
+        Assert.Contains("(+50 en camino)", population.Value);
+        game.HoverProvince = to.Id;
+        Assert.Contains("(+50 en camino)", game.MapTooltip());
+    }
+
+    [Fact]
     public void TheTopBarSpeedButtonsSetTheClock()
     {
         var game = NewGame();

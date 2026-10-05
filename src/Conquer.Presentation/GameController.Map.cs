@@ -43,13 +43,19 @@ public sealed partial class GameController
     private bool OnScreen(Vector2 p, float margin = 40) =>
         p.X > -margin && p.Y > -margin && p.X < Camera.Screen.X + margin && p.Y < Camera.Screen.Y + margin;
 
-    public MapMarkers Markers() => new(Cities(), NationLabels(), Counters(), Battles());
+    public MapMarkers Markers()
+    {
+        _ = ExploredProvinces; // brings what the player has explored up to date before hiding the rest
+        return new(Cities(), NationLabels(), Counters(), Battles());
+    }
 
     private List<CityMarker> Cities()
     {
         var cities = new List<CityMarker>();
         foreach (var city in Session.Cities)
         {
+            // Cities in lands the player has never seen are unknown to them.
+            if (!IsExplored(city.ProvinceId)) continue;
             var s = Camera.MapToScreen(Center(city.ProvinceId));
             if (!OnScreen(s)) continue;
             bool capital = Session.Players[city.OwnerId].CapitalCityId == city.Id;
@@ -66,7 +72,7 @@ public sealed partial class GameController
     /// <summary>
     /// Each nation's name over its land: in its middle (a circular mean of longitudes, so a nation across the date
     /// line is labelled over its land), sized to how big it looks, hidden while it is too small and faded out when
-    /// zoomed in so close that it covers the screen.
+    /// zoomed in so close that it covers the screen. Only the land the player has explored counts.
     /// </summary>
     private List<NationLabel> NationLabels()
     {
@@ -74,9 +80,10 @@ public sealed partial class GameController
         var labels = new List<NationLabel>();
         foreach (var player in Session.Players)
         {
-            if (player.Provinces.Count < 3) continue;
+            var known = player.Provinces.Where(IsExplored).ToList();
+            if (known.Count < 3) continue;
             double cos = 0, sin = 0, ySum = 0, area = 0;
-            foreach (int id in player.Provinces)
+            foreach (int id in known)
             {
                 var p = Map.Provinces[id];
                 double angle = (p.CenterX + 0.5) / Map.Width * Math.Tau;

@@ -18,8 +18,8 @@ public sealed class RiverLayer
     private static readonly Rgba Glint = new(0xFFA8D2F5);
     private static readonly Rgba Floodplain = new(0xFF4E8A34);
 
-    /// <summary>One stretch, with x unwrapped so it runs continuously across the date line.</summary>
-    private sealed record Stretch(Vector2[] Points, float[] Flow);
+    /// <summary>One stretch, with x unwrapped so it runs continuously across the date line, and the province of each point.</summary>
+    private sealed record Stretch(Vector2[] Points, float[] Flow, int[] Provinces);
 
     private readonly List<Stretch> _stretches = [];
     private readonly int _mapWidth;
@@ -48,7 +48,8 @@ public sealed class RiverLayer
 
         void Finish()
         {
-            if (points.Count >= 2) _stretches.Add(new([.. points], [.. flow]));
+            if (points.Count >= 2)
+                _stretches.Add(new([.. points], [.. flow], [.. points.Select(p => map.ProvinceAt((int)MathF.Floor(p.X), (int)MathF.Floor(p.Y))?.Id ?? -1)]));
             points.Clear();
             flow.Clear();
         }
@@ -56,7 +57,8 @@ public sealed class RiverLayer
 
     private float Wrap(float x) => ((x % _mapWidth) + _mapWidth) % _mapWidth;
 
-    public void Draw(Batch2D batch, Camera camera, bool terrainMode)
+    /// <param name="explored">Whether the player has explored a province: rivers break off where unknown land begins.</param>
+    public void Draw(Batch2D batch, Camera camera, bool terrainMode, Func<int, bool> explored)
     {
         float zoom = camera.Zoom;
         float minFlow = GameRules.MinRiverFlow * MathF.Max(1, MathF.Pow(6 / zoom, 1.5f));
@@ -66,19 +68,23 @@ public sealed class RiverLayer
         var screen = new List<Vector2>();
         var half = new List<float>();
         var flows = new List<float>();
+        float minX = 0, maxX = 0, minY = 0, maxY = 0;
         foreach (var stretch in _stretches)
         {
             if (stretch.Flow[^1] < minFlow) continue;
 
             // Screen points from the first point's nearest copy of the planet, so the path stays continuous.
             var origin = camera.MapToScreen(stretch.Points[0]);
-            screen.Clear();
-            half.Clear();
-            flows.Clear();
-            float minX = float.MaxValue, maxX = float.MinValue, minY = float.MaxValue, maxY = float.MinValue;
+            Restart();
             for (int i = 0; i < stretch.Points.Length; i++)
             {
                 if (stretch.Flow[i] < minFlow) continue;
+                if (!explored(stretch.Provinces[i]))
+                {
+                    DrawRun();
+                    Restart();
+                    continue;
+                }
                 var p = origin + (stretch.Points[i] - stretch.Points[0]) * zoom;
                 screen.Add(p);
                 flows.Add(stretch.Flow[i]);
@@ -86,7 +92,22 @@ public sealed class RiverLayer
                 minX = MathF.Min(minX, p.X); maxX = MathF.Max(maxX, p.X);
                 minY = MathF.Min(minY, p.Y); maxY = MathF.Max(maxY, p.Y);
             }
-            if (screen.Count < 2) continue;
+            DrawRun();
+        }
+
+        void Restart()
+        {
+            screen.Clear();
+            half.Clear();
+            flows.Clear();
+            minX = minY = float.MaxValue;
+            maxX = maxY = float.MinValue;
+        }
+
+        // Draws the run of explored points gathered so far.
+        void DrawRun()
+        {
+            if (screen.Count < 2) return;
 
             // A long stretch near the date line may show on the other copy of the planet too.
             float worldPx = _mapWidth * zoom;

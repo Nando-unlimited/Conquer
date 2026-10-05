@@ -20,6 +20,7 @@ public sealed class MenuNavigator(ConquerApp app) : IMenuNavigator
 public sealed class MainMenuScreen(ConquerApp app, bool settingsOpen = false) : IScreen
 {
     private readonly ChangelogView _changelog = new();
+    private readonly ChangelogView _credits = new("Créditos", Credits.Lines);
     private readonly MainMenu _menu = new(new MenuNavigator(app)) { Settings = { Open = settingsOpen } };
 
     public void Frame(double dt)
@@ -47,9 +48,14 @@ public sealed class MainMenuScreen(ConquerApp app, bool settingsOpen = false) : 
             y += 50;
         }
 
-        if (ui.Input.KeysPressed.Contains(Silk.NET.Input.Key.Escape)) _menu.ChangelogOpen = _menu.Settings.Open = false;
+        // The copyright at the foot of the screen.
+        ui.TextCentered(new Rect(1, s.Y - 35, s.X, 24), Credits.Copyright, Rgba.Black.WithAlpha(0.7f), FontSize.Small);
+        ui.TextCentered(new Rect(0, s.Y - 36, s.X, 24), Credits.Copyright, Theme.TextDim, FontSize.Small);
+
+        if (ui.Input.KeysPressed.Contains(Silk.NET.Input.Key.Escape)) _menu.CloseWindows();
         SettingsView.Frame(ui, s, _menu.Settings);
         if (_menu.ChangelogOpen && _changelog.Frame(ui, new Rect(cx - 380, 60, 760, s.Y - 120))) _menu.ChangelogOpen = false;
+        if (_menu.CreditsOpen && _credits.Frame(ui, new Rect(cx - 380, 60, 760, s.Y - 120))) _menu.CreditsOpen = false;
     }
 
     public void Dispose() { }
@@ -163,9 +169,12 @@ public sealed class LoadGameScreen(ConquerApp app) : IScreen
     public void Dispose() { }
 }
 
-/// <summary>Shows the progress of a <see cref="LoadingJob{TPicture}"/> and opens the game when it is ready.</summary>
-public sealed class LoadingScreen : IScreen
+/// <summary>Shows the progress of a <see cref="LoadingJob{TPicture}"/>, to music of its own, and opens the game when it is ready.</summary>
+public sealed class LoadingScreen : IScreen, IAudibleScreen
 {
+    public IReadOnlyList<string> Playlist => Soundtrack.Loading;
+    public IReadOnlyList<SoundCue> TakeSounds() => [];
+
     private readonly ConquerApp _app;
     private readonly LoadingJob<MapRenderer.Prepared> _job;
     private double _elapsed;

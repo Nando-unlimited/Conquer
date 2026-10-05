@@ -15,29 +15,40 @@ public interface IMenuNavigator
     void Quit();
 }
 
-/// <summary>The title screen: carry on the latest game, start a new one, load a saved one, change the options, see the changelog or quit.</summary>
+/// <summary>
+/// The title screen: carry on the latest game, start a new one, load a saved one, change the options, see the changelog
+/// or the credits, or quit.
+/// </summary>
 public sealed class MainMenu(IMenuNavigator navigator)
 {
     private readonly SaveFile? _latest = SaveFiles.List().FirstOrDefault();
 
     public bool ChangelogOpen { get; set; }
+    public bool CreditsOpen { get; set; }
+
+    /// <summary>The options, the changelog or the credits are open over the menu.</summary>
+    private bool WindowOpen => ChangelogOpen || CreditsOpen || Settings.Open;
+
+    /// <summary>Closes whichever window is open (Esc).</summary>
+    public void CloseWindows() => ChangelogOpen = CreditsOpen = Settings.Open = false;
 
     /// <summary>The three big buttons on top: Continuar, Nueva partida and Cargar partida. They do nothing while a window is open.</summary>
     public IReadOnlyList<Button> Main() =>
     [
-        new("Continuar", () => { if (!ChangelogOpen && !Settings.Open) navigator.LoadSavedGame(_latest!); }, _latest != null, Tooltip: _latest?.Name, Size: TextSize.Large),
-        new("Nueva partida", () => { if (!ChangelogOpen && !Settings.Open) navigator.ShowNewGame(); }, Size: TextSize.Large),
-        new("Cargar partida", () => { if (!ChangelogOpen && !Settings.Open) navigator.ShowLoadGame(); }, _latest != null, Size: TextSize.Large),
+        new("Continuar", () => { if (!WindowOpen) navigator.LoadSavedGame(_latest!); }, _latest != null, Tooltip: _latest?.Name, Size: TextSize.Large),
+        new("Nueva partida", () => { if (!WindowOpen) navigator.ShowNewGame(); }, Size: TextSize.Large),
+        new("Cargar partida", () => { if (!WindowOpen) navigator.ShowLoadGame(); }, _latest != null, Size: TextSize.Large),
     ];
 
     public SettingsMenu Settings { get; } = new();
 
-    /// <summary>The smaller ones below: the options, the changelog and Salir. They do nothing while a window is open.</summary>
+    /// <summary>The smaller ones below: the options, the changelog, the credits and Salir. They do nothing while a window is open.</summary>
     public IReadOnlyList<Button> Other() =>
     [
-        new("Opciones", () => { if (!ChangelogOpen) Settings.Open = true; }, Tooltip: "Música, sonido, animaciones y aspecto del mapa."),
-        new("Historial de versiones", () => { if (!Settings.Open) ChangelogOpen = true; }),
-        new("Salir", () => { if (!ChangelogOpen && !Settings.Open) navigator.Quit(); }),
+        new("Opciones", () => { if (!WindowOpen) Settings.Open = true; }, Tooltip: "Música, sonido, animaciones y aspecto del mapa."),
+        new("Historial de versiones", () => { if (!WindowOpen) ChangelogOpen = true; }),
+        new("Créditos", () => { if (!WindowOpen) CreditsOpen = true; }, Tooltip: "Quién hizo el juego, y la música, los sonidos y los gráficos que usa."),
+        new("Salir", () => { if (!WindowOpen) navigator.Quit(); }),
     ];
 }
 

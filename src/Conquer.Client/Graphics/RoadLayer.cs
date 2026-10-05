@@ -39,7 +39,8 @@ public sealed class RoadLayer
     private static bool Visible(Camera camera, Vector2 a, Vector2 b) =>
         MathF.Max(a.X, b.X) > -20 && MathF.Min(a.X, b.X) < camera.Screen.X + 20 && MathF.Max(a.Y, b.Y) > -20 && MathF.Min(a.Y, b.Y) < camera.Screen.Y + 20;
 
-    public void Draw(Batch2D batch, Camera camera, RoadNetwork roads, IEnumerable<RoadProject> works, IReadOnlyList<int>? planned)
+    /// <param name="explored">Whether the player has explored a province: roads in unknown land are not drawn.</param>
+    public void Draw(Batch2D batch, Camera camera, RoadNetwork roads, IEnumerable<RoadProject> works, IReadOnlyList<int>? planned, Func<int, bool> explored)
     {
         float zoom = camera.Zoom;
         if (zoom >= MinZoom)
@@ -50,7 +51,7 @@ public sealed class RoadLayer
             foreach (var kind in RoadKinds.All)
                 foreach (var (a, b, k) in roads.Links)
                 {
-                    if (k != kind) continue;
+                    if (k != kind || !explored(a) || !explored(b)) continue;
                     var (p, q) = OnScreen(camera, a, b);
                     if (!Visible(camera, p, q)) continue;
                     if (k == RoadKind.Road) DrawRoad(batch, p, q, scale, alpha);

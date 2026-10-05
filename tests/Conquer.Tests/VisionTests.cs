@@ -28,6 +28,46 @@ public class VisionTests(WorldFixture world)
     }
 
     [Fact]
+    public void WhatANationHasSeenStaysExploredAndIsSaved()
+    {
+        var s = GameSession.Create(_map, 2, seed: 7, computerRivals: false);
+        var home = _map.Provinces[s.Units.First(u => u.OwnerId == 0).ProvinceId];
+        var twoAway = home.Neighbors.SelectMany(n => _map.Provinces[n].Neighbors).First(id => id != home.Id && !home.Neighbors.Contains(id));
+        s.VisibleProvinces(0);
+        Assert.True(s.HasExplored(0, home.Id));
+        Assert.False(s.HasExplored(0, twoAway));
+
+        var scouts = s.AddRegiment(0, home.Id, BattalionType.Scouts);
+        s.Step();
+        Assert.True(s.HasExplored(0, twoAway));
+        Assert.True(s.Claim(0, scouts.Id).Ok); // they may only be sent home on their own land
+        Assert.True(s.Disband(0, scouts.Id).Ok);
+        s.Step();
+        Assert.DoesNotContain(twoAway, s.VisibleProvinces(0));
+        Assert.True(s.HasExplored(0, twoAway));
+
+        var loaded = GameSession.Load(_map, s.ToSave("test"));
+        Assert.Equal(s.Human.Explored.Order(), loaded.Human.Explored.Order());
+    }
+
+    [Fact]
+    public void UnexploredLandShowsNothing()
+    {
+        var game = new GameController(GameSession.Create(_map, 2, seed: 7, computerRivals: false));
+        var s = game.Session;
+        var rival = s.Units.First(u => u.OwnerId == 1 && u.CanFoundCity);
+        Assert.True(s.FoundCity(1, rival.Id).Ok);
+        var city = s.Cities.Single(c => c.OwnerId == 1);
+        Assert.False(game.ExploredProvinces.Contains(city.ProvinceId));
+
+        game.ViewProvince(city.ProvinceId); // on screen, but never seen
+        Assert.Equal(-1, game.SelectedProvince);
+        Assert.DoesNotContain(game.Markers().Cities, c => c.Id == city.Id);
+        game.HoverProvince = city.ProvinceId;
+        Assert.Equal("Tierra inexplorada", game.MapTooltip());
+    }
+
+    [Fact]
     public void EnemyUnitsOutOfSightAreHiddenUnlessAnAllySeesThem()
     {
         var game = new GameController(GameSession.Create(_map, 3, seed: 7));

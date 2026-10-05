@@ -2,6 +2,19 @@
 
 Todos los cambios del juego, del más reciente al más antiguo. Cada versión es un commit cuyo título es su número.
 
+## [1.92.0] - 2026-10-05
+
+### Añadido
+- **Créditos**: un botón «Créditos» en la pantalla inicial muestra quién hizo el juego y de quién son la música, los sonidos, los gráficos, las tipografías y los datos del mapa, con sus licencias. Al pie de la pantalla, el copyright.
+- **Música en la pantalla de carga**: mientras se crea o se carga la partida suena «Lord of the Land», de Kevin MacLeod, que sigue sonando si la partida empieza en paz en las primeras eras.
+
+### Cambiado
+- **Niebla de guerra total**: solo se ve el mundo que has explorado, sea tuyo o no. El resto está en negro: ni tierra, ni ríos, ni caminos, ni ciudades, ni fronteras, ni nombres de naciones; no se puede seleccionar y el tooltip solo dice «Tierra inexplorada». Lo explorado que ya no ves sigue en gris. Lo explorado se guarda con la partida; en las partidas guardadas anteriores empiezas conociendo solo lo que ves.
+- **Los colonos se marcan con un triángulo**, en lugar de la carreta, tanto con fichas como con figuras 3D.
+
+### Corregido
+- Los migrantes enviados con la migración forzada no aparecían en la población de su destino mientras viajaban: ahora la población de la provincia y su tooltip dicen cuántos vienen en camino («+50 en camino») hasta que llegan y se suman.
+
 ## [1.91.0] - 2026-10-02
 
 ### Añadido

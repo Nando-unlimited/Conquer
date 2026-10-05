@@ -5,7 +5,7 @@ namespace Conquer.Game.Simulation;
 /// <summary>
 /// The fog of war: what a nation can see. It sees its land and the land it occupies, its allies', overlord's and vassals',
 /// one province around all of it, and around each of their units; scouts see a province further. Units elsewhere are
-/// hidden from it.
+/// hidden from it. What it has seen once stays explored; the rest of the world is unknown to it.
 /// </summary>
 public sealed partial class GameSession
 {
@@ -35,6 +35,7 @@ public sealed partial class GameSession
             if (unit.IsMoving) See(unit.Path[0], 0);
         }
         _visible[playerId] = seen;
+        Players[playerId].Explored.UnionWith(seen);
         return seen;
 
         void See(int provinceId, int rings)
@@ -44,6 +45,9 @@ public sealed partial class GameSession
             foreach (int n in Map.Provinces[provinceId].Neighbors) See(n, rings - 1);
         }
     }
+
+    /// <summary>Whether a nation has ever seen a province.</summary>
+    public bool HasExplored(int playerId, int provinceId) => Players[playerId].Explored.Contains(provinceId);
 
     /// <summary>Whether a nation can see a unit: its own and its friends' always, any other only in a province it sees.</summary>
     public bool CanSee(int playerId, Unit unit) =>

@@ -314,13 +314,19 @@ public sealed class MapRenderer : IDisposable
             col = mix(col, pc.rgb, pc.a);
             col = mix(col, vec3(0.08, 0.08, 0.08), provinceLine * uProvinceBorders);
             col = nationBorder(col, id, sea, ownerDistance, m);
-            // The fog of war: land and sea out of sight are greyed and darkened.
+            // The fog of war: land and sea explored but out of sight are greyed and darkened (fog 0.5); what was never
+            // explored (fog 1) is hidden under a dark shroud with only a faint mottling, so nothing of it shows.
             float fog = texelFetch(uProvOwner, slot(id), 0).b;
-            col = mix(col, vec3(dot(col, vec3(0.299, 0.587, 0.114))) * 0.7, fog * 0.6);
+            bool unexplored = fog > 0.75;
+            col = mix(col, vec3(dot(col, vec3(0.299, 0.587, 0.114))) * 0.7, min(fog * 2.0, 1.0) * 0.6);
+            if (unexplored) {
+                float mottle = 0.6 * noise(m * 0.08, uMapSize.x * 0.08) + 0.4 * noise(m * 0.3 + 5.0, uMapSize.x * 0.3);
+                col = vec3(0.045, 0.05, 0.06) * (0.8 + 0.4 * mottle);
+            }
 
             if (uParchment > 0.0) col = parchment(col, m, frag);
             if (id == uSelected) col = mix(col, vec3(1.0, 1.0, 0.85), 0.35);
-            else if (id == uHover) col = mix(col, vec3(1.0), 0.12);
+            else if (id == uHover && !unexplored) col = mix(col, vec3(1.0), 0.12);
             // A soft vignette towards the screen edges.
             vec2 v = frag / uScreen - 0.5;
             col *= 1.0 - 0.35 * dot(v, v);
@@ -427,16 +433,20 @@ public sealed class MapRenderer : IDisposable
         return data;
     }
 
-    /// <summary>Recomputes every province's overlay colour, owner and fog (outside <paramref name="visible"/>, if given) for the current mode.</summary>
-    public void Refresh(GameSession session, IReadOnlySet<int>? visible = null)
+    /// <summary>
+    /// Recomputes every province's overlay colour, owner and fog for the current mode: grey outside <paramref name="visible"/>
+    /// and black outside <paramref name="explored"/>, if given. Unexplored land shows no owner, so no border line gives it away.
+    /// </summary>
+    public void Refresh(GameSession session, IReadOnlySet<int>? visible = null, IReadOnlySet<int>? explored = null)
     {
         var players = session.Players;
         foreach (var p in _map.Provinces)
         {
             int o = p.Id * 4;
-            _ownerData[o] = (byte)(p.OwnerId + 1);
+            bool known = explored == null || explored.Contains(p.Id);
+            _ownerData[o] = known ? (byte)(p.OwnerId + 1) : (byte)0;
             _ownerData[o + 1] = p.IsWater ? (byte)255 : (byte)0; // for the coastline
-            _ownerData[o + 2] = visible == null || visible.Contains(p.Id) ? (byte)0 : (byte)255; // the fog of war
+            _ownerData[o + 2] = !known ? (byte)255 : visible == null || visible.Contains(p.Id) ? (byte)0 : (byte)128; // the fog of war
             _ownerData[o + 3] = 255;
             // The owner's colour bands its borders; occupied land is striped with the occupier's (see the shader).
             SetColor(_nationData, o, p.IsOwned ? new Rgba(players[p.OwnerId].Color) : new Rgba(0));

@@ -132,7 +132,7 @@ public sealed partial class GameScreen : IScreen, IAudibleScreen
         if (_mapDirty || (_game.Mode >= MapMode.Population && _session.Date.Days != _lastRefreshDay)
             || (_game.Mode == MapMode.Terrain && _session.Date.MonthAndDay.Month != _lastRefreshMonth))
         {
-            _renderer.Refresh(_session, _game.VisibleProvinces);
+            _renderer.Refresh(_session, _game.VisibleProvinces, _game.ExploredProvinces);
             _mapDirty = false;
             _lastRefreshDay = _session.Date.Days;
             _lastRefreshMonth = _session.Date.MonthAndDay.Month;
@@ -143,7 +143,7 @@ public sealed partial class GameScreen : IScreen, IAudibleScreen
 
         _renderer.Draw(_game.Camera, _game.SelectedProvince, _game.HoverProvince, _app.PixelScale, _game.Now);
         DrawRivers();
-        _roads.Draw(Batch, _game.Camera, _session.Roads, _session.RoadProjects.Where(r => r.OwnerId == Human.Id), _game.PlannedRoute);
+        _roads.Draw(Batch, _game.Camera, _session.Roads, _session.RoadProjects.Where(r => r.OwnerId == Human.Id), _game.PlannedRoute, _game.IsExplored);
         DrawMarkers();
 
         DrawTopBar();
@@ -267,7 +267,7 @@ public sealed partial class GameScreen : IScreen, IAudibleScreen
 
     // ------------------------------------------------------------------ map markers
 
-    private void DrawRivers() => _rivers.Draw(Batch, _game.Camera, _game.Mode == MapMode.Terrain);
+    private void DrawRivers() => _rivers.Draw(Batch, _game.Camera, _game.Mode == MapMode.Terrain, _game.IsExplored);
 
     private Vector2 Center(int provinceId) => _game.Center(provinceId);
 

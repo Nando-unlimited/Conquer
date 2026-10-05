@@ -23,6 +23,9 @@ public sealed partial class GameController
         return doc;
     }
 
+    /// <summary>People on their way to settle in a province, forced or not; they count in its population once they arrive.</summary>
+    public int IncomingMigrants(int provinceId) => Session.Migrations.Where(m => m.ToProvinceId == provinceId).Sum(m => m.People);
+
     public bool IsBuildingKnown(BuildingType type) => type.Info().RequiresTech is not Tech tech || Human.Techs.Contains(tech);
 
     /// <summary>Current mood, where it is heading and why, and what it does to the province.</summary>
@@ -171,7 +174,10 @@ public sealed partial class GameController
         {
             var owner = Session.Players[p.OwnerId];
             doc.Add(new Info("Dueño", owner.Name, Ink.Nation(owner.Color)));
-            doc.Add(new Info("Población", $"{p.Population:N0} / {Session.CapacityOf(p):N0}"));
+            int incoming = IncomingMigrants(p.Id);
+            int outgoing = Session.Migrations.Where(m => m.FromProvinceId == p.Id).Sum(m => m.People);
+            doc.Add(new Info("Población", $"{p.Population:N0} / {Session.CapacityOf(p):N0}" + (incoming > 0 ? $" (+{incoming:N0} en camino)" : ""), Tone.Normal,
+                incoming > 0 ? $"Llegarán {incoming:N0} migrantes más; cuentan en la población cuando se instalan." : null));
             if (p.Population >= 1)
             {
                 doc.Add(new Info("Moral", $"{p.Mood:0} · {GameRules.MoodName(p.Mood)}", Ink.Mood(p.Mood, Tone.Normal), MoodTooltip(p)));
@@ -181,8 +187,6 @@ public sealed partial class GameController
                 doc.Add(new Info("Nacimientos", $"+{Session.DailyBirths(p, owner.IsStarving):0.##} al día", owner.IsStarving ? Tone.Bad : Tone.Normal));
                 AddCultureAndRevolt(doc, p);
             }
-            int incoming = Session.Migrations.Where(m => m.ToProvinceId == p.Id).Sum(m => m.People);
-            int outgoing = Session.Migrations.Where(m => m.FromProvinceId == p.Id).Sum(m => m.People);
             string migrants = "Gente en camino hacia esta provincia y desde ella.\n" +
                               $"Las ciudades de más de {GameRules.MinEmigrationCityPopulation} habitantes envían cada día un {GameRules.DailyEmigrationShare:P2} de su gente " +
                               $"a tus provincias sin ciudad que no llegan al {GameRules.MigrationTargetShare:P0} de su capacidad.";

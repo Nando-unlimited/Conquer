@@ -98,6 +98,22 @@ public class MenuTests(WorldFixture world)
     }
 
     [Fact]
+    public void TheTitleScreenShowsTheCredits()
+    {
+        var nav = new FakeNavigator();
+        var menu = new MainMenu(nav);
+        menu.Other().Single(b => b.Text == "Créditos").Press();
+        Assert.True(menu.CreditsOpen);
+        menu.Main()[1].Press();
+        Assert.Equal("", nav.Last);
+        menu.CloseWindows();
+        Assert.False(menu.CreditsOpen);
+        // «Lord of the Land» asks to be credited.
+        Assert.Contains(Credits.Lines, l => l.Text.Contains("Lord of the Land") && l.Text.Contains("Attribution 4.0"));
+        Assert.Contains("©", Credits.Copyright);
+    }
+
+    [Fact]
     public void ASavedGameCanBeLoadedAndDeletedAfterConfirming()
     {
         var session = GameSession.Create(world.Map, 1, seed: 7);

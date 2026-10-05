@@ -77,7 +77,7 @@ public sealed partial class GameScreen
 
     /// <summary>
     /// A NATO-style counter: the symbol of the unit's arm inside the frame, its size marks above it, "HQ" inside an
-    /// HQ's frame and a wagon for settlers; combat units and fleets carry a strength bar (green) and an organisation
+    /// HQ's frame and a triangle for settlers; combat units and fleets carry a strength bar (green) and an organisation
     /// bar (amber). Before it, its route, the line to its HQ and the arrow of its attack.
     /// </summary>
     private void DrawCounter(UnitCounter c)
