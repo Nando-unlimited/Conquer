@@ -2,6 +2,15 @@
 
 Todos los cambios del juego, del más reciente al más antiguo. Cada versión es un commit cuyo título es su número.
 
+## [1.95.0] - 2026-10-05
+
+### Añadido
+- **Primeros retratos pintados**: 113 retratos de oficiales para las épocas clásica, medieval, industrial y moderna, de los seis rangos, hombres y mujeres, del ejército, la marina, la caballería (industrial) y la aviación (moderna). Las épocas antigua y del Renacimiento siguen con el retrato dibujado.
+
+### Cambiado
+- Los retratos van en la carpeta del juego reducidos a 256 píxeles de alto y en JPG (2 MB en total en lugar de 254); los originales a tamaño completo se guardan aparte, en `Assets/Portraits/originales`, que no entra en el juego ni en git.
+- Los retratos pueden ser verticales: el juego recorta un cuadrado, más cerca de arriba.
+
 ## [1.94.0] - 2026-10-05
 
 ### Añadido

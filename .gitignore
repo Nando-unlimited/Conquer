@@ -4,3 +4,6 @@ obj/
 *.user
 TestResults/
 publish/
+
+# Full-size originals of the painted portraits; the game embeds the scaled-down copies beside them.
+src/Conquer.Client/Assets/Portraits/originales/

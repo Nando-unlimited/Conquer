@@ -13,9 +13,12 @@ ninguno, el retrato dibujado. Se pueden ir añadiendo poco a poco, por ejemplo e
 
 ## Formato y nombres
 
-- PNG o JPG (no SVG), **cuadrados**, de 256 píxeles o más (el juego los reduce a 256). Cabeza y hombros, la cara
-  centrada en la parte de arriba.
-- Nombre: `rango-época-sexo-grupo-número.png`, en minúsculas y sin tildes. Por ejemplo
+- PNG o JPG (no SVG), cuadrados o verticales (el juego recorta un cuadrado, más cerca de arriba que de abajo).
+  Cabeza y hombros, la cara en la parte de arriba.
+- El juego los muestra a 256 píxeles como mucho, así que en la carpeta van **reducidos a 256 de alto, en JPG**
+  (unos 20 KB cada uno): todos van dentro del ejecutable. Los originales grandes se guardan en
+  `Assets/Portraits/originales`, que ni se compila ni se sube a git.
+- Nombre: `rango-época-sexo-grupo-número.png`, en minúsculas y sin tildes (o `.jpg`). Por ejemplo
   `coronel-renacimiento-hombre-ejercito-03.png`, `division-moderna-mujer-marina-01.png`,
   `brigadier-industrial-hombre-caballeria-02.png` o `coronel-moderna-hombre-aviacion-01.png`. El número puede ser
   cualquiera. Las cinco partes son obligatorias.
