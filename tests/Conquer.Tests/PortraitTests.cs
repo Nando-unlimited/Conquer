@@ -36,20 +36,20 @@ public class PortraitTests
     {
         var teniente = new Officer(5, "Leonor Bazán", [OfficerTrait.Offensive], 1, rank: OfficerRank.LieutenantGeneral);
         Assert.Equal(
-            ["antigua-mujer-teniente", "antigua-mujer-division", "antigua-mujer-general", "antigua-mujer-brigadier", "antigua-mujer-mariscal",
-             "antigua-mujer-coronel", "antigua-mujer"],
+            ["teniente-antigua-mujer-ejercito", "division-antigua-mujer-ejercito", "general-antigua-mujer-ejercito",
+             "brigadier-antigua-mujer-ejercito", "mariscal-antigua-mujer-ejercito", "coronel-antigua-mujer-ejercito"],
             Portrait.Of(teniente, Era.Ancient, 0).PhotoGroups);
     }
 
     [Fact]
-    public void ASailorLooksForASailorsPortraitFirst()
+    public void ASailorLooksForASailorsPortraitFirstThenTheArmys()
     {
         var colonel = new Officer(6, "Sancho Haro", [OfficerTrait.Offensive], 1, branch: OfficerBranch.Navy);
         var groups = Portrait.Of(colonel, Era.Renaissance, 0).PhotoGroups.ToList();
-        Assert.Equal("renacimiento-marino-coronel", groups[0]);
-        Assert.Equal("renacimiento-marino", groups[6]);
-        Assert.Equal("renacimiento-hombre-coronel", groups[7]);
-        Assert.Equal("renacimiento-hombre", groups[^1]);
+        Assert.Equal("coronel-renacimiento-hombre-marina", groups[0]);
+        Assert.Equal("mariscal-renacimiento-hombre-marina", groups[5]);
+        Assert.Equal("coronel-renacimiento-hombre-ejercito", groups[6]);
+        Assert.Equal(12, groups.Count);
     }
 
     [Fact]
@@ -58,18 +58,21 @@ public class PortraitTests
         var airman = new Officer(9, "Diego Lara", [OfficerTrait.Offensive], 1, branch: OfficerBranch.Air);
         var face = Portrait.Of(airman, Era.Modern, 0);
         Assert.True(face.Air);
-        Assert.Equal("moderna-aviador-coronel", face.PhotoGroups.First());
+        Assert.Equal("coronel-moderna-hombre-aviacion", face.PhotoGroups.First());
     }
 
-    /// <summary>The painted portraits in the assets are named era-group[-rank]-number, so every one can be found.</summary>
+    /// <summary>The painted portraits in the assets are named rank-era-sex-arm-number, so every one can be found.</summary>
     [Fact]
     public void ThePaintedPortraitsAreWellNamed()
     {
         var dir = new DirectoryInfo(AppContext.BaseDirectory);
         while (dir != null && !File.Exists(Path.Combine(dir.FullName, "Conquer.sln"))) dir = dir.Parent;
         var folder = Path.Combine(dir!.FullName, "src", "Conquer.Client", "Assets", "Portraits");
-        var bases = Enum.GetValues<Era>().SelectMany(e => new[] { "hombre", "mujer", "marino", "aviador" }.Select(g => $"{Portrait.EraSlug(e)}-{g}")).ToList();
-        var groups = bases.Concat(bases.SelectMany(b => Portrait.RankSlugs.Select(r => $"{b}-{r}"))).ToHashSet();
+        var groups = (from rank in Portrait.RankSlugs
+                      from era in Enum.GetValues<Era>()
+                      from female in new[] { false, true }
+                      from branch in Enum.GetValues<OfficerBranch>()
+                      select $"{rank}-{Portrait.EraSlug(era)}-{Portrait.SexSlug(female)}-{Portrait.BranchSlug(branch)}").ToHashSet();
         foreach (var file in Directory.GetFiles(folder).Where(f => f.EndsWith(".png") || f.EndsWith(".jpg")))
         {
             string name = Path.GetFileNameWithoutExtension(file);

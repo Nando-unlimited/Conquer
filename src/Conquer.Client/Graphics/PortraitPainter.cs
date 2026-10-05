@@ -27,8 +27,8 @@ public static class PortraitPainter
     private static Dictionary<string, string[]> _groups = [];
 
     /// <summary>
-    /// The painted portraits of Assets/Portraits, loaded once: "renacimiento-hombre-coronel-03" belongs to the group
-    /// "renacimiento-hombre-coronel". Officers whose era has pictures take one of them (see Portrait.PhotoGroups); the rest are drawn.
+    /// The painted portraits of Assets/Portraits, loaded once: "coronel-renacimiento-hombre-ejercito-03" belongs to the group
+    /// "coronel-renacimiento-hombre-ejercito". Officers whose era has pictures take one of them (see Portrait.PhotoGroups); the rest are drawn.
     /// </summary>
     public static void LoadPhotos(Silk.NET.OpenGL.GL gl)
     {
@@ -37,7 +37,7 @@ public static class PortraitPainter
         _groups = _photos.Names.GroupBy(GroupOf).ToDictionary(g => g.Key, g => g.Order(StringComparer.Ordinal).ToArray());
     }
 
-    /// <summary>"renacimiento-hombre-coronel-03" is in "renacimiento-hombre-coronel": the name without its last part if that is a number.</summary>
+    /// <summary>"coronel-renacimiento-hombre-ejercito-03" is in "coronel-renacimiento-hombre-ejercito": the name without its last part if that is a number.</summary>
     public static string GroupOf(string name)
     {
         int dash = name.LastIndexOf('-');

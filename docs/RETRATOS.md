@@ -4,20 +4,21 @@ El juego puede usar retratos pintados (creados con una IA de imágenes como Recr
 los dibujados con formas. Basta con dejar las imágenes en `src/Conquer.Client/Assets/Portraits` y compilar.
 
 Los retratos **muestran el rango ellos mismos**: el juego los dibuja tal cual, solo con un marco fino del color de la
-nación. Cada oficial toma uno de su época, su sexo (o de marino o aviador según su arma) y su rango, siempre el mismo
+nación. Cada oficial toma uno de su rango, su época, su sexo y su arma (ejército, marina o aviación), siempre el mismo
 mientras no cambie de rango; al ascender pasa a uno del nuevo rango, así que cambia de cara.
 
-No hace falta tenerlo todo: si falta su rango, el oficial toma uno del rango más cercano (el inferior si hay empate), y
-si su época no tiene ninguno, el retrato dibujado. Se pueden ir añadiendo poco a poco, por ejemplo empezando solo con
+No hace falta tenerlo todo: si falta su rango, el oficial toma uno del rango más cercano (el inferior si hay empate); un
+marino o un aviador sin retratos de su arma toma uno del ejército; y si su época no tiene ninguno, el retrato
+dibujado. Se pueden ir añadiendo poco a poco, por ejemplo empezando solo con
 `coronel` y `general`.
 
 ## Formato y nombres
 
 - PNG o JPG (no SVG), **cuadrados**, de 256 píxeles o más (el juego los reduce a 256). Cabeza y hombros, la cara
   centrada en la parte de arriba.
-- Nombre: `época-grupo-rango-número.png`, en minúsculas y sin tildes. Por ejemplo `renacimiento-hombre-coronel-03.png`
-  o `moderna-marino-mariscal-01.png`. El número puede ser cualquiera.
-- También vale sin rango (`renacimiento-hombre-03.png`): se usa cuando no hay ninguno con rango para ese oficial.
+- Nombre: `rango-época-sexo-grupo-número.png`, en minúsculas y sin tildes. Por ejemplo
+  `coronel-renacimiento-hombre-ejercito-03.png`, `division-moderna-mujer-marina-01.png` o
+  `brigadier-industrial-hombre-aviacion-02.png`. El número puede ser cualquiera. Las cinco partes son obligatorias.
 
 | Época | En el nombre | Tiempos |
 | --- | --- | --- |
@@ -28,12 +29,16 @@ si su época no tiene ninguno, el retrato dibujado. Se pueden ir añadiendo poco
 | Industrial | `industrial` | siglo XIX |
 | Moderna | `moderna` | siglo XX |
 
-| Grupo | En el nombre |
+| Sexo | En el nombre |
 | --- | --- |
-| Oficiales hombres | `hombre` |
-| Oficiales mujeres | `mujer` |
-| Oficiales de marina (mandan flotas) | `marino` |
-| Oficiales de aviación (mandan aviones) | `aviador` |
+| Hombre | `hombre` |
+| Mujer | `mujer` |
+
+| Grupo (arma) | En el nombre |
+| --- | --- |
+| Ejército (regimientos y cuarteles generales) | `ejercito` |
+| Marina (mandan flotas) | `marina` |
+| Aviación (mandan aviones) | `aviacion` |
 
 | Rango | En el nombre | En la armada | En la aviación | Qué manda |
 | --- | --- | --- | --- | --- |
@@ -48,7 +53,7 @@ Casi todos los oficiales son coroneles (los reclutados lo son, y la mayoría de 
 generales tienen tenientes generales, generales y mariscales, y son siempre del ejército: los marinos y los aviadores
 solo llegan hasta `division`. Por eso conviene tener más coroneles:
 
-| Rango | Por época, para hombres | Para mujeres | Para marinos y aviadores |
+| Rango | Por época: `hombre-ejercito` | `mujer-ejercito` | `marina` y `aviacion` (cada sexo) |
 | --- | --- | --- | --- |
 | `coronel` | 6 | 3 | 2 |
 | `brigadier`, `division` | 2 cada uno | 1 cada uno | 1 cada uno |
@@ -95,7 +100,7 @@ grisáceo, gorra de plato con el emblema de alas y las alas de piloto en el pech
 
 Para las mujeres, la misma descripción con *female commander*.
 
-| Época | Oficiales (`hombre` / `mujer`) | Marinos (`marino`) |
+| Época | Ejército (`ejercito`) | Marina (`marina`) |
 | --- | --- | --- |
 | Antigua | bronze age warlord, bronze helmet with a horsehair crest, leather and bronze scale armor, undyed wool cloak | bronze age ship captain, bareheaded, linen tunic, salt-weathered skin |
 | Clásica | classical antiquity general, polished bronze muscle cuirass, crested helmet or bareheaded, plain off-white cloak | trireme captain of antiquity, bareheaded, white linen tunic and simple bronze brooch |

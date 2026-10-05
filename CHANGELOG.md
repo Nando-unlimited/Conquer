@@ -2,6 +2,13 @@
 
 Todos los cambios del juego, del más reciente al más antiguo. Cada versión es un commit cuyo título es su número.
 
+## [1.93.0] - 2026-10-05
+
+### Cambiado
+- **Nuevo nombre para los retratos pintados**: `rango-época-sexo-grupo-número`, donde el grupo es el arma del oficial (`ejercito`, `marina` o `aviacion`). Por ejemplo `coronel-renacimiento-hombre-ejercito-03.png` o `division-moderna-mujer-marina-01.png`. Ya no valen los retratos sin rango.
+- Los oficiales de marina y de aviación también pueden ser mujeres en los retratos pintados; si no hay retratos de su arma, toman uno del ejército.
+- `docs/RETRATOS.md` y `Assets/Portraits/LEEME.txt` explican los nuevos nombres.
+
 ## [1.92.0] - 2026-10-05
 
 ### Añadido

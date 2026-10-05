@@ -69,34 +69,35 @@ public readonly record struct Portrait(
     public float Greying => Math.Clamp(Age * 0.5f - 0.15f + (Skill - 1) * 0.15f, 0f, 1f);
 
     /// <summary>
-    /// The groups of painted portraits (Assets/Portraits) this officer may take one of, best first. The portraits show
-    /// the rank themselves, so it is in the group: "renacimiento-hombre-teniente" for a lieutenant general, then those of
-    /// the nearest ranks, then "renacimiento-hombre" (no rank); a sailor first looks among "renacimiento-marino-…" and an
-    /// airman among "renacimiento-aviador-…".
+    /// The groups of painted portraits (Assets/Portraits) this officer may take one of, best first, named
+    /// rank-era-sex-arm: "teniente-renacimiento-hombre-ejercito" for a lieutenant general of the army, then those of the
+    /// nearest ranks. A sailor or an airman who has none of their arm takes one of the army.
     /// <see cref="Pick"/> chooses within the group, so an officer changes face only when promoted into another group.
     /// </summary>
     public IEnumerable<string> PhotoGroups
     {
         get
         {
-            string[] bases = Branch switch
-            {
-                OfficerBranch.Navy => [$"{EraSlug(Era)}-marino", $"{EraSlug(Era)}-{Sex}"],
-                OfficerBranch.Air => [$"{EraSlug(Era)}-aviador", $"{EraSlug(Era)}-{Sex}"],
-                _ => [$"{EraSlug(Era)}-{Sex}"],
-            };
-            // The officer's own rank first, then the nearest ones (the lower first on a tie), then a picture without a rank.
+            string[] arms = Branch == OfficerBranch.Army ? [BranchSlug(Branch)] : [BranchSlug(Branch), BranchSlug(OfficerBranch.Army)];
+            // The officer's own rank first, then the nearest ones (the lower first on a tie).
             int rank = Rank;
             var ranks = Enumerable.Range(0, RankSlugs.Length).OrderBy(r => Math.Abs(r - rank)).ThenBy(r => r).ToList();
-            foreach (string group in bases)
-            {
-                foreach (int r in ranks) yield return $"{group}-{RankSlugs[r]}";
-                yield return group;
-            }
+            foreach (string arm in arms)
+                foreach (int r in ranks)
+                    yield return $"{RankSlugs[r]}-{EraSlug(Era)}-{SexSlug(IsFemale)}-{arm}";
         }
     }
 
-    private string Sex => IsFemale ? "mujer" : "hombre";
+    /// <summary>The sexes as they are written in the portraits' file names.</summary>
+    public static string SexSlug(bool female) => female ? "mujer" : "hombre";
+
+    /// <summary>An arm as it is written in the portraits' file names.</summary>
+    public static string BranchSlug(OfficerBranch branch) => branch switch
+    {
+        OfficerBranch.Navy => "marina",
+        OfficerBranch.Air => "aviacion",
+        _ => "ejercito",
+    };
 
     /// <summary>The ranks as they are written in the portraits' file names, from colonel (0) to marshal (5).</summary>
     public static readonly string[] RankSlugs = ["coronel", "brigadier", "division", "teniente", "general", "mariscal"];
