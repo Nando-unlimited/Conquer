@@ -52,8 +52,31 @@ public readonly record struct Ink(Tone Tone, uint Color = 0)
 }
 
 /// <summary>A small picture before a label: a resource, a kind of battalion or a building.</summary>
-public abstract record Icon;
-public sealed record ResourceIcon(ResourceType Resource) : Icon;
+public abstract record Icon
+{
+    /// <summary>
+    /// A name as the icons' file names write it: in lower case, without accents and with hyphens for spaces. The
+    /// accents are swapped by hand: the client runs without culture data, where <see cref="string.Normalize()"/> is
+    /// not to be relied on.
+    /// </summary>
+    public static string Slug(string name)
+    {
+        var text = new StringBuilder();
+        foreach (char c in name.ToLowerInvariant())
+            text.Append(c switch { 'á' => 'a', 'é' => 'e', 'í' => 'i', 'ó' => 'o', 'ú' or 'ü' => 'u', 'ñ' => 'n', ' ' => '-', _ => c });
+        return text.ToString();
+    }
+}
+
+/// <summary>
+/// A resource's icon: its picture in Assets/ResourceIcons, named after it (<see cref="Slug"/>: «Petróleo» is
+/// petroleo.png), or else the one the client draws.
+/// </summary>
+public sealed record ResourceIcon(ResourceType Resource) : Icon
+{
+    public static string Slug(ResourceType resource) => Slug(resource.Name());
+}
+
 public sealed record BattalionIcon(BattalionType Battalion) : Icon;
 
 /// <summary>
@@ -62,17 +85,7 @@ public sealed record BattalionIcon(BattalionType Battalion) : Icon;
 /// </summary>
 public sealed record BuildingIcon(BuildingType Building) : Icon
 {
-    /// <summary>
-    /// The building's name in lower case, without accents and with hyphens for spaces. The accents are swapped by hand:
-    /// the client runs without culture data, where <see cref="string.Normalize()"/> is not to be relied on.
-    /// </summary>
-    public static string Slug(BuildingType building)
-    {
-        var text = new StringBuilder();
-        foreach (char c in building.Info().Name.ToLowerInvariant())
-            text.Append(c switch { 'á' => 'a', 'é' => 'e', 'í' => 'i', 'ó' => 'o', 'ú' or 'ü' => 'u', 'ñ' => 'n', ' ' => '-', _ => c });
-        return text.ToString();
-    }
+    public static string Slug(BuildingType building) => Slug(building.Info().Name);
 }
 
 /// <summary>

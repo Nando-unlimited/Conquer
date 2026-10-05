@@ -352,6 +352,8 @@ public sealed class MapRenderer : IDisposable
     public ResourceType? ResourceFilter { get; set; }
     /// <summary>Resources the viewer knows; the rest are never drawn.</summary>
     public Func<ResourceType, bool> IsResourceKnown { get; set; } = _ => true;
+    /// <summary>In resources mode, the deposits are drawn as icons over the map (close in), so the provinces are not coloured.</summary>
+    public bool DepositIcons { get; set; }
 
     /// <summary>Pixel data prepared off the main thread (it takes a moment for 6.5 million pixels).</summary>
     public sealed record Prepared(byte[] Ids, byte[] Terrain, byte[] Detail, byte[] Coast);
@@ -481,7 +483,7 @@ public sealed class MapRenderer : IDisposable
                     if (p.IsClaimable) color = InstitutionColor(p);
                     break;
                 case MapMode.Resources:
-                    if (p.IsClaimable) color = DepositColor(p);
+                    if (p.IsClaimable && !DepositIcons) color = DepositColor(p);
                     break;
                 case MapMode.Culture:
                     // The fill is the people's culture and the border band their ruler: a mismatch is foreign land.

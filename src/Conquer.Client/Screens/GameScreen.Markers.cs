@@ -17,11 +17,22 @@ public sealed partial class GameScreen
         Motion.Time = (float)(_game.Now % 3600);
         var markers = _game.Markers();
         foreach (var city in markers.Cities) DrawCity(city);
+        foreach (var deposit in markers.Deposits) DrawDeposits(deposit);
         foreach (var label in markers.Nations) DrawNationName(label);
         _unitHitBoxes.Clear();
         foreach (var counter in markers.Units) DrawCounter(counter);
         _battleHitBoxes.Clear();
         foreach (var battle in markers.Battles) DrawBattleMark(battle);
+    }
+
+    /// <summary>A province's deposits: their icons side by side on a dark strip, so they read over any ground.</summary>
+    private void DrawDeposits(DepositMarker d)
+    {
+        float gap = 2, pad = 3, width = d.Resources.Count * (d.Size + gap) - gap;
+        var strip = new Rect(d.Screen.X - width / 2 - pad, d.Screen.Y - d.Size / 2 - pad, width + 2 * pad, d.Size + 2 * pad);
+        Batch.Rect(strip.X, strip.Y, strip.W, strip.H, Rgba.Black.WithAlpha(0.55f));
+        for (int i = 0; i < d.Resources.Count; i++)
+            Icons.Resource(Batch, d.Resources[i], new Vector2(strip.X + pad + d.Size / 2 + i * (d.Size + gap), d.Screen.Y), d.Size);
     }
 
     /// <summary>

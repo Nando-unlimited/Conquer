@@ -150,6 +150,32 @@ public class ControllerTests(WorldFixture world)
     }
 
     [Fact]
+    public void TheResourcesMapShowsEveryDepositOfExploredProvincesCloseIn()
+    {
+        var game = NewGame();
+        game.Camera.Screen = new System.Numerics.Vector2(1600, 900);
+        var rich = _map.Provinces.First(p => p.HasDeposit(ResourceType.Copper) && p.HasDeposit(ResourceType.Gold) && !game.IsExplored(p.Id));
+        game.Mode = MapMode.Resources;
+        game.Camera.LookAt(game.Center(rich.Id), 6);
+        Assert.True(game.DepositIconsShown);
+        Assert.DoesNotContain(game.Markers().Deposits, d => d.ProvinceId == rich.Id); // never seen
+
+        game.Human.Explored.Add(rich.Id);
+        var mark = Assert.Single(game.Markers().Deposits, d => d.ProvinceId == rich.Id);
+        Assert.Contains(ResourceType.Copper, mark.Resources);
+        Assert.Contains(ResourceType.Gold, mark.Resources);
+        Assert.All(mark.Resources, r => Assert.True(game.Human.Knows(r)));
+
+        game.ResourceFilter = ResourceType.Gold;
+        Assert.Equal([ResourceType.Gold], Assert.Single(game.Markers().Deposits, d => d.ProvinceId == rich.Id).Resources);
+
+        // Far out, the provinces are coloured instead.
+        game.Camera.LookAt(game.Center(rich.Id), 1);
+        Assert.False(game.DepositIconsShown);
+        Assert.Empty(game.Markers().Deposits);
+    }
+
+    [Fact]
     public void TheTopBarSpeedButtonsSetTheClock()
     {
         var game = NewGame();

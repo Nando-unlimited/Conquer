@@ -1,5 +1,6 @@
 using System.Numerics;
 using Conquer.Game.Economy;
+using Conquer.Presentation;
 
 namespace Conquer.Client.Graphics;
 
@@ -12,10 +13,20 @@ public static class Icons
 {
     private static readonly Rgba Outline = new(0xC0000000);
 
-    /// <summary>The icon of a resource, <paramref name="size"/> pixels across, centred on <paramref name="c"/>.</summary>
+    /// <summary>The resources' own pictures, from Assets/ResourceIcons (named by <see cref="ResourceIcon.Slug"/>); they replace the drawn ones.</summary>
+    private static SpriteAtlas? _pictures;
+
+    public static void Load(Silk.NET.OpenGL.GL gl) => _pictures ??= new SpriteAtlas(gl, "ResourceIcons", maxSize: 64);
+
+    /// <summary>The icon of a resource, <paramref name="size"/> pixels across, centred on <paramref name="c"/>: its picture if there is one, or drawn.</summary>
     public static void Resource(Batch2D b, ResourceType type, Vector2 c, float size)
     {
         float s = size / 2;
+        if (_pictures is { } pictures && pictures.Has(ResourceIcon.Slug(type)))
+        {
+            pictures.DrawCover(b, ResourceIcon.Slug(type), c - new Vector2(s), c + new Vector2(s));
+            return;
+        }
         var color = MapRenderer.ResourceColor(type);
         switch (type)
         {

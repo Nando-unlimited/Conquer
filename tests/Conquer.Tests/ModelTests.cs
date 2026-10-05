@@ -1,4 +1,5 @@
 using Conquer.Game.Buildings;
+using Conquer.Game.Economy;
 using Conquer.Game.Military;
 using Conquer.Presentation;
 
@@ -52,6 +53,19 @@ public class ModelTests
 
         // Every picture in the folder belongs to a building, so none is left unused by a typo.
         var folder = Path.Combine(Path.GetDirectoryName(Sprites)!, "BuildingIcons");
+        foreach (var file in Directory.GetFiles(folder).Where(f => f.EndsWith(".png") || f.EndsWith(".jpg")))
+            Assert.Contains(Path.GetFileNameWithoutExtension(file), slugs);
+    }
+
+    [Fact]
+    public void ResourceIconsAreNamedAfterTheirResource()
+    {
+        Assert.Equal("petroleo", ResourceIcon.Slug(ResourceType.Oil));
+        Assert.Equal("carbon", ResourceIcon.Slug(ResourceType.Coal));
+        var slugs = Resources.All.Select(ResourceIcon.Slug).ToList();
+        Assert.Equal(slugs.Count, slugs.Distinct().Count());
+
+        var folder = Path.Combine(Path.GetDirectoryName(Sprites)!, "ResourceIcons");
         foreach (var file in Directory.GetFiles(folder).Where(f => f.EndsWith(".png") || f.EndsWith(".jpg")))
             Assert.Contains(Path.GetFileNameWithoutExtension(file), slugs);
     }

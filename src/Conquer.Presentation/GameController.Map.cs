@@ -1,5 +1,6 @@
 using System.Numerics;
 using Conquer.Game.Buildings;
+using Conquer.Game.Economy;
 using Conquer.Game.Entities;
 using Conquer.Game.Military;
 using Conquer.Game.Rules;
@@ -35,18 +36,55 @@ public sealed record UnitCounter(int UnitId, Vector2 Screen, float Scale, uint C
 public sealed record BattleMarker(int ProvinceId, Battle? Battle, Vector2 Screen, Func<string> Tooltip);
 
 /// <summary>Everything drawn on the map over the provinces, in screen positions, already left out when off screen.</summary>
-public sealed record MapMarkers(IReadOnlyList<CityMarker> Cities, IReadOnlyList<NationLabel> Nations, IReadOnlyList<UnitCounter> Units, IReadOnlyList<BattleMarker> Battles);
+public sealed record MapMarkers(IReadOnlyList<CityMarker> Cities, IReadOnlyList<NationLabel> Nations, IReadOnlyList<UnitCounter> Units, IReadOnlyList<BattleMarker> Battles,
+    IReadOnlyList<DepositMarker> Deposits);
+
+/// <summary>
+/// In the resources mode, close enough in: the icons of a province's deposits in a row, <see cref="Size"/> pixels each,
+/// centred on <see cref="Screen"/>.
+/// </summary>
+public sealed record DepositMarker(int ProvinceId, Vector2 Screen, float Size, IReadOnlyList<ResourceType> Resources);
 
 /// <summary>The markers on the map, worked out from the camera.</summary>
 public sealed partial class GameController
 {
+    /// <summary>From this zoom on, the resources mode shows each province's deposits as icons instead of colours.</summary>
+    public const float DepositIconZoom = 3f;
+
+    /// <summary>The resources mode shows icons now (close in) rather than colouring each province by its main deposit.</summary>
+    public bool DepositIconsShown => Mode == MapMode.Resources && Camera.Zoom >= DepositIconZoom;
+
     private bool OnScreen(Vector2 p, float margin = 40) =>
         p.X > -margin && p.Y > -margin && p.X < Camera.Screen.X + margin && p.Y < Camera.Screen.Y + margin;
 
     public MapMarkers Markers()
     {
         _ = ExploredProvinces; // brings what the player has explored up to date before hiding the rest
-        return new(Cities(), NationLabels(), Counters(), Battles());
+        return new(Cities(), NationLabels(), Counters(), Battles(), Deposits());
+    }
+
+    /// <summary>
+    /// Every deposit the player knows in each explored province on screen (only the chosen resource, with the filter),
+    /// richest first; above the city, where there is one. None while <see cref="DepositIconsShown"/> is off.
+    /// </summary>
+    private List<DepositMarker> Deposits()
+    {
+        var marks = new List<DepositMarker>();
+        if (!DepositIconsShown) return marks;
+        float size = Math.Clamp(Camera.Zoom * 3.5f, 14, 26);
+        foreach (var p in Map.Provinces)
+        {
+            if (!p.IsClaimable || !IsExplored(p.Id)) continue;
+            var s = Camera.MapToScreen(Center(p.Id));
+            if (!OnScreen(s)) continue;
+            var found = Resources.Deposits
+                .Where(r => p.HasDeposit(r) && Human.Knows(r) && (ResourceFilter is null || ResourceFilter == r))
+                .OrderByDescending(r => p.Reserves[(int)r]).ToList();
+            if (found.Count == 0) continue;
+            if (p.CityId.HasValue) s.Y -= 22 + size / 2;
+            marks.Add(new DepositMarker(p.Id, s, size, found));
+        }
+        return marks;
     }
 
     private List<CityMarker> Cities()

@@ -2,6 +2,12 @@
 
 Todos los cambios del juego, del más reciente al más antiguo. Cada versión es un commit cuyo título es su número.
 
+## [1.97.0] - 2026-10-05
+
+### Añadido
+- **Iconos de los yacimientos en el mapa**: en el modo Recursos, de cerca, cada provincia muestra en fila los iconos de todos sus yacimientos conocidos (del más rico al más pobre), en lugar de colorearse solo por el principal. Con el filtro, solo el del recurso elegido. De lejos, donde no caben, sigue el color.
+- **Preparado para iconos de recursos**: si en `Assets/ResourceIcons` hay una imagen con el nombre de un recurso (`oro.png`, `petroleo.png`...), sustituye al icono dibujado en todas partes: la barra superior, los paneles, el filtro y el mapa. La lista de nombres está en el `LEEME.txt` de esa carpeta.
+
 ## [1.96.0] - 2026-10-05
 
 ### Añadido

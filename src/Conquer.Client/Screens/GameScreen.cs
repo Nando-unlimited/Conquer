@@ -56,6 +56,7 @@ public sealed partial class GameScreen : IScreen, IAudibleScreen
         _sprites = new SpriteAtlas(app.Gl);
         PortraitPainter.LoadPhotos(app.Gl);
         BuildingIcons.Load(app.Gl);
+        Icons.Load(app.Gl);
         _rivers = new RiverLayer(session.Map);
         _roads = new RoadLayer(session.Map);
         session.OwnershipChanged += _ => _mapDirty = true;
@@ -119,10 +120,11 @@ public sealed partial class GameScreen : IScreen, IAudibleScreen
         HandleKeys(dt);
         _game.Tick(dt, _game.TimeStopped);
 
-        if (_renderer.Mode != _game.Mode || _renderer.ResourceFilter != _game.ResourceFilter)
+        if (_renderer.Mode != _game.Mode || _renderer.ResourceFilter != _game.ResourceFilter || _renderer.DepositIcons != _game.DepositIconsShown)
         {
             _renderer.Mode = _game.Mode;
             _renderer.ResourceFilter = _game.ResourceFilter;
+            _renderer.DepositIcons = _game.DepositIconsShown;
             _mapDirty = true;
         }
         if (_game.FogSignature != _lastFog)

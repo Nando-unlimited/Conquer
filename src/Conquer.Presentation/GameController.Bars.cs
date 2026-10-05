@@ -70,11 +70,11 @@ public sealed partial class GameController
         if (Mode != MapMode.Resources) return [];
         var buttons = new List<Button>
         {
-            new("Todos", () => ResourceFilter = null, Active: ResourceFilter is null, Tooltip: "Color del yacimiento principal de cada provincia", Size: TextSize.Small),
+            new("Todos", () => ResourceFilter = null, Active: ResourceFilter is null, Tooltip: "Todos los yacimientos de cada provincia, con sus iconos (de lejos, el color del principal)", Size: TextSize.Small),
         };
         foreach (var r in Resources.Deposits.Where(Human.Knows))
             buttons.Add(new Button(r.Name(), () => ResourceFilter = ResourceFilter == r ? null : r, Active: ResourceFilter == r,
-                Tooltip: $"Solo {r.Name().ToLowerInvariant()}: más intenso cuanto más queda en la bolsa", Size: TextSize.Small, Icon: new ResourceIcon(r)));
+                Tooltip: $"Solo {r.Name().ToLowerInvariant()}: su icono donde lo hay (de lejos, un color más intenso cuanto más queda en la bolsa)", Size: TextSize.Small, Icon: new ResourceIcon(r)));
         return buttons;
     }
 
