@@ -248,7 +248,7 @@ public sealed partial class GameController
     {
         var owner = Session.Players[unit.OwnerId];
         var shown = officers.Where(o => o.Officer != null)
-            .Select(o => (Portrait.Of(o.Officer!, owner.Era, owner.Color), o.Role, OfficerTooltip(o.Officer!))).ToList();
+            .Select(o => (Portrait.Of(o.Officer!, owner.Era, owner.Color, o.Officer == unit.Officer && LeadsCavalry(unit)), o.Role, OfficerTooltip(o.Officer!))).ToList();
         return shown.Count == 0 ? new Space(0) : new Portraits(shown);
     }
     private static Info OfficerLine(string label, Officer? officer, string role) =>

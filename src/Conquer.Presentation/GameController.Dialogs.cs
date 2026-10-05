@@ -151,7 +151,7 @@ public sealed partial class GameController
             _ => "Reclutar oficial",
         };
         return new OfficerColumn($"{role} (rango: {rank})",
-            unit.Officer is { } current ? OfficerCard(current) : null,
+            unit.Officer is { } current ? OfficerCard(current, LeadsCavalry(unit)) : null,
             unit.Officer is null ? null : new Button("Relevar del mando", () => Show(Session.RelieveOfficer(Human.Id, unit.Id)),
                 Tooltip: "Vuelve a la reserva; la unidad se queda sin oficial.", Size: TextSize.Small),
             unit.Officer is null ? "Sin oficial: ni ventajas ni defectos." : null,
@@ -163,13 +163,16 @@ public sealed partial class GameController
                 Tooltip: can.Ok ? "Se une a la reserva con rasgos al azar: una o dos virtudes, y a veces un defecto." : can.Message, Size: TextSize.Small));
     }
 
-    private OfficerCard OfficerCard(Officer officer) =>
+    private OfficerCard OfficerCard(Officer officer, bool cavalry) =>
         new(officer.Title, new string('*', officer.Skill), OfficerTooltip(officer),
             officer.Traits.Select(t => ($"{Officer.TraitName(t)}: {Officer.TraitDescription(t)}", (Ink)(Officer.IsFlaw(t) ? Tone.Bad : Tone.Good))).ToList(),
-            PortraitOf(officer));
+            PortraitOf(officer, cavalry));
 
-    /// <summary>The officer's portrait in the player's colour and era.</summary>
-    public Portrait PortraitOf(Officer officer) => Portrait.Of(officer, Human.Era, Human.Color);
+    /// <summary>The officer's portrait in the player's colour and era; <paramref name="cavalry"/> if they lead cavalry.</summary>
+    public Portrait PortraitOf(Officer officer, bool cavalry = false) => Portrait.Of(officer, Human.Era, Human.Color, cavalry);
+
+    /// <summary>A regiment that is mostly cavalry: its officer's painted portrait is a cavalryman's.</summary>
+    private static bool LeadsCavalry(Unit unit) => unit.IsMilitary && unit.Function == UnitFunction.Cavalry;
 
     // ------------------------------------------------------------------ road window
 

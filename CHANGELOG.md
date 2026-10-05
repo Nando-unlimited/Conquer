@@ -2,6 +2,14 @@
 
 Todos los cambios del juego, del más reciente al más antiguo. Cada versión es un commit cuyo título es su número.
 
+## [1.94.0] - 2026-10-05
+
+### Añadido
+- **Retratos de caballería**: el grupo `caballeria` (por ejemplo `coronel-industrial-hombre-caballeria-01.png`) es para los oficiales al mando de un regimiento sobre todo de caballería. Si su época no tiene retratos de caballería, toman uno del ejército.
+
+### Corregido
+- `docs/RETRATOS.md` decía que los aviadores existen en la época industrial: la Aviación es de la moderna. Ahora explica qué grupos tiene sentido pintar en cada época (en la clásica y la medieval basta con `ejercito` y `marina`).
+
 ## [1.93.0] - 2026-10-05
 
 ### Cambiado

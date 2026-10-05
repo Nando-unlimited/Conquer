@@ -4,9 +4,9 @@ Deja aquí imágenes cuadradas (PNG o JPG, 256 px o más) llamadas rango-época-
 coronel-renacimiento-hombre-ejercito-03.png. El retrato muestra el rango; el juego no le pinta insignias.
 Épocas: antigua, clasica, medieval, renacimiento, industrial, moderna.
 Sexos: hombre, mujer.
-Grupos (el arma del oficial): ejercito, marina, aviacion.
+Grupos: ejercito, caballeria (oficiales al mando de caballería), marina, aviacion (solo en la época moderna).
 Rangos: coronel, brigadier, division, teniente, general, mariscal.
-Si falta un rango se usa el más cercano, y a marinos y aviadores sin retratos de su arma, los del ejército; las épocas sin imágenes usan el retrato dibujado. Cómo crearlas: docs/RETRATOS.md.
+Si falta un rango se usa el más cercano, y a los de caballería, marina y aviación sin retratos de su grupo, los del ejército; las épocas sin imágenes usan el retrato dibujado. Cómo crearlas: docs/RETRATOS.md.
 
 Origen y licencia de las imágenes (herramienta y plan con que se hicieron):
 - (aún no hay ninguna)

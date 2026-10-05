@@ -61,6 +61,18 @@ public class PortraitTests
         Assert.Equal("coronel-moderna-hombre-aviacion", face.PhotoGroups.First());
     }
 
+    [Fact]
+    public void ACavalryOfficerLooksForACavalrymansPortraitFirstThenTheArmys()
+    {
+        var colonel = new Officer(10, "Sancho Haro", [OfficerTrait.Offensive], 1);
+        var groups = Portrait.Of(colonel, Era.Industrial, 0, cavalry: true).PhotoGroups.ToList();
+        Assert.Equal("coronel-industrial-hombre-caballeria", groups[0]);
+        Assert.Equal("coronel-industrial-hombre-ejercito", groups[6]);
+        // Only the army has cavalry.
+        var sailor = new Officer(11, "Diego Lara", [OfficerTrait.Offensive], 1, branch: OfficerBranch.Navy);
+        Assert.DoesNotContain(Portrait.Of(sailor, Era.Industrial, 0, cavalry: true).PhotoGroups, g => g.EndsWith(Portrait.CavalrySlug));
+    }
+
     /// <summary>The painted portraits in the assets are named rank-era-sex-arm-number, so every one can be found.</summary>
     [Fact]
     public void ThePaintedPortraitsAreWellNamed()
@@ -71,8 +83,8 @@ public class PortraitTests
         var groups = (from rank in Portrait.RankSlugs
                       from era in Enum.GetValues<Era>()
                       from female in new[] { false, true }
-                      from branch in Enum.GetValues<OfficerBranch>()
-                      select $"{rank}-{Portrait.EraSlug(era)}-{Portrait.SexSlug(female)}-{Portrait.BranchSlug(branch)}").ToHashSet();
+                      from arm in Enum.GetValues<OfficerBranch>().Select(Portrait.BranchSlug).Append(Portrait.CavalrySlug)
+                      select $"{rank}-{Portrait.EraSlug(era)}-{Portrait.SexSlug(female)}-{arm}").ToHashSet();
         foreach (var file in Directory.GetFiles(folder).Where(f => f.EndsWith(".png") || f.EndsWith(".jpg")))
         {
             string name = Path.GetFileNameWithoutExtension(file);

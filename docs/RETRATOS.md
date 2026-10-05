@@ -4,21 +4,21 @@ El juego puede usar retratos pintados (creados con una IA de imágenes como Recr
 los dibujados con formas. Basta con dejar las imágenes en `src/Conquer.Client/Assets/Portraits` y compilar.
 
 Los retratos **muestran el rango ellos mismos**: el juego los dibuja tal cual, solo con un marco fino del color de la
-nación. Cada oficial toma uno de su rango, su época, su sexo y su arma (ejército, marina o aviación), siempre el mismo
-mientras no cambie de rango; al ascender pasa a uno del nuevo rango, así que cambia de cara.
+nación. Cada oficial toma uno de su rango, su época, su sexo y su grupo (ejército, caballería, marina o aviación),
+siempre el mismo mientras no cambie de rango; al ascender pasa a uno del nuevo rango, así que cambia de cara.
 
 No hace falta tenerlo todo: si falta su rango, el oficial toma uno del rango más cercano (el inferior si hay empate); un
-marino o un aviador sin retratos de su arma toma uno del ejército; y si su época no tiene ninguno, el retrato
-dibujado. Se pueden ir añadiendo poco a poco, por ejemplo empezando solo con
-`coronel` y `general`.
+oficial de caballería, de marina o de aviación sin retratos de su grupo toma uno del ejército; y si su época no tiene
+ninguno, el retrato dibujado. Se pueden ir añadiendo poco a poco, por ejemplo empezando solo con `coronel` y `general`.
 
 ## Formato y nombres
 
 - PNG o JPG (no SVG), **cuadrados**, de 256 píxeles o más (el juego los reduce a 256). Cabeza y hombros, la cara
   centrada en la parte de arriba.
 - Nombre: `rango-época-sexo-grupo-número.png`, en minúsculas y sin tildes. Por ejemplo
-  `coronel-renacimiento-hombre-ejercito-03.png`, `division-moderna-mujer-marina-01.png` o
-  `brigadier-industrial-hombre-aviacion-02.png`. El número puede ser cualquiera. Las cinco partes son obligatorias.
+  `coronel-renacimiento-hombre-ejercito-03.png`, `division-moderna-mujer-marina-01.png`,
+  `brigadier-industrial-hombre-caballeria-02.png` o `coronel-moderna-hombre-aviacion-01.png`. El número puede ser
+  cualquiera. Las cinco partes son obligatorias.
 
 | Época | En el nombre | Tiempos |
 | --- | --- | --- |
@@ -34,11 +34,15 @@ dibujado. Se pueden ir añadiendo poco a poco, por ejemplo empezando solo con
 | Hombre | `hombre` |
 | Mujer | `mujer` |
 
-| Grupo (arma) | En el nombre |
-| --- | --- |
-| Ejército (regimientos y cuarteles generales) | `ejercito` |
-| Marina (mandan flotas) | `marina` |
-| Aviación (mandan aviones) | `aviacion` |
+| Grupo | En el nombre | Quién lo usa | Épocas |
+| --- | --- | --- | --- |
+| Ejército | `ejercito` | Oficiales de los regimientos y los cuarteles generales | Todas |
+| Caballería | `caballeria` | Oficiales del ejército al mando de un regimiento sobre todo de caballería | Las que quieras (si falta, `ejercito`) |
+| Marina | `marina` | Oficiales de las flotas | Todas |
+| Aviación | `aviacion` | Oficiales de los regimientos de aviones | Solo la moderna (la Aviación es un avance de esa época) |
+
+Así, por ejemplo, la clásica y la medieval pueden tener solo `ejercito` y `marina`, y la industrial `ejercito`,
+`caballeria` y `marina`: no hay aviones en la industrial.
 
 | Rango | En el nombre | En la armada | En la aviación | Qué manda |
 | --- | --- | --- | --- | --- |
@@ -53,11 +57,13 @@ Casi todos los oficiales son coroneles (los reclutados lo son, y la mayoría de 
 generales tienen tenientes generales, generales y mariscales, y son siempre del ejército: los marinos y los aviadores
 solo llegan hasta `division`. Por eso conviene tener más coroneles:
 
-| Rango | Por época: `hombre-ejercito` | `mujer-ejercito` | `marina` y `aviacion` (cada sexo) |
+| Rango | Por época: `hombre-ejercito` | `mujer-ejercito` | `caballeria`, `marina` y `aviacion` (cada sexo) |
 | --- | --- | --- | --- |
 | `coronel` | 6 | 3 | 2 |
 | `brigadier`, `division` | 2 cada uno | 1 cada uno | 1 cada uno |
 | `teniente`, `general`, `mariscal` | 2 cada uno | 1 cada uno | — |
+
+La caballería, como la marina y la aviación, solo manda regimientos, así que tampoco pasa de `division`.
 
 Unas 30 imágenes por época. Con menos también funciona.
 
@@ -93,8 +99,9 @@ joven; un mariscal, un veterano canoso cargado de honores.
 
 Para los marinos, lo mismo con sus equivalentes: *ship captain, commodore, rear admiral, vice admiral, admiral, grand
 admiral*, con los galones en las mangas en las épocas industrial y moderna. Para los aviadores (solo existen desde la
-Aviación, en las épocas industrial y moderna): *air force colonel, air commodore, air vice-marshal*, uniforme azul
-grisáceo, gorra de plato con el emblema de alas y las alas de piloto en el pecho.
+Aviación, en la época moderna): *air force colonel, air commodore, air vice-marshal*, uniforme azul grisáceo, gorra de
+plato con el emblema de alas y las alas de piloto en el pecho. Para la caballería, el mismo rango que en el ejército,
+como *cavalry colonel*, *cavalry general*.
 
 ## Personajes por época
 
@@ -108,6 +115,9 @@ Para las mujeres, la misma descripción con *female commander*.
 | Renacimiento | 17th–18th century army commander, black tricorne hat, buff leather coat, steel gorget, lace cravat | Age of Sail naval officer, black bicorne hat, dark navy coat with gold trim |
 | Industrial | 19th century army officer, kepi, dark frock coat with brass buttons and epaulettes | Victorian naval officer, navy blue uniform with gold braid, peaked cap |
 | Moderna | 20th century army officer, peaked cap, olive drab uniform | mid-20th century naval officer, white peaked cap, navy blue uniform |
+
+Caballería (`caballeria`), por ejemplo en la industrial: *19th century cavalry officer, hussar or dragoon uniform with
+frogging, plumed shako or crested helmet, sabre hilt at the shoulder*.
 
 ## Licencias
 
