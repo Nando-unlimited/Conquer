@@ -24,12 +24,10 @@ public enum BattalionType
     Engineers,
     Medics,
     Bombers,
-    Trireme,
     Transport,
-    Galleon,
-    SteamTransport,
-    Ironclad,
-    Destroyer,
+    LineShip,
+    Escort,
+    Submarine,
     AircraftCarrier,
 }
 
@@ -235,22 +233,50 @@ public static class Battalions
             new("bombers", "Bombarderos", "V", 40, Cost((G, 200), (Al, 40), (Oil, 40)), 60, [Tech.Aviation], 55, 8, 40, 4, Machine: true, Flies: true) { Pieces = 10, PieceName = "bombarderos" },
         ]),
 
-        // Ships (lower-case symbols) sail at their speed times the sailing speed; their attack is their fire at sea.
-        [BattalionType.Trireme] = Ship(new("trireme", "Trirreme", "r", 150, Cost((W, 90), (G, 30)), 40, [Tech.Navigation], 8, 6, 30, 1, Naval: true)),
-        [BattalionType.Transport] = Ship(new("transport", "Barco de transporte", "t", 50, Cost((W, 70), (G, 20)), 30, [Tech.Navigation], 1, 2, 20, 0.9,
-            Naval: true, Capacity: 600)),
-        [BattalionType.Galleon] = Ship(new("galleon", "Galeón", "g", 250, Cost((W, 160), (G, 80), (Fe, 20)), 60, [Tech.Cartography], 20, 15, 45, 1.2,
-            Naval: true, Capacity: 200)),
-        [BattalionType.SteamTransport] = Ship(new("steam-transport", "Vapor de transporte", "v", 80, Cost((W, 60), (G, 80), (Fe, 60), (C, 30)), 45,
-            [Tech.SteamEngine], 2, 4, 30, 1.8, Naval: true, Capacity: 1500)),
-        [BattalionType.Ironclad] = Ship(new("ironclad", "Acorazado", "a", 400, Cost((G, 200), (Fe, 150), (C, 60)), 90, [Tech.Steel], 50, 40, 60, 2, Naval: true)),
-        [BattalionType.Destroyer] = Ship(new("destroyer", "Destructor", "d", 300, Cost((G, 250), (Fe, 150), (Oil, 60)), 90, [Tech.NavalEngineering], 70, 45, 65, 3,
-            Naval: true, Shipyard: BuildingType.DryDock)),
-        [BattalionType.AircraftCarrier] = Ship(new("aircraft-carrier", "Portaaviones", "p", 800, Cost((G, 500), (Fe, 300), (Oil, 120), (Al, 80)), 150,
-            [Tech.NavalEngineering, Tech.Aviation], 120, 50, 70, 2.5, Naval: true, Shipyard: BuildingType.DryDock)),
+        // Ships (lower-case symbols) sail at their speed times the sailing speed; their attack is their fire at sea. Each
+        // line has a model per age, like the army's, and its ships are refitted to the newest in port.
+        [BattalionType.Transport] = Fleet("Transportes",
+        [
+            new("transport", "Barco de transporte", "t", 50, Cost((W, 70), (G, 20)), 30, [Tech.Navigation], 1, 2, 20, 0.9, Naval: true, Capacity: 600),
+            new("carrack", "Carraca", "k", 70, Cost((W, 110), (G, 40)), 40, [Tech.Cartography], 3, 5, 30, 1.1, Naval: true, Capacity: 900),
+            new("steam-transport", "Vapor de transporte", "v", 80, Cost((W, 60), (G, 80), (Fe, 60), (C, 30)), 45, [Tech.SteamEngine], 2, 4, 30, 1.8,
+                Naval: true, Capacity: 1500),
+            new("motor-transport", "Buque de transporte", "m", 90, Cost((G, 100), (Fe, 80), (Oil, 30)), 45, [Tech.Combustion], 3, 6, 35, 2.5,
+                Naval: true, Capacity: 2500),
+        ]),
+        // The heavy guns of the fleet: they decide the battles at sea.
+        [BattalionType.LineShip] = Fleet("Buques de línea",
+        [
+            new("trireme", "Trirreme", "r", 150, Cost((W, 90), (G, 30)), 40, [Tech.Navigation], 8, 6, 30, 1, Naval: true),
+            new("galleon", "Galeón", "g", 250, Cost((W, 160), (G, 80), (Fe, 20)), 60, [Tech.Cartography], 20, 15, 45, 1.2, Naval: true, Capacity: 200),
+            new("ship-of-the-line", "Navío de línea", "n", 400, Cost((W, 200), (G, 100), (Fe, 40)), 70, [Tech.Metallurgy], 35, 25, 50, 1.2, Naval: true),
+            new("ironclad", "Acorazado", "a", 400, Cost((G, 200), (Fe, 150), (C, 60)), 90, [Tech.Steel], 50, 40, 60, 2, Naval: true),
+            new("battleship", "Acorazado moderno", "b", 900, Cost((G, 400), (Fe, 300), (Oil, 100)), 150, [Tech.NavalEngineering], 100, 70, 70, 2.5,
+                Naval: true, Shipyard: BuildingType.DryDock),
+        ]),
+        // Light and fast: they screen the fleet and, with the convoys, hunt submarines.
+        [BattalionType.Escort] = Fleet("Escoltas",
+        [
+            new("liburna", "Liburna", "l", 80, Cost((W, 50), (G, 20)), 25, [Tech.Navigation], 5, 5, 30, 1.5, Naval: true),
+            new("caravel", "Carabela", "c", 60, Cost((W, 80), (G, 30)), 30, [Tech.Cartography], 9, 8, 35, 1.6, Naval: true),
+            new("frigate", "Fragata", "f", 200, Cost((W, 120), (G, 60), (Fe, 20)), 45, [Tech.Metallurgy], 22, 15, 45, 1.7, Naval: true),
+            new("cruiser", "Crucero", "u", 300, Cost((G, 180), (Fe, 100), (C, 40)), 60, [Tech.Steel], 40, 30, 55, 2.3, Naval: true),
+            new("destroyer", "Destructor", "d", 300, Cost((G, 250), (Fe, 150), (Oil, 60)), 90, [Tech.NavalEngineering], 70, 45, 65, 3,
+                Naval: true, Shipyard: BuildingType.DryDock),
+        ]),
+        // They strike unseen and hunt merchant ships; weak if caught.
+        [BattalionType.Submarine] = Fleet("Submarinos",
+        [
+            new("submarine", "Submarino", "s", 60, Cost((G, 150), (Fe, 80), (Oil, 40)), 60, [Tech.Combustion], 45, 10, 50, 1.8, Naval: true),
+        ]),
+        [BattalionType.AircraftCarrier] = Fleet("Portaaviones",
+        [
+            new("aircraft-carrier", "Portaaviones", "p", 800, Cost((G, 500), (Fe, 300), (Oil, 120), (Al, 80)), 150,
+                [Tech.NavalEngineering, Tech.Aviation], 120, 50, 70, 2.5, Naval: true, Shipyard: BuildingType.DryDock),
+        ]),
     };
 
-    private static LineInfo Ship(BattalionInfo model) => new(model.Name, BattalionGroup.Navy, [model]);
+    private static LineInfo Fleet(string name, BattalionInfo[] models) => new(name, BattalionGroup.Navy, models);
 
     public static LineInfo Line(this BattalionType type) => Table[type];
 

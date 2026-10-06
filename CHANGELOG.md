@@ -2,6 +2,17 @@
 
 Todos los cambios del juego, del más reciente al más antiguo. Cada versión es un commit cuyo título es su número.
 
+## [1.111.0] - 2026-10-06
+
+Quinta parte de la nueva estructura militar: la marina (1 de 3).
+
+### Cambiado
+- **Líneas de barcos por época**, como las del ejército. Transportes: barco de transporte (600 hombres), carraca (900, Cartografía), vapor de transporte (1.500) y buque de transporte (2.500, Motor de combustión). Buques de línea: trirreme, galeón, navío de línea (Metalurgia), acorazado y acorazado moderno (Ingeniería naval, con dique seco). Escoltas: liburna, carabela, fragata, crucero (Acero) y destructor. Submarinos (Motor de combustión) y portaaviones.
+- Las partidas guardadas pasan cada barco a su línea y modelo: el trirreme, el galeón y el acorazado son buques de línea; el vapor, un transporte, y el destructor, una escolta.
+
+### Añadido
+- **Modernización en puerto**: una flota en uno de tus puertos pasa cada día sus barcos al modelo más nuevo de su línea que conozcas, por la mitad de lo que cuesta. Conserva su tripulación y el puerto completa el resto. Los modelos con dique seco lo piden también para modernizarse. El panel de la flota dice qué barcos pueden modernizarse y, si no, por qué.
+
 ## [1.110.0] - 2026-10-06
 
 Cuarta parte de la nueva estructura militar: la logística.

@@ -162,6 +162,50 @@ public sealed partial class GameSession
         Destroy(fleet, "hundida");
     }
 
+    /// <summary>
+    /// What refitting a ship to a newer model of its line takes, or why it cannot be done: the fleet in one of the
+    /// nation's ports and out of battle, the port's shipyard if the model needs one, room for what it carries and
+    /// <see cref="MilitaryRules.RefitCostShare"/> of the model's cost.
+    /// </summary>
+    public CommandResult CanRefit(Unit fleet, Battalion ship, BattalionInfo model)
+    {
+        var port = Map.Provinces[fleet.ProvinceId];
+        if (!IsPort(port, fleet.OwnerId)) return CommandResult.Fail("Solo se moderniza en uno de tus puertos.");
+        if (EnemyFleetsIn(fleet.ProvinceId, fleet.OwnerId).Any()) return CommandResult.Fail("La flota está combatiendo.");
+        if (model.Shipyard is BuildingType yard && !port.Has(yard)) return CommandResult.Fail($"Hace falta {yard.Info().WithArticle} en el puerto.");
+        if (CargoMen(fleet) > fleet.Capacity - ship.Info.Capacity + model.Capacity) return CommandResult.Fail("No cabría lo que lleva.");
+        if (!fleet.Owner.Stockpile.Has(RefitCost(model))) return CommandResult.Fail($"Cuesta {RefitCost(model)}.");
+        return CommandResult.Success();
+    }
+
+    public static Economy.ResourceCost RefitCost(BattalionInfo model) => model.Cost.Times(MilitaryRules.RefitCostShare);
+
+    /// <summary>
+    /// Every day the nation's fleets in port refit their ships to the newest model of their line it knows, as far as it
+    /// can pay (<see cref="CanRefit"/>); a ship keeps its crew and its share of organisation, and the port fills up the rest.
+    /// </summary>
+    private void RefitFleets(Player player)
+    {
+        foreach (var fleet in Units.Where(u => u.OwnerId == player.Id && u.IsFleet).ToList())
+        {
+            var refitted = new List<string>();
+            foreach (var ship in fleet.Ships)
+            {
+                int best = ship.Type.BestModel(player.Techs);
+                if (best <= ship.Model) continue;
+                var model = ship.Type.Models()[best];
+                if (!CanRefit(fleet, ship, model).Ok) continue;
+                var cost = RefitCost(model);
+                player.Stockpile.TrySpend(cost);
+                foreach (var (type, amount) in cost.Items) player.Record(Economy.ResourceFlow.Upkeep, type, -amount);
+                refitted.Add($"{ship.Info.Name} a {model.Name.ToLowerInvariant()}");
+                ship.Modernise(best);
+            }
+            if (refitted.Count > 0 && player.IsHuman)
+                Notify(player.Id, $"{fleet.Name} se moderniza en {PlaceName(Map.Provinces[fleet.ProvinceId])}: {string.Join(", ", refitted)}.");
+        }
+    }
+
     /// <summary>Tells the human when their fleet runs into an enemy one, or an enemy fleet into theirs.</summary>
     private void NotifyNavalEncounter(Unit fleet, int provinceId)
     {

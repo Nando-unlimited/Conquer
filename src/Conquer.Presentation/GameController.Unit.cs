@@ -192,6 +192,7 @@ public sealed partial class GameController
             doc.Add(new Info("Velocidad en el mar", $"{unit.Speed * GameRules.SailingSpeed * GameRules.CitizenSpeedKmh:0.#} km/h"));
             bool port = Session.IsPort(Map.Provinces[unit.ProvinceId], unit.OwnerId);
             doc.Add(new Info("Reparaciones", port ? "En puerto" : "Solo en puerto", port ? Tone.Good : Tone.Dim));
+            RefitLine(doc, unit);
             doc.Add(OfficerLine("Oficial", unit.Officer, "Manda esta flota: sus rasgos y su habilidad afectan al fuego de sus barcos."));
             doc.Add(PortraitsOf(unit, ("Oficial", unit.Officer)));
             if (unit.Capacity > 0)
@@ -268,6 +269,24 @@ public sealed partial class GameController
         if (ammoOnTheWay >= 0.05) carried.Add($"{ammoOnTheWay:0.#} de munición");
         doc.Add(new Info("Envíos", $"{shipments.Count} en camino · {next}", Tone.Normal,
             $"Desde la capital: {string.Join(", ", carried)}. El siguiente llega en {next}.\n{QueueText(unit)}"));
+    }
+
+    /// <summary>
+    /// Which of a fleet's ships its nation knows a newer model of, and whether they are refitted next day or why not;
+    /// nothing when all are up to date.
+    /// </summary>
+    private void RefitLine(Document doc, Unit fleet)
+    {
+        var owner = Session.Players[fleet.OwnerId];
+        var due = fleet.Ships.Select(b => (Ship: b, Best: b.Type.BestModel(owner.Techs))).Where(x => x.Best > x.Ship.Model)
+            .Select(x => (x.Ship, Model: x.Ship.Type.Models()[x.Best])).ToList();
+        if (due.Count == 0 || fleet.OwnerId != Human.Id) return;
+        var checks = due.Select(d => (d.Ship, d.Model, Check: Session.CanRefit(fleet, d.Ship, d.Model))).ToList();
+        int ready = checks.Count(c => c.Check.Ok);
+        string tip = string.Join("\n", checks.Select(c => $"{c.Ship.Info.Name} → {c.Model.Name}: " +
+                                                         (c.Check.Ok ? $"{GameSession.RefitCost(c.Model)}" : c.Check.Message)));
+        doc.Add(new Info("Modernización", ready > 0 ? $"{ready} de {due.Count} barcos, mañana" : $"{due.Count} barcos esperan",
+            ready > 0 ? Tone.Good : Tone.Accent, tip + $"\nEn uno de tus puertos, cada barco pasa al modelo más nuevo de su línea por el {MilitaryRules.RefitCostShare:P0} de su coste."));
     }
 
     /// <summary>Where the unit stands in the queue for shipments, by its HQ's priority.</summary>

@@ -120,6 +120,42 @@ public sealed record SaveGame
         JsonSerializer.Serialize(gzip, this, Options);
     }
 
+    /// <summary>
+    /// The ship types of saves from before 1.111.0, each a line of one model, and the line and model they are now:
+    /// the trireme, the galleon and the ironclad are line ships; the steam transport, a transport; the destroyer, an escort.
+    /// </summary>
+    private static readonly Dictionary<string, (BattalionType Type, int Model)> OldShips = new()
+    {
+        ["Trireme"] = (BattalionType.LineShip, 0),
+        ["Galleon"] = (BattalionType.LineShip, 1),
+        ["Ironclad"] = (BattalionType.LineShip, 3),
+        ["SteamTransport"] = (BattalionType.Transport, 2),
+        ["Destroyer"] = (BattalionType.Escort, 4),
+    };
+
+    /// <summary>Puts the old ship types of a save from before 1.111.0 into their lines, with the model each was (see <see cref="OldShips"/>).</summary>
+    private static void RenameOldShips(System.Text.Json.Nodes.JsonNode node)
+    {
+        switch (node)
+        {
+            case System.Text.Json.Nodes.JsonObject obj:
+                foreach (string key in new[] { "Type", "Battalion" })
+                    if (obj[key] is System.Text.Json.Nodes.JsonValue value && value.TryGetValue(out string? name) && name != null && OldShips.TryGetValue(name, out var ship))
+                    {
+                        obj[key] = ship.Type.ToString();
+                        if (key == "Type" && obj.ContainsKey("Strength")) obj["Model"] = ship.Model;
+                    }
+                foreach (var (_, child) in obj.ToList()) if (child != null) RenameOldShips(child);
+                break;
+            case System.Text.Json.Nodes.JsonArray array:
+                for (int i = 0; i < array.Count; i++)
+                    if (array[i] is System.Text.Json.Nodes.JsonValue v && v.TryGetValue(out string? s) && s != null && OldShips.TryGetValue(s, out var renamed))
+                        array[i] = renamed.Type.ToString();
+                    else if (array[i] != null) RenameOldShips(array[i]!);
+                break;
+        }
+    }
+
     /// <summary>Reads a save, or throws <see cref="InvalidDataException"/> if it is damaged or from an incompatible version.</summary>
     public static SaveGame Read(Stream stream)
     {
@@ -127,7 +163,9 @@ public sealed record SaveGame
         try
         {
             using var gzip = new GZipStream(stream, CompressionMode.Decompress, leaveOpen: true);
-            save = JsonSerializer.Deserialize<SaveGame>(gzip, Options);
+            var json = System.Text.Json.Nodes.JsonNode.Parse(gzip);
+            if (json != null) RenameOldShips(json);
+            save = json.Deserialize<SaveGame>(Options);
         }
         catch (Exception e) when (e is JsonException or InvalidDataException or NotSupportedException)
         {

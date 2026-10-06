@@ -746,7 +746,7 @@ public class MilitaryTests(WorldFixture world)
         Assert.True(s.RaiseHeadquarters(0, a.Id, 1).Ok);
         var scoutsOnly = s.AddTemplate(s.Human, [BattalionType.Scouts, BattalionType.Engineers]);
         Assert.True(s.CanTrainTemplate(a, scoutsOnly).Ok);
-        Assert.Null(BattalionType.Trireme.First().TrainingBuilding(BattalionType.Trireme));
+        Assert.Null(BattalionType.LineShip.First().TrainingBuilding(BattalionType.LineShip));
 
         // Barracks need no advance, and once built the city trains combat troops.
         Assert.True(s.Build(0, a.Id, BuildingType.Barracks).Ok);
@@ -777,7 +777,7 @@ public class MilitaryTests(WorldFixture world)
         Assert.Null(field.CityId);
 
         // With them it trains like a city, keeping enough people to stay settled; ships still need a port.
-        Assert.False(s.CanTrain(field, BattalionType.Trireme).Ok);
+        Assert.False(s.CanTrain(field, BattalionType.LineShip).Ok);
         Assert.True(s.Train(0, field.Id, BattalionType.LightInfantry).Ok);
         Assert.Single(field.Training);
         field.Population = 100;
@@ -905,7 +905,7 @@ public class MilitaryTests(WorldFixture world)
         Assert.Equal("1.er Ejército", Formations.HeadquartersName(2, 1));
         Assert.Equal("2.º Grupo de ejércitos", Formations.HeadquartersName(3, 2));
         Assert.Equal("Batallón de arqueros", Formations.BattalionName(BattalionType.RangedInfantry.First()));
-        Assert.Equal("Trirreme", Formations.BattalionName(BattalionType.Trireme.First()));
+        Assert.Equal("Trirreme", Formations.BattalionName(BattalionType.LineShip.First()));
     }
 
     [Fact]

@@ -30,12 +30,12 @@ public static class Models
         "engineers" => "unit-engineer",
         "tanks" => "unit-tank",
         "bombers" => "plane-biplane-bombers",
-        "trireme" => "ship-trireme",
-        "transport" => "ship-galley",
-        "galleon" => "ship-galleon",
-        "steam-transport" => "ship-cruiser",
-        "ironclad" => "ship-ironclad",
-        "destroyer" => "ship-destroyer",
+        "trireme" or "liburna" => "ship-trireme",
+        "transport" or "caravel" => "ship-galley",
+        "galleon" or "carrack" or "ship-of-the-line" or "frigate" => "ship-galleon",
+        "steam-transport" or "motor-transport" or "cruiser" => "ship-cruiser",
+        "ironclad" or "battleship" => "ship-ironclad",
+        "destroyer" or "submarine" => "ship-destroyer",
         _ => "ship-aircraft-carrier",
     };
 

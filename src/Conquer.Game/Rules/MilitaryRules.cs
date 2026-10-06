@@ -17,6 +17,8 @@ public static class MilitaryRules
     public const int MaxShipsPerFleet = 10;
     /// <summary>A fleet in a port with a dry dock recovers organisation and crews this many times faster.</summary>
     public const double DryDockRepair = 2;
+    /// <summary>Share of the newer model's cost a ship's refit costs, in one of the nation's ports.</summary>
+    public const double RefitCostShare = 0.5;
     /// <summary>Each advance that studies a battalion (<see cref="Science.TechInfo.FasterTraining"/>) has the barracks train it this much faster.</summary>
     public const double TechTrainingSpeed = 0.25;
     /// <summary>HQs travel on horseback, faster than infantry.</summary>

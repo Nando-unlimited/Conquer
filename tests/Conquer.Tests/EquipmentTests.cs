@@ -151,7 +151,7 @@ public class EquipmentTests(WorldFixture world)
         // Training costs the gold; the rest of the cost is the equipment's.
         Assert.All(catapults.TrainingCost.Items, i => Assert.Equal(ResourceType.Gold, i.Type));
         Assert.DoesNotContain(catapults.EquipmentCost.Items, i => i.Type == ResourceType.Gold);
-        Assert.False(BattalionType.Trireme.First().NeedsEquipment);
+        Assert.False(BattalionType.LineShip.First().NeedsEquipment);
     }
 
     [Fact]

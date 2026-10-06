@@ -1,3 +1,4 @@
+using Conquer.Game.Military;
 using Conquer.Game.Buildings;
 using Conquer.Game.Economy;
 using Conquer.Game.Rules;
@@ -161,5 +162,30 @@ public class SaveGameTests(WorldFixture world)
     {
         using var stream = new MemoryStream([1, 2, 3, 4]);
         Assert.Throws<InvalidDataException>(() => SaveGame.Read(stream));
+    }
+
+    [Fact]
+    public void OldShipTypesLoadAsTheirLineAndModel()
+    {
+        var s = GameSession.Create(_map, 2, seed: 7, computerRivals: false);
+        var port = _map.Provinces.First(p => p.IsWater);
+        s.AddFleet(0, port.Id, BattalionType.LineShip, BattalionType.Escort, BattalionType.Transport);
+
+        // Written as a save from before 1.111.0 would be: each ship its own type, of a single model.
+        using var plain = new MemoryStream();
+        using (var gzip = new System.IO.Compression.GZipStream(new MemoryStream(Bytes(s.ToSave("test"))), System.IO.Compression.CompressionMode.Decompress))
+            gzip.CopyTo(plain);
+        string json = System.Text.Encoding.UTF8.GetString(plain.ToArray())
+            .Replace("\"Type\":\"LineShip\"", "\"Type\":\"Ironclad\"").Replace("\"Type\":\"Escort\"", "\"Type\":\"Destroyer\"")
+            .Replace("\"Type\":\"Transport\"", "\"Type\":\"SteamTransport\"");
+        using var old = new MemoryStream();
+        using (var gzip = new System.IO.Compression.GZipStream(old, System.IO.Compression.CompressionLevel.Fastest, leaveOpen: true))
+            gzip.Write(System.Text.Encoding.UTF8.GetBytes(json));
+        old.Position = 0;
+
+        var loaded = GameSession.Load(_map, SaveGame.Read(old));
+        var ships = loaded.Units.Single(u => u.IsFleet).Ships;
+        Assert.Equal([(BattalionType.LineShip, "Acorazado"), (BattalionType.Escort, "Destructor"), (BattalionType.Transport, "Vapor de transporte")],
+            ships.Select(b => (b.Type, b.Info.Name)));
     }
 }

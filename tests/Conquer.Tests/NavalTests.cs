@@ -62,21 +62,21 @@ public class NavalTests(WorldFixture world)
         s.FoundCity(0, s.AddUnit(0, UnitType.Settlers, inland.Id, 300).Id);
         inland.Population = 3000;
 
-        Assert.Equal("Los barcos solo se construyen en ciudades con puerto.", s.CanTrain(inland, BattalionType.Trireme).Message);
-        Assert.True(s.Train(0, port.Id, BattalionType.Trireme).Ok);
+        Assert.Equal("Los barcos solo se construyen en ciudades con puerto.", s.CanTrain(inland, BattalionType.LineShip).Message);
+        Assert.True(s.Train(0, port.Id, BattalionType.LineShip).Ok);
         RunUntil(s, () => s.Units.Any(u => u.IsFleet));
 
         var fleet = s.Units.Single(u => u.IsFleet);
         Assert.Equal(port.Id, fleet.ProvinceId);
-        Assert.Equal(BattalionType.Trireme, fleet.Battalions.Single().Type);
-        Assert.False(s.CanAddToTemplate(s.Human, s.Human.Templates[0], BattalionType.Trireme).Ok);
+        Assert.Equal(BattalionType.LineShip, fleet.Battalions.Single().Type);
+        Assert.False(s.CanAddToTemplate(s.Human, s.Human.Templates[0], BattalionType.LineShip).Ok);
     }
 
     [Fact]
     public void FleetsSailAsFarAsTheirNationCanNavigate()
     {
         var (s, port, sea, landing) = WithPort();
-        var fleet = s.AddFleet(0, port.Id, BattalionType.Trireme);
+        var fleet = s.AddFleet(0, port.Id, BattalionType.LineShip);
         var ocean = _map.Provinces.First(p => p.Biome == Biome.Ocean);
 
         Assert.True(s.CanUnitEnter(fleet, sea.Id));
@@ -124,7 +124,7 @@ public class NavalTests(WorldFixture world)
     {
         var (s, _, sea, _) = WithPort(players: 2);
         s.DeclareWar(0, 1);
-        var ours = s.AddFleet(0, sea.Id, BattalionType.Trireme, BattalionType.Trireme, BattalionType.Trireme);
+        var ours = s.AddFleet(0, sea.Id, BattalionType.LineShip, BattalionType.LineShip, BattalionType.LineShip);
         var theirs = s.AddFleet(1, sea.Id, BattalionType.Transport);
         var aboard = s.AddRegiment(1, sea.Id, BattalionType.LightInfantry);
         aboard.CarrierId = theirs.Id;
@@ -142,7 +142,7 @@ public class NavalTests(WorldFixture world)
     public void MergingFleetsKeepsTheirCargo()
     {
         var (s, port, _, _) = WithPort();
-        var a = s.AddFleet(0, port.Id, BattalionType.Trireme);
+        var a = s.AddFleet(0, port.Id, BattalionType.LineShip);
         var b = s.AddFleet(0, port.Id, BattalionType.Transport);
         var regiment = s.AddRegiment(0, port.Id, BattalionType.LightInfantry);
         s.Embark(0, regiment.Id, b.Id);
@@ -194,11 +194,11 @@ public class NavalTests(WorldFixture world)
     public void WithoutAPortBuildingACityBuildsNoShipsAndShelters()
     {
         var (s, port, _, _) = WithPort();
-        var fleet = s.AddFleet(0, port.Id, BattalionType.Trireme);
+        var fleet = s.AddFleet(0, port.Id, BattalionType.LineShip);
         port.ClearBuildings();
 
         Assert.False(s.IsPort(port, 0));
-        Assert.False(s.CanTrain(port, BattalionType.Trireme).Ok);
+        Assert.False(s.CanTrain(port, BattalionType.LineShip).Ok);
         Assert.False(s.CanUnitEnter(fleet, port.Id));
     }
 
@@ -209,10 +209,10 @@ public class NavalTests(WorldFixture world)
         var city = s.CityIn(port)!;
         s.Human.Learn(Tech.NavalEngineering);
 
-        Assert.StartsWith("Requiere dique seco", s.CanTrain(port, BattalionType.Destroyer).Message);
+        Assert.StartsWith("Requiere dique seco", s.CanTrain(port, BattalionType.Escort).Message);
         Assert.True(s.IsBuildingAvailable(port, BuildingType.DryDock).Ok);
         port.AddBuilding(BuildingType.DryDock);
-        Assert.True(s.CanTrain(port, BattalionType.Destroyer).Ok);
+        Assert.True(s.CanTrain(port, BattalionType.Escort).Ok);
         Assert.False(s.CanTrain(port, BattalionType.AircraftCarrier).Ok); // also needs aviation
     }
 
@@ -232,7 +232,7 @@ public class NavalTests(WorldFixture world)
         {
             var (s, port, _, _) = WithPort();
             if (dock) port.AddBuilding(BuildingType.DryDock);
-            var fleet = s.AddFleet(0, port.Id, BattalionType.Trireme);
+            var fleet = s.AddFleet(0, port.Id, BattalionType.LineShip);
             fleet.Battalions[0].Organisation = 0;
             for (int h = 0; h < 24; h++) s.Step();
             return fleet.Battalions[0].Organisation;
@@ -265,5 +265,47 @@ public class NavalTests(WorldFixture world)
         Assert.Equal(1, landing.ControllerId);
         Assert.Equal(landing.Id, regiment.ProvinceId);
         Assert.False(regiment.IsAboard);
+    }
+
+    [Fact]
+    public void EachLineOfShipsHasAModelPerAge()
+    {
+        Assert.Equal(["Barco de transporte", "Carraca", "Vapor de transporte", "Buque de transporte"], BattalionType.Transport.Models().Select(m => m.Name));
+        Assert.Equal(["Trirreme", "Galeón", "Navío de línea", "Acorazado", "Acorazado moderno"], BattalionType.LineShip.Models().Select(m => m.Name));
+        Assert.Equal(["Liburna", "Carabela", "Fragata", "Crucero", "Destructor"], BattalionType.Escort.Models().Select(m => m.Name));
+        Assert.Equal("Submarino", BattalionType.Submarine.First().Name);
+        Assert.All(Battalions.All.Where(t => t.Line().Group == BattalionGroup.Navy).SelectMany(t => t.Models()), m => Assert.True(m.Naval && !m.NeedsEquipment));
+        // Each line's transports carry more as the ages go by.
+        var capacity = BattalionType.Transport.Models().Select(m => m.Capacity).ToList();
+        Assert.Equal(capacity.Order(), capacity);
+    }
+
+    [Fact]
+    public void FleetsInPortAreRefittedToTheNewestModelOfTheirLine()
+    {
+        var (s, port, sea, _) = WithPort();
+        var fleet = s.AddFleet(0, port.Id, BattalionType.LineShip, BattalionType.Escort);
+        Assert.Equal(["Trirreme", "Liburna"], fleet.Ships.Select(b => b.Info.Name));
+        s.Human.Learn(Tech.Astronomy);
+        s.Human.Learn(Tech.Cartography);
+        double iron = s.Human.Stockpile[ResourceType.Iron];
+
+        // At sea nothing happens; back in port, both are refitted for half the new model's cost.
+        fleet.ProvinceId = sea.Id;
+        Assert.Equal("Solo se moderniza en uno de tus puertos.", s.CanRefit(fleet, fleet.Ships[0], BattalionType.LineShip.Models()[1]).Message);
+        do s.Step(); while (s.Date.Hour != 0);
+        Assert.Equal("Trirreme", fleet.Ships[0].Info.Name);
+        fleet.ProvinceId = port.Id;
+        do s.Step(); while (s.Date.Hour != 0);
+        Assert.Equal(["Galeón", "Carabela"], fleet.Ships.Select(b => b.Info.Name));
+        // The galleon's iron (nobody mines it yet): half of its 20.
+        Assert.True(iron - s.Human.Stockpile[ResourceType.Iron] >= 20 * MilitaryRules.RefitCostShare - 1e-6);
+
+        // The modern battleship needs a dry dock.
+        foreach (var t in new[] { Tech.NavalEngineering }) s.Human.Learn(t);
+        var battleship = BattalionType.LineShip.Models()[4];
+        Assert.StartsWith("Hace falta un dique seco", s.CanRefit(fleet, fleet.Ships[0], battleship).Message);
+        port.AddBuilding(BuildingType.DryDock);
+        Assert.True(s.CanRefit(fleet, fleet.Ships[0], battleship).Ok);
     }
 }

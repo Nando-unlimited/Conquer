@@ -41,7 +41,7 @@ public class OfficerBranchTests(WorldFixture world)
     public void FleetsAreLedByNavalOfficersAndAircraftByAirmen()
     {
         var (s, home) = Nation();
-        var fleet = s.AddFleet(0, Sea().Id, BattalionType.Trireme);
+        var fleet = s.AddFleet(0, Sea().Id, BattalionType.LineShip);
         Assert.True(fleet.HasOfficer);
         Assert.Equal(OfficerBranch.Navy, fleet.OfficerBranch);
         Assert.Equal(OfficerBranch.Air, s.AddRegiment(0, home.Id, BattalionType.Bombers).OfficerBranch);
@@ -68,7 +68,7 @@ public class OfficerBranchTests(WorldFixture world)
         s.Human.Learn(Tech.Aviation);
         Assert.True(s.CanRecruitOfficer(s.Human, OfficerBranch.Air).Ok);
         Assert.False(s.CanRecruitOfficer(s.Human, OfficerBranch.Navy).Ok);
-        s.AddFleet(0, Sea().Id, BattalionType.Trireme);
+        s.AddFleet(0, Sea().Id, BattalionType.LineShip);
         Assert.True(s.CanRecruitOfficer(s.Human, OfficerBranch.Navy).Ok);
     }
 
@@ -76,7 +76,7 @@ public class OfficerBranchTests(WorldFixture world)
     public void ANavalOfficerAddsToTheFleetsFire()
     {
         var (s, _) = Nation();
-        var fleet = s.AddFleet(0, Sea().Id, BattalionType.Trireme, BattalionType.Trireme);
+        var fleet = s.AddFleet(0, Sea().Id, BattalionType.LineShip, BattalionType.LineShip);
         double plain = GameSession.ExpectedNavalFire(fleet);
         s.Human.OfficerReserve.Add(new Officer(50, "Sancho Haro", [OfficerTrait.Offensive], 3, branch: OfficerBranch.Navy));
         Assert.True(s.AssignOfficer(0, fleet.Id, 50).Ok);
@@ -87,7 +87,7 @@ public class OfficerBranchTests(WorldFixture world)
     public void TheArmIsSaved()
     {
         var (s, _) = Nation();
-        var fleet = s.AddFleet(0, Sea().Id, BattalionType.Trireme);
+        var fleet = s.AddFleet(0, Sea().Id, BattalionType.LineShip);
         s.RecruitOfficer(0, OfficerBranch.Navy);
         s.AssignOfficer(0, fleet.Id, s.Human.OfficerReserve[^1].Id);
         var loaded = GameSession.Load(_map, s.ToSave("test"));

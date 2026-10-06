@@ -1003,6 +1003,7 @@ public sealed partial class GameSession
         _supplied[player.Id] = ComputeSupply(player);
         ModerniseInPlace(player);
         DailyShipments(player);
+        RefitFleets(player);
         var capital = CapitalProvince(player);
 
         foreach (var unit in Units.Where(u => u.OwnerId == player.Id && (u.IsMilitary || u.IsFleet)).ToList())
