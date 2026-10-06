@@ -185,10 +185,11 @@ public sealed record PlayerSave(
     double[] ResearchProgress, double SpareScience, double LastDayScience, List<TemplateSave> Templates,
     int[]? ResearchPriorities = null, List<Tech>? CurrentResearch = null, List<Institution>? Institutions = null,
     List<OfficerSave>? OfficerReserve = null, bool Eliminated = false, double? Manpower = null, int? ReligionId = null,
-    List<int>? Explored = null, Dictionary<string, double>? Equipment = null, double[][]? LastDayFlows = null, List<ShipOrderSave>? ShipOrders = null);
+    List<int>? Explored = null, Dictionary<string, double>? Equipment = null, double[][]? LastDayFlows = null, List<ShipOrderSave>? ShipOrders = null,
+    double? Convoys = null);
 
 /// <summary>A ship in the nation's construction queue.</summary>
-public sealed record ShipOrderSave(int Id, BattalionType Type, int Model, int? PreferredPortId, int? PortId, double DaysDone, bool WaitingForCrew);
+public sealed record ShipOrderSave(int Id, BattalionType Type, int Model, int? PreferredPortId, int? PortId, double DaysDone, bool WaitingForCrew, bool Convoys = false);
 
 /// <summary>Where and when an institution was born.</summary>
 public sealed record InstitutionBirthSave(Institution Institution, int ProvinceId, long Hours);
@@ -215,10 +216,11 @@ public sealed record UnitSave(
     List<BattalionSave> Battalions, int? CommanderId, int? AttackingProvinceId, List<int> Path, double HoursToNext, double StepHours,
     int? CarrierId = null, GeneralSave? General = null, OfficerSave? Officer = null, string? CustomName = null, bool AutoClaim = false,
     Echelon Size = Echelon.Regiment, List<RegimentSave>? Regiments = null, List<BrigadeSave>? Brigades = null,
-    bool AutoExplore = false, SupplyPriority SupplyPriority = SupplyPriority.Normal, double AmmoSpent = 0);
+    bool AutoExplore = false, SupplyPriority SupplyPriority = SupplyPriority.Normal, double AmmoSpent = 0, FleetMission Mission = FleetMission.None);
 
 /// <summary>A shipment on its way from the capital to a combat unit.</summary>
-public sealed record ShipmentSave(int OwnerId, int UnitId, double Men, Dictionary<string, double> Pieces, double Ammo, long ArriveHours);
+public sealed record ShipmentSave(int OwnerId, int UnitId, double Men, Dictionary<string, double> Pieces, double Ammo, long ArriveHours,
+    List<int>? SeaRoute = null, double Convoys = 0);
 
 /// <summary>A regiment inside a combat unit (a regiment unit has one, carrying the unit's number and name).</summary>
 public sealed record RegimentSave(int Number, string? CustomName, List<BattalionSave> Battalions);

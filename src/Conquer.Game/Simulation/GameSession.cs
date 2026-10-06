@@ -146,7 +146,12 @@ public sealed partial class GameSession
         * (p.OwnerId >= 0 ? GameRules.EraCapacity(Players[p.OwnerId].Era) : 1);
 
     /// <summary>What improves a province: its owner's advances plus its own buildings.</summary>
-    public Modifiers BonusesOf(Province p) => p.OwnerId >= 0 ? Players[p.OwnerId].Bonuses + p.BuildingBonuses : p.BuildingBonuses;
+    public Modifiers BonusesOf(Province p)
+    {
+        var bonuses = p.OwnerId >= 0 ? Players[p.OwnerId].Bonuses + p.BuildingBonuses : p.BuildingBonuses;
+        // A blockaded port loses its sea trade.
+        return IsBlockaded(p) ? bonuses with { Taxes = bonuses.Taxes - BuildingType.Port.Info().Effects.Taxes } : bonuses;
+    }
 
     /// <summary>
     /// What pushes a province's mood up or down, as (reason, points). Their sum, clamped to 0..100,
@@ -227,6 +232,7 @@ public sealed partial class GameSession
     public void Step()
     {
         Date = new GameDate(Date.Hours + 1);
+        Patrol();
         MoveUnits();
         ResolveBattles();
         ResolveNavalBattles();
@@ -247,6 +253,7 @@ public sealed partial class GameSession
             DailyRoadWork();
             foreach (var player in Players) DailyProduction(player);
             foreach (var player in Players) DailyMilitary(player);
+            DailyConvoyRaids();
             DailySieges();
             DailyMemories();
             DailyTributes();

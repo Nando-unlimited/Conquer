@@ -27,6 +27,7 @@ public sealed partial class GameSession
     public CommandResult CanBuildShipIn(Province p, int playerId, BattalionInfo model)
     {
         if (!IsPort(p, playerId)) return CommandResult.Fail("Los barcos solo se construyen en ciudades con puerto.");
+        if (IsBlockaded(p)) return CommandResult.Fail("El puerto está bloqueado por el enemigo.");
         if (model.Shipyard is BuildingType yard && !p.Has(yard)) return CommandResult.Fail($"Requiere {yard.Info().Name.ToLowerInvariant()} en la ciudad.");
         return CommandResult.Success();
     }
@@ -148,6 +149,12 @@ public sealed partial class GameSession
         port.Population -= info.Men;
         player.Manpower -= info.Men;
         player.ShipOrders.Remove(order);
+        if (order.Convoys)
+        {
+            player.Convoys += MilitaryRules.ConvoysPerOrder;
+            if (player.IsHuman) Notify(player.Id, $"{MilitaryRules.ConvoysPerOrder} convoyes nuevos en {PlaceName(port)}: tienes {player.Convoys:0}.");
+            return;
+        }
         var fleet = AddUnit(player.Id, UnitType.Fleet, port.Id, 0, NextUnitNumber(player.Id, FleetNumbering));
         fleet.Ships.Add(new Battalion(order.Type, order.Model));
         if (player.IsHuman) Notify(player.Id, $"Nueva unidad en {PlaceName(port)}: {fleet.Name} ({info.Name.ToLowerInvariant()}).");

@@ -74,6 +74,14 @@ public sealed partial class GameController
             alerts.Add(UnitAlert("Sin munición", Tone.Bad, noAmmo,
                 $"A estas unidades les queda menos de una cuarta parte de su munición: sin ella luchan al {MilitaryRules.OutOfAmmoEfficiency:P0}. " +
                 "La capital se la repone con los suministros del almacén: fabrica más en los talleres o sube la prioridad de su cuartel general."));
+        if (Human.CargoLeftForWantOfConvoys >= 0.5)
+            alerts.Add(new Alert("Faltan convoyes", Tone.Bad,
+                $"Los envíos a tus tropas al otro lado del mar dejaron atrás {Human.CargoLeftForWantOfConvoys:N0} hombres, piezas o suministros por falta de convoyes. Encarga más en la pestaña Marina.",
+                () => OpenNation(NationTab.Navy)));
+        if (Human.ConvoysLostLastDay >= 0.05)
+            alerts.Add(new Alert("Convoyes hundidos", Tone.Bad,
+                $"Ayer el enemigo hundió {Human.ConvoysLostLastDay:0.#} de tus convoyes con su carga. Pon flotas a escoltar los mares de sus rutas o cambia de ruta.",
+                () => OpenNation(NationTab.Navy)));
         var worn = regiments.Where(u => Session.IsInSupply(u) && Session.DailyAttrition(u) > 0).Select(u => u.Id).ToList();
         if (worn.Count > 0)
             alerts.Add(UnitAlert("Desgaste", Tone.Accent, worn,

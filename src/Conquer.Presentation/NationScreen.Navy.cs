@@ -12,7 +12,7 @@ public sealed partial class NationScreen
     /// <summary>Each fleet: where it is, its ships, crews and organisation, whether in port and what it does.</summary>
     private TablePage Fleets()
     {
-        Column[] columns = [new("Flota", 190), new("Ubicación", 190), new("Barcos", 330), new("Tripulación", 140), new("Organiz.", 110), new("Estado", 230), new("", 60)];
+        Column[] columns = [new("Flota", 180), new("Ubicación", 170), new("Barcos", 300), new("Tripulación", 130), new("Organiz.", 100), new("Misión", 160), new("Estado", 200), new("", 60)];
         var rows = new List<IReadOnlyList<Cell>>();
         foreach (var fleet in Session.Units.Where(u => u.OwnerId == Player.Id && u.IsFleet).OrderBy(u => u.Name))
         {
@@ -27,6 +27,8 @@ public sealed partial class NationScreen
                     $"{s.Info.Name} ({s.Type.Line().Name.ToLowerInvariant()}): fuego {s.Info.Attack:0}, tripulación {s.Strength:0}/{s.Info.Men}"))),
                 new TextCell($"{fleet.Citizens:N0}", fleet.StrengthShare < 0.5 ? Tone.Bad : Tone.Normal, Bar: new CellBar(fleet.StrengthShare, Tone.Strength, 26, 3, 20)),
                 new TextCell("", Bar: new CellBar(fleet.OrganisationShare, Tone.Organisation, 13, 8, 20)),
+                new TextCell(GameSession.MissionName(fleet.Mission), fleet.Mission == Conquer.Game.Rules.FleetMission.None ? Tone.Dim : Tone.Good, TextSize.Small, Top: 8,
+                    Tooltip: GameSession.MissionDescription(fleet.Mission)),
                 new TextCell((Session.IsPort(p, Player.Id) ? "En puerto" : Session.EnemyFleetsIn(p.Id, Player.Id).Any() ? "Combatiendo" : "En el mar")
                              + (fleet.Capacity > 0 ? $" · lleva {cargo:N0}/{fleet.Capacity:N0}" : ""),
                     Session.EnemyFleetsIn(p.Id, Player.Id).Any() ? Tone.Bad : Tone.Dim, TextSize.Small),
@@ -49,8 +51,10 @@ public sealed partial class NationScreen
                 new TextCell(Session.PlaceName(port), Bold: true),
                 new TextCell($"{building.Count}/{slips}", building.Count < slips ? Tone.Accent : Tone.Normal,
                     Tooltip: "Un puerto tiene una grada, y otra más con dique seco. Cada grada construye un barco a la vez."),
-                new TextCell(building.Count == 0 ? "Libre" : string.Join(", ", building.Select(o => $"{o.Info.Name} ({o.Progress:P0})")),
-                    building.Count == 0 ? Tone.Dim : Tone.Normal),
+                Session.IsBlockaded(port)
+                    ? new TextCell("Bloqueado por el enemigo: no construye", Tone.Bad, Tooltip: "Una flota enemiga bloquea el puerto: sus gradas paran y lo que construían espera otra grada.")
+                    : new TextCell(building.Count == 0 ? "Libre" : string.Join(", ", building.Select(o => $"{o.Info.Name} ({o.Progress:P0})")),
+                        building.Count == 0 ? Tone.Dim : Tone.Normal),
             ]);
         }
         return new TablePage(new Table(columns, rows, Empty: "No tienes astilleros: construye un Puerto (Navegación a vela) en una ciudad con costa."),
@@ -119,6 +123,24 @@ public sealed partial class NationScreen
                         : can.Message, Size: TextSize.Small)]),
             ]);
         }
-        return new TablePage(new Table(columns, rows), "Encargar barcos", Tone.Accent);
+        // Convoys: merchant ships in batches, which carry the shipments over the sea.
+        var batch = Battalions.ConvoyBatch;
+        var convoys = Session.CanOrderConvoys(Player);
+        rows.Add(
+        [
+            new TextCell("Convoyes", Bold: true),
+            new TextCell($"Lote de {MilitaryRules.ConvoysPerOrder}", Tone.Normal),
+            new TextCell("-", Tone.Dim),
+            new TextCell($"{MilitaryRules.ConvoyCapacity * MilitaryRules.ConvoysPerOrder:N0}", Tone.Dim, Tooltip: $"Cada convoy lleva {MilitaryRules.ConvoyCapacity:0} hombres, piezas o suministros."),
+            new TextCell($"{batch.Men:N0}", Tone.Dim),
+            new TextCell($"{batch.TrainingDays}", Tone.Dim),
+            new TextCell(batch.Cost.ToString(), Tone.Dim, TextSize.Small, Top: 8),
+            new ButtonsCell([new Button("Encargar", () => Show(Session.OrderConvoys(Player.Id)), convoys.Ok,
+                Tooltip: convoys.Ok ? $"Añade {MilitaryRules.ConvoysPerOrder} convoyes al final de la cola." : convoys.Message, Size: TextSize.Small)]),
+        ]);
+        double free = Session.FreeConvoys(Player), inUse = Session.ConvoysInUse(Player);
+        string title = $"Encargar barcos · Convoyes: {Player.Convoys:0.#} ({inUse:0.#} en el mar, {free:0.#} en puerto)" +
+                       (Player.CargoLeftForWantOfConvoys >= 0.5 ? $" · faltan para {Player.CargoLeftForWantOfConvoys:N0} de carga" : "");
+        return new TablePage(new Table(columns, rows), title, Player.CargoLeftForWantOfConvoys >= 0.5 ? Tone.Bad : Tone.Accent);
     }
 }

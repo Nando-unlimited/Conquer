@@ -2,6 +2,23 @@
 
 Todos los cambios del juego, del más reciente al más antiguo. Cada versión es un commit cuyo título es su número.
 
+## [1.113.0] - 2026-10-06
+
+La marina (3 de 3): convoyes y misiones.
+
+### Añadido
+- **Convoyes**: lo que la capital envía a tus tropas al otro lado del mar viaja en convoyes, cada uno con 100 hombres, piezas o suministros. Los envíos van por la ruta real: por tierra hasta uno de tus puertos, por el mar que sabes navegar y por tierra hasta la unidad. Los convoyes de un envío no sirven para otro hasta que llega; sin bastantes, el envío lleva menos y avisa la alerta «Faltan convoyes». Se encargan en lotes de 5 a los astilleros (pestaña Marina), que muestra cuántos tienes, en el mar y en puerto.
+- **Misiones de las flotas**, en su panel y en la pestaña Marina:
+  - **Patrullar**: va a por las flotas enemigas que entren en los mares vecinos.
+  - **Escoltar convoyes**: protege los tuyos en su mar y los vecinos.
+  - **Atacar convoyes**: cada día hunde parte de los convoyes enemigos que crucen su mar o los vecinos, y su carga; los submarinos, el doble. La alerta «Convoyes hundidos» avisa de los tuyos.
+  - **Bloquear puertos**: un puerto enemigo junto a ella no construye barcos, no envía nada por mar y pierde los impuestos de su comercio marítimo.
+- La IA encarga convoyes cuando le faltan y, en guerra, pone sus submarinos a atacar convoyes y sus buques de guerra a patrullar.
+
+### Cambiado
+- Los envíos por mar ya no tardan 10 días fijos: tardan lo que se navega por su ruta.
+- Las partidas guardadas dan 10 convoyes a cada nación que ya tiene un puerto.
+
 ## [1.112.0] - 2026-10-06
 
 La marina (2 de 3): los astilleros.

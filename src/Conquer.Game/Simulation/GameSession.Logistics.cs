@@ -17,6 +17,10 @@ public sealed class Shipment
     public Dictionary<string, double> Pieces { get; init; } = [];
     public double Ammo { get; set; }
     public required long ArriveHours { get; init; }
+    /// <summary>The seas it crosses, in order; empty by land.</summary>
+    public List<int> SeaRoute { get; init; } = [];
+    /// <summary>Convoys carrying it over the sea, kept from other shipments until it arrives.</summary>
+    public double Convoys { get; set; }
 }
 
 /// <summary>
@@ -124,30 +128,21 @@ public sealed partial class GameSession
         }
         if (served.Count == 0) return;
 
-        // The way from the capital, searched only as far as the units it serves.
-        bool CanGo(int id) => !Map.Provinces[id].IsWater && (!Map.Provinces[id].IsOwned || Map.Provinces[id].ControllerId == player.Id);
-        var targets = served.Select(s => s.Unit.ProvinceId).ToHashSet();
-        var (byLand, _) = Pathfinder.FromSources([capital.Id], targets: targets, canEnter: CanGo);
-        double[]? fromCities = null;
-
+        // The way from the capital, by land and over the sea, searched only as far as the units it serves.
+        var (routeHours, previous) = SupplyRoutes(player, capital.Id, served.Select(s => s.Unit.ProvinceId).ToHashSet());
         var queue = new List<(Unit Unit, int Rank, double Hours)>();
         foreach (var (unit, rank, slowdown) in served)
-        {
-            double hours = byLand[unit.ProvinceId];
-            if (double.IsPositiveInfinity(hours))
-            {
-                fromCities ??= Pathfinder.FromSources(Cities.Where(c => c.OwnerId == player.Id && !Map.Provinces[c.ProvinceId].IsOccupied)
-                    .Select(c => c.ProvinceId), targets: targets, canEnter: CanGo).Hours;
-                hours = fromCities[unit.ProvinceId] + MilitaryRules.OverseasShipmentHours;
-                if (double.IsPositiveInfinity(hours)) continue;
-            }
-            queue.Add((unit, rank, hours * slowdown));
-        }
+            if (!double.IsPositiveInfinity(routeHours[unit.ProvinceId])) queue.Add((unit, rank, routeHours[unit.ProvinceId] * slowdown));
 
+        player.CargoLeftForWantOfConvoys = 0;
         foreach (var (unit, _, hours) in queue.OrderBy(q => q.Rank).ThenBy(q => q.Hours))
         {
             var onTheWay = ShipmentsTo(unit).ToList();
-            var shipment = new Shipment { OwnerId = player.Id, UnitId = unit.Id, ArriveHours = Date.Hours + Math.Max(1, (long)Math.Ceiling(hours)) };
+            var shipment = new Shipment
+            {
+                OwnerId = player.Id, UnitId = unit.Id, ArriveHours = Date.Hours + Math.Max(1, (long)Math.Ceiling(hours)),
+                SeaRoute = SeaLegs(previous, unit.ProvinceId),
+            };
 
             // The pieces of the newest model of each line, for the men its battalions have left.
             var upgrades = new Dictionary<string, double>();
@@ -178,7 +173,18 @@ public sealed partial class GameSession
                 player.AddEquipment(Supplies.General.Key, -ammo);
                 shipment.Ammo = ammo;
             }
-            if (shipment.Men > 0 || shipment.Ammo > 0 || shipment.Pieces.Count > 0) _shipments.Add(shipment);
+            // Over the sea it needs convoys for its cargo; what they cannot carry stays behind.
+            if (shipment.SeaRoute.Count > 0 && Cargo(shipment) > 0)
+            {
+                double room = FreeConvoys(player) * MilitaryRules.ConvoyCapacity, cargo = Cargo(shipment);
+                if (cargo > room)
+                {
+                    player.CargoLeftForWantOfConvoys += cargo - room;
+                    Unload(player, shipment, 1 - room / cargo);
+                }
+                shipment.Convoys = Cargo(shipment) / MilitaryRules.ConvoyCapacity;
+            }
+            if (Cargo(shipment) > 1e-6) _shipments.Add(shipment);
         }
     }
 
@@ -261,6 +267,69 @@ public sealed partial class GameSession
             b.Strength += men;
             s.Men -= men;
         }
+    }
+
+    /// <summary>Men, pieces and ammunition a shipment carries, each counting one against a convoy's room.</summary>
+    public static double Cargo(Shipment s) => s.Men + s.Pieces.Values.Sum() + s.Ammo;
+
+    /// <summary>Takes this share of what a shipment carries back where it came from (see <see cref="Return"/>).</summary>
+    private void Unload(Player player, Shipment s, double share)
+    {
+        var back = new Shipment { OwnerId = s.OwnerId, UnitId = s.UnitId, ArriveHours = s.ArriveHours, Men = s.Men * share, Ammo = s.Ammo * share,
+            Pieces = s.Pieces.ToDictionary(p => p.Key, p => p.Value * share) };
+        s.Men -= back.Men;
+        s.Ammo -= back.Ammo;
+        foreach (var key in s.Pieces.Keys.ToList()) s.Pieces[key] -= back.Pieces[key];
+        Return(player, back);
+    }
+
+    /// <summary>
+    /// Travel hours from the capital to every province by land through the nation's own or free land and over the sea it
+    /// can sail, boarding only at its ports that are not blockaded and landing on any coast; and the province each was
+    /// reached from. The search stops once the <paramref name="targets"/> are reached.
+    /// </summary>
+    private (double[] Hours, int[] Previous) SupplyRoutes(Player player, int capital, HashSet<int> targets)
+    {
+        int n = Map.Provinces.Count;
+        var hours = new double[n];
+        var previous = new int[n];
+        Array.Fill(hours, double.PositiveInfinity);
+        Array.Fill(previous, -1);
+        var open = new PriorityQueue<int, double>();
+        hours[capital] = 0;
+        open.Enqueue(capital, 0);
+        int left = targets.Count;
+        bool Land(Province p) => !p.IsWater && (!p.IsOwned || p.ControllerId == player.Id);
+        while (open.TryDequeue(out int id, out double at))
+        {
+            if (at > hours[id]) continue;
+            if (targets.Contains(id) && --left == 0) break;
+            var from = Map.Provinces[id];
+            foreach (int next in from.Neighbors)
+            {
+                var to = Map.Provinces[next];
+                bool can = to.IsWater
+                    ? CanSail(player, to) && (from.IsWater || IsPort(from, player.Id) && !IsBlockaded(from))
+                    : Land(to);
+                if (!can) continue;
+                double h = at + Pathfinder.StepHours(id, next);
+                if (h >= hours[next]) continue;
+                hours[next] = h;
+                previous[next] = id;
+                open.Enqueue(next, h);
+            }
+        }
+        return (hours, previous);
+    }
+
+    /// <summary>The seas on the way to a province, in order, from <see cref="SupplyRoutes"/>.</summary>
+    private List<int> SeaLegs(int[] previous, int provinceId)
+    {
+        var seas = new List<int>();
+        for (int id = provinceId; id >= 0; id = previous[id])
+            if (Map.Provinces[id].IsWater) seas.Add(id);
+        seas.Reverse();
+        return seas;
     }
 
     /// <summary>What a shipment still carries goes back: pieces and ammunition to the stockpile, recruits to the reserve and the capital.</summary>

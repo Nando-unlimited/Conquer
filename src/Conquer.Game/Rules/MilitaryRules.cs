@@ -135,8 +135,19 @@ public static class MilitaryRules
     // Logistics: shipments from the capital, and ammunition in battle
     /// <summary>Units without an HQ in range get their shipments this many times slower (and after everyone else).</summary>
     public const double UnattachedShipmentSlowdown = 2;
-    /// <summary>Hours a shipment takes, on top of the way from the nation's nearest city, when no land route joins the unit to the capital (by sea).</summary>
-    public const double OverseasShipmentHours = 24 * 10;
+    /// <summary>Men, pieces of equipment or suministros a convoy carries over the sea.</summary>
+    public const double ConvoyCapacity = 100;
+    /// <summary>Convoys a shipyard order builds at once.</summary>
+    public const int ConvoysPerOrder = 5;
+    /// <summary>Convoys a nation with a port gets when a save from before convoys is loaded.</summary>
+    public const int ConvoysInOldSaves = 10;
+    /// <summary>
+    /// A shipment at sea loses each day raid / (raid + EscortWeight * escort + ConvoyEvasion) of its convoys and cargo, at
+    /// most MaxDailyConvoyLoss, where raid and escort are the fire of the raiders and escorts on its route.
+    /// </summary>
+    public const double EscortWeight = 2, ConvoyEvasion = 30, MaxDailyConvoyLoss = 0.6;
+    /// <summary>Submarines hunt convoys this many times better than their fire says.</summary>
+    public const double SubmarineRaidBonus = 2;
     /// <summary>Suministros a battalion of 100 men spends each hour it fights (artillery and aircraft as well; medics do not fight).</summary>
     public const double AmmoPerHundredMenHour = 0.25;
     /// <summary>Hours of fighting a unit carries ammunition for.</summary>

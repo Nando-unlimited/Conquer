@@ -278,6 +278,12 @@ public static class Battalions
 
     private static LineInfo Fleet(string name, BattalionInfo[] models) => new(name, BattalionGroup.Navy, models);
 
+    /// <summary>
+    /// A batch of convoys (<see cref="Rules.MilitaryRules.ConvoysPerOrder"/>) as the shipyards build it: merchant ships
+    /// that carry the shipments over the sea and do not form fleets. Its men are the crews of the whole batch.
+    /// </summary>
+    public static readonly BattalionInfo ConvoyBatch = new("convoys", "Convoyes", "c", 50, Cost((W, 60), (G, 20)), 15, [Tech.Navigation], 0, 1, 10, 1, Naval: true);
+
     public static LineInfo Line(this BattalionType type) => Table[type];
 
     private static readonly Dictionary<string, (BattalionType Type, int Index)> ByKeys =

@@ -371,6 +371,20 @@ public enum UnitType
     Fleet,
 }
 
+/// <summary>What a fleet does where it is, beyond moving and fighting the enemy fleets it meets.</summary>
+public enum FleetMission
+{
+    None,
+    /// <summary>It goes after the enemy fleets in the neighbouring seas.</summary>
+    Patrol,
+    /// <summary>It protects its nation's convoys in this sea and the neighbouring ones.</summary>
+    Escort,
+    /// <summary>It sinks the enemy's convoys in this sea and the neighbouring ones.</summary>
+    Raid,
+    /// <summary>It closes the enemy ports on this sea.</summary>
+    Blockade,
+}
+
 /// <summary>How soon an HQ's units get their shipments from the capital, against the rest of the nation's.</summary>
 public enum SupplyPriority
 {

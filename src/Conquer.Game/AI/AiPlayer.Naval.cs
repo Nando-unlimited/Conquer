@@ -1,3 +1,4 @@
+using Conquer.Game.Rules;
 using Conquer.Game.Entities;
 using Conquer.Game.Military;
 using Conquer.Game.Science;
@@ -137,5 +138,22 @@ internal sealed partial class AiPlayer
             foreach (int sea in target.Neighbors.Where(n => Map.Provinces[n].IsWater))
                 if (_session.MoveUnit(_player.Id, fleet.Id, sea).Ok) return true;
         return false;
+    }
+
+    /// <summary>
+    /// Orders convoys when its shipments over the sea left cargo behind and none are coming; in war its submarines
+    /// raid the enemy's convoys and its warships in port patrol, and in peace every fleet stands down.
+    /// </summary>
+    private void ConvoysAndMissions(bool atWar)
+    {
+        if (_player.CargoLeftForWantOfConvoys > 0 && !_player.ShipOrders.Any(o => o.Convoys) && Spare(Battalions.ConvoyBatch.Cost))
+            _session.OrderConvoys(_player.Id);
+        foreach (var fleet in _session.Units.Where(u => u.OwnerId == _player.Id && u.IsFleet && u.Capacity == 0))
+        {
+            var mission = !atWar ? FleetMission.None
+                : fleet.Ships.All(s => s.Type == BattalionType.Submarine) ? FleetMission.Raid
+                : FleetMission.Patrol;
+            if (fleet.Mission != mission) _session.SetFleetMission(_player.Id, fleet.Id, mission);
+        }
     }
 }

@@ -132,12 +132,14 @@ public sealed class ShipOrder
     public required int Id { get; init; }
     public required BattalionType Type { get; init; }
     public required int Model { get; init; }
+    /// <summary>A batch of <see cref="Rules.MilitaryRules.ConvoysPerOrder"/> convoys rather than a ship (its type and model are then unused).</summary>
+    public bool Convoys { get; init; }
     public int? PreferredPortId { get; init; }
     public int? PortId { get; set; }
     public double DaysDone { get; set; }
     /// <summary>The nation has been told the finished ship waits for its crew.</summary>
     public bool WaitingForCrew { get; set; }
 
-    public BattalionInfo Info => Type.Models()[Model];
+    public BattalionInfo Info => Convoys ? Battalions.ConvoyBatch : Type.Models()[Model];
     public double Progress => Math.Min(1, DaysDone / Info.TrainingDays);
 }

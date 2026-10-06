@@ -96,6 +96,7 @@ public class ControllerTests(WorldFixture world)
     private static Button Button(Document doc, string text) =>
         doc.Elements.OfType<Button>().Concat(doc.Elements.OfType<ButtonRow>().SelectMany(r => r.Buttons)).First(b => b.Text.StartsWith(text));
 
+[Fact]    public void FleetPanelsSetTheirMission()    {        var game = GameWithCapital();        var sea = game.Session.Map.Provinces.First(p => p.IsWater);        var fleet = game.Session.AddFleet(0, sea.Id, BattalionType.LineShip);        game.SelectUnit(fleet.Id);        Assert.Equal("Sin misión", game.SidePanel()!.Elements.OfType<Info>().Single(i => i.Label == "Misión").Value);        Button(game.SidePanel()!, "Atacar convoyes").Press();        Assert.Equal(FleetMission.Raid, fleet.Mission);        Assert.True(Button(game.SidePanel()!, "Atacar convoyes").Active);    }
     [Fact]
     public void UnitPanelsShowAmmunitionShipmentsAndTheHeadquartersPriority()
     {

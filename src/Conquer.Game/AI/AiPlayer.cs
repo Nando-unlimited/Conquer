@@ -105,6 +105,7 @@ internal sealed partial class AiPlayer
             ChooseProduction();
             BuildArmy();
             BuildNavy();
+            ConvoysAndMissions(atWar);
             OrganiseArmy();
             Diplomacy();
             SeekAlliances();

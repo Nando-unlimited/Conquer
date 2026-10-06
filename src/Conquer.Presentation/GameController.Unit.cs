@@ -193,6 +193,7 @@ public sealed partial class GameController
             bool port = Session.IsPort(Map.Provinces[unit.ProvinceId], unit.OwnerId);
             doc.Add(new Info("Reparaciones", port ? "En puerto" : "Solo en puerto", port ? Tone.Good : Tone.Dim));
             RefitLine(doc, unit);
+            MissionLines(doc, unit);
             doc.Add(OfficerLine("Oficial", unit.Officer, "Manda esta flota: sus rasgos y su habilidad afectan al fuego de sus barcos."));
             doc.Add(PortraitsOf(unit, ("Oficial", unit.Officer)));
             if (unit.Capacity > 0)
@@ -268,7 +269,9 @@ public sealed partial class GameController
         carried.AddRange(pieces.Select(p => $"{p.Pieces:N0} {SupplyName(p.Key).ToLowerInvariant()}"));
         if (ammoOnTheWay >= 0.05) carried.Add($"{ammoOnTheWay:0.#} de munición");
         doc.Add(new Info("Envíos", $"{shipments.Count} en camino · {next}", Tone.Normal,
-            $"Desde la capital: {string.Join(", ", carried)}. El siguiente llega en {next}.\n{QueueText(unit)}"));
+            $"Desde la capital: {string.Join(", ", carried)}. El siguiente llega en {next}." +
+            (shipments.Any(s => s.SeaRoute.Count > 0) ? $"\nCruzan el mar en {shipments.Sum(s => s.Convoys):0.#} convoyes: las flotas enemigas que atacan convoyes en su ruta pueden hundirlos." : "") +
+            $"\n{QueueText(unit)}"));
     }
 
     /// <summary>
@@ -287,6 +290,20 @@ public sealed partial class GameController
                                                          (c.Check.Ok ? $"{GameSession.RefitCost(c.Model)}" : c.Check.Message)));
         doc.Add(new Info("Modernización", ready > 0 ? $"{ready} de {due.Count} barcos, mañana" : $"{due.Count} barcos esperan",
             ready > 0 ? Tone.Good : Tone.Accent, tip + $"\nEn uno de tus puertos, cada barco pasa al modelo más nuevo de su línea por el {MilitaryRules.RefitCostShare:P0} de su coste."));
+    }
+
+    /// <summary>A fleet's mission, with a button for each to the owner, and the ports it blockades.</summary>
+    private void MissionLines(Document doc, Unit fleet)
+    {
+        var ports = Session.Blockading(fleet).Select(p => Session.PlaceName(p)).ToList();
+        doc.Add(new Info("Misión", GameSession.MissionName(fleet.Mission), fleet.Mission == FleetMission.None ? Tone.Dim : Tone.Good,
+            GameSession.MissionDescription(fleet.Mission) + (fleet.Mission == FleetMission.Blockade && ports.Count == 0 ? "\nNo hay puertos enemigos junto a este mar." : "")));
+        if (ports.Count > 0) doc.Add(new Info("Bloquea", TextFormat.List(ports), Tone.Good));
+        if (fleet.OwnerId != Human.Id) return;
+        Button Mission(FleetMission m, string label) => new(label, () => Show(Session.SetFleetMission(Human.Id, fleet.Id, m)), Active: fleet.Mission == m,
+            Tooltip: GameSession.MissionDescription(m), Size: TextSize.Small);
+        doc.Add(new ButtonRow([Mission(FleetMission.None, "Ninguna"), Mission(FleetMission.Patrol, "Patrullar"), Mission(FleetMission.Blockade, "Bloquear")], Height: 26, Gap: 4));
+        doc.Add(new ButtonRow([Mission(FleetMission.Escort, "Escoltar convoyes"), Mission(FleetMission.Raid, "Atacar convoyes")], Height: 26, Gap: 6));
     }
 
     /// <summary>Where the unit stands in the queue for shipments, by its HQ's priority.</summary>

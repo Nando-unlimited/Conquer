@@ -88,6 +88,14 @@ public sealed class Player
     /// <summary>Its ships under construction or waiting for a slip, in the order the shipyards take them (see <c>GameSession.DailyShipyards</c>).</summary>
     public List<ShipOrder> ShipOrders { get; } = [];
 
+    /// <summary>Merchant ships that carry its shipments over the sea (see <c>GameSession.ConvoysInUse</c>); fractions are ships half sunk.</summary>
+    public double Convoys { get; set; }
+    /// <summary>Convoys it lost to enemy raiders the last day, and those its raiders sank, for the alerts.</summary>
+    public double ConvoysLostLastDay { get; set; }
+    public double ConvoysSunkLastDay { get; set; }
+    /// <summary>Cargo its last shipments by sea had to leave behind for want of convoys.</summary>
+    public double CargoLeftForWantOfConvoys { get; set; }
+
     /// <summary>Officers recruited but not leading anything, ready to be put at the head of a unit.</summary>
     public List<Officer> OfficerReserve { get; } = [];
 
@@ -191,6 +199,8 @@ public sealed class Unit
     public ScoutOrders ScoutOrders { get; set; }
     /// <summary>For an HQ, which of the nation's units its own get their shipments before (see <c>GameSession.DailyShipments</c>).</summary>
     public SupplyPriority SupplyPriority { get; set; } = SupplyPriority.Normal;
+    /// <summary>For a fleet, what it does where it is (see <c>GameSession.SetFleetMission</c>).</summary>
+    public FleetMission Mission { get; set; }
     /// <summary>Ammunition the combat unit has spent in battle and not yet had back: it carries <c>GameSession.AmmoCapacity</c> less this.</summary>
     public double AmmoSpent { get; set; }
     /// <summary>Scouts left to explore on their own, claiming land or not.</summary>

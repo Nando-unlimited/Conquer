@@ -32,7 +32,7 @@ public sealed partial class GameSession
             [.. p.Templates.Select(t => new TemplateSave(t.Id, t.Number, [.. t.Battalions]))], [.. p.ResearchPriorities],
             [.. p.Researching.OfType<Tech>()], [.. p.Institutions.Order()], [.. p.OfficerReserve.Select(ToSave)], p.Eliminated, p.Manpower, p.ReligionId,
             [.. p.Explored.Order()], new(p.Equipment.Where(e => e.Value > 0)), [.. p.LastDayFlows.Select(f => f.ToArray())],
-            [.. p.ShipOrders.Select(o => new ShipOrderSave(o.Id, o.Type, o.Model, o.PreferredPortId, o.PortId, o.DaysDone, o.WaitingForCrew))])).ToList(),
+            [.. p.ShipOrders.Select(o => new ShipOrderSave(o.Id, o.Type, o.Model, o.PreferredPortId, o.PortId, o.DaysDone, o.WaitingForCrew, o.Convoys))], p.Convoys)).ToList(),
         // Provinces nobody has touched keep their generated state, so only the rest are stored.
         Provinces = Map.Provinces.Where(Changed).Select(p => new ProvinceSave(
             p.Id, p.OwnerId, p.ControllerId, p.Population, p.CityId, p.Mood, p.Fertility, [.. p.Reserves],
@@ -47,8 +47,8 @@ public sealed partial class GameSession
             Officer: u.Officer is { } o ? ToSave(o) : null, CustomName: u.CustomName, AutoClaim: u.ScoutOrders == ScoutOrders.Claim,
             AutoExplore: u.ScoutOrders == ScoutOrders.Explore, Size: u.Size, Regiments: u.IsMilitary ? [.. u.Regiments.Select(ToSave)] : null,
             Brigades: u.Brigades.Count > 0 ? [.. u.Brigades.Select(b => new BrigadeSave(b.Number, b.CustomName, [.. b.Regiments.Select(ToSave)]))] : null,
-            SupplyPriority: u.SupplyPriority, AmmoSpent: u.AmmoSpent)).ToList(),
-        Shipments = _shipments.Select(s => new ShipmentSave(s.OwnerId, s.UnitId, s.Men, new(s.Pieces), s.Ammo, s.ArriveHours)).ToList(),
+            SupplyPriority: u.SupplyPriority, AmmoSpent: u.AmmoSpent, Mission: u.Mission)).ToList(),
+        Shipments = _shipments.Select(s => new ShipmentSave(s.OwnerId, s.UnitId, s.Men, new(s.Pieces), s.Ammo, s.ArriveHours, [.. s.SeaRoute], s.Convoys)).ToList(),
         Migrations = Migrations.Select(m => new MigrationSave(m.Id, m.OwnerId, m.FromProvinceId, m.ToProvinceId, m.People,
             m.DepartHours, m.ArriveHours, m.Forced, m.Mood)).ToList(),
         Battles = _battles.Select(b => new BattleSave(b.ProvinceId, b.AttackerId, b.DefenderId, b.StartHours, [.. b.Attackers], b.AttackerLosses, b.DefenderLosses)).ToList(),
@@ -202,7 +202,8 @@ public sealed partial class GameSession
             // Before 1.105.0 the day's flows were not kept: they fill in at the next day.
             for (int f = 0; f < Math.Min(player.LastDayFlows.Length, s.LastDayFlows?.Length ?? 0); f++) s.LastDayFlows![f].CopyTo(player.LastDayFlows[f], 0);
             foreach (var o in s.ShipOrders ?? [])
-                player.ShipOrders.Add(new ShipOrder { Id = o.Id, Type = o.Type, Model = o.Model, PreferredPortId = o.PreferredPortId, PortId = o.PortId, DaysDone = o.DaysDone, WaitingForCrew = o.WaitingForCrew });
+                player.ShipOrders.Add(new ShipOrder { Id = o.Id, Type = o.Type, Model = o.Model, PreferredPortId = o.PreferredPortId, PortId = o.PortId, DaysDone = o.DaysDone, WaitingForCrew = o.WaitingForCrew, Convoys = o.Convoys });
+            player.Convoys = s.Convoys ?? -1;
             player.IsStarving = s.IsStarving;
             player.FoodReserveDays = s.FoodReserveDays;
             foreach (var tech in s.Techs) player.Learn(tech);
@@ -280,6 +281,7 @@ public sealed partial class GameSession
             else if (u.Battalions.Count > 0) flat[unit] = [.. u.Battalions.Select(FromSave)];
             unit.SupplyPriority = u.SupplyPriority;
             unit.AmmoSpent = u.AmmoSpent;
+            unit.Mission = u.Mission;
             unit.CustomName = u.CustomName;
             unit.ScoutOrders = u.AutoClaim ? ScoutOrders.Claim : u.AutoExplore ? ScoutOrders.Explore : ScoutOrders.None;
             // Generals from before officers become officers of their HQ's rank, and HQs from before generals get one now.
@@ -293,7 +295,8 @@ public sealed partial class GameSession
 
         session._nextShipOrderId = save.NextShipOrderId;
         foreach (var s in save.Shipments ?? [])
-            session._shipments.Add(new Shipment { OwnerId = s.OwnerId, UnitId = s.UnitId, Men = s.Men, Pieces = new(s.Pieces), Ammo = s.Ammo, ArriveHours = s.ArriveHours });
+            session._shipments.Add(new Shipment { OwnerId = s.OwnerId, UnitId = s.UnitId, Men = s.Men, Pieces = new(s.Pieces), Ammo = s.Ammo, ArriveHours = s.ArriveHours,
+                SeaRoute = s.SeaRoute ?? [], Convoys = s.Convoys });
         foreach (var m in save.Migrations)
             session.Migrations.Add(new Migration(m.Id, m.OwnerId, m.From, m.To, m.People, m.DepartHours, m.ArriveHours, m.Forced, m.Mood));
         foreach (var b in save.Battles)
@@ -355,6 +358,9 @@ public sealed partial class GameSession
         }
         // Saves from before provinces were named on claiming: those with an owner get their name now.
         foreach (var p in map.Provinces.Where(p => p.IsOwned && p.Name.Length == 0)) session.NameProvince(p, p.OwnerId);
+        // Saves from before convoys: nations with a port get some to carry what they send over the sea.
+        foreach (var player in session.Players.Where(p => p.Convoys < 0))
+            player.Convoys = session.Shipyards(player).Any() ? MilitaryRules.ConvoysInOldSaves : 0;
         if (!save.RealisticPopulation)
             foreach (var p in map.Provinces.Where(p => p.Population > 0)) p.Population = Math.Min(p.Population, session.CapacityOf(p));
         return session;
