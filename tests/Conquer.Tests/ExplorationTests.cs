@@ -45,7 +45,7 @@ public class ExplorationTests(WorldFixture world)
     public void OnlyScoutsExploreAndTheOptionIsSaved()
     {
         var (s, capital) = WithCapital();
-        var warriors = s.AddRegiment(0, capital.Id, BattalionType.Warriors);
+        var warriors = s.AddRegiment(0, capital.Id, BattalionType.LightInfantry);
         Assert.False(s.SetAutoClaim(0, warriors.Id, true).Ok);
         Assert.False(warriors.AutoClaim);
 

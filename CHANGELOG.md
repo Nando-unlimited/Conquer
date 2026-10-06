@@ -2,6 +2,34 @@
 
 Todos los cambios del juego, del más reciente al más antiguo. Cada versión es un commit cuyo título es su número.
 
+## [1.101.0] - 2026-10-06
+
+Primera parte de la nueva estructura militar: los tipos de batallón.
+
+### Cambiado
+- **Líneas de batallón que evolucionan con las épocas**: cada tipo de batallón es ahora una línea con un modelo por época, que llega con su avance. Al descubrirlo, tus batallones de esa línea lo adoptan en el día y desde entonces se entrena el nuevo.
+  - **Infantería ligera**: guerreros → vélites → arcabuceros → infantería ligera.
+  - **Infantería pesada**: espadachines → falanges → legionarios → infantería pesada → piqueros; con el Estriado pasa a infantería ligera.
+  - **Infantería a distancia**: arqueros → ballesteros → mosqueteros → fusileros → ametralladores.
+  - **Caballería**: jinetes → catafractos → caballeros → caballería mecanizada. **Carros**: carros de guerra → tanques.
+  - **Artillería**: catapultas → trabuquetes → cañones → artillería de campaña → artillería pesada.
+- El ejército se organiza en cuatro grupos: infantería, caballería, artillería y apoyo.
+- Las plantillas guardan líneas, no modelos: con cada avance, sus batallones se entrenan con el modelo nuevo.
+- Los avances que aceleran la instrucción aceleran líneas enteras (Arcos mejorados, toda la infantería a distancia).
+
+### Añadido
+- **Tropas de montaña** (desde la era Clásica, mejores en cada era): un 50 % más de fuego en montañas, colinas, bosques y pantanos.
+- **Paracaidistas** (Aviación); podrán saltar cuando haya aviones de transporte.
+- **Artillería antiaérea** (Aviación): dispara el doble contra los aviones y cada batallón les quita un 25 % de fuego, hasta un 75 %.
+- **Médicos** (Medicina, 50 hombres): no combaten, pero salvan un 30 % de las bajas de su unidad.
+- Nuevos símbolos OTAN para montaña, paracaidistas, antiaérea y médicos; los carros de guerra se dibujan como caballería.
+
+### Quitado
+- Lanceros de bronce, infantería de hierro, carros de arqueros e infantería motorizada, que ya cubren las nuevas líneas.
+
+### Partidas guardadas
+- Las partidas de versiones anteriores ya no se pueden cargar.
+
 ## [1.100.0] - 2026-10-05
 
 ### Cambiado

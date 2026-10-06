@@ -259,11 +259,24 @@ public sealed partial class GameController
             "Haz clic en una de tus provincias. Los ciudadanos viajan a 10 km/h.", Height: 34));
     }
 
+    /// <summary>What sets a line apart in battle, beyond its numbers; null for the plain ones.</summary>
+    public static string? LineNote(BattalionType type) => type switch
+    {
+        BattalionType.MountainInfantry => $"En montañas, colinas, bosques y pantanos lucha un {MilitaryRules.MountainTroopsRoughTerrain - 1:P0} mejor.",
+        BattalionType.Medics => $"No combate: salva un {MilitaryRules.MedicsSaving:P0} de las bajas de su unidad.",
+        BattalionType.AntiAir => $"Contra aviones dispara ×{MilitaryRules.AntiAirAgainstAircraft:0} y quita un {MilitaryRules.AntiAirShield:P0} a su fuego (hasta un {MilitaryRules.MaxAntiAirShield:P0}).",
+        BattalionType.Paratroopers => "Podrán lanzarse en paracaídas cuando haya aviones de transporte.",
+        BattalionType.Engineers => "Atacando, restan al defensor la ventaja del terreno y del río; construyen carreteras y ferrocarriles.",
+        BattalionType.Scouts => "Exploran y reclaman tierra libre.",
+        _ => null,
+    };
+
     /// <summary>The battalions the owner's military advances have a training building (barracks or workshop) train faster, and how much.</summary>
     private static void TrainingImprovements(Document doc, BuildingType building, Player owner)
     {
-        var faster = Battalions.All.Where(t => t.TrainingBuilding() == building && t.Info().Requires.All(owner.Techs.Contains) && GameSession.TrainingSpeed(owner, t) > 0)
-            .Select(t => $"{t.Info().Name} -{1 - 1 / (1 + GameSession.TrainingSpeed(owner, t)):P0}").ToList();
+        var faster = Battalions.All.Where(t => t.BestModel(owner.Techs) >= 0 && GameSession.ModelFor(owner, t).TrainingBuilding(t) == building
+                                              && GameSession.TrainingSpeed(owner, t) > 0)
+            .Select(t => $"{GameSession.ModelFor(owner, t).Name} -{1 - 1 / (1 + GameSession.TrainingSpeed(owner, t)):P0}").ToList();
         if (faster.Count == 0) return;
         doc.Add(new Paragraph("Instrucción más corta: " + string.Join(", ", faster) + ".", Tone.Good, After: 6, Indent: 10));
     }
@@ -353,8 +366,9 @@ public sealed partial class GameController
         {
             var can = Session.CanTrainTemplate(p, template);
             int days = GameSession.TrainingDays(Human, template);
-            string tip = $"{template.Name}: {template.Composition}.\n{template.Men} hombres de la provincia. Ataque {template.Attack:0.#}, defensa {template.Defense:0.#}." +
-                         $"\nCoste: {template.Cost}. {TextFormat.TrainingDaysText(days, template.TrainingDays)}" + (can.Ok ? "" : "\n" + can.Message);
+            var known = Human.Techs;
+            string tip = $"{template.Name}: {template.Composition(known)}.\n{template.Men(known)} hombres de la provincia. Ataque {template.Attack(known):0.#}, defensa {template.Defense(known):0.#}." +
+                         $"\nCoste: {template.Cost(known)}. {TextFormat.TrainingDaysText(days, template.TrainingDays(known))}" + (can.Ok ? "" : "\n" + can.Message);
             doc.Add(new Button($"{template.Name}  ·  {Formations.BattalionCount(template.Battalions.Count)}  ·  {days} d",
                 () => Show(Session.TrainTemplate(Human.Id, p.Id, template.Id)), can.Ok, Tooltip: tip, Size: TextSize.Small, Height: 28, Gap: 4));
         }
@@ -362,14 +376,16 @@ public sealed partial class GameController
             Tone.Dim, Height: 28));
 
         doc.Add(Section("Entrenar batallones sueltos"));
-        foreach (var type in Battalions.All.Where(t => t.Info().Requires.All(Human.Techs.Contains)))
+        foreach (var type in Battalions.All.Where(t => t.BestModel(Human.Techs) >= 0 && !t.Redundant(Human.Techs)))
         {
-            var info = type.Info();
+            var info = GameSession.ModelFor(Human, type);
             var can = Session.CanTrain(p, type);
             int days = GameSession.TrainingDays(Human, type);
-            string tip = $"{Formations.BattalionName(info)}: {info.Men} hombres de la provincia. Ataque {info.Attack:0.#}, defensa {info.Defense:0.#}, " +
+            string tip = $"{Formations.BattalionName(info)} ({type.Line().Name.ToLowerInvariant()}, {type.Line().Group.Name().ToLowerInvariant()}): " +
+                         $"{info.Men} hombres de la provincia. Ataque {info.Attack:0.#}, defensa {info.Defense:0.#}, " +
                          $"organización {info.MaxOrganisation:0}, {info.Speed * GameRules.CitizenSpeedKmh:0.#} km/h." +
                          (info.Mounted ? "\nMontada: ataca a la mitad en bosques, pantanos y montañas." : "") +
+                         (LineNote(type) is { } note ? "\n" + note : "") +
                          $"\nCoste: {info.Cost}. {TextFormat.TrainingDaysText(days, info.TrainingDays)} Mantenimiento: {TextFormat.UpkeepText([info.Cost])}." + (can.Ok ? "" : "\n" + can.Message);
             doc.Add(new Button($"{info.Name}  ·  {info.Cost}  ·  {days} d", () => Show(Session.Train(Human.Id, p.Id, type)), can.Ok,
                 Tooltip: tip, Size: TextSize.Small, Height: 28, Gap: 4, Icon: new BattalionIcon(type)));

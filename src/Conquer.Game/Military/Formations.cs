@@ -31,32 +31,46 @@ public static class Formations
 
     /// <summary>
     /// The NATO symbol a combat unit shows for its battalions: the role most of them share (ties go to the front line);
-    /// tanks with motorised infantry make mechanised infantry.
+    /// tanks with infantry or cavalry make mechanised infantry.
     /// </summary>
-    public static UnitFunction Function(IEnumerable<BattalionType> battalions)
+    public static UnitFunction Function(IEnumerable<Battalion> battalions) => Function(battalions.Select(b => FunctionOf(b.Type, b.Info)));
+
+    /// <summary>The same for a design (<see cref="RegimentTemplate"/>), which names lines only: its carros are taken for tanks.</summary>
+    public static UnitFunction Function(IEnumerable<BattalionType> battalions) => Function(battalions.Select(FunctionOf));
+
+    private static UnitFunction Function(IEnumerable<UnitFunction> functions)
     {
         var counts = new Dictionary<UnitFunction, int>();
-        foreach (var b in battalions)
-        {
-            var f = FunctionOf(b);
-            counts[f] = counts.GetValueOrDefault(f) + 1;
-        }
+        foreach (var f in functions) counts[f] = counts.GetValueOrDefault(f) + 1;
         if (counts.Count == 0) return UnitFunction.Infantry;
-        if (counts.ContainsKey(UnitFunction.Armour) && counts.ContainsKey(UnitFunction.MotorisedInfantry)) return UnitFunction.Mechanised;
+        if (counts.ContainsKey(UnitFunction.Armour) && (counts.ContainsKey(UnitFunction.Infantry) || counts.ContainsKey(UnitFunction.Cavalry)))
+            return UnitFunction.Mechanised;
         return counts.OrderByDescending(c => c.Value).ThenBy(c => c.Key).First().Key;
     }
 
-    /// <summary>The NATO symbol of one kind of battalion.</summary>
-    public static UnitFunction FunctionOf(BattalionType type) => type == BattalionType.MotorisedInfantry ? UnitFunction.MotorisedInfantry : type.Role() switch
+    /// <summary>The NATO symbol of one battalion: its line's, but horse-drawn war chariots are cavalry, not armour.</summary>
+    public static UnitFunction FunctionOf(BattalionType type, BattalionInfo model) =>
+        type == BattalionType.Armour && !model.Machine ? UnitFunction.Cavalry : FunctionOf(type);
+
+    /// <summary>The NATO symbol of one line of battalion.</summary>
+    public static UnitFunction FunctionOf(BattalionType type) => type switch
     {
-        BattalionRole.Cavalry => UnitFunction.Cavalry,
-        BattalionRole.Armour => UnitFunction.Armour,
-        BattalionRole.Artillery => UnitFunction.Artillery,
-        BattalionRole.Engineers => UnitFunction.Engineers,
-        BattalionRole.Air => UnitFunction.Air,
-        BattalionRole.Naval => UnitFunction.Naval,
+        BattalionType.MountainInfantry => UnitFunction.Mountain,
+        BattalionType.Paratroopers => UnitFunction.Airborne,
+        BattalionType.AntiAir => UnitFunction.AntiAir,
+        BattalionType.Medics => UnitFunction.Medical,
         // Scouts are reconnaissance, drawn like cavalry.
-        _ => type == BattalionType.Scouts ? UnitFunction.Cavalry : UnitFunction.Infantry,
+        BattalionType.Scouts => UnitFunction.Cavalry,
+        _ => type.Role() switch
+        {
+            BattalionRole.Cavalry => UnitFunction.Cavalry,
+            BattalionRole.Armour => UnitFunction.Armour,
+            BattalionRole.Artillery => UnitFunction.Artillery,
+            BattalionRole.Engineers => UnitFunction.Engineers,
+            BattalionRole.Air => UnitFunction.Air,
+            BattalionRole.Naval => UnitFunction.Naval,
+            _ => UnitFunction.Infantry,
+        },
     };
 
     /// <summary>"Regimiento", "Brigada" or "División" for a combat unit of so many battalions.</summary>
@@ -78,6 +92,10 @@ public static class Formations
 
     /// <summary>"Batallón de arqueros"; a ship is just its kind ("Trirreme").</summary>
     public static string BattalionName(BattalionInfo info) => info.Naval ? info.Name : "Batallón de " + info.Name.ToLowerInvariant();
+
+    /// <summary>"Batallón de infantería ligera", by its line, whatever the model; a ship is its kind.</summary>
+    public static string BattalionName(BattalionType type) =>
+        type.Line().Group == BattalionGroup.Navy ? type.Line().Name : "Batallón de " + type.Line().Name.ToLowerInvariant();
 
     /// <summary>A combat unit's name from its number and size: "3.er Regimiento", "3.ª Brigada", "3.ª División".</summary>
     public static string CombatUnitName(int number, int battalions)
@@ -121,8 +139,10 @@ public enum UnitFunction
 {
     /// <summary>A cross (X).</summary>
     Infantry,
-    /// <summary>The infantry cross with a vertical line.</summary>
-    MotorisedInfantry,
+    /// <summary>The infantry cross with a mountain at its foot.</summary>
+    Mountain,
+    /// <summary>The infantry cross with a parachute's canopy.</summary>
+    Airborne,
     /// <summary>The infantry cross with the tracks of armour.</summary>
     Mechanised,
     /// <summary>A diagonal slash: horse, chariots and reconnaissance.</summary>
@@ -131,8 +151,12 @@ public enum UnitFunction
     Armour,
     /// <summary>A filled dot.</summary>
     Artillery,
+    /// <summary>The artillery dot under an arch: guns aimed at the sky.</summary>
+    AntiAir,
     /// <summary>A bridge: a bar with three legs.</summary>
     Engineers,
+    /// <summary>A cross of two bars: the medics.</summary>
+    Medical,
     /// <summary>Wings.</summary>
     Air,
     Naval,

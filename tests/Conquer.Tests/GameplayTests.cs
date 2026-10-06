@@ -81,7 +81,7 @@ public class GameplayTests(WorldFixture world)
         var ocean = _map.Provinces.First(p => p.Biome == Biome.Ocean);
         var ice = _map.Provinces.First(p => p.Biome == Biome.PolarIce);
         var settlers = s.AddUnit(0, UnitType.Settlers, ocean.Id, 300);
-        var warriors = s.AddRegiment(0, ice.Id, BattalionType.Warriors);
+        var warriors = s.AddRegiment(0, ice.Id, BattalionType.LightInfantry);
 
         Assert.False(s.FoundCity(0, settlers.Id).Ok);
         Assert.False(s.Claim(0, warriors.Id).Ok);
@@ -95,7 +95,7 @@ public class GameplayTests(WorldFixture world)
         var s = NewSession();
         var coast = _map.Provinces.First(p => p.IsClaimable && p.Neighbors.Any(n => _map.Provinces[n].Biome == Biome.ShallowSea));
         var sea = coast.Neighbors.First(n => _map.Provinces[n].IsWater);
-        var warriors = s.AddRegiment(0, coast.Id, BattalionType.Warriors);
+        var warriors = s.AddRegiment(0, coast.Id, BattalionType.LightInfantry);
 
         Assert.False(s.MoveUnit(0, warriors.Id, sea).Ok);
         Assert.False(warriors.IsMoving);
@@ -156,8 +156,8 @@ public class GameplayTests(WorldFixture world)
         var s = NewSession();
         var (a, _) = GrasslandPair();
         var settlers = s.AddUnit(0, UnitType.Settlers, a.Id, 300);
-        var warriors = s.AddRegiment(0, a.Id, BattalionType.Warriors, BattalionType.Warriors);
-        var mixed = s.AddRegiment(0, a.Id, BattalionType.Warriors, BattalionType.Scouts);
+        var warriors = s.AddRegiment(0, a.Id, BattalionType.LightInfantry, BattalionType.LightInfantry);
+        var mixed = s.AddRegiment(0, a.Id, BattalionType.LightInfantry, BattalionType.Scouts);
 
         Assert.False(s.Claim(0, settlers.Id).Ok);
         var refused = s.Claim(0, warriors.Id);
@@ -175,7 +175,7 @@ public class GameplayTests(WorldFixture world)
     {
         var s = NewSession();
         var (a, b) = GrasslandPair();
-        var unit = s.AddRegiment(0, a.Id, BattalionType.Warriors);
+        var unit = s.AddRegiment(0, a.Id, BattalionType.LightInfantry);
         double expected = _map.DistanceKm(a, b) / GameRules.CitizenSpeedKmh;
 
         Assert.Equal(expected, s.Pathfinder.StepHours(a.Id, b.Id), 6);
@@ -694,8 +694,8 @@ public class GameplayTests(WorldFixture world)
         {
             var capital = _map.Provinces[s.CityById(ai.CapitalCityId!.Value)!.ProvinceId];
             Assert.Contains(BuildingType.Barracks, capital.Buildings);
-            var combat = s.Units.Where(u => u.OwnerId == ai.Id && u.IsMilitary).SelectMany(u => u.Battalions).Count(b => b.Type.TrainingBuilding() != null)
-                         + ai.Provinces.Sum(id => _map.Provinces[id].Training.Count(o => o.TemplateBattalions.Count > 0 || o.Battalion is { } t && t.TrainingBuilding() != null));
+            var combat = s.Units.Where(u => u.OwnerId == ai.Id && u.IsMilitary).SelectMany(u => u.Battalions).Count(b => b.Info.TrainingBuilding(b.Type) != null)
+                         + ai.Provinces.Sum(id => _map.Provinces[id].Training.Count(o => o.TemplateBattalions.Count > 0 || o.Battalion is { } t && t.First().TrainingBuilding(t) != null));
             Assert.True(combat > 0, $"{ai.Name} has no combat troops");
         }
     }

@@ -220,15 +220,15 @@ public sealed partial class NationScreen
             var settlers = Session.CanRecruitSettlers(city);
             string settlersTip = $"{GameRules.SettlerCitizens} ciudadanos salen a fundar otra ciudad. Coste: {GameRules.SettlersCost}." +
                                  (settlers.Ok ? "" : "\n" + settlers.Message);
-            var warriors = BattalionType.Warriors.Info();
-            var train = Session.CanTrain(p, BattalionType.Warriors);
+            var warriors = GameSession.ModelFor(Player, BattalionType.LightInfantry);
+            var train = Session.CanTrain(p, BattalionType.LightInfantry);
             string trainTip = $"Entrena {Formations.BattalionName(warriors).ToLowerInvariant()} ({warriors.Men} hombres). Coste: {warriors.Cost}. " +
-                              TextFormat.TrainingDaysText(GameSession.TrainingDays(Player, BattalionType.Warriors), warriors.TrainingDays) +
+                              TextFormat.TrainingDaysText(GameSession.TrainingDays(Player, BattalionType.LightInfantry), warriors.TrainingDays) +
                               (p.Training.Count > 0 ? $"\nEn instrucción: {p.Training.Count}." : "") + (train.Ok ? "" : "\n" + train.Message);
             cells.Add(new ButtonsCell(
             [
                 new Button("Colonos", () => Show(Session.RecruitSettlers(Player.Id, city.Id)), settlers.Ok, Tooltip: settlersTip, Size: TextSize.Small),
-                new Button(warriors.Name, () => Show(Session.Train(Player.Id, p.Id, BattalionType.Warriors)), train.Ok, Tooltip: trainTip, Size: TextSize.Small),
+                new Button(warriors.Name, () => Show(Session.Train(Player.Id, p.Id, BattalionType.LightInfantry)), train.Ok, Tooltip: trainTip, Size: TextSize.Small),
             ], Inset: 10));
             cells.Add(ViewButton(p.Id));
             rows.Add(cells);

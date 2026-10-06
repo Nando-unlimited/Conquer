@@ -73,7 +73,7 @@ public class RelationsTests(WorldFixture world)
         var land = _map.Provinces.First(p => p.IsClaimable && !p.IsOwned && p.Neighbors.Length > 2);
         var scouts = s.AddRegiment(2, land.Id, BattalionType.Scouts);
         s.Claim(2, scouts.Id);
-        var regiment = s.AddRegiment(1, land.Neighbors.First(n => _map.Provinces[n].IsClaimable), BattalionType.Warriors);
+        var regiment = s.AddRegiment(1, land.Neighbors.First(n => _map.Provinces[n].IsClaimable), BattalionType.LightInfantry);
 
         Assert.True(s.CanUnitEnter(regiment, land.Id));
         Assert.False(s.CanDeclareWar(1, 2).Ok);
@@ -110,7 +110,7 @@ public class RelationsTests(WorldFixture world)
         var land = _map.Provinces.First(p => p.IsClaimable && !p.IsOwned && p.Neighbors.Length > 2);
         var scouts = s.AddRegiment(2, land.Id, BattalionType.Scouts);
         s.Claim(2, scouts.Id);
-        var regiment = s.AddRegiment(1, land.Neighbors.First(n => _map.Provinces[n].IsClaimable), BattalionType.Warriors);
+        var regiment = s.AddRegiment(1, land.Neighbors.First(n => _map.Provinces[n].IsClaimable), BattalionType.LightInfantry);
         Assert.False(s.CanUnitEnter(regiment, land.Id));
 
         // Rival 2 thinks well enough of rival 1 to let it through, but not of the human.

@@ -27,6 +27,16 @@ public static class MilitaryRules
     public const double CombatRandomness = 0.2;
     /// <summary>Horses and chariots attack at this share of their strength in rough terrain.</summary>
     public const double MountedRoughTerrainAttack = 0.5;
+    /// <summary>Mountain troops fire this many times harder, attacking or defending, in rough terrain.</summary>
+    public const double MountainTroopsRoughTerrain = 1.5;
+    /// <summary>Share of the men a unit with medics would lose in battle that they save.</summary>
+    public const double MedicsSaving = 0.3;
+    /// <summary>Anti-air fires this many times harder when the enemy has aircraft in the fight...</summary>
+    public const double AntiAirAgainstAircraft = 2;
+    /// <summary>...and each of its battalions takes this share off the enemy aircraft's fire...</summary>
+    public const double AntiAirShield = 0.25;
+    /// <summary>...up to this much.</summary>
+    public const double MaxAntiAirShield = 0.75;
 
     /// <summary>Extra fire of a fully experienced (elite) battalion.</summary>
     public const double ExperienceBonus = 0.5;

@@ -38,7 +38,7 @@ public class SeasonTests(WorldFixture world)
     {
         var s = GameSession.Create(_map, 1, seed: 7, computerRivals: false);
         var cold = Land(p => p.Latitude > GameRules.HarshWinterLatitude);
-        var regiment = s.AddRegiment(0, cold.Id, BattalionType.Warriors);
+        var regiment = s.AddRegiment(0, cold.Id, BattalionType.LightInfantry);
         double severity = s.WinterSeverity(cold);
         Assert.Equal(1, severity, 6);
         Assert.Equal(GameRules.WinterAttrition, s.DailyAttrition(regiment), 6);
@@ -58,7 +58,7 @@ public class SeasonTests(WorldFixture world)
     {
         var s = GameSession.Create(_map, 1, seed: 7, computerRivals: false);
         var desert = _map.Provinces.First(p => p.Biome == Biome.Desert && Math.Abs(p.Latitude) < GameRules.MildWinterLatitude);
-        var regiment = s.AddRegiment(0, desert.Id, BattalionType.Warriors);
+        var regiment = s.AddRegiment(0, desert.Id, BattalionType.LightInfantry);
         Assert.Equal(GameRules.DesertAttrition, s.DailyAttrition(regiment), 6);
     }
 
@@ -67,7 +67,7 @@ public class SeasonTests(WorldFixture world)
     {
         var s = GameSession.Create(_map, 1, seed: 7, computerRivals: false);
         var peak = _map.Provinces.First(p => p.Biome is Biome.Peaks or Biome.PolarIce); // the test map may have no peaks
-        var regiment = s.AddRegiment(0, peak.Id, BattalionType.Warriors);
+        var regiment = s.AddRegiment(0, peak.Id, BattalionType.LightInfantry);
         Assert.Equal(GameRules.PeakAttrition, GameSession.HeightAttrition(peak), 6);
         Assert.True(s.DailyAttrition(regiment) >= GameRules.PeakAttrition);
         Assert.Contains("aire enrarecido", s.SeasonEffect(peak));

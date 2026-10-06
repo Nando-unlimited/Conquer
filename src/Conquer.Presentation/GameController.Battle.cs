@@ -88,6 +88,7 @@ public sealed partial class GameController
         bool engineers = GameSession.HasEngineers(attackers);
         var attacking = ongoing ? Session.Engage(attackers, p, attacking: true) : [];
         var defending = ongoing ? Session.Engage(defenders, p, attacking: false, engineers) : [];
+        (attacking, defending) = GameSession.FaceEachOther(attacking, defending);
 
         int front = MilitaryRules.FrontWidth(p.Biome);
         double defense = GameSession.DefenseMultiplier(p, engineers), unengineered = GameSession.DefenseMultiplier(p);

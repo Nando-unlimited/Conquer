@@ -18,8 +18,8 @@ namespace Conquer.Game.Simulation;
 /// </summary>
 public sealed record SaveGame
 {
-    /// <summary>Bumped when the format changes in a way older saves cannot be read into.</summary>
-    public const int CurrentFormat = 1;
+    /// <summary>Bumped when the format changes in a way older saves cannot be read into: 2 since the lines of battalions (1.101.0).</summary>
+    public const int CurrentFormat = 2;
 
     public int Format { get; init; } = CurrentFormat;
     /// <summary>Version of the game that wrote it, for display.</summary>
@@ -170,7 +170,8 @@ public sealed record UnitSave(
     List<BattalionSave> Battalions, int? CommanderId, int? AttackingProvinceId, List<int> Path, double HoursToNext, double StepHours,
     int? CarrierId = null, GeneralSave? General = null, OfficerSave? Officer = null, string? CustomName = null, bool AutoClaim = false);
 
-public sealed record BattalionSave(BattalionType Type, double Strength, double Organisation, double Experience = 0);
+/// <param name="Model">Which of its line's models it fights with.</param>
+public sealed record BattalionSave(BattalionType Type, double Strength, double Organisation, double Experience = 0, int Model = 0);
 
 /// <summary>An HQ's general as saves before officers (1.32.0) wrote it: one trait, no rank; loaded as an officer.</summary>
 public sealed record GeneralSave(string Name, OfficerTrait Trait, int StartingSkill, int Victories);

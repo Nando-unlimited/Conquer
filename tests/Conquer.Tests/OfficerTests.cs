@@ -58,7 +58,7 @@ public class OfficerTests(WorldFixture world)
     public void OfficersAreAssignedRelievedAndRetiredThroughTheReserve()
     {
         var (s, home) = Nation();
-        var unit = s.AddRegiment(0, home.Id, BattalionType.Warriors);
+        var unit = s.AddRegiment(0, home.Id, BattalionType.LightInfantry);
         var first = Recruit(s);
         var second = Recruit(s);
 
@@ -83,14 +83,14 @@ public class OfficerTests(WorldFixture world)
     public void OfficersArePromotedAsTheirUnitGrows()
     {
         var (s, home) = Nation();
-        var unit = s.AddRegiment(0, home.Id, [.. Enumerable.Repeat(BattalionType.Warriors, 3)]);
+        var unit = s.AddRegiment(0, home.Id, [.. Enumerable.Repeat(BattalionType.LightInfantry, 3)]);
         var officer = Recruit(s);
         s.AssignOfficer(0, unit.Id, officer.Id);
         Assert.Equal(OfficerRank.Colonel, officer.Rank);
 
-        Assert.True(s.Merge(0, unit.Id, s.AddRegiment(0, home.Id, [.. Enumerable.Repeat(BattalionType.Warriors, 3)]).Id).Ok);
+        Assert.True(s.Merge(0, unit.Id, s.AddRegiment(0, home.Id, [.. Enumerable.Repeat(BattalionType.LightInfantry, 3)]).Id).Ok);
         Assert.Equal(OfficerRank.Brigadier, officer.Rank);
-        Assert.True(s.Merge(0, unit.Id, s.AddRegiment(0, home.Id, BattalionType.Warriors).Id).Ok);
+        Assert.True(s.Merge(0, unit.Id, s.AddRegiment(0, home.Id, BattalionType.LightInfantry).Id).Ok);
         Assert.Equal(OfficerRank.MajorGeneral, officer.Rank);
 
         // Promotions stick when the unit shrinks, and a senior officer keeps their rank at the head of a regiment.
@@ -102,8 +102,8 @@ public class OfficerTests(WorldFixture world)
     public void MergingKeepsTheHostsOfficerOrTakesTheOthers()
     {
         var (s, home) = Nation();
-        var host = s.AddRegiment(0, home.Id, BattalionType.Warriors);
-        var other = s.AddRegiment(0, home.Id, BattalionType.Warriors);
+        var host = s.AddRegiment(0, home.Id, BattalionType.LightInfantry);
+        var other = s.AddRegiment(0, home.Id, BattalionType.LightInfantry);
         var hostOfficer = Recruit(s);
         var otherOfficer = Recruit(s);
         s.AssignOfficer(0, host.Id, hostOfficer.Id);
@@ -113,7 +113,7 @@ public class OfficerTests(WorldFixture world)
         Assert.Same(hostOfficer, host.Officer);
         Assert.Contains(otherOfficer, s.Players[0].OfficerReserve);
 
-        var leaderless = s.AddRegiment(0, home.Id, BattalionType.Warriors);
+        var leaderless = s.AddRegiment(0, home.Id, BattalionType.LightInfantry);
         Assert.True(s.Merge(0, leaderless.Id, host.Id).Ok);
         Assert.Same(hostOfficer, leaderless.Officer);
     }
@@ -122,14 +122,14 @@ public class OfficerTests(WorldFixture world)
     public void SeveralBattalionsSplitOffTogetherWithoutAnOfficer()
     {
         var (s, home) = Nation();
-        var unit = s.AddRegiment(0, home.Id, BattalionType.Warriors, BattalionType.Archers, BattalionType.Warriors, BattalionType.Archers);
+        var unit = s.AddRegiment(0, home.Id, BattalionType.LightInfantry, BattalionType.RangedInfantry, BattalionType.LightInfantry, BattalionType.RangedInfantry);
         var officer = Recruit(s);
         s.AssignOfficer(0, unit.Id, officer.Id);
 
         Assert.True(s.Split(0, unit.Id, [1, 3]).Ok);
         var split = s.Units.Single(u => u.IsMilitary && u.Id != unit.Id);
-        Assert.All(split.Battalions, b => Assert.Equal(BattalionType.Archers, b.Type));
-        Assert.All(unit.Battalions, b => Assert.Equal(BattalionType.Warriors, b.Type));
+        Assert.All(split.Battalions, b => Assert.Equal(BattalionType.RangedInfantry, b.Type));
+        Assert.All(unit.Battalions, b => Assert.Equal(BattalionType.LightInfantry, b.Type));
         Assert.Same(officer, unit.Officer);
         Assert.Null(split.Officer);
 
@@ -141,7 +141,7 @@ public class OfficerTests(WorldFixture world)
     public void UnitsCanBeRenamedAndGetTheirAutomaticNameBack()
     {
         var (s, home) = Nation();
-        var unit = s.AddRegiment(0, home.Id, BattalionType.Warriors);
+        var unit = s.AddRegiment(0, home.Id, BattalionType.LightInfantry);
         string automatic = unit.Name;
 
         Assert.True(s.RenameUnit(0, unit.Id, "  Los Tercios  ").Ok);
@@ -150,7 +150,7 @@ public class OfficerTests(WorldFixture world)
         Assert.Equal("Los Tercios", unit.Name);
 
         // A custom name stays when the unit grows; an empty one brings back the automatic name, which follows the size.
-        s.Merge(0, unit.Id, s.AddRegiment(0, home.Id, [.. Enumerable.Repeat(BattalionType.Warriors, 3)]).Id);
+        s.Merge(0, unit.Id, s.AddRegiment(0, home.Id, [.. Enumerable.Repeat(BattalionType.LightInfantry, 3)]).Id);
         Assert.Equal("Los Tercios", unit.Name);
         Assert.True(s.RenameUnit(0, unit.Id, "").Ok);
         Assert.Null(unit.CustomName);
@@ -162,7 +162,7 @@ public class OfficerTests(WorldFixture world)
     public void FlawsHinderTheUnitTheyLead()
     {
         var (s, home) = Nation();
-        var unit = s.AddRegiment(0, home.Id, BattalionType.Warriors);
+        var unit = s.AddRegiment(0, home.Id, BattalionType.LightInfantry);
         double speed = unit.Speed, upkeep = s.Upkeep(s.Players[0])[(int)ResourceType.Gold];
         double fire = s.Engage([unit], home, attacking: true).Sum(e => e.Fire);
 
@@ -180,7 +180,7 @@ public class OfficerTests(WorldFixture world)
     public void DisbandingSendsTheOfficerBackToTheReserve()
     {
         var (s, home) = Nation();
-        var unit = s.AddRegiment(0, home.Id, BattalionType.Warriors);
+        var unit = s.AddRegiment(0, home.Id, BattalionType.LightInfantry);
         var officer = Recruit(s);
         s.AssignOfficer(0, unit.Id, officer.Id);
         Assert.True(s.Disband(0, unit.Id).Ok);
@@ -191,7 +191,7 @@ public class OfficerTests(WorldFixture world)
     public void OfficersReserveAndNamesAreSaved()
     {
         var (s, home) = Nation();
-        var unit = s.AddRegiment(0, home.Id, BattalionType.Warriors);
+        var unit = s.AddRegiment(0, home.Id, BattalionType.LightInfantry);
         var officer = Recruit(s);
         s.AssignOfficer(0, unit.Id, officer.Id);
         officer.Victories = 5;

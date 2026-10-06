@@ -33,7 +33,7 @@ public class CultureTests(WorldFixture world)
         b.Population = 1000;
         Assert.Equal(1, b.CultureId);
 
-        var regiment = s.AddRegiment(0, a.Id, BattalionType.Warriors);
+        var regiment = s.AddRegiment(0, a.Id, BattalionType.LightInfantry);
         s.DeclareWar(0, 1);
         s.MoveUnit(0, regiment.Id, b.Id);
         for (int h = 0; h < 24 * 5 && !b.IsOccupied; h++) s.Step();
@@ -91,7 +91,7 @@ public class CultureTests(WorldFixture world)
     public void AGarrisonHoldsTheRevoltBack()
     {
         var (s, _, b, _) = ConqueredProvince();
-        s.AddRegiment(0, b.Id, BattalionType.Warriors);
+        s.AddRegiment(0, b.Id, BattalionType.LightInfantry);
         Assert.True(s.IsGarrisoned(b));
         b.Mood = 0;
         b.RevoltProgress = GameRules.RevoltDays - 1;

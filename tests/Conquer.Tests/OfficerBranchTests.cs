@@ -45,7 +45,7 @@ public class OfficerBranchTests(WorldFixture world)
         Assert.True(fleet.HasOfficer);
         Assert.Equal(OfficerBranch.Navy, fleet.OfficerBranch);
         Assert.Equal(OfficerBranch.Air, s.AddRegiment(0, home.Id, BattalionType.Bombers).OfficerBranch);
-        Assert.Equal(OfficerBranch.Army, s.AddRegiment(0, home.Id, BattalionType.Warriors).OfficerBranch);
+        Assert.Equal(OfficerBranch.Army, s.AddRegiment(0, home.Id, BattalionType.LightInfantry).OfficerBranch);
 
         Assert.True(s.RecruitOfficer(0).Ok);
         var soldier = s.Players[0].OfficerReserve[^1];

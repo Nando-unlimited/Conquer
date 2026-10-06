@@ -45,7 +45,10 @@ internal sealed partial class AiPlayer
     private IEnumerable<Unit> Army => _session.Units.Where(u => u.OwnerId == _player.Id && u.IsMilitary && !_claimers.Contains(u.Id) && !IsEngineerUnit(u));
 
     /// <summary>Battalions that stay out of its fighting army: scouts claim land and engineers build.</summary>
-    private static bool Auxiliary(BattalionType type) => type is BattalionType.Scouts or BattalionType.Engineers;
+    private static bool Auxiliary(BattalionType type) => type is BattalionType.Scouts or BattalionType.Engineers or BattalionType.Medics or BattalionType.AntiAir;
+
+    /// <summary>The model of the line the nation would raise now.</summary>
+    private BattalionInfo Model(BattalionType type) => GameSession.ModelFor(_player, type);
 
     /// <summary>
     /// New regiments fill the claimer slots first if they are lone scouts (one per city, plus one), since only
@@ -83,11 +86,11 @@ internal sealed partial class AiPlayer
         if (city == null || Map.Provinces[city.ProvinceId].Population < 400) return;
         // A unit as big as the city can spare (keeping 100 people beyond the minimum), from 2 to 6 battalions.
         int size = Math.Clamp((int)((Map.Provinces[city.ProvinceId].Population - GameRules.MinCityPopulation - 100) / 100), 0, BattalionsPerUnit);
-        if (size >= 2 && ArmyTemplate(size, Map.Provinces[city.ProvinceId]) is var template && Spare(template.Cost)
+        if (size >= 2 && ArmyTemplate(size, Map.Provinces[city.ProvinceId]) is var template && Spare(template.Cost(_player.Techs))
             && _session.TrainTemplate(_player.Id, city.ProvinceId, template.Id).Ok) return;
         var best = Battalions.All
-            .Where(t => !t.Info().Naval && !Auxiliary(t) && _session.CanTrain(Map.Provinces[city.ProvinceId], t).Ok && Spare(t.Info().Cost))
-            .OrderByDescending(t => t.Info().Attack + t.Info().Defense)
+            .Where(t => !Model(t).Naval && !Auxiliary(t) && _session.CanTrain(Map.Provinces[city.ProvinceId], t).Ok && Spare(Model(t).Cost))
+            .OrderByDescending(t => Model(t).Attack + Model(t).Defense)
             .Cast<BattalionType?>().FirstOrDefault();
         if (best is BattalionType type) _session.Train(_player.Id, city.ProvinceId, type);
     }
@@ -102,12 +105,12 @@ internal sealed partial class AiPlayer
         var ports = _session.Cities.Where(c => c.OwnerId == _player.Id && _session.IsPort(Map.Provinces[c.ProvinceId], _player.Id)).ToList();
         if (ports.Count == 0) return;
         int fleets = _session.Units.Count(u => u.IsFleet && u.OwnerId == _player.Id)
-                     + ports.Sum(c => Map.Provinces[c.ProvinceId].Training.Count(o => o.Battalion is BattalionType t && t.Info().Naval));
+                     + ports.Sum(c => Map.Provinces[c.ProvinceId].Training.Count(o => o.Battalion is BattalionType t && Model(t).Naval));
         if (fleets >= (ports.Count + 2) / 3) return;
         var port = ports.MaxBy(c => Map.Provinces[c.ProvinceId].Population)!;
         var warship = Battalions.All
-            .Where(t => t.Info().Naval && t.Info().Capacity < t.Info().Men && _session.CanTrain(Map.Provinces[port.ProvinceId], t).Ok && Spare(t.Info().Cost))
-            .Cast<BattalionType?>().MaxBy(t => t!.Value.Info().Attack);
+            .Where(t => Model(t).Naval && Model(t).Capacity < Model(t).Men && _session.CanTrain(Map.Provinces[port.ProvinceId], t).Ok && Spare(Model(t).Cost))
+            .Cast<BattalionType?>().MaxBy(t => Model(t!.Value).Attack);
         if (warship is BattalionType type) _session.Train(_player.Id, port.ProvinceId, type);
     }
 
@@ -118,10 +121,10 @@ internal sealed partial class AiPlayer
     /// </summary>
     private RegimentTemplate ArmyTemplate(int size, Province where)
     {
-        var known = Battalions.All.Where(t => !t.Info().Naval && !Auxiliary(t) && t.Info().Requires.All(_player.Techs.Contains) && CanSupply(t)
-                                              && (t.TrainingBuilding() is not BuildingType b || where.Has(b))).ToList();
-        var infantry = known.Where(t => !t.Info().Mounted).MaxBy(t => t.Info().Defense);
-        var striker = known.MaxBy(t => t.Info().Attack);
+        var known = Battalions.All.Where(t => !Model(t).Naval && !Auxiliary(t) && t.BestModel(_player.Techs) >= 0 && CanSupply(t)
+                                              && (Model(t).TrainingBuilding(t) is not BuildingType b || where.Has(b))).ToList();
+        var infantry = known.Where(t => !Model(t).Mounted).MaxBy(t => Model(t).Defense);
+        var striker = known.MaxBy(t => Model(t).Attack);
         BattalionType[] design = [.. new[] { infantry, infantry, striker, infantry, striker, infantry }.Take(size)];
         _armyTemplate ??= _session.AddTemplate(_player, design);
         if (!_armyTemplate.Battalions.SequenceEqual(design))
@@ -133,7 +136,7 @@ internal sealed partial class AiPlayer
     }
 
     /// <summary>Whether it has, or produces, the materials beyond wood and gold that a battalion needs (copper, iron…): twice the amount in store, or enough within 90 days.</summary>
-    private bool CanSupply(BattalionType type) => type.Info().Cost.Items
+    private bool CanSupply(BattalionType type) => Model(type).Cost.Items
         .Where(i => i.Type is not (ResourceType.Wood or ResourceType.Gold))
         .All(i => _player.Stockpile[i.Type] >= i.Amount * 2 || _player.LastDayNet[(int)i.Type] * 90 >= i.Amount);
 

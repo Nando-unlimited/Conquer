@@ -323,7 +323,7 @@ internal sealed partial class AiPlayer
         if (!_player.Techs.Contains(Tech.Engineering)) return;
         if (_session.Units.Any(u => u.OwnerId == _player.Id && IsEngineerUnit(u))
             || cities.Any(c => Map.Provinces[c.ProvinceId].Training.Any(o => o.Battalion == BattalionType.Engineers))) return;
-        if (WantedRoad() == null || !Spare(BattalionType.Engineers.Info().Cost)) return;
+        if (WantedRoad() == null || !Spare(Model(BattalionType.Engineers).Cost)) return;
         _session.Train(_player.Id, cities.MaxBy(c => Map.Provinces[c.ProvinceId].Population)!.ProvinceId, BattalionType.Engineers);
     }
 

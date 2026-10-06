@@ -39,9 +39,9 @@ public class ManpowerTests(WorldFixture world)
     {
         var (s, capital) = Capital();
         s.Human.Manpower = 150;
-        Assert.True(s.Train(0, capital.Id, BattalionType.Warriors).Ok);
+        Assert.True(s.Train(0, capital.Id, BattalionType.LightInfantry).Ok);
         Assert.Equal(50, s.Human.Manpower, 6);
-        var lack = s.Train(0, capital.Id, BattalionType.Warriors);
+        var lack = s.Train(0, capital.Id, BattalionType.LightInfantry);
         Assert.False(lack.Ok);
         Assert.StartsWith("Faltan reclutas", lack.Message);
         Assert.True(s.Train(0, capital.Id, BattalionType.Scouts).Ok); // 50 men still fit
@@ -58,7 +58,7 @@ public class ManpowerTests(WorldFixture world)
         Assert.InRange(s.Human.Manpower, perDay * 0.9, perDay * 1.1);
 
         double before = s.Human.Manpower;
-        var regiment = s.AddRegiment(0, capital.Id, BattalionType.Warriors);
+        var regiment = s.AddRegiment(0, capital.Id, BattalionType.LightInfantry);
         Assert.True(s.Disband(0, regiment.Id).Ok);
         Assert.Equal(Math.Min(s.ManpowerCapacity(s.Human), before + 100), s.Human.Manpower, 6);
 
@@ -75,7 +75,7 @@ public class ManpowerTests(WorldFixture world)
     public void ReinforcementsNeedRecruits()
     {
         var (s, capital) = Capital();
-        var regiment = s.AddRegiment(0, capital.Id, BattalionType.Warriors);
+        var regiment = s.AddRegiment(0, capital.Id, BattalionType.LightInfantry);
         regiment.Battalions[0].Strength = 50;
         s.Human.Manpower = 0;
         for (int h = 0; h < 24; h++) s.Step();

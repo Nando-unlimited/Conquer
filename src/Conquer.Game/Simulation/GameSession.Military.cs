@@ -30,7 +30,7 @@ public sealed partial class GameSession
     internal Unit AddRegiment(int ownerId, int provinceId, params BattalionType[] battalions)
     {
         var unit = AddUnit(ownerId, UnitType.Regiment, provinceId, 0, NextUnitNumber(ownerId, CommandLevels.Combat));
-        foreach (var type in battalions) unit.Battalions.Add(new Battalion(type));
+        foreach (var type in battalions) unit.Battalions.Add(NewBattalion(Players[ownerId], type));
         return unit;
     }
 
@@ -224,12 +224,37 @@ public sealed partial class GameSession
         return CommandResult.Success();
     }
 
+    /// <summary>
+    /// Whether the province can train a battalion of the line: of the newest model its nation knows, or, while it knows
+    /// none, the first model says what is missing.
+    /// </summary>
     public CommandResult CanTrain(Province p, BattalionType type)
     {
-        if (type.Info().Naval && !IsPort(p, p.OwnerId)) return CommandResult.Fail("Los barcos solo se construyen en ciudades con puerto.");
-        if (type.Info().Shipyard is BuildingType yard && !p.Buildings.Contains(yard))
+        var model = ModelFor(Players[p.OwnerId], type);
+        if (model.Naval && !IsPort(p, p.OwnerId)) return CommandResult.Fail("Los barcos solo se construyen en ciudades con puerto.");
+        if (model.Shipyard is BuildingType yard && !p.Buildings.Contains(yard))
             return CommandResult.Fail($"Requiere {yard.Info().Name.ToLowerInvariant()} en la ciudad.");
-        return CanRaiseTroops(p, type.Info().Men, type.Info().Cost, type.Info().Requires, type.TrainingBuilding() is BuildingType b ? [b] : []);
+        return CanRaiseTroops(p, model.Men, model.Cost, model.Requires, model.TrainingBuilding(type) is BuildingType b ? [b] : []);
+    }
+
+    /// <summary>The model of the line a nation raises now: the newest whose advances it knows (the first while it knows none).</summary>
+    public static BattalionInfo ModelFor(Player player, BattalionType type) => type.ModelFor(player.Techs);
+
+    /// <summary>A new battalion of the line, of the newest model its nation knows, at full strength.</summary>
+    private static Battalion NewBattalion(Player player, BattalionType type) => new(type, Math.Max(0, type.BestModel(player.Techs)));
+
+    /// <summary>
+    /// Every battalion of the nation takes up the newest model of its line it knows. For now the new arms reach them at once;
+    /// they will have to be made and sent to them.
+    /// </summary>
+    private static void Modernise(Player player, IEnumerable<Unit> units)
+    {
+        var best = new Dictionary<BattalionType, int>();
+        foreach (var b in units.SelectMany(u => u.Battalions))
+        {
+            if (!best.TryGetValue(b.Type, out int model)) best[b.Type] = model = b.Type.BestModel(player.Techs);
+            b.Modernise(model);
+        }
     }
 
     /// <summary>
@@ -264,7 +289,7 @@ public sealed partial class GameSession
         if (p.OwnerId != playerId) return CommandResult.Fail("La provincia no es tuya.");
         var check = CanTrain(p, type);
         if (!check.Ok) return check;
-        var info = type.Info();
+        var info = ModelFor(Players[playerId], type);
         Players[playerId].Stockpile.TrySpend(info.Cost);
         p.Population -= info.Men;
         Players[playerId].Manpower -= info.Men;
@@ -279,7 +304,7 @@ public sealed partial class GameSession
 
     /// <summary>Days a battalion takes the player to train: its normal days, fewer with the advances that study it.</summary>
     public static int TrainingDays(Player player, BattalionType type) =>
-        (int)Math.Ceiling(type.Info().TrainingDays / (1 + TrainingSpeed(player, type)));
+        (int)Math.Ceiling(ModelFor(player, type).TrainingDays / (1 + TrainingSpeed(player, type)));
 
     /// <summary>Days a regiment of the template takes the player: its battalions train side by side, so the slowest sets the time.</summary>
     public static int TrainingDays(Player player, RegimentTemplate template) =>
@@ -323,7 +348,7 @@ public sealed partial class GameSession
             {
                 if (--order.DaysLeft > 0) continue;
                 p.Training.Remove(order);
-                var unit = order.Battalion is BattalionType ship && ship.Info().Naval ? AddFleet(player.Id, id, ship)
+                var unit = order.Battalion is BattalionType ship && ship.First().Naval ? AddFleet(player.Id, id, ship)
                     : order.Battalion is BattalionType type ? AddRegiment(player.Id, id, type)
                     : order.TemplateBattalions.Count > 0 ? AddRegiment(player.Id, id, [.. order.TemplateBattalions])
                     : AddHeadquarters(player.Id, id, order.HeadquartersLevel);
@@ -347,7 +372,7 @@ public sealed partial class GameSession
     /// <summary>A new template with a single warrior battalion, to be filled in.</summary>
     public CommandResult CreateTemplate(int playerId)
     {
-        var template = AddTemplate(Players[playerId], [BattalionType.Warriors]);
+        var template = AddTemplate(Players[playerId], [BattalionType.LightInfantry]);
         return CommandResult.Success($"{template.Name} creada.");
     }
 
@@ -369,10 +394,10 @@ public sealed partial class GameSession
 
     public CommandResult CanAddToTemplate(Player player, RegimentTemplate template, BattalionType type)
     {
-        if (type.Info().Naval) return CommandResult.Fail("Los barcos no van en plantillas: se construyen sueltos en los puertos.");
+        if (type.First().Naval) return CommandResult.Fail("Los barcos no van en plantillas: se construyen sueltos en los puertos.");
         if (template.Battalions.Count >= MilitaryRules.MaxBattalionsPerUnit)
             return CommandResult.Fail($"Como mucho {Formations.BattalionCount(MilitaryRules.MaxBattalionsPerUnit)} por unidad.");
-        var missing = type.Info().Requires.Where(t => !player.Techs.Contains(t)).ToList();
+        var missing = type.First().Requires.Where(t => !player.Techs.Contains(t)).ToList();
         if (missing.Count > 0) return CommandResult.Fail("Requiere " + string.Join(" y ", missing.Select(t => t.Info().Name.ToLowerInvariant())) + ".");
         return CommandResult.Success();
     }
@@ -397,7 +422,7 @@ public sealed partial class GameSession
     }
 
     public CommandResult CanTrainTemplate(Province p, RegimentTemplate template) =>
-        CanRaiseTroops(p, template.Men, template.Cost, template.Requires, template.TrainingBuildings);
+        CanRaiseTroops(p, template.Men(Players[p.OwnerId].Techs), template.Cost(Players[p.OwnerId].Techs), template.Requires, template.TrainingBuildings(Players[p.OwnerId].Techs));
 
     /// <summary>Pays for every battalion of a template at once; they train side by side and form one regiment.</summary>
     public CommandResult TrainTemplate(int playerId, int provinceId, int templateId)
@@ -407,9 +432,10 @@ public sealed partial class GameSession
         if (TemplateById(Players[playerId], templateId) is not { } template) return CommandResult.Fail("Plantilla no válida.");
         var check = CanTrainTemplate(p, template);
         if (!check.Ok) return check;
-        Players[playerId].Stockpile.TrySpend(template.Cost);
-        p.Population -= template.Men;
-        Players[playerId].Manpower -= template.Men;
+        var known = Players[playerId].Techs;
+        Players[playerId].Stockpile.TrySpend(template.Cost(known));
+        p.Population -= template.Men(known);
+        Players[playerId].Manpower -= template.Men(known);
         int days = TrainingDays(Players[playerId], template);
         p.Training.Add(new TrainingOrder(template, days));
         return CommandResult.Success($"{Formations.CombatName(template.Battalions.Count)} de la {template.Name} en instrucción: {days} días.");
@@ -694,6 +720,7 @@ public sealed partial class GameSession
     {
         DailyManpower(player);
         DailyTraining(player);
+        Modernise(player, Units.Where(u => u.OwnerId == player.Id));
         _supplied[player.Id] = ComputeSupply(player);
         var capital = player.CapitalCityId is int c && CityById(c) is { } city && !Map.Provinces[city.ProvinceId].IsOccupied
             ? Map.Provinces[city.ProvinceId] : null;
@@ -806,6 +833,7 @@ public sealed partial class GameSession
 
             var attacking = Engage(attackers, province, attacking: true);
             var defending = Engage(defenders, province, attacking: false, HasEngineers(attackers));
+            (attacking, defending) = FaceEachOther(attacking, defending);
             double attackFire = SideFire(attacking), defenseFire = SideFire(defending);
             battle.DefenderLosses += Damage(defending, attackFire);
             battle.AttackerLosses += Damage(attacking, defenseFire);
@@ -837,6 +865,26 @@ public sealed partial class GameSession
     public static double DefenseMultiplier(Province province, bool engineers = false) =>
         MilitaryRules.DefenseMultiplier(province, engineers) * (1 + province.BuildingBonuses.Defense);
 
+    /// <summary>Whether the unit has medics with men left, who save some of its wounded.</summary>
+    public static bool HasMedics(Unit unit) => unit.Battalions.Any(b => b.Type == BattalionType.Medics && b.Strength >= 1);
+
+    /// <summary>
+    /// Each side's anti-air against the other's aircraft: with enemy aircraft in the fight it fires harder
+    /// (<see cref="MilitaryRules.AntiAirAgainstAircraft"/>), and each of its battalions takes a share off their fire.
+    /// </summary>
+    public static (List<Engaged> Attacking, List<Engaged> Defending) FaceEachOther(List<Engaged> attacking, List<Engaged> defending) =>
+        (AgainstAircraft(attacking, defending), AgainstAircraft(defending, attacking));
+
+    private static List<Engaged> AgainstAircraft(List<Engaged> side, List<Engaged> enemy)
+    {
+        bool enemyFlies = enemy.Any(e => e.Role == BattalionRole.Air);
+        double shield = Math.Min(MilitaryRules.MaxAntiAirShield, MilitaryRules.AntiAirShield * enemy.Count(e => e.Battalion.Type == BattalionType.AntiAir));
+        return [.. side.Select(e =>
+            e.Battalion.Type == BattalionType.AntiAir && enemyFlies ? e with { Fire = e.Fire * MilitaryRules.AntiAirAgainstAircraft }
+            : e.Role == BattalionRole.Air ? e with { Fire = e.Fire * (1 - shield) }
+            : e)];
+    }
+
     /// <summary>Whether any of these units brings engineers, fighting or not.</summary>
     public static bool HasEngineers(IEnumerable<Unit> units) => units.Any(u => u.Battalions.Any(b => b.Type == BattalionType.Engineers));
 
@@ -865,8 +913,10 @@ public sealed partial class GameSession
             {
                 double value = attacking ? b.Info.Attack : b.Info.Defense;
                 if (attacking && b.Info.Mounted && MilitaryRules.IsRough(province.Biome)) value *= MilitaryRules.MountedRoughTerrainAttack;
+                if (b.Type == BattalionType.MountainInfantry && MilitaryRules.IsRough(province.Biome)) value *= MilitaryRules.MountainTroopsRoughTerrain;
                 double fire = value * b.StrengthShare * (0.5 + 0.5 * b.OrganisationShare) * (1 + MilitaryRules.ExperienceBonus * b.Experience) * multiplier;
-                all.Add(new Engaged(unit, b, b.Type.Role(), fire, 1));
+                // Medics do not fight: they only save the wounded of their unit (see Damage).
+                if (b.Type.Role() != BattalionRole.Support) all.Add(new Engaged(unit, b, b.Type.Role(), fire, 1));
             }
         }
         int width = MilitaryRules.FrontWidth(province.Biome);
@@ -885,7 +935,7 @@ public sealed partial class GameSession
 
     /// <summary>Extra fire for each kind of troop beyond the first among those fighting, up to a limit.</summary>
     public static double CombinedArms(IEnumerable<BattalionRole> roles) =>
-        Math.Min(MilitaryRules.MaxCombinedArmsBonus, MilitaryRules.CombinedArmsBonus * Math.Max(0, roles.Where(r => r != BattalionRole.Naval).Distinct().Count() - 1));
+        Math.Min(MilitaryRules.MaxCombinedArmsBonus, MilitaryRules.CombinedArmsBonus * Math.Max(0, roles.Where(r => r is not (BattalionRole.Naval or BattalionRole.Support)).Distinct().Count() - 1));
 
     /// <summary>
     /// Spreads the enemy's fire over a side's engaged battalions as lost organisation and men: artillery and
@@ -902,7 +952,8 @@ public sealed partial class GameSession
             double share = fire * e.Exposure / exposure;
             double loss = Math.Max(0, 1 + (GeneralOf(e.Unit)?.OrganisationLoss ?? 0) + (e.Unit.Officer?.OrganisationLoss ?? 0));
             e.Battalion.Organisation = Math.Max(0, e.Battalion.Organisation - share * MilitaryRules.OrganisationDamage * loss);
-            double strength = Math.Max(0, e.Battalion.Strength - share * MilitaryRules.StrengthDamage);
+            double saved = HasMedics(e.Unit) ? 1 - MilitaryRules.MedicsSaving : 1;
+            double strength = Math.Max(0, e.Battalion.Strength - share * MilitaryRules.StrengthDamage * saved);
             lost += e.Battalion.Strength - strength;
             e.Battalion.Strength = strength;
         }

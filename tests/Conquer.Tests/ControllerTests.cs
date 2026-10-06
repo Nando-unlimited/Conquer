@@ -181,7 +181,7 @@ public class ControllerTests(WorldFixture world)
         var game = GameWithCapital();
         game.Camera.Screen = new System.Numerics.Vector2(1600, 900);
         int home = game.SelectedProvince;
-        var ids = Enumerable.Range(0, 3).Select(_ => game.Session.AddRegiment(0, home, BattalionType.Warriors).Id).ToList();
+        var ids = Enumerable.Range(0, 3).Select(_ => game.Session.AddRegiment(0, home, BattalionType.LightInfantry).Id).ToList();
         game.SelectUnit(ids[0]);
         List<UnitCounter> Here() => [.. game.Markers().Units.Where(c => ids.Contains(c.UnitId))];
 
@@ -217,8 +217,8 @@ public class ControllerTests(WorldFixture world)
         p.Population += 1000;
         p.AddBuilding(BuildingType.Barracks);
         foreach (var r in new[] { ResourceType.Wood, ResourceType.Gold }) game.Human.Stockpile[r] += 1000;
-        s.Train(game.Human.Id, p.Id, BattalionType.Warriors);
-        s.Train(game.Human.Id, p.Id, BattalionType.Warriors);
+        s.Train(game.Human.Id, p.Id, BattalionType.LightInfantry);
+        s.Train(game.Human.Id, p.Id, BattalionType.LightInfantry);
         for (int h = 0; h < 24 * 25; h++) s.Step();
         var units = s.Units.Where(u => u.OwnerId == game.Human.Id && u.IsMilitary).ToList();
         s.Merge(game.Human.Id, units[0].Id, units[1].Id);
@@ -278,8 +278,8 @@ public class ControllerTests(WorldFixture world)
         s.FoundCity(0, s.AddUnit(0, UnitType.Settlers, a.Id, 300).Id);
         var claimer = s.AddRegiment(1, b.Id, BattalionType.Scouts);
         s.Claim(1, claimer.Id);
-        s.AddRegiment(1, b.Id, BattalionType.Warriors, BattalionType.Warriors);
-        var attacker = s.AddRegiment(0, a.Id, BattalionType.Warriors, BattalionType.Warriors);
+        s.AddRegiment(1, b.Id, BattalionType.LightInfantry, BattalionType.LightInfantry);
+        var attacker = s.AddRegiment(0, a.Id, BattalionType.LightInfantry, BattalionType.LightInfantry);
         s.DeclareWar(0, 1);
         s.MoveUnit(0, attacker.Id, b.Id);
         for (int h = 0; h < 24 * 5 && (s.BattleIn(b.Id) is null || s.BattleIn(b.Id)!.History.Count < 3); h++) s.Step();
@@ -406,8 +406,8 @@ public class ControllerTests(WorldFixture world)
     {
         var (game, capital) = WithCapital();
         var far = _map.Provinces.Where(p => p.IsClaimable && _map.DistanceKm(p, capital) > 6000).Take(2).ToList();
-        var first = game.Session.AddRegiment(0, far[0].Id, BattalionType.Warriors);
-        var second = game.Session.AddRegiment(0, far[1].Id, BattalionType.Warriors);
+        var first = game.Session.AddRegiment(0, far[0].Id, BattalionType.LightInfantry);
+        var second = game.Session.AddRegiment(0, far[1].Id, BattalionType.LightInfantry);
 
         var alert = AlertStarting(game, "Sin suministro")!;
         Assert.Equal("Sin suministro (2)", alert.Text);

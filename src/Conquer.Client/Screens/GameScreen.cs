@@ -101,7 +101,7 @@ public sealed partial class GameScreen : IScreen, IAudibleScreen
         Map.Provinces[city.ProvinceId].AddBuilding(BuildingType.Barracks);
         foreach (var r in new[] { ResourceType.Wood, ResourceType.Gold }) Human.Stockpile[r] += 1000;
         Human.Learn(Tech.Archery);
-        foreach (var type in new[] { BattalionType.Warriors, BattalionType.Archers, BattalionType.Warriors }) _session.Train(Human.Id, city.ProvinceId, type);
+        foreach (var type in new[] { BattalionType.LightInfantry, BattalionType.RangedInfantry, BattalionType.LightInfantry }) _session.Train(Human.Id, city.ProvinceId, type);
         _session.RaiseHeadquarters(Human.Id, city.ProvinceId, 1);
         for (int h = 0; h < 24 * 25; h++) _session.Step();
         var regiments = _session.Units.Where(u => u.OwnerId == Human.Id && u.IsMilitary).ToList();

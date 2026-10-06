@@ -234,12 +234,12 @@ public sealed class Unit
         _ => "",
     };
     /// <summary>What its NATO symbol shows inside the frame, from its battalions.</summary>
-    public UnitFunction Function => Formations.Function(Battalions.Select(b => b.Type));
+    public UnitFunction Function => Formations.Function(Battalions);
     public string Symbol => Type switch
     {
         UnitType.Settlers => "C",
         UnitType.Headquarters => CommandLevels.Info(HeadquartersLevel).Symbol,
-        _ => Battalions.Count == 0 ? "?" : Battalions.GroupBy(b => b.Type).OrderByDescending(g => g.Count()).First().Key.Info().Symbol,
+        _ => Battalions.Count == 0 ? "?" : Battalions.GroupBy(b => b.Type).OrderByDescending(g => g.Count()).First().First().Info.Symbol,
     };
 
     public bool IsMoving => Path.Count > 0;

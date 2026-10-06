@@ -54,17 +54,23 @@ public class MilitaryTests(WorldFixture world)
         Assert.Equal("XX", Formations.CombatEchelon(7));
         Assert.Equal(["XXX", "XXXX", "XXXXX"], CommandLevels.All.Select(l => l.Symbol));
 
-        Assert.Equal(UnitFunction.Infantry, Formations.Function([BattalionType.Warriors, BattalionType.Archers]));
-        Assert.Equal(UnitFunction.Cavalry, Formations.Function([BattalionType.Horsemen, BattalionType.Chariots, BattalionType.Warriors]));
+        Assert.Equal(UnitFunction.Infantry, Formations.Function([BattalionType.LightInfantry, BattalionType.RangedInfantry]));
+        Assert.Equal(UnitFunction.Cavalry, Formations.Function([BattalionType.Cavalry, BattalionType.Cavalry, BattalionType.LightInfantry]));
         Assert.Equal(UnitFunction.Cavalry, Formations.Function([BattalionType.Scouts]));
-        Assert.Equal(UnitFunction.Armour, Formations.Function([BattalionType.Tanks]));
-        Assert.Equal(UnitFunction.Mechanised, Formations.Function([BattalionType.Tanks, BattalionType.MotorisedInfantry]));
-        Assert.Equal(UnitFunction.MotorisedInfantry, Formations.Function([BattalionType.MotorisedInfantry]));
-        Assert.Equal(UnitFunction.Artillery, Formations.Function([BattalionType.Cannons, BattalionType.Cannons, BattalionType.Musketeers]));
+        Assert.Equal(UnitFunction.Armour, Formations.Function([BattalionType.Armour]));
+        Assert.Equal(UnitFunction.Mechanised, Formations.Function([BattalionType.Armour, BattalionType.Cavalry]));
+        Assert.Equal(UnitFunction.Mountain, Formations.Function([BattalionType.MountainInfantry]));
+        Assert.Equal(UnitFunction.Airborne, Formations.Function([BattalionType.Paratroopers]));
+        Assert.Equal(UnitFunction.AntiAir, Formations.Function([BattalionType.AntiAir]));
+        Assert.Equal(UnitFunction.Medical, Formations.Function([BattalionType.Medics]));
+        // Horse-drawn chariots are cavalry; tanks are armour.
+        Assert.Equal(UnitFunction.Cavalry, Formations.Function([new Battalion(BattalionType.Armour, 0)]));
+        Assert.Equal(UnitFunction.Armour, Formations.Function([new Battalion(BattalionType.Armour, 1)]));
+        Assert.Equal(UnitFunction.Artillery, Formations.Function([BattalionType.Artillery, BattalionType.Artillery, BattalionType.RangedInfantry]));
         Assert.Equal(UnitFunction.Engineers, Formations.Function([BattalionType.Engineers]));
         Assert.Equal(UnitFunction.Air, Formations.Function([BattalionType.Bombers]));
         // A tie goes to the front line.
-        Assert.Equal(UnitFunction.Infantry, Formations.Function([BattalionType.Catapults, BattalionType.Warriors]));
+        Assert.Equal(UnitFunction.Infantry, Formations.Function([BattalionType.Artillery, BattalionType.LightInfantry]));
     }
 
     [Fact]
@@ -74,9 +80,9 @@ public class MilitaryTests(WorldFixture world)
         var city = s.CityIn(a)!;
         a.Population = 1000;
         s.Human.Stockpile[ResourceType.Wood] = s.Human.Stockpile[ResourceType.Gold] = 500;
-        var info = BattalionType.Warriors.Info();
+        var info = BattalionType.LightInfantry.First();
 
-        Assert.True(s.Train(0, city.ProvinceId, BattalionType.Warriors).Ok);
+        Assert.True(s.Train(0, city.ProvinceId, BattalionType.LightInfantry).Ok);
         Assert.Equal(1000 - info.Men, a.Population);
         Assert.Equal(500 - 30, s.Human.Stockpile[ResourceType.Wood]);
         Assert.Single(a.Training);
@@ -98,22 +104,22 @@ public class MilitaryTests(WorldFixture world)
         s.Human.Stockpile[ResourceType.Wood] = s.Human.Stockpile[ResourceType.Gold] = 500;
         s.Human.Stockpile[ResourceType.Copper] = 100;
 
-        Assert.True(s.Train(0, city.ProvinceId, BattalionType.Warriors).Ok); // warriors need nothing
-        Assert.False(s.Train(0, city.ProvinceId, BattalionType.Archers).Ok);
+        Assert.True(s.Train(0, city.ProvinceId, BattalionType.LightInfantry).Ok); // warriors need nothing
+        Assert.False(s.Train(0, city.ProvinceId, BattalionType.RangedInfantry).Ok);
         s.Human.Learn(Tech.Archery);
-        Assert.True(s.Train(0, city.ProvinceId, BattalionType.Archers).Ok);
+        Assert.True(s.Train(0, city.ProvinceId, BattalionType.RangedInfantry).Ok);
 
-        Assert.False(s.Train(0, city.ProvinceId, BattalionType.Horsemen).Ok);
+        Assert.False(s.Train(0, city.ProvinceId, BattalionType.Cavalry).Ok);
         s.Human.Learn(Tech.HorsebackRiding);
-        Assert.True(s.Train(0, city.ProvinceId, BattalionType.Horsemen).Ok);
-        Assert.False(s.Train(0, city.ProvinceId, BattalionType.Chariots).Ok); // needs the wheel
+        Assert.True(s.Train(0, city.ProvinceId, BattalionType.Cavalry).Ok);
+        Assert.False(s.Train(0, city.ProvinceId, BattalionType.Armour).Ok); // needs the wheel
 
         s.Human.Learn(Tech.TheWheel);
-        Assert.True(s.Train(0, city.ProvinceId, BattalionType.ChariotArchers).Ok); // the wheel and archery
-        s.Human.Techs.Remove(Tech.Archery);
-        var noBows = s.CanTrain(a, BattalionType.ChariotArchers);
-        Assert.False(noBows.Ok);
-        Assert.Contains("tiro con arco", noBows.Message);
+        Assert.True(s.Train(0, city.ProvinceId, BattalionType.Armour).Ok);
+        s.Human.Techs.Remove(Tech.TheWheel);
+        var noWheel = s.CanTrain(a, BattalionType.Armour);
+        Assert.False(noWheel.Ok);
+        Assert.Contains("la rueda", noWheel.Message);
     }
 
     [Fact]
@@ -124,26 +130,26 @@ public class MilitaryTests(WorldFixture world)
         a.Population = 2000;
         foreach (var r in new[] { ResourceType.Wood, ResourceType.Gold, ResourceType.Copper, ResourceType.Iron }) s.Human.Stockpile[r] = 1000;
 
-        Assert.False(s.Train(0, city.ProvinceId, BattalionType.Legionaries).Ok);
+        Assert.False(s.Train(0, city.ProvinceId, BattalionType.HeavyInfantry).Ok);
         s.Human.Learn(Tech.MilitaryTactics);
-        Assert.True(s.Train(0, city.ProvinceId, BattalionType.Legionaries).Ok);
+        Assert.True(s.Train(0, city.ProvinceId, BattalionType.HeavyInfantry).Ok);
 
         a.AddBuilding(BuildingType.Workshop);
-        Assert.False(s.Train(0, city.ProvinceId, BattalionType.Catapults).Ok);
+        Assert.False(s.Train(0, city.ProvinceId, BattalionType.Artillery).Ok);
         s.Human.Learn(Tech.SiegeEngines);
-        Assert.True(s.Train(0, city.ProvinceId, BattalionType.Catapults).Ok);
+        Assert.True(s.Train(0, city.ProvinceId, BattalionType.Artillery).Ok);
 
-        Assert.False(s.Train(0, city.ProvinceId, BattalionType.Cataphracts).Ok);
+        Assert.False(s.Train(0, city.ProvinceId, BattalionType.Cavalry).Ok);
         s.Human.Learn(Tech.HeavyCavalry);
-        Assert.True(s.Train(0, city.ProvinceId, BattalionType.Cataphracts).Ok);
+        Assert.True(s.Train(0, city.ProvinceId, BattalionType.Cavalry).Ok);
     }
 
     [Fact]
     public void DivisionsMergeSplitAndMarchAtTheSlowestPace()
     {
         var (s, a, _) = TwoNations();
-        var riders = s.AddRegiment(0, a.Id, BattalionType.Horsemen);
-        var foot = s.AddRegiment(0, a.Id, BattalionType.Warriors, BattalionType.Archers);
+        var riders = s.AddRegiment(0, a.Id, BattalionType.Cavalry);
+        var foot = s.AddRegiment(0, a.Id, BattalionType.LightInfantry, BattalionType.RangedInfantry);
         Assert.Equal(1.8, riders.Speed);
 
         Assert.True(s.Merge(0, riders.Id, foot.Id).Ok);
@@ -151,19 +157,19 @@ public class MilitaryTests(WorldFixture world)
         Assert.Equal(3, riders.Battalions.Count);
         Assert.Equal(1, riders.Speed);
 
-        var more = s.AddRegiment(0, a.Id, [.. Enumerable.Repeat(BattalionType.Warriors, 10)]);
+        var more = s.AddRegiment(0, a.Id, [.. Enumerable.Repeat(BattalionType.LightInfantry, 10)]);
         Assert.False(s.Merge(0, riders.Id, more.Id).Ok); // thirteen battalions is too many
 
         Assert.True(s.Split(0, riders.Id, 0).Ok);
         Assert.Equal(2, riders.Battalions.Count);
-        Assert.Contains(s.Units, u => u.IsMilitary && u.Battalions.Count == 1 && u.Battalions[0].Type == BattalionType.Horsemen);
+        Assert.Contains(s.Units, u => u.IsMilitary && u.Battalions.Count == 1 && u.Battalions[0].Type == BattalionType.Cavalry);
     }
 
     [Fact]
     public void ArmiesOnlyEnterTheLandOfNationsAtWar()
     {
         var (s, a, b) = TwoNations();
-        var regiment = s.AddRegiment(0, a.Id, BattalionType.Warriors);
+        var regiment = s.AddRegiment(0, a.Id, BattalionType.LightInfantry);
 
         Assert.False(s.MoveUnit(0, regiment.Id, b.Id).Ok);
         var settlers = s.AddUnit(0, UnitType.Settlers, a.Id, 300);
@@ -177,7 +183,7 @@ public class MilitaryTests(WorldFixture world)
     public void MarchingIntoUndefendedEnemyLandOccupiesIt()
     {
         var (s, a, b) = TwoNations();
-        var regiment = s.AddRegiment(0, a.Id, BattalionType.Warriors);
+        var regiment = s.AddRegiment(0, a.Id, BattalionType.LightInfantry);
         s.DeclareWar(0, 1);
         s.MoveUnit(0, regiment.Id, b.Id);
 
@@ -193,9 +199,9 @@ public class MilitaryTests(WorldFixture world)
     public void AStrongAttackWinsTheProvince()
     {
         var (s, a, b) = TwoNations();
-        var defender = s.AddRegiment(1, b.Id, BattalionType.Warriors);
+        var defender = s.AddRegiment(1, b.Id, BattalionType.LightInfantry);
         var attackers = Enumerable.Range(0, 3)
-            .Select(_ => s.AddRegiment(0, a.Id, BattalionType.IronInfantry, BattalionType.IronInfantry, BattalionType.IronInfantry, BattalionType.IronInfantry))
+            .Select(_ => s.AddRegiment(0, a.Id, BattalionType.HeavyInfantry, BattalionType.HeavyInfantry, BattalionType.HeavyInfantry, BattalionType.HeavyInfantry))
             .ToList();
         s.DeclareWar(0, 1);
         foreach (var unit in attackers) s.MoveUnit(0, unit.Id, b.Id);
@@ -218,8 +224,8 @@ public class MilitaryTests(WorldFixture world)
         var city = s.CityIn(a)!;
         a.Population = 1000;
         s.Human.Stockpile[ResourceType.Wood] = s.Human.Stockpile[ResourceType.Gold] = 500;
-        var scouts = BattalionType.Scouts.Info();
-        var warriors = BattalionType.Warriors.Info();
+        var scouts = BattalionType.Scouts.First();
+        var warriors = BattalionType.LightInfantry.First();
         Assert.Empty(scouts.Requires);
         Assert.True(scouts.Cost.Items.Sum(i => i.Amount) < warriors.Cost.Items.Sum(i => i.Amount) / 2);
         Assert.True(scouts.Speed > warriors.Speed);
@@ -250,12 +256,12 @@ public class MilitaryTests(WorldFixture world)
         var plain = _map.Provinces.First(p => p.Biome == Biome.Grassland && !p.HasRiver);
         Assert.Equal(1, MilitaryRules.DefenseMultiplier(plain, engineers: true), 6);
 
-        var defenders = new List<Conquer.Game.Entities.Unit> { s.AddRegiment(1, hillsWithRiver.Id, BattalionType.Warriors) };
+        var defenders = new List<Conquer.Game.Entities.Unit> { s.AddRegiment(1, hillsWithRiver.Id, BattalionType.LightInfantry) };
         double normal = GameSession.ExpectedFire(s.Engage(defenders, hillsWithRiver, attacking: false));
         double engineered = GameSession.ExpectedFire(s.Engage(defenders, hillsWithRiver, attacking: false, enemyEngineers: true));
         Assert.Equal(normal * MilitaryRules.DefenseMultiplier(hillsWithRiver, true) / MilitaryRules.DefenseMultiplier(hillsWithRiver), engineered, 6);
 
-        var sappers = s.AddRegiment(0, a.Id, BattalionType.Warriors, BattalionType.Engineers);
+        var sappers = s.AddRegiment(0, a.Id, BattalionType.LightInfantry, BattalionType.Engineers);
         Assert.True(GameSession.HasEngineers([sappers]));
         var engaged = s.Engage([sappers], a, attacking: true);
         Assert.Equal(MilitaryRules.SupportExposure, engaged.Single(e => e.Role == BattalionRole.Engineers).Exposure);
@@ -372,8 +378,8 @@ public class MilitaryTests(WorldFixture world)
     public void BattlesRecordLossesHourByHourAndHowTheyEnded()
     {
         var (s, a, b) = TwoNations();
-        var defender = s.AddRegiment(1, b.Id, BattalionType.Warriors, BattalionType.Warriors);
-        var attacker = s.AddRegiment(0, a.Id, BattalionType.IronInfantry, BattalionType.IronInfantry, BattalionType.IronInfantry);
+        var defender = s.AddRegiment(1, b.Id, BattalionType.LightInfantry, BattalionType.LightInfantry);
+        var attacker = s.AddRegiment(0, a.Id, BattalionType.HeavyInfantry, BattalionType.HeavyInfantry, BattalionType.HeavyInfantry);
         s.DeclareWar(0, 1);
         s.MoveUnit(0, attacker.Id, b.Id);
         RunUntil(s, () => s.BattleIn(b.Id) != null, 24 * 5);
@@ -401,8 +407,8 @@ public class MilitaryTests(WorldFixture world)
     public void AWeakAttackBreaksAndGivesUp()
     {
         var (s, a, b) = TwoNations();
-        s.AddRegiment(1, b.Id, BattalionType.IronInfantry, BattalionType.IronInfantry, BattalionType.IronInfantry, BattalionType.IronInfantry);
-        var attacker = s.AddRegiment(0, a.Id, BattalionType.Archers);
+        s.AddRegiment(1, b.Id, BattalionType.HeavyInfantry, BattalionType.HeavyInfantry, BattalionType.HeavyInfantry, BattalionType.HeavyInfantry);
+        var attacker = s.AddRegiment(0, a.Id, BattalionType.RangedInfantry);
         s.DeclareWar(0, 1);
         s.MoveUnit(0, attacker.Id, b.Id);
 
@@ -421,11 +427,11 @@ public class MilitaryTests(WorldFixture world)
         // Player 0 holds every land neighbour of B, so there is nowhere to retreat to.
         foreach (int n in b.Neighbors.Where(n => !_map.Provinces[n].IsWater && !_map.Provinces[n].IsOwned))
             s.Claim(0, s.AddRegiment(0, n, BattalionType.Scouts).Id);
-        var defender = s.AddRegiment(1, b.Id, BattalionType.Warriors);
+        var defender = s.AddRegiment(1, b.Id, BattalionType.LightInfantry);
         s.DeclareWar(0, 1);
         foreach (int n in b.Neighbors.Where(n => _map.Provinces[n].ControllerId == 0 && !_map.Provinces[n].IsOccupied))
         {
-            var unit = s.AddRegiment(0, n, BattalionType.IronInfantry, BattalionType.IronInfantry, BattalionType.IronInfantry);
+            var unit = s.AddRegiment(0, n, BattalionType.HeavyInfantry, BattalionType.HeavyInfantry, BattalionType.HeavyInfantry);
             s.MoveUnit(0, unit.Id, b.Id);
         }
 
@@ -439,7 +445,7 @@ public class MilitaryTests(WorldFixture world)
     public void PeaceReturnsOccupiedLandAndSendsArmiesHome()
     {
         var (s, a, b) = TwoNations();
-        var regiment = s.AddRegiment(0, a.Id, BattalionType.Warriors);
+        var regiment = s.AddRegiment(0, a.Id, BattalionType.LightInfantry);
         s.DeclareWar(0, 1);
         s.MoveUnit(0, regiment.Id, b.Id);
         RunUntil(s, () => b.IsOccupied, 24 * 5);
@@ -456,7 +462,7 @@ public class MilitaryTests(WorldFixture world)
     {
         var (s, a, b) = TwoNations();
         b.AddBuilding(BuildingType.Walls);
-        var regiment = s.AddRegiment(0, a.Id, BattalionType.Warriors);
+        var regiment = s.AddRegiment(0, a.Id, BattalionType.LightInfantry);
         s.DeclareWar(0, 1);
         s.MoveUnit(0, regiment.Id, b.Id);
         RunUntil(s, () => regiment.ProvinceId == b.Id, 24 * 5);
@@ -481,11 +487,11 @@ public class MilitaryTests(WorldFixture world)
     {
         var (s, a, b) = TwoNations();
         b.AddBuilding(BuildingType.Castle);
-        var regiment = s.AddRegiment(0, a.Id, BattalionType.Warriors, BattalionType.Catapults);
+        var regiment = s.AddRegiment(0, a.Id, BattalionType.LightInfantry, BattalionType.Artillery);
         s.DeclareWar(0, 1);
         s.MoveUnit(0, regiment.Id, b.Id);
         RunUntil(s, () => s.SiegeAt(b.Id) != null, 24 * 5);
-        Assert.Equal(1 + BattalionType.Catapults.Info().Attack / MilitaryRules.SiegeAttackPerDay, s.DailySiegeWork(s.SiegeAt(b.Id)!), 6);
+        Assert.Equal(1 + regiment.Battalions[1].Info.Attack / MilitaryRules.SiegeAttackPerDay, s.DailySiegeWork(s.SiegeAt(b.Id)!), 6);
 
         s.MoveUnit(0, regiment.Id, a.Id);
         RunUntil(s, () => regiment.ProvinceId == a.Id, 24 * 5);
@@ -531,7 +537,7 @@ public class MilitaryTests(WorldFixture world)
         var city = s.CityIn(c)!;
         var rival = s.Players[1];
         Assert.Equal(city.Id, rival.CapitalCityId);
-        var regiment = s.AddRegiment(0, a.Id, BattalionType.Warriors);
+        var regiment = s.AddRegiment(0, a.Id, BattalionType.LightInfantry);
         s.DeclareWar(0, 1);
         Assert.False(s.CanProposePeace(0, 1, PeaceTerms.TakeOccupied).Ok);
         s.MoveUnit(0, regiment.Id, c.Id);
@@ -560,7 +566,7 @@ public class MilitaryTests(WorldFixture world)
     {
         var (s, a, b) = TwoNations();
         b.Population = 500;
-        var regiment = s.AddRegiment(1, b.Id, BattalionType.Warriors);
+        var regiment = s.AddRegiment(1, b.Id, BattalionType.LightInfantry);
         s.DeclareWar(1, 0);
         s.MoveUnit(1, regiment.Id, a.Id);
         RunUntil(s, () => a.IsOccupied, 24 * 5);
@@ -579,8 +585,8 @@ public class MilitaryTests(WorldFixture world)
     public void BattlesWonAddToTheWarScore()
     {
         var (s, a, b) = TwoNations();
-        var attacker = s.AddRegiment(1, b.Id, BattalionType.Warriors);
-        s.AddRegiment(0, a.Id, [.. Enumerable.Repeat(BattalionType.Warriors, 6)]);
+        var attacker = s.AddRegiment(1, b.Id, BattalionType.LightInfantry);
+        s.AddRegiment(0, a.Id, [.. Enumerable.Repeat(BattalionType.LightInfantry, 6)]);
         s.DeclareWar(1, 0);
         s.MoveUnit(1, attacker.Id, a.Id);
         RunUntil(s, () => s.WarVictories(0, 1) > 0, 24 * 10);
@@ -596,7 +602,8 @@ public class MilitaryTests(WorldFixture world)
         var s = GameSession.Create(_map, 2, seed: 7);
         // A human army at least as strong as the rival's, so the rival is not winning.
         var home = s.Units.First(u => u.OwnerId == 0).ProvinceId;
-        s.AddRegiment(0, home, [.. Enumerable.Repeat(BattalionType.IronInfantry, 12)]);
+        s.Human.Learn(Tech.Armouries); // heavy infantry, not swordsmen
+        s.AddRegiment(0, home, [.. Enumerable.Repeat(BattalionType.HeavyInfantry, 12)]);
         s.Human.Stockpile[ResourceType.Gold] = s.Human.Stockpile[ResourceType.Iron] = 1000; // to pay for it
         s.DeclareWar(0, 1);
         Assert.False(s.ProposePeace(0, 1).Ok);
@@ -609,16 +616,16 @@ public class MilitaryTests(WorldFixture world)
     public void DivisionsWitherWithoutSupply()
     {
         var (s, a, _) = TwoNations();
-        var home = s.AddRegiment(0, a.Id, BattalionType.Warriors);
+        var home = s.AddRegiment(0, a.Id, BattalionType.LightInfantry);
         var far = _map.Provinces.First(p => p.IsClaimable && _map.DistanceKm(p, a) > 6000);
-        var lost = s.AddRegiment(0, far.Id, BattalionType.Warriors);
+        var lost = s.AddRegiment(0, far.Id, BattalionType.LightInfantry);
 
         RunHours(s, 24);
         Assert.True(s.IsInSupply(home));
         Assert.False(s.IsInSupply(lost));
         Assert.Equal(1, home.OrganisationShare, 6);
         Assert.True(lost.OrganisationShare < 1);
-        Assert.True(lost.Citizens < BattalionType.Warriors.Info().Men);
+        Assert.True(lost.Citizens < BattalionType.LightInfantry.First().Men);
     }
 
     [Fact]
@@ -626,7 +633,7 @@ public class MilitaryTests(WorldFixture world)
     {
         var (s, a, _) = TwoNations();
         a.Population = 1000;
-        var regiment = s.AddRegiment(0, a.Id, BattalionType.Warriors);
+        var regiment = s.AddRegiment(0, a.Id, BattalionType.LightInfantry);
         var battalion = regiment.Battalions[0];
         battalion.Organisation = 0;
         battalion.Strength = 50;
@@ -641,7 +648,7 @@ public class MilitaryTests(WorldFixture world)
     public void HeadquartersInRangeGiveABonusUpTheChain()
     {
         var (s, a, _) = TwoNations();
-        var regiment = s.AddRegiment(0, a.Id, BattalionType.Warriors);
+        var regiment = s.AddRegiment(0, a.Id, BattalionType.LightInfantry);
         var corps = s.AddHeadquarters(0, a.Id, 1);
         var army = s.AddHeadquarters(0, a.Id, 2);
         Assert.Equal("I Cuerpo", corps.Name);
@@ -665,7 +672,7 @@ public class MilitaryTests(WorldFixture world)
         {
             var template = Assert.Single(p.Templates);
             Assert.Equal("Plantilla I", template.Name);
-            Assert.Equal([BattalionType.Warriors, BattalionType.Warriors], template.Battalions);
+            Assert.Equal([BattalionType.LightInfantry, BattalionType.LightInfantry], template.Battalions);
         });
     }
 
@@ -676,12 +683,12 @@ public class MilitaryTests(WorldFixture world)
         Assert.True(s.CreateTemplate(0).Ok);
         var template = s.Human.Templates[^1];
         Assert.Equal("Plantilla II", template.Name);
-        Assert.Equal([BattalionType.Warriors], template.Battalions);
+        Assert.Equal([BattalionType.LightInfantry], template.Battalions);
 
-        Assert.False(s.AddToTemplate(0, template.Id, BattalionType.Archers).Ok); // archery not known yet
+        Assert.False(s.AddToTemplate(0, template.Id, BattalionType.RangedInfantry).Ok); // archery not known yet
         s.Human.Learn(Tech.Archery);
-        for (int i = 1; i < MilitaryRules.MaxBattalionsPerUnit; i++) Assert.True(s.AddToTemplate(0, template.Id, BattalionType.Archers).Ok);
-        Assert.False(s.AddToTemplate(0, template.Id, BattalionType.Warriors).Ok); // full
+        for (int i = 1; i < MilitaryRules.MaxBattalionsPerUnit; i++) Assert.True(s.AddToTemplate(0, template.Id, BattalionType.RangedInfantry).Ok);
+        Assert.False(s.AddToTemplate(0, template.Id, BattalionType.LightInfantry).Ok); // full
 
         Assert.True(s.DuplicateTemplate(0, template.Id).Ok);
         Assert.Equal(template.Battalions, s.Human.Templates[^1].Battalions);
@@ -701,9 +708,9 @@ public class MilitaryTests(WorldFixture world)
         s.Human.Stockpile[ResourceType.Wood] = s.Human.Stockpile[ResourceType.Gold] = 500;
         s.Human.Learn(Tech.Archery);
         var template = s.Human.Templates[0];
-        s.AddToTemplate(0, template.Id, BattalionType.Archers);
+        s.AddToTemplate(0, template.Id, BattalionType.RangedInfantry);
 
-        Assert.Equal(20, template.TrainingDays); // the archers are the slowest
+        Assert.Equal(20, template.TrainingDays(s.Human.Techs)); // the archers are the slowest
         Assert.True(s.TrainTemplate(0, city.ProvinceId, template.Id).Ok);
         Assert.Equal(2000 - 300, a.Population);
         Assert.Equal(500 - 90, s.Human.Stockpile[ResourceType.Wood]);
@@ -711,7 +718,7 @@ public class MilitaryTests(WorldFixture world)
 
         RunHours(s, 24 * 20);
         var regiment = Assert.Single(s.Units, u => u.IsMilitary && u.OwnerId == 0);
-        Assert.Equal([BattalionType.Warriors, BattalionType.Warriors, BattalionType.Archers], regiment.Battalions.Select(b => b.Type));
+        Assert.Equal([BattalionType.LightInfantry, BattalionType.LightInfantry, BattalionType.RangedInfantry], regiment.Battalions.Select(b => b.Type));
         Assert.Equal(300, regiment.Citizens);
     }
 
@@ -725,7 +732,7 @@ public class MilitaryTests(WorldFixture world)
         s.Human.Learn(Tech.Engineering);
         s.Human.Learn(Tech.Navigation);
 
-        Assert.Equal("Requiere un cuartel en la provincia.", s.CanTrain(a, BattalionType.Warriors).Message);
+        Assert.Equal("Requiere un cuartel en la provincia.", s.CanTrain(a, BattalionType.LightInfantry).Message);
         Assert.False(s.CanTrainTemplate(a, s.Human.Templates[0]).Ok);
         // Scouts, engineers and HQs need no barracks in a city; ships need a port instead.
         Assert.True(s.Train(0, a.Id, BattalionType.Scouts).Ok);
@@ -733,14 +740,14 @@ public class MilitaryTests(WorldFixture world)
         Assert.True(s.RaiseHeadquarters(0, a.Id, 1).Ok);
         var scoutsOnly = s.AddTemplate(s.Human, [BattalionType.Scouts, BattalionType.Engineers]);
         Assert.True(s.CanTrainTemplate(a, scoutsOnly).Ok);
-        Assert.Null(BattalionType.Trireme.TrainingBuilding());
+        Assert.Null(BattalionType.Trireme.First().TrainingBuilding(BattalionType.Trireme));
 
         // Barracks need no advance, and once built the city trains combat troops.
         Assert.True(s.Build(0, a.Id, BuildingType.Barracks).Ok);
-        Assert.False(s.CanTrain(a, BattalionType.Warriors).Ok); // still under construction
+        Assert.False(s.CanTrain(a, BattalionType.LightInfantry).Ok); // still under construction
         RunHours(s, 24 * BuildingType.Barracks.Info().Days);
         Assert.Contains(BuildingType.Barracks, a.Buildings);
-        Assert.True(s.Train(0, a.Id, BattalionType.Warriors).Ok);
+        Assert.True(s.Train(0, a.Id, BattalionType.LightInfantry).Ok);
         Assert.True(s.TrainTemplate(0, a.Id, s.Human.Templates[0].Id).Ok);
     }
 
@@ -765,17 +772,17 @@ public class MilitaryTests(WorldFixture world)
 
         // With them it trains like a city, keeping enough people to stay settled; ships still need a port.
         Assert.False(s.CanTrain(field, BattalionType.Trireme).Ok);
-        Assert.True(s.Train(0, field.Id, BattalionType.Warriors).Ok);
+        Assert.True(s.Train(0, field.Id, BattalionType.LightInfantry).Ok);
         Assert.Single(field.Training);
         field.Population = 100;
-        Assert.Equal($"Hacen falta {100 + GameRules.SettledPopulation} habitantes.", s.CanTrain(field, BattalionType.Warriors).Message);
+        Assert.Equal($"Hacen falta {100 + GameRules.SettledPopulation} habitantes.", s.CanTrain(field, BattalionType.LightInfantry).Message);
 
         // What it trains is saved with the province.
         var loaded = GameSession.Load(_map, s.ToSave("test"));
         Assert.Single(_map.Provinces[field.Id].Training);
-        RunHours(loaded, 24 * GameSession.TrainingDays(loaded.Human, BattalionType.Warriors));
+        RunHours(loaded, 24 * GameSession.TrainingDays(loaded.Human, BattalionType.LightInfantry));
         Assert.Empty(_map.Provinces[field.Id].Training);
-        Assert.Contains(loaded.Units, u => u.OwnerId == 0 && u.ProvinceId == field.Id && u.Battalions.Any(x => x.Type == BattalionType.Warriors));
+        Assert.Contains(loaded.Units, u => u.OwnerId == 0 && u.ProvinceId == field.Id && u.Battalions.Any(x => x.Type == BattalionType.LightInfantry));
     }
 
     [Fact]
@@ -785,14 +792,14 @@ public class MilitaryTests(WorldFixture world)
         a.Population = 3000;
         foreach (var r in Resources.All) s.Human.Stockpile[r] = 5000;
         Assert.Equal(
-            [BattalionType.Catapults, BattalionType.Cannons, BattalionType.FieldArtillery, BattalionType.HeavyArtillery, BattalionType.Tanks, BattalionType.Bombers],
-            Battalions.All.Where(t => t.TrainingBuilding() == BuildingType.Workshop));
+            [BattalionType.Armour, BattalionType.Artillery, BattalionType.AntiAir, BattalionType.Bombers],
+            Battalions.All.Where(t => t.Models().Any(m => m.TrainingBuilding(t) == BuildingType.Workshop)));
 
         // The workshop comes with siege engines, the first war machine.
         Assert.Equal("Requiere maquinaria de asedio.", s.IsBuildingAvailable(a, BuildingType.Workshop).Message);
         s.Human.Learn(Tech.SiegeEngines);
-        Assert.Equal("Requiere un taller en la provincia.", s.CanTrain(a, BattalionType.Catapults).Message);
-        var siege = s.AddTemplate(s.Human, [BattalionType.Warriors, BattalionType.Catapults]);
+        Assert.Equal("Requiere un taller en la provincia.", s.CanTrain(a, BattalionType.Artillery).Message);
+        var siege = s.AddTemplate(s.Human, [BattalionType.LightInfantry, BattalionType.Artillery]);
         Assert.Equal("Requiere un taller en la provincia.", s.CanTrainTemplate(a, siege).Message);
         a.RemoveBuilding(BuildingType.Barracks);
         Assert.Equal("Requiere un cuartel y un taller en la provincia.", s.CanTrainTemplate(a, siege).Message);
@@ -801,8 +808,8 @@ public class MilitaryTests(WorldFixture world)
         RunHours(s, 24 * BuildingType.Workshop.Info().Days);
         Assert.Contains(BuildingType.Workshop, a.Buildings);
         // A workshop builds war machines but drills no soldiers: that is still the barracks' job.
-        Assert.True(s.Train(0, a.Id, BattalionType.Catapults).Ok);
-        Assert.Equal("Requiere un cuartel en la provincia.", s.CanTrain(a, BattalionType.Warriors).Message);
+        Assert.True(s.Train(0, a.Id, BattalionType.Artillery).Ok);
+        Assert.Equal("Requiere un cuartel en la provincia.", s.CanTrain(a, BattalionType.LightInfantry).Message);
         a.AddBuilding(BuildingType.Barracks);
         Assert.True(s.TrainTemplate(0, a.Id, siege.Id).Ok);
     }
@@ -828,9 +835,9 @@ public class MilitaryTests(WorldFixture world)
         Assert.Contains(s.Notifications, n => n.Text == "Industrialización: tu taller pasa a ser una fábrica.");
 
         // The factory builds the war machines as the workshop did.
-        Assert.True(s.Train(0, a.Id, BattalionType.Cannons).Ok);
+        Assert.True(s.Train(0, a.Id, BattalionType.Artillery).Ok);
         a.RemoveBuilding(BuildingType.Factory);
-        Assert.Equal("Requiere una fábrica en la provincia.", s.CanTrain(a, BattalionType.Cannons).Message);
+        Assert.Equal("Requiere una fábrica en la provincia.", s.CanTrain(a, BattalionType.Artillery).Message);
         Assert.Equal(0, a.BuildingBonuses.Deposits);
     }
 
@@ -842,27 +849,28 @@ public class MilitaryTests(WorldFixture world)
         a.Population = 3000;
         foreach (var r in Resources.All) s.Human.Stockpile[r] = 5000;
         s.Human.Learn(Tech.Archery);
-        Assert.Equal(20, GameSession.TrainingDays(s.Human, BattalionType.Archers));
+        Assert.Equal(20, GameSession.TrainingDays(s.Human, BattalionType.RangedInfantry));
 
         // Improved bows speed up the archers only.
         s.Human.Learn(Tech.ImprovedBows);
-        Assert.Equal(16, GameSession.TrainingDays(s.Human, BattalionType.Archers)); // 20 / 1.25
-        Assert.Equal(15, GameSession.TrainingDays(s.Human, BattalionType.Warriors));
-        Assert.True(s.Train(0, city.ProvinceId, BattalionType.Archers).Ok);
+        Assert.Equal(16, GameSession.TrainingDays(s.Human, BattalionType.RangedInfantry)); // 20 / 1.25
+        Assert.Equal(15, GameSession.TrainingDays(s.Human, BattalionType.LightInfantry));
+        Assert.True(s.Train(0, city.ProvinceId, BattalionType.RangedInfantry).Ok);
         Assert.Equal(16, a.Training[^1].TotalDays);
 
         // A template waits for its slowest battalion, each at its own pace.
-        var template = s.AddTemplate(s.Human, [BattalionType.Warriors, BattalionType.Archers]);
-        Assert.Equal(20, template.TrainingDays);
+        var template = s.AddTemplate(s.Human, [BattalionType.LightInfantry, BattalionType.RangedInfantry]);
+        Assert.Equal(20, template.TrainingDays(s.Human.Techs));
         Assert.Equal(16, GameSession.TrainingDays(s.Human, template));
         s.Human.Learn(Tech.Drill);
-        Assert.Equal(12, GameSession.TrainingDays(s.Human, BattalionType.Warriors)); // 15 / 1.25
+        Assert.Equal(12, GameSession.TrainingDays(s.Human, BattalionType.LightInfantry)); // 15 / 1.25
         Assert.Equal(16, GameSession.TrainingDays(s.Human, template));
 
         // Advances add up: knights are studied by horse breeding and armouries.
+        s.Human.Learn(Tech.Stirrup);
         s.Human.Learn(Tech.HorseBreeding);
         s.Human.Learn(Tech.Armouries);
-        Assert.Equal(30, GameSession.TrainingDays(s.Human, BattalionType.Knights)); // 45 / 1.5
+        Assert.Equal(30, GameSession.TrainingDays(s.Human, BattalionType.Cavalry)); // 45 / 1.5
     }
 
     [Fact]
@@ -873,10 +881,10 @@ public class MilitaryTests(WorldFixture world)
         foreach (var tech in faster)
         {
             Assert.Equal(TechBranch.Military, tech.Info().Branch);
-            Assert.All(tech.Info().FasterTraining, type => Assert.NotNull(type.TrainingBuilding()));
+            Assert.All(tech.Info().FasterTraining, type => Assert.Contains(type.Models(), m => m.TrainingBuilding(type) != null));
         }
         // Every combat battalion has some advance that speeds it up.
-        Assert.All(Battalions.All.Where(t => t.TrainingBuilding() != null), type => Assert.Contains(faster, t => t.Info().FasterTraining.Contains(type)));
+        Assert.All(Battalions.All.Where(t => t.Models().Any(m => m.TrainingBuilding(t) != null)), type => Assert.Contains(faster, t => t.Info().FasterTraining.Contains(type)));
     }
 
     [Fact]
@@ -889,14 +897,14 @@ public class MilitaryTests(WorldFixture world)
         Assert.Equal("IV Cuerpo", Formations.HeadquartersName(1, 4));
         Assert.Equal("1.er Ejército", Formations.HeadquartersName(2, 1));
         Assert.Equal("2.º Grupo de ejércitos", Formations.HeadquartersName(3, 2));
-        Assert.Equal("Batallón de arqueros", Formations.BattalionName(BattalionType.Archers.Info()));
-        Assert.Equal("Trirreme", Formations.BattalionName(BattalionType.Trireme.Info()));
+        Assert.Equal("Batallón de arqueros", Formations.BattalionName(BattalionType.RangedInfantry.First()));
+        Assert.Equal("Trirreme", Formations.BattalionName(BattalionType.Trireme.First()));
 
         // A regiment that grows into a division keeps its number.
         var (s, a, _) = TwoNations();
-        var unit = s.AddRegiment(0, a.Id, BattalionType.Warriors);
+        var unit = s.AddRegiment(0, a.Id, BattalionType.LightInfantry);
         string number = unit.Name.Split(' ')[0].TrimEnd('º', '.', 'e', 'r');
-        var other = s.AddRegiment(0, a.Id, [.. Enumerable.Repeat(BattalionType.Warriors, 6)]);
+        var other = s.AddRegiment(0, a.Id, [.. Enumerable.Repeat(BattalionType.LightInfantry, 6)]);
         Assert.True(s.Merge(0, unit.Id, other.Id).Ok);
         Assert.Equal(7, unit.Battalions.Count);
         Assert.EndsWith("División", unit.Name);
@@ -904,29 +912,76 @@ public class MilitaryTests(WorldFixture world)
     }
 
     [Fact]
+    public void MountainTroopsFightBetterInRoughTerrain()
+    {
+        var (s, a, _) = TwoNations();
+        s.Human.Learn(Tech.MilitaryTactics);
+        var mountaineers = s.AddRegiment(0, a.Id, BattalionType.MountainInfantry);
+        var phalanx = s.AddRegiment(0, a.Id, BattalionType.HeavyInfantry);
+        var rough = _map.Provinces.First(p => !p.IsWater && MilitaryRules.IsRough(p.Biome));
+        var open = _map.Provinces.First(p => !p.IsWater && !MilitaryRules.IsRough(p.Biome));
+        double Fire(Conquer.Game.Entities.Unit u, Province p) => s.Engage([u], p, attacking: true).Sum(e => e.Fire);
+
+        Assert.Equal(Fire(mountaineers, open) * MilitaryRules.MountainTroopsRoughTerrain, Fire(mountaineers, rough), 6);
+        Assert.Equal(Fire(phalanx, open), Fire(phalanx, rough), 6);
+    }
+
+    [Fact]
+    public void MedicsDoNotFightNorCountAsAnotherKindOfTroop()
+    {
+        var (s, a, _) = TwoNations();
+        var unit = s.AddRegiment(0, a.Id, BattalionType.LightInfantry, BattalionType.Medics);
+        Assert.True(GameSession.HasMedics(unit));
+        var engaged = s.Engage([unit], a, attacking: true);
+        Assert.DoesNotContain(engaged, e => e.Battalion.Type == BattalionType.Medics);
+        Assert.Equal(0, GameSession.CombinedArms([BattalionRole.Infantry, BattalionRole.Support]));
+        Assert.False(GameSession.HasMedics(s.AddRegiment(0, a.Id, BattalionType.LightInfantry)));
+    }
+
+    [Fact]
+    public void AntiAirFiresHarderAtAircraftAndBluntsTheirFire()
+    {
+        var (s, a, b) = TwoNations();
+        s.Human.Learn(Tech.Aviation);
+        s.Players[1].Learn(Tech.Aviation);
+        var bombers = s.Engage([s.AddRegiment(0, a.Id, BattalionType.Bombers)], b, attacking: true);
+        var guns = s.Engage([s.AddRegiment(1, b.Id, BattalionType.AntiAir, BattalionType.AntiAir)], b, attacking: false);
+        var infantry = s.Engage([s.AddRegiment(1, b.Id, BattalionType.LightInfantry)], b, attacking: false);
+
+        var (air, ground) = GameSession.FaceEachOther(bombers, guns);
+        Assert.Equal(bombers.Sum(e => e.Fire) * (1 - 2 * MilitaryRules.AntiAirShield), air.Sum(e => e.Fire), 6);
+        Assert.Equal(guns.Sum(e => e.Fire) * MilitaryRules.AntiAirAgainstAircraft, ground.Sum(e => e.Fire), 6);
+        // Without aircraft to shoot at, the guns fire as they are; without guns, the aircraft too.
+        var (_, alone) = GameSession.FaceEachOther(infantry, guns);
+        Assert.Equal(guns.Sum(e => e.Fire), alone.Sum(e => e.Fire), 6);
+        Assert.Equal(bombers.Sum(e => e.Fire), GameSession.FaceEachOther(bombers, infantry).Attacking.Sum(e => e.Fire), 6);
+    }
+
+    [Fact]
     public void ForcesCostUpkeepEveryDay()
     {
         var (s, a, _) = TwoNations();
-        s.AddRegiment(0, a.Id, BattalionType.Warriors, BattalionType.IronInfantry);
+        s.Human.Learn(Tech.Armouries); // heavy infantry: 50 gold and 35 iron
+        s.AddRegiment(0, a.Id, BattalionType.LightInfantry, BattalionType.HeavyInfantry);
         s.AddHeadquarters(0, a.Id, 1);
         var upkeep = s.Upkeep(s.Human);
 
-        double gold = (15 + 30 + 60) * MilitaryRules.UpkeepGoldShare; // two battalions and a corps
+        double gold = (15 + 50 + 60) * MilitaryRules.UpkeepGoldShare; // two battalions and a corps
         Assert.Equal(gold, upkeep[(int)ResourceType.Gold], 6);
-        Assert.Equal(20 * MilitaryRules.UpkeepResourceShare, upkeep[(int)ResourceType.Iron], 6);
+        Assert.Equal(35 * MilitaryRules.UpkeepResourceShare, upkeep[(int)ResourceType.Iron], 6);
         Assert.Equal(0, upkeep[(int)ResourceType.Wood]); // wood only goes into raising them
 
         s.Human.Stockpile[ResourceType.Gold] = s.Human.Stockpile[ResourceType.Iron] = 1000;
         RunHours(s, 24);
         Assert.False(s.Human.ArmyUnpaid);
-        Assert.Equal(1000 - 20 * MilitaryRules.UpkeepResourceShare, s.Human.Stockpile[ResourceType.Iron], 6);
+        Assert.Equal(1000 - 35 * MilitaryRules.UpkeepResourceShare, s.Human.Stockpile[ResourceType.Iron], 6);
     }
 
     [Fact]
     public void AnUnpaidArmyLosesHeartAndMen()
     {
         var (s, a, _) = TwoNations();
-        var unit = s.AddRegiment(0, a.Id, BattalionType.IronInfantry);
+        var unit = s.AddRegiment(0, a.Id, BattalionType.HeavyInfantry);
         s.Human.Stockpile[ResourceType.Iron] = 0; // nothing to keep its iron weapons
         var b = unit.Battalions[0];
 
@@ -943,8 +998,8 @@ public class MilitaryTests(WorldFixture world)
     {
         var (s, a, _) = TwoNations();
         var corps = s.AddHeadquarters(0, a.Id, 1);
-        for (int i = 0; i < 5; i++) Assert.True(s.Attach(0, s.AddRegiment(0, a.Id, BattalionType.Warriors).Id, corps.Id).Ok);
-        Assert.False(s.Attach(0, s.AddRegiment(0, a.Id, BattalionType.Warriors).Id, corps.Id).Ok);
+        for (int i = 0; i < 5; i++) Assert.True(s.Attach(0, s.AddRegiment(0, a.Id, BattalionType.LightInfantry).Id, corps.Id).Ok);
+        Assert.False(s.Attach(0, s.AddRegiment(0, a.Id, BattalionType.LightInfantry).Id, corps.Id).Ok);
     }
 
     [Fact]
@@ -952,7 +1007,7 @@ public class MilitaryTests(WorldFixture world)
     {
         var (s, a, _) = TwoNations();
         var corps = s.AddHeadquarters(0, a.Id, 1);
-        var unit = s.AddRegiment(0, a.Id, BattalionType.Warriors);
+        var unit = s.AddRegiment(0, a.Id, BattalionType.LightInfantry);
         Assert.NotNull(corps.Officer);
         Assert.Equal(OfficerRank.LieutenantGeneral, corps.Officer!.Rank);
         Assert.InRange(corps.Officer.Skill, 1, 3);
@@ -979,8 +1034,8 @@ public class MilitaryTests(WorldFixture world)
     public void BattlesGiveExperienceAndTheWinnersGeneralAVictory()
     {
         var (s, a, b) = TwoNations();
-        s.AddRegiment(1, b.Id, BattalionType.Warriors);
-        var attacker = s.AddRegiment(0, a.Id, [.. Enumerable.Repeat(BattalionType.IronInfantry, 6)]);
+        s.AddRegiment(1, b.Id, BattalionType.LightInfantry);
+        var attacker = s.AddRegiment(0, a.Id, [.. Enumerable.Repeat(BattalionType.HeavyInfantry, 6)]);
         var corps = s.AddHeadquarters(0, a.Id, 1);
         s.Attach(0, attacker.Id, corps.Id);
         int victories = corps.Officer!.Victories;
@@ -999,7 +1054,7 @@ public class MilitaryTests(WorldFixture world)
     {
         var (s, a, _) = TwoNations();
         a.Population = 1000;
-        var battalion = s.AddRegiment(0, a.Id, BattalionType.Warriors).Battalions[0];
+        var battalion = s.AddRegiment(0, a.Id, BattalionType.LightInfantry).Battalions[0];
         battalion.Strength = 50;
         battalion.Experience = 0.5;
 
@@ -1011,9 +1066,9 @@ public class MilitaryTests(WorldFixture world)
     public void OnlyAFrontsWorthOfBattalionsFightWithSupportBehind()
     {
         var (s, a, _) = TwoNations();
-        var infantry = s.AddRegiment(0, a.Id, [.. Enumerable.Repeat(BattalionType.IronInfantry, 12)]);
-        var more = s.AddRegiment(0, a.Id, [.. Enumerable.Repeat(BattalionType.IronInfantry, 6)]);
-        var siege = s.AddRegiment(0, a.Id, [.. Enumerable.Repeat(BattalionType.Catapults, 12)]);
+        var infantry = s.AddRegiment(0, a.Id, [.. Enumerable.Repeat(BattalionType.HeavyInfantry, 12)]);
+        var more = s.AddRegiment(0, a.Id, [.. Enumerable.Repeat(BattalionType.HeavyInfantry, 6)]);
+        var siege = s.AddRegiment(0, a.Id, [.. Enumerable.Repeat(BattalionType.Artillery, 12)]);
         var engaged = s.Engage([infantry, more, siege], a, attacking: true);
         int width = MilitaryRules.FrontWidth(a.Biome);
         Assert.Equal(width, engaged.Count(e => e.Role == BattalionRole.Infantry));
@@ -1038,7 +1093,7 @@ public class MilitaryTests(WorldFixture world)
     {
         var (s, a, _) = TwoNations();
         var corps = s.AddHeadquarters(0, a.Id, 1);
-        var unit = s.AddRegiment(0, a.Id, BattalionType.Warriors);
+        var unit = s.AddRegiment(0, a.Id, BattalionType.LightInfantry);
         unit.Battalions[0].Experience = 0.4;
         corps.Officer!.Victories = 4;
 

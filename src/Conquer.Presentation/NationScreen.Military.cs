@@ -119,36 +119,40 @@ public sealed partial class NationScreen
                 slots.Add(new TemplateSlot(null, "hueco libre", "", null));
                 continue;
             }
-            var info = template.Battalions[i].Info();
+            var info = GameSession.ModelFor(Player, template.Battalions[i]);
             int index = i;
             slots.Add(new TemplateSlot(template.Battalions[i], Formations.BattalionName(info), $"A {info.Attack:0.#} · D {info.Defense:0.#} · {info.Men} h",
                 new Button("Quitar", () => Show(Session.RemoveFromTemplate(Player.Id, template.Id, index)), template.Battalions.Count > 1, Size: TextSize.Small)));
         }
 
         // Ships are built one by one in ports, never from templates.
-        var add = Battalions.All.Where(t => !t.Info().Naval && t.Info().Requires.All(Player.Techs.Contains)).Select(type =>
+        var add = Battalions.All.Where(t => !t.First().Naval && t.BestModel(Player.Techs) >= 0 && !t.Redundant(Player.Techs)).Select(type =>
         {
             var can = Session.CanAddToTemplate(Player, template, type);
-            return new Button("+ " + type.Info().Name, () => Show(Session.AddToTemplate(Player.Id, template.Id, type)), can.Ok,
-                Tooltip: can.Ok ? Formations.BattalionName(type.Info()) : can.Message, Size: TextSize.Small, Icon: new BattalionIcon(type));
+            var model = GameSession.ModelFor(Player, type);
+            string tip = $"{Formations.BattalionName(model)} ({type.Line().Name.ToLowerInvariant()}, {type.Line().Group.Name().ToLowerInvariant()})"
+                         + (GameController.LineNote(type) is { } note ? "\n" + note : "");
+            return new Button("+ " + model.Name, () => Show(Session.AddToTemplate(Player.Id, template.Id, type)), can.Ok,
+                Tooltip: can.Ok ? tip : can.Message, Size: TextSize.Small, Icon: new BattalionIcon(type));
         }).ToList();
 
         // What a unit of this design is like.
         var details = new Document();
         details.Add(new Heading(Formations.CombatName(template.Battalions.Count), Tone.Accent, Height: 28));
-        details.Add(new Pair("Hombres", $"{template.Men:N0}"));
+        var known = Player.Techs;
+        details.Add(new Pair("Hombres", $"{template.Men(known):N0}"));
         details.Add(new Pair("Instrucción", $"{GameSession.TrainingDays(Player, template)} días"));
-        details.Add(new Pair("Ataque", $"{template.Attack:0.#}"));
-        details.Add(new Pair("Defensa", $"{template.Defense:0.#}"));
-        details.Add(new Pair("Organización", $"{template.MaxOrganisation:0}"));
-        details.Add(new Pair("Velocidad", $"{template.Speed * GameRules.CitizenSpeedKmh:0.#} km/h"));
-        details.Add(new Pair("Mantenimiento", TextFormat.UpkeepText(template.Battalions.Select(b => b.Info().Cost))));
+        details.Add(new Pair("Ataque", $"{template.Attack(known):0.#}"));
+        details.Add(new Pair("Defensa", $"{template.Defense(known):0.#}"));
+        details.Add(new Pair("Organización", $"{template.MaxOrganisation(known):0}"));
+        details.Add(new Pair("Velocidad", $"{template.Speed(known) * GameRules.CitizenSpeedKmh:0.#} km/h"));
+        details.Add(new Pair("Mantenimiento", TextFormat.UpkeepText(template.Models(known).Select(m => m.Cost))));
         details.Add(new Space(6));
         details.Add(new Label("Coste", Tone.Dim, TextSize.Normal));
-        foreach (var (type, amount) in template.Cost.Items) details.Add(new Pair(type.Name(), $"{amount:0}", Indent: 12));
+        foreach (var (type, amount) in template.Cost(known).Items) details.Add(new Pair(type.Name(), $"{amount:0}", Indent: 12));
         details.Add(new Space(10));
         details.Add(new Paragraph("Se entrena entero en la pestaña Ejército de tus ciudades; sus batallones se instruyen a la vez.", Tone.Dim));
-        if (template.AnyMounted) details.Add(new Paragraph("Los montados atacan a la mitad en bosques, pantanos y montañas.", Tone.Dim));
+        if (template.AnyMounted(known)) details.Add(new Paragraph("Los montados atacan a la mitad en bosques, pantanos y montañas.", Tone.Dim));
 
         return new TemplatesPage(list, actions, template.Name,
             $"{Formations.CombatName(template.Battalions.Count)} de {Formations.BattalionCount(template.Battalions.Count)}", slots, add, details);

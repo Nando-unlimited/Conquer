@@ -99,7 +99,7 @@ public sealed partial class GameSession
             player.ReligionId = faiths.Next(Religions.Count);
             session.Players.Add(player);
             session.AddUnit(i, UnitType.Settlers, starts[i], GameRules.StartingCitizens);
-            session.AddTemplate(player, [BattalionType.Warriors, BattalionType.Warriors]);
+            session.AddTemplate(player, [BattalionType.LightInfantry, BattalionType.LightInfantry]);
             if (!player.IsHuman && computerRivals) session._ais.Add(new AiPlayer(session, player, seed + 100 + i));
         }
 

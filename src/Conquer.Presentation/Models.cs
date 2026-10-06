@@ -12,42 +12,44 @@ namespace Conquer.Presentation;
 /// </summary>
 public static class Models
 {
-    /// <summary>The model of a kind of battalion or ship.</summary>
-    public static string Of(BattalionType type) => type switch
+    /// <summary>The model of a battalion's or ship's model (<see cref="BattalionInfo.Key"/>): soldiers dressed for their times, guns, ships and planes.</summary>
+    public static string Of(BattalionInfo model) => model.Key switch
     {
-        BattalionType.Scouts => "unit-scout",
-        BattalionType.Warriors or BattalionType.Archers or BattalionType.BronzeSpearmen or BattalionType.IronInfantry
-            or BattalionType.Legionaries or BattalionType.Crossbowmen => "unit-infantry-ancient",
-        BattalionType.Arquebusiers or BattalionType.Musketeers => "unit-infantry-musket",
-        BattalionType.Riflemen or BattalionType.MachineGunners => "unit-infantry-modern",
-        BattalionType.MotorisedInfantry => "unit-truck",
-        BattalionType.Horsemen or BattalionType.Chariots or BattalionType.ChariotArchers or BattalionType.Cataphracts
-            or BattalionType.Knights => "unit-cavalry",
-        BattalionType.Catapults => "unit-catapult",
-        BattalionType.Cannons => "unit-cannon",
-        BattalionType.FieldArtillery or BattalionType.HeavyArtillery => "unit-artillery",
-        BattalionType.Engineers => "unit-engineer",
-        BattalionType.Tanks => "unit-tank",
-        BattalionType.Bombers => "plane-biplane-bombers",
-        BattalionType.Trireme => "ship-trireme",
-        BattalionType.Transport => "ship-galley",
-        BattalionType.Galleon => "ship-galleon",
-        BattalionType.SteamTransport => "ship-cruiser",
-        BattalionType.Ironclad => "ship-ironclad",
-        BattalionType.Destroyer => "ship-destroyer",
+        "scouts" => "unit-scout",
+        "warriors" or "velites" or "swordsmen" or "phalanx" or "legionaries" or "heavy-infantry" or "archers" or "crossbowmen" => "unit-infantry-ancient",
+        "arquebusiers" or "pikemen" or "musketeers" => "unit-infantry-musket",
+        "light-infantry" or "riflemen" or "machine-gunners" or "medics" => "unit-infantry-modern",
+        "mountaineers" or "almogavars" or "mountain-hunters" or "alpine-hunters" or "mountain-troops" => "unit-mountain",
+        "paratroopers" => "unit-marines",
+        "horsemen" or "cataphracts" or "knights" or "chariots" => "unit-cavalry",
+        "mechanised-cavalry" => "unit-cavalry-modern",
+        "catapults" or "trebuchets" => "unit-catapult",
+        "cannons" => "unit-cannon",
+        "field-artillery" or "heavy-artillery" => "unit-artillery",
+        "anti-air" => "unit-anti-air",
+        "engineers" => "unit-engineer",
+        "tanks" => "unit-tank",
+        "bombers" => "plane-biplane-bombers",
+        "trireme" => "ship-trireme",
+        "transport" => "ship-galley",
+        "galleon" => "ship-galleon",
+        "steam-transport" => "ship-cruiser",
+        "ironclad" => "ship-ironclad",
+        "destroyer" => "ship-destroyer",
         _ => "ship-aircraft-carrier",
     };
 
     /// <summary>
-    /// The model of a unit: a fleet its strongest ship; a regiment its most numerous kind of battalion. Settlers and
-    /// headquarters have none and keep their counter (the settlers' triangle, the HQ's letters).
+    /// The model of a unit: a fleet its strongest ship; a regiment its most numerous line of battalion, in the model the
+    /// first of them fights with. Settlers and headquarters have none and keep their counter (the settlers' triangle, the
+    /// HQ's letters).
     /// </summary>
     public static string? Of(Unit unit) => unit.Type switch
     {
         UnitType.Settlers or UnitType.Headquarters => null,
         _ when unit.Battalions.Count == 0 => null,
-        _ when unit.IsFleet => Of(unit.Battalions.Select(b => b.Type).MaxBy(t => t.Info().Defense)),
-        _ => Of(unit.Battalions.GroupBy(b => b.Type).OrderByDescending(g => g.Count()).First().Key),
+        _ when unit.IsFleet => Of(unit.Battalions.MaxBy(b => b.Info.Defense)!.Info),
+        _ => Of(unit.Battalions.GroupBy(b => b.Type).OrderByDescending(g => g.Count()).First().First().Info),
     };
 
     /// <summary>The model of a building, if it has one: farms a windmill, workshops a forge, libraries a tower...</summary>

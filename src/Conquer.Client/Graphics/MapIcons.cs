@@ -72,9 +72,25 @@ public static class MapIcons
             case UnitFunction.Infantry:
                 Cross();
                 break;
-            case UnitFunction.MotorisedInfantry:
+            case UnitFunction.Mountain:
+                // The cross with a filled peak at its foot.
                 Cross();
-                b.Line(new(centre.X, y), new(centre.X, bottom), ink, t);
+                b.Triangle(new(centre.X - w * 0.18f, bottom), new(centre.X + w * 0.18f, bottom), new(centre.X, bottom - h * 0.32f), ink);
+                break;
+            case UnitFunction.Airborne:
+                // The cross with a parachute's canopy over it.
+                Cross();
+                Arc(b, new(centre.X, y + h * 0.42f), w * 0.22f, h * 0.3f, ink, t);
+                break;
+            case UnitFunction.AntiAir:
+                // The artillery dot under an arch.
+                b.Circle(centre + new Vector2(0, h * 0.12f), Math.Min(w, h) * 0.16f, ink);
+                Arc(b, new(centre.X, bottom - h * 0.1f), w * 0.36f, h * 0.62f, ink, t);
+                break;
+            case UnitFunction.Medical:
+                // A cross of two bars.
+                b.Line(new(centre.X, y + h * 0.15f), new(centre.X, bottom - h * 0.15f), ink, t * 1.6f);
+                b.Line(new(centre.X - w * 0.18f, centre.Y), new(centre.X + w * 0.18f, centre.Y), ink, t * 1.6f);
                 break;
             case UnitFunction.Mechanised:
                 Cross();
@@ -122,7 +138,7 @@ public static class MapIcons
         const float W = 20, H = 14;
         b.Rect(x - 1, y - 1, W + 2, H + 2, Ink);
         b.Rect(x, y, W, H, Wall);
-        if (type.Info().Naval)
+        if (type.First().Naval)
         {
             // A hull for ships.
             b.Line(new(x + 3, y + H - 4), new(x + W - 3, y + H - 4), Rgba.Black, 2);
@@ -130,6 +146,16 @@ public static class MapIcons
             b.Line(new(x + W - 3, y + H - 4), new(x + W - 7, y + H - 1), Rgba.Black, 1.5f);
         }
         else NatoSymbol(b, x + 1, y + 1, W - 2, H - 2, Formations.FunctionOf(type));
+    }
+
+    /// <summary>The upper half of an ellipse standing on <paramref name="foot"/>: a canopy or an arch.</summary>
+    private static void Arc(Batch2D b, Vector2 foot, float rx, float ry, Rgba color, float thickness, int segments = 10)
+    {
+        for (int i = 0; i < segments; i++)
+        {
+            float a0 = MathF.PI + MathF.PI * i / segments, a1 = MathF.PI + MathF.PI * (i + 1) / segments;
+            b.Line(foot + new Vector2(MathF.Cos(a0) * rx, MathF.Sin(a0) * ry), foot + new Vector2(MathF.Cos(a1) * rx, MathF.Sin(a1) * ry), color, thickness);
+        }
     }
 
     private static void Ellipse(Batch2D b, Vector2 centre, float rx, float ry, Rgba color, float thickness, int segments = 16)

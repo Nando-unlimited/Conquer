@@ -41,7 +41,7 @@ public class PeakTests(PeakEarthFixture earth) : IClassFixture<PeakEarthFixture>
     {
         var s = GameSession.Create(_map, 1, seed: 7, computerRivals: false);
         var tibet = Tibet;
-        var unit = s.AddRegiment(0, tibet.Id, BattalionType.Warriors);
+        var unit = s.AddRegiment(0, tibet.Id, BattalionType.LightInfantry);
         Assert.False(tibet.IsClaimable);
         Assert.Equal(WorldGenerator.LatestGenerator, s.ToSave("test").World.Generator); // so loading it makes the same map
         var claim = s.Claim(0, unit.Id);

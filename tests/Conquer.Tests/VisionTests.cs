@@ -74,7 +74,7 @@ public class VisionTests(WorldFixture world)
         var s = game.Session;
         var home = _map.Provinces[s.Units.First(u => u.OwnerId == 0).ProvinceId];
         var far = _map.Provinces.First(p => p.IsClaimable && _map.DistanceKm(p, home) > 6000);
-        var stranger = s.AddRegiment(1, far.Id, BattalionType.Warriors);
+        var stranger = s.AddRegiment(1, far.Id, BattalionType.LightInfantry);
 
         Assert.False(s.CanSee(0, stranger));
         game.ViewProvince(far.Id); // on screen, so only the fog hides it
@@ -83,7 +83,7 @@ public class VisionTests(WorldFixture world)
         Assert.Null(game.SelectedUnit);
 
         // Rival 2 stands beside it and shares what it sees with its ally.
-        s.AddRegiment(2, far.Id, BattalionType.Warriors);
+        s.AddRegiment(2, far.Id, BattalionType.LightInfantry);
         foreach (var p in s.Players) p.Stockpile[ResourceType.Gold] = 10_000;
         while (s.Opinion(2, 0) < Conquer.Game.Rules.GameRules.AllianceAcceptOpinion) Assert.True(s.SendGift(0, 2).Ok);
         Assert.True(s.ProposeAlliance(0, 2).Ok);

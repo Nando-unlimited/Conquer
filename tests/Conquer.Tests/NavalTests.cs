@@ -45,7 +45,7 @@ public class NavalTests(WorldFixture world)
     public void TroopsNeedShipsToCrossTheSea()
     {
         var (s, port, sea, _) = WithPort();
-        var regiment = s.AddRegiment(0, port.Id, BattalionType.Warriors);
+        var regiment = s.AddRegiment(0, port.Id, BattalionType.LightInfantry);
         var bombers = s.AddRegiment(0, port.Id, BattalionType.Bombers);
 
         Assert.False(s.CanUnitEnter(regiment, sea.Id));
@@ -91,8 +91,8 @@ public class NavalTests(WorldFixture world)
     {
         var (s, port, sea, landing) = WithPort();
         var fleet = s.AddFleet(0, port.Id, BattalionType.Transport);
-        var regiment = s.AddRegiment(0, port.Id, BattalionType.Warriors, BattalionType.Warriors);
-        var tooBig = s.AddRegiment(0, port.Id, [.. Enumerable.Repeat(BattalionType.Warriors, 6)]);
+        var regiment = s.AddRegiment(0, port.Id, BattalionType.LightInfantry, BattalionType.LightInfantry);
+        var tooBig = s.AddRegiment(0, port.Id, [.. Enumerable.Repeat(BattalionType.LightInfantry, 6)]);
 
         Assert.True(s.Embark(0, regiment.Id, fleet.Id).Ok);
         Assert.True(regiment.IsAboard);
@@ -126,7 +126,7 @@ public class NavalTests(WorldFixture world)
         s.DeclareWar(0, 1);
         var ours = s.AddFleet(0, sea.Id, BattalionType.Trireme, BattalionType.Trireme, BattalionType.Trireme);
         var theirs = s.AddFleet(1, sea.Id, BattalionType.Transport);
-        var aboard = s.AddRegiment(1, sea.Id, BattalionType.Warriors);
+        var aboard = s.AddRegiment(1, sea.Id, BattalionType.LightInfantry);
         aboard.CarrierId = theirs.Id;
 
         Assert.Contains(sea.Id, s.NavalBattleProvinces());
@@ -144,7 +144,7 @@ public class NavalTests(WorldFixture world)
         var (s, port, _, _) = WithPort();
         var a = s.AddFleet(0, port.Id, BattalionType.Trireme);
         var b = s.AddFleet(0, port.Id, BattalionType.Transport);
-        var regiment = s.AddRegiment(0, port.Id, BattalionType.Warriors);
+        var regiment = s.AddRegiment(0, port.Id, BattalionType.LightInfantry);
         s.Embark(0, regiment.Id, b.Id);
 
         Assert.True(s.Merge(0, a.Id, b.Id).Ok);
@@ -158,7 +158,7 @@ public class NavalTests(WorldFixture world)
     {
         var (s, port, _, _) = WithPort();
         var fleet = s.AddFleet(0, port.Id, BattalionType.Transport);
-        var regiment = s.AddRegiment(0, port.Id, BattalionType.Warriors);
+        var regiment = s.AddRegiment(0, port.Id, BattalionType.LightInfantry);
         s.Embark(0, regiment.Id, fleet.Id);
 
         var loaded = GameSession.Load(_map, s.ToSave("test"));
@@ -252,7 +252,7 @@ public class NavalTests(WorldFixture world)
         port.AddBuilding(BuildingType.Port);
         rival.Learn(Tech.Navigation);
         foreach (var r in Resources.All) rival.Stockpile[r] = 5000;
-        var regiment = s.AddRegiment(1, port.Id, BattalionType.Warriors);
+        var regiment = s.AddRegiment(1, port.Id, BattalionType.LightInfantry);
         s.AddFleet(1, port.Id, BattalionType.Transport);
         // The human holds the coast across the sea, with no border with the rival.
         var scouts = s.AddRegiment(0, landing.Id, BattalionType.Scouts);

@@ -113,26 +113,66 @@ public class EraTests(WorldFixture world)
     }
 
     [Theory]
-    [InlineData(BattalionType.Knights, Tech.Stirrup)]
-    [InlineData(BattalionType.Crossbowmen, Tech.Machinery)]
-    [InlineData(BattalionType.Arquebusiers, Tech.Gunpowder)]
-    [InlineData(BattalionType.Cannons, Tech.Metallurgy)]
-    [InlineData(BattalionType.Musketeers, Tech.MilitaryScience)]
-    [InlineData(BattalionType.Riflemen, Tech.Rifling)]
-    [InlineData(BattalionType.FieldArtillery, Tech.Steel)]
-    [InlineData(BattalionType.MachineGunners, Tech.MachineGuns)]
-    [InlineData(BattalionType.MotorisedInfantry, Tech.Combustion)]
-    [InlineData(BattalionType.HeavyArtillery, Tech.HeavyArtillery)]
-    [InlineData(BattalionType.Tanks, Tech.Armour)]
-    public void BattalionsNeedTheirAdvance(BattalionType type, Tech tech)
+    [InlineData(BattalionType.Cavalry, Tech.HorsebackRiding)]
+    [InlineData(BattalionType.RangedInfantry, Tech.Archery)]
+    [InlineData(BattalionType.HeavyInfantry, Tech.BronzeWorking)]
+    [InlineData(BattalionType.MountainInfantry, Tech.MilitaryTactics)]
+    [InlineData(BattalionType.Armour, Tech.TheWheel)]
+    [InlineData(BattalionType.Artillery, Tech.SiegeEngines)]
+    [InlineData(BattalionType.Medics, Tech.Medicine)]
+    [InlineData(BattalionType.AntiAir, Tech.Aviation)]
+    [InlineData(BattalionType.Paratroopers, Tech.Aviation)]
+    public void ALineIsRaisedOnceItsFirstModelsAdvanceIsKnown(BattalionType type, Tech tech)
     {
         var (s, a) = WithCapital();
         var city = s.CityIn(a)!;
         a.AddBuilding(BuildingType.Barracks);
         a.AddBuilding(BuildingType.Workshop);
+        s.Human.Stockpile[ResourceType.Aluminium] = s.Human.Stockpile[ResourceType.Iron] = s.Human.Stockpile[ResourceType.Coal] = 1000;
         Assert.False(s.Train(0, city.ProvinceId, type).Ok);
         s.Human.Learn(tech);
         Assert.True(s.Train(0, city.ProvinceId, type).Ok);
+    }
+
+    [Theory]
+    [InlineData(BattalionType.LightInfantry, Tech.MilitaryTactics, "Vélites")]
+    [InlineData(BattalionType.LightInfantry, Tech.Gunpowder, "Arcabuceros")]
+    [InlineData(BattalionType.HeavyInfantry, Tech.Drill, "Legionarios")]
+    [InlineData(BattalionType.HeavyInfantry, Tech.Armouries, "Infantería pesada")]
+    [InlineData(BattalionType.HeavyInfantry, Tech.Gunpowder, "Piqueros")]
+    [InlineData(BattalionType.HeavyInfantry, Tech.Rifling, "Infantería ligera")]
+    [InlineData(BattalionType.RangedInfantry, Tech.Machinery, "Ballesteros")]
+    [InlineData(BattalionType.RangedInfantry, Tech.MilitaryScience, "Mosqueteros")]
+    [InlineData(BattalionType.RangedInfantry, Tech.MachineGuns, "Ametralladores")]
+    [InlineData(BattalionType.Cavalry, Tech.Stirrup, "Caballeros")]
+    [InlineData(BattalionType.Cavalry, Tech.Combustion, "Caballería mecanizada")]
+    [InlineData(BattalionType.Armour, Tech.Armour, "Tanques")]
+    [InlineData(BattalionType.Artillery, Tech.SiegeWorkshops, "Trabuquetes")]
+    [InlineData(BattalionType.Artillery, Tech.Metallurgy, "Cañones")]
+    [InlineData(BattalionType.Artillery, Tech.HeavyArtillery, "Artillería pesada")]
+    public void EachAdvanceBringsItsModel(BattalionType type, Tech tech, string model)
+    {
+        var (s, _) = WithCapital();
+        Assert.NotEqual(model, GameSession.ModelFor(s.Human, type).Name);
+        s.Human.Learn(tech);
+        Assert.Equal(model, GameSession.ModelFor(s.Human, type).Name);
+    }
+
+    [Fact]
+    public void BattalionsTakeUpTheNewModelOfTheirLine()
+    {
+        var (s, a) = WithCapital();
+        var regiment = s.AddRegiment(0, a.Id, BattalionType.LightInfantry, BattalionType.LightInfantry);
+        Assert.All(regiment.Battalions, b => Assert.Equal("Guerreros", b.Info.Name));
+        s.Human.Learn(Tech.MilitaryTactics);
+        for (int h = 0; h < 24; h++) s.Step();
+        Assert.All(regiment.Battalions, b => Assert.Equal("Vélites", b.Info.Name));
+
+        // With rifles, the heavy infantry becomes light infantry, and lists leave the line out as a duplicate.
+        Assert.False(BattalionType.HeavyInfantry.Redundant(s.Human.Techs));
+        s.Human.Learn(Tech.Rifling);
+        Assert.True(BattalionType.HeavyInfantry.Redundant(s.Human.Techs));
+        Assert.False(BattalionType.LightInfantry.Redundant(s.Human.Techs));
     }
 
     [Fact]

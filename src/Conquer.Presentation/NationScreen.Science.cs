@@ -112,7 +112,7 @@ public sealed partial class NationScreen
             : new Button("Investigar", () => Show(Session.Research(Player.Id, tech)), can.Ok, Tooltip: can.Ok ? null : can.Message, Size: TextSize.Small);
         // Buildings and battalions stay hidden until their advance is known, so the card says what it brings.
         var unlocks = Buildings.All.Where(b => b.Info().RequiresTech == tech).Select(b => b.Info().Name)
-            .Concat(Battalions.All.Where(b => b.Info().Requires.Contains(tech)).Select(b => b.Info().Name))
+            .Concat(Battalions.All.SelectMany(b => b.Models()).Where(m => m.Requires.Contains(tech)).Select(m => m.Name).Distinct())
             .Concat(RoadKinds.All.Where(r => r.Info().Requires == tech).Select(r => r.Info().Plural)).ToList();
         var notes = new List<(string Text, Ink Ink)>();
         if (info.Requires.Length > 0)

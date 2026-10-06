@@ -30,8 +30,8 @@ internal sealed partial class AiPlayer
 
     /// <summary>The ship it builds to carry troops: the roomiest transport it can build in the port.</summary>
     private BattalionType? TransportType(Province port) =>
-        Battalions.All.Where(t => t.Info().Naval && t.Info().Capacity >= t.Info().Men && _session.CanTrain(port, t).Ok)
-            .Cast<BattalionType?>().MaxBy(t => t!.Value.Info().Capacity);
+        Battalions.All.Where(t => Model(t).Naval && Model(t).Capacity >= Model(t).Men && _session.CanTrain(port, t).Ok)
+            .Cast<BattalionType?>().MaxBy(t => Model(t!.Value).Capacity);
 
     /// <summary>Whether it can carry an army across the sea: a port, and transports it knows how to build.</summary>
     private bool CanInvade() => StagingPort() is { } port && TransportType(port) != null;
@@ -79,8 +79,8 @@ internal sealed partial class AiPlayer
 
         // Enough ships for everyone: one more transport at a time while they fall short.
         int men = force.Sum(u => u.Citizens) + aboard.Sum(u => u.Citizens);
-        bool building = port.Training.Any(o => o.Battalion is BattalionType t && t.Info().Naval && t.Info().Capacity > 0);
-        if (transports.Sum(f => f.Capacity) < men && !building && TransportType(port) is BattalionType ship && Spare(ship.Info().Cost))
+        bool building = port.Training.Any(o => o.Battalion is BattalionType t && Model(t).Naval && Model(t).Capacity > 0);
+        if (transports.Sum(f => f.Capacity) < men && !building && TransportType(port) is BattalionType ship && Spare(Model(ship).Cost))
             _session.Train(_player.Id, port.Id, ship);
 
         foreach (var fleet in transports.Where(f => !f.IsMoving))

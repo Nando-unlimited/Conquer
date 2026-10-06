@@ -41,7 +41,7 @@ public sealed partial class GameSession
         Cities = Cities.Select(c => new CitySave(c.Id, c.Name, c.OwnerId, c.ProvinceId, c.FoundedHours, c.FestivalUntilHours)).ToList(),
         Units = Units.Select(u => new UnitSave(
             u.Id, u.OwnerId, u.Type, u.ProvinceId, u.Type is UnitType.Regiment or UnitType.Fleet ? 0 : u.Citizens, u.Number, u.HeadquartersLevel,
-            [.. u.Battalions.Select(b => new BattalionSave(b.Type, b.Strength, b.Organisation, b.Experience))],
+            [.. u.Battalions.Select(b => new BattalionSave(b.Type, b.Strength, b.Organisation, b.Experience, b.Model))],
             u.CommanderId, u.AttackingProvinceId, [.. u.Path], u.HoursToNext, u.StepHours, u.CarrierId,
             Officer: u.Officer is { } o ? ToSave(o) : null, CustomName: u.CustomName, AutoClaim: u.AutoClaim)).ToList(),
         Migrations = Migrations.Select(m => new MigrationSave(m.Id, m.OwnerId, m.FromProvinceId, m.ToProvinceId, m.People,
@@ -228,7 +228,7 @@ public sealed partial class GameSession
                 HoursToNext = u.HoursToNext,
                 StepHours = u.StepHours,
             };
-            foreach (var b in u.Battalions) unit.Battalions.Add(new Battalion(b.Type) { Strength = b.Strength, Organisation = b.Organisation, Experience = b.Experience });
+            foreach (var b in u.Battalions) unit.Battalions.Add(new Battalion(b.Type, b.Model) { Strength = b.Strength, Organisation = b.Organisation, Experience = b.Experience });
             unit.CustomName = u.CustomName;
             unit.AutoClaim = u.AutoClaim;
             // Generals from before officers become officers of their HQ's rank, and HQs from before generals get one now.

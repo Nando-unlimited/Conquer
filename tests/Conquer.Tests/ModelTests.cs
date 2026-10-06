@@ -23,7 +23,7 @@ public class ModelTests
     [Fact]
     public void EveryBattalionAndShipHasAModel()
     {
-        foreach (var type in Battalions.All) Assert.True(Exists(Models.Of(type)), $"{type}: {Models.Of(type)}");
+        foreach (var model in Battalions.All.SelectMany(t => t.Models())) Assert.True(Exists(Models.Of(model)), $"{model.Name}: {Models.Of(model)}");
     }
 
     [Fact]
@@ -38,8 +38,8 @@ public class ModelTests
     [Fact]
     public void UnitModelsHaveTheirTeamColours()
     {
-        foreach (var type in Battalions.All)
-            Assert.True(File.Exists(Path.Combine(Sprites, "Units", Models.Of(type) + "-team.png")), Models.Of(type));
+        foreach (var model in Battalions.All.SelectMany(t => t.Models()))
+            Assert.True(File.Exists(Path.Combine(Sprites, "Units", Models.Of(model) + "-team.png")), Models.Of(model));
     }
 
     [Fact]

@@ -56,7 +56,7 @@ public class TreatyTests(WorldFixture world)
     private static void OccupyAll(GameSession s, Province a, Province c)
     {
         s.DeclareWar(0, 1);
-        var regiment = s.AddRegiment(0, a.Id, BattalionType.Warriors);
+        var regiment = s.AddRegiment(0, a.Id, BattalionType.LightInfantry);
         s.MoveUnit(0, regiment.Id, c.Id);
         RunUntil(s, () => c.IsOccupied, 24 * 10);
         Assert.True(c.IsOccupied);
@@ -100,7 +100,7 @@ public class TreatyTests(WorldFixture world)
         Assert.False(s.CanDeclareWar(1, 2).Ok);
         Assert.False(s.CanDeclareWar(0, 1).Ok);
         Assert.False(s.CanProposeAlliance(1, 2).Ok);
-        Assert.True(s.CanUnitEnter(s.AddRegiment(0, a.Id, BattalionType.Warriors), b.Id));
+        Assert.True(s.CanUnitEnter(s.AddRegiment(0, a.Id, BattalionType.LightInfantry), b.Id));
 
         // Attacked, the overlord brings its vassal along.
         Assert.True(s.DeclareWar(2, 0).Ok);
@@ -123,9 +123,9 @@ public class TreatyTests(WorldFixture world)
     {
         var (s, a, b, c) = ThreeNations();
         var far = _map.Provinces.First(p => p.IsClaimable && !p.IsOwned && _map.DistanceKm(p, c) > 3000);
-        var straggler = s.AddRegiment(1, far.Id, BattalionType.Warriors);
+        var straggler = s.AddRegiment(1, far.Id, BattalionType.LightInfantry);
         s.DeclareWar(0, 1);
-        var regiment = s.AddRegiment(0, a.Id, BattalionType.Warriors);
+        var regiment = s.AddRegiment(0, a.Id, BattalionType.LightInfantry);
         s.MoveUnit(0, regiment.Id, c.Id);
         RunUntil(s, () => c.IsOccupied, 24 * 10);
         Assert.True(c.IsOccupied);
