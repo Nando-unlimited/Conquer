@@ -75,7 +75,15 @@ public sealed partial class NationScreen
             waiting[model.SupplyKey] = waiting.GetValueOrDefault(model.SupplyKey) + model.Pieces * b.StrengthShare;
         }
 
-        Column[] columns = [new("Suministro", 300), new("En almacén", 230), new("Producción", 220), new("Para modernizar", 170), new("Coste por batallón", 220)];
+        // What is on its way to the troops: pieces for recruits and new models, and ammunition (suministros).
+        var onTheWay = new Dictionary<string, double>();
+        foreach (var s in Session.Shipments.Where(s => s.OwnerId == Player.Id))
+        {
+            foreach (var (key, pieces) in s.Pieces) onTheWay[key] = onTheWay.GetValueOrDefault(key) + pieces;
+            onTheWay[Supplies.General.Key] = onTheWay.GetValueOrDefault(Supplies.General.Key) + s.Ammo;
+        }
+
+        Column[] columns = [new("Suministro", 300), new("En almacén", 230), new("Producción", 220), new("Para modernizar", 170), new("En camino", 140), new("Coste por batallón", 220)];
         var rows = new List<IReadOnlyList<Cell>>();
         foreach (var (type, model) in models.OrderBy(m => m.Type).ThenByDescending(m => m.Model.Requires.Length))
         {
@@ -88,13 +96,16 @@ public sealed partial class NationScreen
             rows.Add(
             [
                 new TextCell(model.SupplyName, newest ? Tone.Normal : Tone.Dim, Bold: newest, Suffix: newest ? null : " · antiguo",
-                    Tooltip: $"Para {users}: {(model.Supply != null ? "una pieza por hombre" : model.PiecesText(model.Pieces) + " por batallón")}."),
+                    Tooltip: $"Para {users}: {(model.Supply != null ? "una pieza por hombre" : model.PiecesText(model.Pieces) + " por batallón")}."
+                        + (model.SupplyKey == Supplies.General.Key ? " También es la munición de todas tus tropas en combate." : "")),
                 new TextCell($"{stock:N0}", stock >= model.Pieces ? Tone.Normal : Tone.Dim,
                     Suffix: model.Supply != null ? $" · {Math.Floor(stock / 100):0} bat. de 100" : $" · {Math.Floor(stock / model.Pieces):0} bat."),
                 new TextCell(perDay > 0 ? $"{perDay:0.#}/día" : "-", perDay > 0 ? Tone.Good : Tone.Dim,
                     Suffix: making.Count > 0 ? $" · {TextFormat.Plural(making.Count, "taller", "talleres")}" : null,
                     Tooltip: making.Count > 0 ? string.Join(", ", making.Select(p => Session.PlaceName(p))) : null),
                 new TextCell(waiting.TryGetValue(model.SupplyKey, out double wait) ? $"{wait:N0}" : "-", wait > stock ? Tone.Bad : Tone.Dim),
+                new TextCell(onTheWay.GetValueOrDefault(model.SupplyKey) >= 0.5 ? $"{onTheWay[model.SupplyKey]:N0}" : "-", Tone.Dim,
+                    Tooltip: "Salió de la capital hacia tus tropas y aún no ha llegado. Si una unidad queda aislada, vuelve al almacén."),
                 new TextCell(model.EquipmentCost.Items.Length == 0 ? "gratis"
                     : model.Supply != null ? $"{model.Supply.PieceCost.Times(100)} por 100" : model.EquipmentCost.ToString(), Tone.Dim, TextSize.Small, Top: 8),
             ]);
@@ -103,7 +114,7 @@ public sealed partial class NationScreen
             ? "No tienes talleres: constrúyelos (pestaña Edificios de una provincia) para fabricar equipo."
             : $"{TextFormat.Plural(workshops.Count, "taller o fábrica", "talleres y fábricas")}" +
               (idle > 0 ? $" · {TextFormat.Plural(idle, "parado", "parados")}: elige qué fabrican en la pestaña Edificios de su provincia" : "") +
-              ". Entrenar, reforzar y modernizar batallones gasta este equipo.";
+              ". Entrenar, reforzar y modernizar batallones gasta este equipo, que sale de la capital hacia las tropas en envíos; los suministros son además su munición.";
         return new TablePage(new Table(columns, rows, Empty: "No sabes fabricar equipo todavía."), "Equipo · " + title, idle > 0 || workshops.Count == 0 ? Tone.Accent : Tone.Dim);
     }
 }

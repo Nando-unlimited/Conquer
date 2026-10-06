@@ -73,10 +73,14 @@ public sealed class Player
     /// </summary>
     public Dictionary<string, double> Equipment { get; } = [];
 
-    public double EquipmentOf(BattalionInfo model) => Equipment.GetValueOrDefault(model.SupplyKey);
+    public double EquipmentOf(BattalionInfo model) => EquipmentOf(model.SupplyKey);
+
+    public double EquipmentOf(string supplyKey) => Equipment.GetValueOrDefault(supplyKey);
 
     /// <summary>Puts pieces into the stockpile, or takes them out (negative).</summary>
-    public void AddEquipment(BattalionInfo model, double pieces) => Equipment[model.SupplyKey] = Math.Max(0, EquipmentOf(model) + pieces);
+    public void AddEquipment(BattalionInfo model, double pieces) => AddEquipment(model.SupplyKey, pieces);
+
+    public void AddEquipment(string supplyKey, double pieces) => Equipment[supplyKey] = Math.Max(0, EquipmentOf(supplyKey) + pieces);
 
     /// <summary>Its regiment designs; every nation starts with one of two warrior battalions.</summary>
     public List<RegimentTemplate> Templates { get; } = [];
@@ -182,6 +186,10 @@ public sealed class Unit
     public string? CustomName { get; set; }
     /// <summary>What scouts left on their own do: explore unknown land, or claim free land along their nation's borders.</summary>
     public ScoutOrders ScoutOrders { get; set; }
+    /// <summary>For an HQ, which of the nation's units its own get their shipments before (see <c>GameSession.DailyShipments</c>).</summary>
+    public SupplyPriority SupplyPriority { get; set; } = SupplyPriority.Normal;
+    /// <summary>Ammunition the combat unit has spent in battle and not yet had back: it carries <c>GameSession.AmmoCapacity</c> less this.</summary>
+    public double AmmoSpent { get; set; }
     /// <summary>Scouts left to explore on their own, claiming land or not.</summary>
     public bool ExploresAlone => ScoutOrders != ScoutOrders.None;
 

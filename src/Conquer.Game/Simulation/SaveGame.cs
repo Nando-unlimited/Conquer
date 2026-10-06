@@ -61,6 +61,8 @@ public sealed record SaveGame
     public required List<CitySave> Cities { get; init; }
     public required List<UnitSave> Units { get; init; }
     public required List<MigrationSave> Migrations { get; init; }
+    /// <summary>Shipments on their way to the troops; missing in saves from before 1.110.0.</summary>
+    public List<ShipmentSave>? Shipments { get; init; }
     public required List<BattleSave> Battles { get; init; }
     public required List<WarSave> Wars { get; init; }
     /// <summary>Truces still running; missing in saves from before 1.62.0.</summary>
@@ -171,7 +173,10 @@ public sealed record UnitSave(
     List<BattalionSave> Battalions, int? CommanderId, int? AttackingProvinceId, List<int> Path, double HoursToNext, double StepHours,
     int? CarrierId = null, GeneralSave? General = null, OfficerSave? Officer = null, string? CustomName = null, bool AutoClaim = false,
     Echelon Size = Echelon.Regiment, List<RegimentSave>? Regiments = null, List<BrigadeSave>? Brigades = null,
-    bool AutoExplore = false);
+    bool AutoExplore = false, SupplyPriority SupplyPriority = SupplyPriority.Normal, double AmmoSpent = 0);
+
+/// <summary>A shipment on its way from the capital to a combat unit.</summary>
+public sealed record ShipmentSave(int OwnerId, int UnitId, double Men, Dictionary<string, double> Pieces, double Ammo, long ArriveHours);
 
 /// <summary>A regiment inside a combat unit (a regiment unit has one, carrying the unit's number and name).</summary>
 public sealed record RegimentSave(int Number, string? CustomName, List<BattalionSave> Battalions);

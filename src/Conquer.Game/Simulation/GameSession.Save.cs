@@ -45,7 +45,9 @@ public sealed partial class GameSession
             u.CommanderId, u.AttackingProvinceId, [.. u.Path], u.HoursToNext, u.StepHours, u.CarrierId,
             Officer: u.Officer is { } o ? ToSave(o) : null, CustomName: u.CustomName, AutoClaim: u.ScoutOrders == ScoutOrders.Claim,
             AutoExplore: u.ScoutOrders == ScoutOrders.Explore, Size: u.Size, Regiments: u.IsMilitary ? [.. u.Regiments.Select(ToSave)] : null,
-            Brigades: u.Brigades.Count > 0 ? [.. u.Brigades.Select(b => new BrigadeSave(b.Number, b.CustomName, [.. b.Regiments.Select(ToSave)]))] : null)).ToList(),
+            Brigades: u.Brigades.Count > 0 ? [.. u.Brigades.Select(b => new BrigadeSave(b.Number, b.CustomName, [.. b.Regiments.Select(ToSave)]))] : null,
+            SupplyPriority: u.SupplyPriority, AmmoSpent: u.AmmoSpent)).ToList(),
+        Shipments = _shipments.Select(s => new ShipmentSave(s.OwnerId, s.UnitId, s.Men, new(s.Pieces), s.Ammo, s.ArriveHours)).ToList(),
         Migrations = Migrations.Select(m => new MigrationSave(m.Id, m.OwnerId, m.FromProvinceId, m.ToProvinceId, m.People,
             m.DepartHours, m.ArriveHours, m.Forced, m.Mood)).ToList(),
         Battles = _battles.Select(b => new BattleSave(b.ProvinceId, b.AttackerId, b.DefenderId, b.StartHours, [.. b.Attackers], b.AttackerLosses, b.DefenderLosses)).ToList(),
@@ -272,6 +274,8 @@ public sealed partial class GameSession
             }
             // Saves from 1.101.0 kept a combat unit's battalions in one list: they are arranged once the numbers are back.
             else if (u.Battalions.Count > 0) flat[unit] = [.. u.Battalions.Select(FromSave)];
+            unit.SupplyPriority = u.SupplyPriority;
+            unit.AmmoSpent = u.AmmoSpent;
             unit.CustomName = u.CustomName;
             unit.ScoutOrders = u.AutoClaim ? ScoutOrders.Claim : u.AutoExplore ? ScoutOrders.Explore : ScoutOrders.None;
             // Generals from before officers become officers of their HQ's rank, and HQs from before generals get one now.
@@ -283,6 +287,8 @@ public sealed partial class GameSession
             session._unitsById[unit.Id] = unit;
         }
 
+        foreach (var s in save.Shipments ?? [])
+            session._shipments.Add(new Shipment { OwnerId = s.OwnerId, UnitId = s.UnitId, Men = s.Men, Pieces = new(s.Pieces), Ammo = s.Ammo, ArriveHours = s.ArriveHours });
         foreach (var m in save.Migrations)
             session.Migrations.Add(new Migration(m.Id, m.OwnerId, m.From, m.To, m.People, m.DepartHours, m.ArriveHours, m.Forced, m.Mood));
         foreach (var b in save.Battles)

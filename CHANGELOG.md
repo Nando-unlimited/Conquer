@@ -2,6 +2,21 @@
 
 Todos los cambios del juego, del más reciente al más antiguo. Cada versión es un commit cuyo título es su número.
 
+## [1.110.0] - 2026-10-06
+
+Cuarta parte de la nueva estructura militar: la logística.
+
+### Añadido
+- **Envíos desde la capital**: el almacén de la nación está en su capital, y lo que necesitan tus tropas les llega en envíos que tardan lo que se tarda en llegar por la red de suministro (más deprisa por carreteras y ferrocarriles; por mar, desde tu ciudad más cercana y 10 días más). Cada día la capital manda a cada unidad con suministro los reclutas para reforzarla con su equipo, el equipo del modelo nuevo para modernizarla y la munición que ha gastado. Si al llegar la unidad está aislada o ya no existe, el envío vuelve al almacén.
+- **Prioridad de suministro**: cada cuartel general tiene prioridad alta, normal o baja (botones en su panel). Cuando no hay para todos, se sirve primero a sus unidades por ese orden; las unidades sin cuartel a su alcance van las últimas y sus envíos tardan el doble. Un cuartel aislado deja a sus unidades sin envíos.
+- **Munición**: cada unidad lleva suministros para 24 horas de combate, y cada batallón que combate gasta 0,25 por cada 100 hombres y hora. Sin munición lucha a la mitad. La capital la repone con los suministros del almacén, que fabrican los talleres.
+- El panel de una unidad dice su munición y los envíos que van en camino (qué llevan y cuándo llegan, o por qué no le llega nada); la ventana de batalla, la munición de cada unidad; nueva alerta «Sin munición»; la pestaña Almacén suma la columna «En camino»; nueva sección Logística en la ayuda.
+
+### Cambiado
+- Los refuerzos y la modernización ya no llegan al momento: viajan desde la capital. Un batallón cuyo modelo nuevo usa las mismas armas (de falanges a legionarios) lo sigue adoptando al momento. Las flotas siguen completando su tripulación en puerto.
+- La IA fabrica también los suministros que su ejército necesitaría para reponer toda su munición.
+- Las partidas guardadas empiezan con la munición llena y sin envíos en camino.
+
 ## [1.109.0] - 2026-10-06
 
 ### Añadido

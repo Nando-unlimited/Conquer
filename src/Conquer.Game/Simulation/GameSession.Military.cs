@@ -319,30 +319,6 @@ public sealed partial class GameSession
     private static Battalion NewBattalion(Player player, BattalionType type) => new(type, Math.Max(0, type.BestModel(player.Techs)));
 
     /// <summary>
-    /// Battalions in supply and out of battle take up the newest model of their line the nation knows as its equipment
-    /// reaches them: as many pieces as the men they have left need, from the stockpile, into which their old ones go back.
-    /// </summary>
-    private void Modernise(Player player)
-    {
-        foreach (var unit in Units.Where(u => u.OwnerId == player.Id && u.IsMilitary && !u.IsAboard && IsInSupply(u) && !InBattle(u)))
-            foreach (var b in unit.Battalions)
-            {
-                int best = b.Type.BestModel(player.Techs);
-                if (best <= b.Model) continue;
-                var model = b.Type.Models()[best];
-                double share = b.StrengthShare, need = model.Pieces * share;
-                // A newer model with the same weapons (phalanx and legionaries) takes it up at once.
-                if (model.SupplyKey != b.Info.SupplyKey)
-                {
-                    if (player.EquipmentOf(model) < need) continue;
-                    player.AddEquipment(model, -need);
-                    player.AddEquipment(b.Info, b.Info.Pieces * share);
-                }
-                b.Modernise(best);
-            }
-    }
-
-    /// <summary>
     /// Whether a province can raise troops: it has a city, barracks or a workshop (<see cref="CanTrainIn"/>), the
     /// advances are known, it has the buildings they train in (<see cref="Battalions.TrainingBuilding"/>), it has the
     /// men to spare (keeping a city's minimum, or a settled province's) and the nation can pay.
@@ -611,6 +587,7 @@ public sealed partial class GameSession
     private void Absorb(Unit unit, Unit other)
     {
         unit.CommanderId ??= other.CommanderId;
+        unit.AmmoSpent += other.AmmoSpent;
         if (unit.Officer == null)
         {
             unit.Officer = other.Officer;
@@ -1024,9 +1001,9 @@ public sealed partial class GameSession
         DailyManpower(player);
         DailyTraining(player);
         _supplied[player.Id] = ComputeSupply(player);
-        Modernise(player);
-        var capital = player.CapitalCityId is int c && CityById(c) is { } city && !Map.Provinces[city.ProvinceId].IsOccupied
-            ? Map.Provinces[city.ProvinceId] : null;
+        ModerniseInPlace(player);
+        DailyShipments(player);
+        var capital = CapitalProvince(player);
 
         foreach (var unit in Units.Where(u => u.OwnerId == player.Id && (u.IsMilitary || u.IsFleet)).ToList())
         {
@@ -1073,14 +1050,11 @@ public sealed partial class GameSession
             foreach (var b in unit.Battalions)
             {
                 b.Organisation = Math.Min(b.Info.MaxOrganisation, b.Organisation + b.Info.MaxOrganisation * recovery);
+                // Combat units get their recruits by shipment (DailyShipments); fleets crew up in port from the capital.
                 double missing = b.Info.Men - b.Strength;
-                if (missing <= 0 || capital == null) continue;
+                if (!unit.IsFleet || missing <= 0 || capital == null) continue;
                 double men = Math.Min(Math.Min(missing, player.Manpower), Math.Min(b.Info.Men * MilitaryRules.ReinforcementRate * repair, capital.Population - GameRules.MinCityPopulation));
-                // New men need their equipment: as many as the stockpile arms.
-                if (b.Info.NeedsEquipment) men = Math.Min(men, player.EquipmentOf(b.Info) / b.Info.Pieces * b.Info.Men);
                 if (men <= 0) continue;
-                if (b.Info.NeedsEquipment) player.AddEquipment(b.Info, -men / b.Info.Men * b.Info.Pieces);
-                // Recruits are green: they water down the battalion's experience.
                 b.Experience = b.Experience * b.Strength / (b.Strength + men);
                 b.Strength += men;
                 capital.Population -= men;
@@ -1143,6 +1117,7 @@ public sealed partial class GameSession
             double attackFire = SideFire(attacking), defenseFire = SideFire(defending);
             battle.DefenderLosses += Damage(defending, attackFire);
             battle.AttackerLosses += Damage(attacking, defenseFire);
+            SpendAmmo(attacking.Concat(defending));
             battle.History.Add(new BattleHour(attackers.Sum(u => u.Citizens), defenders.Sum(u => u.Citizens),
                 AverageOrganisation(attackers), AverageOrganisation(defenders), attackFire, defenseFire));
             foreach (var e in attacking.Concat(defending))
@@ -1213,7 +1188,7 @@ public sealed partial class GameSession
         foreach (var unit in units)
         {
             double multiplier = Math.Max(0, 1 + CommandBonus(unit) + (GeneralOf(unit)?.FireBonus(attacking) ?? 0) + (unit.Officer?.FireBonus(attacking) ?? 0))
-                                * (IsInSupply(unit) ? 1 : MilitaryRules.OutOfSupplyEfficiency)
+                                * (IsInSupply(unit) ? 1 : MilitaryRules.OutOfSupplyEfficiency) * AmmoEfficiency(unit)
                                 * (attacking ? 1 : DefenseMultiplier(province, enemyEngineers));
             foreach (var b in unit.Battalions)
             {

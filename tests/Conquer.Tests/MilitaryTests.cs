@@ -641,7 +641,7 @@ public class MilitaryTests(WorldFixture world)
         battalion.Organisation = 0;
         battalion.Strength = 50;
 
-        RunHours(s, 24);
+        RunHours(s, 25); // the recruits leave the capital at midnight and arrive an hour later
         Assert.Equal(battalion.Info.MaxOrganisation * MilitaryRules.OrganisationRecovery, battalion.Organisation, 6);
         double reinforcement = battalion.Info.Men * MilitaryRules.ReinforcementRate;
         Assert.Equal(50 + reinforcement, battalion.Strength, 6);

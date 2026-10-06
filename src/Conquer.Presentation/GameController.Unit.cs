@@ -208,6 +208,7 @@ public sealed partial class GameController
                 doc.Add(new Info("Hombres", $"{unit.Citizens:N0} / {unit.FullMen:N0}", unit.Citizens < unit.FullMen ? Tone.Normal : Tone.Good,
                     $"Los que quedan, de su plantilla completa. Una división tiene como mucho {MilitaryRules.MaxDivisionMen:N0}."));
             doc.Add(new Info("Suministro", unit.IsAboard ? "Víveres del barco" : supplied ? "Con suministro" : "Sin suministro", supplied ? Tone.Good : Tone.Bad));
+            if (unit.IsMilitary) LogisticsLines(doc, unit);
             doc.Add(new Info("Velocidad", $"{unit.Speed * GameRules.CitizenSpeedKmh:0.#} km/h"));
             doc.Add(CommandLine(unit));
             doc.Add(OfficerLine("Oficial", unit.Officer, "Manda esta unidad."));
@@ -237,6 +238,47 @@ public sealed partial class GameController
         if (unit.OwnerId != Human.Id || unit.IsAboard) return;
         if (!unit.IsFleet) AttachButtons(doc, unit);
     }
+
+    /// <summary>
+    /// The ammunition a combat unit carries, and what the capital is sending it: how many shipments, when the next
+    /// arrives and, on hover, what they carry and where the unit stands in the queue; or why nothing can reach it.
+    /// </summary>
+    private void LogisticsLines(Document doc, Unit unit)
+    {
+        double ammo = GameSession.Ammo(unit), capacity = GameSession.AmmoCapacity(unit);
+        if (capacity > 0)
+            doc.Add(new Info("Munición", $"{ammo:0.#} / {capacity:0.#}", ammo >= capacity - 0.05 ? Tone.Good : ammo < capacity * 0.25 ? Tone.Bad : Tone.Normal,
+                $"Suministros para {MilitaryRules.AmmoHours:0} horas de combate. Cada batallón que combate gasta {MilitaryRules.AmmoPerHundredMenHour:0.##} por cada 100 hombres y hora; " +
+                $"sin munición lucha al {MilitaryRules.OutOfAmmoEfficiency:P0}. La capital repone lo gastado con los suministros del almacén."));
+        if (unit.OwnerId != Human.Id) return;
+
+        var shipments = Session.ShipmentsTo(unit).OrderBy(s => s.ArriveHours).ToList();
+        if (shipments.Count == 0)
+        {
+            string? reason = Session.NoShipmentsReason(unit);
+            doc.Add(new Info("Envíos", reason == null ? "Nada en camino" : "No le llegan", reason == null ? Tone.Dim : Tone.Bad, reason ?? QueueText(unit)));
+            return;
+        }
+        string next = GameSession.FormatHours(shipments[0].ArriveHours - Session.Date.Hours);
+        double men = shipments.Sum(s => s.Men), ammoOnTheWay = shipments.Sum(s => s.Ammo);
+        var pieces = shipments.SelectMany(s => s.Pieces).GroupBy(p => p.Key).Select(g => (Key: g.Key, Pieces: g.Sum(p => p.Value))).Where(p => p.Pieces >= 0.5).ToList();
+        var carried = new List<string>();
+        if (men >= 0.5) carried.Add($"{men:N0} reclutas");
+        carried.AddRange(pieces.Select(p => $"{p.Pieces:N0} {SupplyName(p.Key).ToLowerInvariant()}"));
+        if (ammoOnTheWay >= 0.05) carried.Add($"{ammoOnTheWay:0.#} de munición");
+        doc.Add(new Info("Envíos", $"{shipments.Count} en camino · {next}", Tone.Normal,
+            $"Desde la capital: {string.Join(", ", carried)}. El siguiente llega en {next}.\n{QueueText(unit)}"));
+    }
+
+    /// <summary>Where the unit stands in the queue for shipments, by its HQ's priority.</summary>
+    private string QueueText(Unit unit) =>
+        Session.ShipmentTerms(unit) is not var (rank, _) ? ""
+        : rank > (int)SupplyPriority.Low ? "Sin cuartel general a su alcance: sus envíos salen los últimos y tardan el doble."
+        : $"Prioridad de su cuartel general: {GameSession.PriorityName((SupplyPriority)rank).ToLowerInvariant()}.";
+
+    /// <summary>What the workshops call a supply kept under this key: "Armas clásicas", "Suministros", "Catapultas".</summary>
+    private static string SupplyName(string key) =>
+        Battalions.All.SelectMany(t => t.Models()).FirstOrDefault(m => m.SupplyKey == key)?.SupplyName ?? key;
 
     /// <summary>A regiment inside a brigade or division: its name, then its battalions.</summary>
     private static void RegimentRows(Document doc, Regiment regiment, float indent)
@@ -279,6 +321,17 @@ public sealed partial class GameController
         doc.Add(CommandLine(hq));
         doc.Add(OfficerLine("General", hq.Officer, "Manda las unidades de su cuartel general que estén a su alcance."));
         doc.Add(PortraitsOf(hq, ("General", hq.Officer)));
+        string priorityTip = "Quién recibe antes los refuerzos, el equipo y la munición que salen de la capital cuando no hay para todos: " +
+                             "las unidades de los cuarteles de prioridad alta, luego normal, luego baja y, al final, las que no tienen cuartel a su alcance." +
+                             (Session.IsSupplied(hq.OwnerId, hq.ProvinceId) ? "" : "\nEste cuartel está aislado: sus unidades no reciben nada.");
+        if (hq.OwnerId == Human.Id)
+        {
+            doc.Add(new Label("Prioridad de suministro", Session.IsSupplied(hq.OwnerId, hq.ProvinceId) ? Tone.Dim : Tone.Bad, Tooltip: priorityTip));
+            doc.Add(new ButtonRow([.. Enum.GetValues<SupplyPriority>().Select(p => new Button(GameSession.PriorityName(p),
+                () => Show(Session.SetSupplyPriority(Human.Id, hq.Id, p)), Active: hq.SupplyPriority == p, Tooltip: priorityTip, Size: TextSize.Small))],
+                Height: 26, Gap: 6));
+        }
+        else doc.Add(new Info("Prioridad de suministro", GameSession.PriorityName(hq.SupplyPriority), Tone.Normal, priorityTip));
         var subs = Session.SubordinatesOf(hq).ToList();
         string below = Formations.SubordinatesPlural(hq.HeadquartersLevel);
         doc.Add(Section($"Al mando ({subs.Count}/{info.MaxSubordinates} {below})", 24));

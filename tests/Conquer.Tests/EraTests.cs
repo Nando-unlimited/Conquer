@@ -166,7 +166,7 @@ public class EraTests(WorldFixture world)
         var regiment = s.AddRegiment(0, a.Id, BattalionType.LightInfantry, BattalionType.LightInfantry);
         Assert.All(regiment.Battalions, b => Assert.Equal("Guerreros", b.Info.Name));
         s.Human.Learn(Tech.MilitaryTactics);
-        for (int h = 0; h < 24; h++) s.Step();
+        for (int h = 0; h < 25; h++) s.Step(); // the classical arms leave the capital at midnight and arrive an hour later
         Assert.All(regiment.Battalions, b => Assert.Equal("Vélites", b.Info.Name));
 
         // With rifles, the heavy infantry becomes light infantry, and lists leave the line out as a duplicate.

@@ -371,6 +371,14 @@ public enum UnitType
     Fleet,
 }
 
+/// <summary>How soon an HQ's units get their shipments from the capital, against the rest of the nation's.</summary>
+public enum SupplyPriority
+{
+    High,
+    Normal,
+    Low,
+}
+
 /// <summary>What scouts left on their own do.</summary>
 public enum ScoutOrders
 {

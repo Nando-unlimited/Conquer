@@ -130,6 +130,18 @@ public static class MilitaryRules
     /// <summary>Share of full strength a battalion in supply gets back each day, taken from the capital's people.</summary>
     public const double ReinforcementRate = 0.05;
 
+    // Logistics: shipments from the capital, and ammunition in battle
+    /// <summary>Units without an HQ in range get their shipments this many times slower (and after everyone else).</summary>
+    public const double UnattachedShipmentSlowdown = 2;
+    /// <summary>Hours a shipment takes, on top of the way from the nation's nearest city, when no land route joins the unit to the capital (by sea).</summary>
+    public const double OverseasShipmentHours = 24 * 10;
+    /// <summary>Suministros a battalion of 100 men spends each hour it fights (artillery and aircraft as well; medics do not fight).</summary>
+    public const double AmmoPerHundredMenHour = 0.25;
+    /// <summary>Hours of fighting a unit carries ammunition for.</summary>
+    public const double AmmoHours = 24;
+    /// <summary>A battalion out of ammunition fights at this share of its fire.</summary>
+    public const double OutOfAmmoEfficiency = 0.5;
+
     // Sieges
     /// <summary>Days to take a fortified province per point of its defence: 30 for walls (+50 %), 60 for a castle (+100 %).</summary>
     public const double SiegeDaysPerDefense = 60;

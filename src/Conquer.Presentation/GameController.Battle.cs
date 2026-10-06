@@ -161,6 +161,9 @@ public sealed partial class GameController
         if (command > 0) lines.Add($"Cadena de mando: +{command:P0}");
         if (Session.GeneralOf(unit) is { } general) lines.Add($"General: {general.Title} ({general.Summary})");
         if (unit.Officer is { } officer) lines.Add($"Oficial: {officer.Title} ({officer.Summary})");
+        double ammo = GameSession.Ammo(unit), capacity = GameSession.AmmoCapacity(unit), ammoShare = GameSession.AmmoEfficiency(unit);
+        if (capacity > 0)
+            lines.Add($"Munición: {ammo:0.#} de {capacity:0.#}" + (ammoShare < 1 ? $" · lucha al {ammoShare:P0} por falta de munición" : ""));
         foreach (var b in unit.Battalions)
         {
             var e = mine.FirstOrDefault(m => m.Battalion == b);
@@ -172,8 +175,8 @@ public sealed partial class GameController
         lines.Add(attacking ? "Ataca desde su provincia; entra cuando no quedan defensores." : "Defiende con la ventaja del terreno.");
 
         return new UnitEntry(unit.Name, unit.OwnerId == Human.Id ? Tone.Accent : Tone.Normal, unit.Officer?.Title ?? "sin oficial",
-            unit.Officer == null ? Tone.Dim : Tone.Normal, $"{unit.Citizens:N0} hombres · {fighting}" + (supplied ? "" : " · sin suministro"),
-            supplied ? Tone.Dim : Tone.Bad, unit.StrengthShare, unit.OrganisationShare, string.Join("\n", lines));
+            unit.Officer == null ? Tone.Dim : Tone.Normal, $"{unit.Citizens:N0} hombres · {fighting}" + (supplied ? "" : " · sin suministro") + (ammoShare < 1 ? " · sin munición" : ""),
+            supplied && ammoShare >= 1 ? Tone.Dim : Tone.Bad, unit.StrengthShare, unit.OrganisationShare, string.Join("\n", lines));
     }
 
     /// <summary>Each side's organisation, hour by hour.</summary>

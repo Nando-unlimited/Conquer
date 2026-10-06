@@ -97,6 +97,32 @@ public class ControllerTests(WorldFixture world)
         doc.Elements.OfType<Button>().Concat(doc.Elements.OfType<ButtonRow>().SelectMany(r => r.Buttons)).First(b => b.Text.StartsWith(text));
 
     [Fact]
+    public void UnitPanelsShowAmmunitionShipmentsAndTheHeadquartersPriority()
+    {
+        var game = GameWithCapital();
+        int home = game.SelectedProvince;
+        var unit = game.Session.AddRegiment(0, home, BattalionType.LightInfantry);
+        unit.AmmoSpent = GameSession.AmmoCapacity(unit);
+        game.SelectUnit(unit.Id);
+        var ammo = game.SidePanel()!.Elements.OfType<Info>().Single(i => i.Label == "Munición");
+        Assert.Equal(Tone.Bad, ammo.Ink.Tone);
+        Assert.Contains(game.Alerts(), a => a.Text.StartsWith("Sin munición"));
+
+        game.Session.Human.Arm();
+        do game.Session.Step(); while (game.Session.Date.Hour != 0);
+        var shipments = game.SidePanel()!.Elements.OfType<Info>().Single(i => i.Label == "Envíos");
+        Assert.StartsWith("1 en camino", shipments.Value);
+        Assert.Contains("de munición", shipments.Tooltip);
+        Assert.Contains("Sin cuartel general", shipments.Tooltip);
+
+        var corps = game.Session.AddHeadquarters(0, home, 1);
+        game.SelectUnit(corps.Id);
+        Button(game.SidePanel()!, "Alta").Press();
+        Assert.Equal(SupplyPriority.High, corps.SupplyPriority);
+        Assert.True(Button(game.SidePanel()!, "Alta").Active);
+    }
+
+    [Fact]
     public void TheSettlersPanelOffersToFoundTheCity()
     {
         var game = NewGame();

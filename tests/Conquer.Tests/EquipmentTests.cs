@@ -106,6 +106,7 @@ public class EquipmentTests(WorldFixture world)
 
         s.Human.AddEquipment(Velites, Velites.Pieces);
         RunDays(s, 1);
+        s.Step(); // the pieces leave the capital at midnight and reach a unit standing there an hour later
         Assert.Equal("Vélites", regiment.Battalions[0].Info.Name);
         Assert.Equal(0, s.Human.EquipmentOf(Velites));
         Assert.Equal(Warriors.Pieces, s.Human.EquipmentOf(Warriors)); // the old weapons go back into store

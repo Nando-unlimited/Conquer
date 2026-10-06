@@ -53,8 +53,9 @@ internal sealed partial class AiPlayer
 
     /// <summary>
     /// Sets each of its workshops and factories to the equipment it lacks most for its army design, its scouts and its
-    /// engineers: the line whose stockpile, with what the other workshops make in a month, would arm the fewest
-    /// battalions. With enough of everything in store (<see cref="KitsInStore"/>), they stop.
+    /// engineers (whose suministros also keep a refill of the army's ammunition aside): the line whose stockpile, with
+    /// what the other workshops make in a month, would arm the fewest battalions. With enough of everything in store
+    /// (<see cref="KitsInStore"/>), they stop.
     /// </summary>
     private void ChooseProduction()
     {
@@ -62,7 +63,11 @@ internal sealed partial class AiPlayer
             .Where(t => t.BestModel(_player.Techs) >= 0).ToList();
         if (_player.Techs.Contains(Tech.Engineering)) lines.Add(BattalionType.Engineers);
         var planned = new Dictionary<BattalionType, double>();
-        double Kits(BattalionType type) => (_player.EquipmentOf(Model(type)) / Model(type).Pieces) + planned.GetValueOrDefault(type) * 30;
+        // The suministros also feed the army in battle: a full refill of every unit's ammunition is kept aside.
+        double ammoReserve = _session.Units.Where(u => u.OwnerId == _player.Id && u.IsMilitary).Sum(GameSession.AmmoCapacity);
+        double Kits(BattalionType type) =>
+            (_player.EquipmentOf(Model(type)) - (Model(type).SupplyKey == Supplies.General.Key ? ammoReserve : 0)) / Model(type).Pieces
+            + planned.GetValueOrDefault(type) * 30;
         foreach (var p in _player.Provinces.Select(id => Map.Provinces[id]).Where(GameSession.HasWorkshop))
         {
             if (lines.Where(t => _session.CanProduce(p, Model(t)).Ok).OrderBy(Kits).Cast<BattalionType?>().FirstOrDefault() is not BattalionType type) continue;

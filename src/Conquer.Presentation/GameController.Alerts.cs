@@ -69,6 +69,11 @@ public sealed partial class GameController
         if (unsupplied.Count > 0)
             alerts.Add(UnitAlert("Sin suministro", Tone.Bad, unsupplied,
                 "Estas unidades están fuera del alcance de tus ciudades y carreteras: pierden hombres y organización cada día."));
+        var noAmmo = regiments.Where(u => GameSession.AmmoCapacity(u) > 0 && GameSession.Ammo(u) < GameSession.AmmoCapacity(u) * 0.25).Select(u => u.Id).ToList();
+        if (noAmmo.Count > 0)
+            alerts.Add(UnitAlert("Sin munición", Tone.Bad, noAmmo,
+                $"A estas unidades les queda menos de una cuarta parte de su munición: sin ella luchan al {MilitaryRules.OutOfAmmoEfficiency:P0}. " +
+                "La capital se la repone con los suministros del almacén: fabrica más en los talleres o sube la prioridad de su cuartel general."));
         var worn = regiments.Where(u => Session.IsInSupply(u) && Session.DailyAttrition(u) > 0).Select(u => u.Id).ToList();
         if (worn.Count > 0)
             alerts.Add(UnitAlert("Desgaste", Tone.Accent, worn,
