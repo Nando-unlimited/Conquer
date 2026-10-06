@@ -9,7 +9,7 @@ public sealed class HelpView
 {
     private readonly List<(string Text, bool Heading, float Indent)> _lines = [];
     private int _topic;
-    private float _scroll;
+    private readonly ScrollState _scroll = new();
     private float _wrappedFor = -1;
 
     /// <summary>Draws the help; true when its Close button was pressed.</summary>
@@ -26,19 +26,20 @@ public sealed class HelpView
             if (ui.Button(new Rect(area.X + 20, ty, 190, 30), HelpTopics.All[i].Title, active: i == _topic, size: FontSize.Small) && i != _topic)
             {
                 _topic = i;
-                _scroll = 0;
+                _scroll.Reset();
                 _wrappedFor = -1;
             }
             ty += 34;
         }
 
         var content = new Rect(area.X + 230, area.Y + 60, area.W - 250, area.H - 76);
+        // The text leaves room for the scroll bar along its right.
         if (_wrappedFor != content.W) Layout(ui.Font, content.W);
-        if (ui.Hover(content)) _scroll -= ui.Input.Scroll * 60;
         float Height((string Text, bool Heading, float Indent) l) => ui.Font.LineHeight(FontSize.Normal, l.Heading) + (l.Heading ? 10 : 2);
-        _scroll = Math.Clamp(_scroll, 0, Math.Max(0, _lines.Sum(Height) - content.H));
+        _scroll.Content = _lines.Sum(Height);
+        ui.Wheel(content, _scroll, 60);
 
-        float y = content.Y - _scroll;
+        float y = content.Y - _scroll.Offset;
         foreach (var line in _lines)
         {
             float h = Height(line);
@@ -46,6 +47,7 @@ public sealed class HelpView
                 ui.Text(content.X + line.Indent, y + (line.Heading ? 8 : 0), line.Text, line.Heading ? Theme.Accent : Theme.Text, FontSize.Normal, line.Heading);
             y += h;
         }
+        ui.ScrollBar(content, _scroll);
         return closed;
     }
 
@@ -53,6 +55,7 @@ public sealed class HelpView
     private void Layout(Font font, float width)
     {
         _wrappedFor = width;
+        width -= Ui.ScrollBarWidth + 12;
         _lines.Clear();
         foreach (var line in HelpTopics.Lines(_topic))
         {

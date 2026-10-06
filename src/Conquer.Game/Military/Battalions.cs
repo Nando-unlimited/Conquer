@@ -69,16 +69,40 @@ public sealed record BattalionInfo(
     /// 5 catapults, 10 tanks. Workshops and factories make them; ships need none (they are built whole).
     /// </summary>
     public int Pieces { get; init; } = Naval ? 0 : Men;
-    /// <summary>What its pieces are called: "armas", "caballos", "catapultas"...</summary>
+    /// <summary>What its pieces are called: "armas", "caballos", "suministros", "catapultas"...</summary>
     public string PieceName { get; init; } = "armas";
     public bool NeedsEquipment => Pieces > 0;
+
+    /// <summary>
+    /// Whether its pieces are of a kind several models share a name for (weapons, horses), so naming them takes the
+    /// model too; catapults, tanks or the shared supplies name themselves.
+    /// </summary>
+    private bool SharedPieceName => PieceName is "armas" or "caballos";
+
+    /// <summary>The stockpile key of the supplies scouts, engineers and medics share (<see cref="SupplyKey"/>).</summary>
+    public const string Supplies = "supplies";
+
+    /// <summary>
+    /// Whether it takes the general supplies of the troops with no equipment of their own (scouts, engineers, medics),
+    /// which they all share.
+    /// </summary>
+    public bool TakesSupplies => PieceName == "suministros";
+
+    /// <summary>Where its pieces are kept in the nation's stockpile: under its own key, or the shared supplies'.</summary>
+    public string SupplyKey => TakesSupplies ? Supplies : Key;
+
+    /// <summary>
+    /// The supply a workshop makes for this model, as its title: "Suministros", "Catapultas", "Tanques", or
+    /// "Armas (legionarios)" when the kind alone would not tell them apart.
+    /// </summary>
+    public string SupplyName => char.ToUpperInvariant(PieceName[0]) + PieceName[1..] + (SharedPieceName && !TakesSupplies ? $" ({Name.ToLowerInvariant()})" : "");
 
     /// <summary>What training a battalion costs: its gold; the rest of its cost goes into its equipment. A ship costs all of it.</summary>
     public ResourceCost TrainingCost => NeedsEquipment ? new([.. Cost.Items.Where(i => i.Type == ResourceType.Gold)]) : Cost;
     /// <summary>What a whole battalion's equipment costs to make: its cost but the gold.</summary>
     public ResourceCost EquipmentCost => NeedsEquipment ? new([.. Cost.Items.Where(i => i.Type != ResourceType.Gold)]) : new();
-    /// <summary>"100 armas de guerreros", "5 catapultas".</summary>
-    public string PiecesText(double pieces) => PieceName == "armas" || PieceName == "caballos" || PieceName == "equipos" || PieceName == "herramientas" || PieceName == "botiquines"
+    /// <summary>"100 armas de guerreros", "5 catapultas", "50 suministros".</summary>
+    public string PiecesText(double pieces) => SharedPieceName
         ? $"{pieces:N0} {PieceName} de {Name.ToLowerInvariant()}" : $"{pieces:N0} {PieceName}";
 }
 
@@ -100,10 +124,11 @@ public static class Battalions
 
     private static readonly Dictionary<BattalionType, LineInfo> Table = new()
     {
+        // Scouts, engineers and medics share their supplies (BattalionInfo.Supplies), so each piece costs them the same wood.
         // Few men, cheap and quick on their feet: they explore and claim land, but barely fight.
         [BattalionType.Scouts] = new("Exploradores", BattalionGroup.Support,
         [
-            new("scouts", "Exploradores", "S", 50, Cost((W, 10), (G, 5)), 7, [], 1, 1, 15, 1.5) { PieceName = "equipos" },
+            new("scouts", "Exploradores", "S", 50, Cost((W, 10), (G, 5)), 7, [], 1, 1, 15, 1.5) { PieceName = "suministros" },
         ]),
         [BattalionType.LightInfantry] = new("Infantería ligera", BattalionGroup.Infantry,
         [
@@ -170,12 +195,12 @@ public static class Battalions
         // Sappers and bridge builders: behind the line they blunt the defenders' terrain; they alone build roads and railways.
         [BattalionType.Engineers] = new("Ingenieros", BattalionGroup.Support,
         [
-            new("engineers", "Ingenieros", "E", 100, Cost((W, 40), (G, 40)), 30, [Tech.Engineering], 2, 3, 30, 1) { PieceName = "herramientas" },
+            new("engineers", "Ingenieros", "E", 100, Cost((W, 20), (G, 40)), 30, [Tech.Engineering], 2, 3, 30, 1) { PieceName = "suministros" },
         ]),
         // Behind the line they save some of the wounded (MilitaryRules.MedicsSaving).
         [BattalionType.Medics] = new("Médicos", BattalionGroup.Support,
         [
-            new("medics", "Médicos", "+", 50, Cost((W, 10), (G, 30)), 20, [Tech.Medicine], 0, 1, 20, 1) { PieceName = "botiquines" },
+            new("medics", "Médicos", "+", 50, Cost((W, 10), (G, 30)), 20, [Tech.Medicine], 0, 1, 20, 1) { PieceName = "suministros" },
         ]),
         [BattalionType.Bombers] = new("Bombarderos", BattalionGroup.Air,
         [

@@ -11,6 +11,33 @@ public readonly record struct Rect(float X, float Y, float W, float H)
     public float Bottom => Y + H;
     public bool Contains(Vector2 p) => p.X >= X && p.X < X + W && p.Y >= Y && p.Y < Y + H;
     public Rect Inset(float d) => new(X + d, Y + d, W - 2 * d, H - 2 * d);
+
+    /// <summary>The part of this rectangle inside the other; empty (zero wide or tall) when they do not meet.</summary>
+    public Rect Intersect(Rect o)
+    {
+        float x = Math.Max(X, o.X), y = Math.Max(Y, o.Y);
+        return new(x, y, Math.Max(0, Math.Min(Right, o.Right) - x), Math.Max(0, Math.Min(Bottom, o.Bottom) - y));
+    }
+}
+
+/// <summary>
+/// How far a scrolling area is scrolled and how tall its content was the last time it was drawn
+/// (<see cref="Ui.BeginScroll"/>), and where its bar was grabbed while it is dragged.
+/// </summary>
+public sealed class ScrollState
+{
+    public float Offset;
+    public float Content;
+    internal float? Grab;
+
+    /// <summary>Whether the content does not fit in an area this tall, so it scrolls and shows its bar.</summary>
+    public bool Overflows(float height) => Content > height + 0.5f;
+
+    public void Reset()
+    {
+        Offset = 0;
+        Grab = null;
+    }
 }
 
 /// <summary>Mouse and keyboard state for one frame, gathered from input events.</summary>
@@ -116,8 +143,90 @@ public sealed class Ui
     public void BeginFrame()
     {
         _blockers.Clear();
+        _clips.Clear();
         _tooltip = null;
         ButtonClicked = false;
+    }
+
+    private readonly Stack<Rect> _clips = new();
+
+    /// <summary>Draws and takes the mouse only inside this area (and the one already clipped to) until <see cref="PopClip"/>.</summary>
+    public void PushClip(Rect r)
+    {
+        if (_clips.Count > 0) r = r.Intersect(_clips.Peek());
+        _clips.Push(r);
+        Batch.PushClip(r.X, r.Y, r.W, r.H);
+    }
+
+    public void PopClip()
+    {
+        if (_clips.Count > 0) _clips.Pop();
+        Batch.PopClip();
+    }
+
+    /// <summary>Width of the bar along the right of a scrolling area; content that scrolls leaves it room.</summary>
+    public const float ScrollBarWidth = 8;
+
+    /// <summary>
+    /// Starts a scrolling area: the mouse wheel over it scrolls it, and what is drawn until <see cref="EndScroll"/> is
+    /// clipped to it. Returns the y where its content starts, moved up by how far it is scrolled.
+    /// </summary>
+    public float BeginScroll(Rect view, ScrollState scroll, float step = 60)
+    {
+        Wheel(view, scroll, step);
+        PushClip(view);
+        return view.Y - scroll.Offset;
+    }
+
+    /// <summary>Ends a scrolling area whose content took <paramref name="contentHeight"/>, and draws its bar if it does not fit.</summary>
+    public void EndScroll(Rect view, ScrollState scroll, float contentHeight)
+    {
+        PopClip();
+        scroll.Content = contentHeight;
+        scroll.Offset = Math.Clamp(scroll.Offset, 0, Math.Max(0, contentHeight - view.H));
+        ScrollBar(view, scroll);
+    }
+
+    /// <summary>Scrolls the area by the mouse wheel when the mouse is over it, and keeps it within its content.</summary>
+    public void Wheel(Rect view, ScrollState scroll, float step)
+    {
+        if (Input.Scroll != 0 && Hover(view))
+        {
+            scroll.Offset -= Input.Scroll * step;
+            Input.Scroll = 0; // one area scrolls, not the ones around it as well
+        }
+        scroll.Offset = Math.Clamp(scroll.Offset, 0, Math.Max(0, scroll.Content - view.H));
+    }
+
+    /// <summary>
+    /// The bar along the right edge of a scrolling area whose content does not fit: its thumb shows the part in view,
+    /// and dragging it, or clicking the track, scrolls.
+    /// </summary>
+    public void ScrollBar(Rect view, ScrollState scroll)
+    {
+        if (!scroll.Overflows(view.H))
+        {
+            scroll.Grab = null;
+            return;
+        }
+        var track = new Rect(view.Right - ScrollBarWidth, view.Y, ScrollBarWidth, view.H);
+        _blockers.Add(track);
+        float range = scroll.Content - view.H;
+        float thumbH = Math.Max(24, view.H * view.H / scroll.Content);
+        float ThumbY() => view.Y + (view.H - thumbH) * scroll.Offset / range;
+        if (Input.LeftPressed && Hover(track))
+        {
+            float thumbY = ThumbY();
+            scroll.Grab = Input.Mouse.Y >= thumbY && Input.Mouse.Y < thumbY + thumbH ? Input.Mouse.Y - thumbY : thumbH / 2;
+        }
+        if (scroll.Grab is float grab)
+        {
+            if (Input.LeftDown) scroll.Offset = Math.Clamp((Input.Mouse.Y - grab - view.Y) / Math.Max(1, view.H - thumbH) * range, 0, range);
+            else scroll.Grab = null;
+        }
+        bool lit = scroll.Grab != null || Hover(track);
+        Batch.RoundedRect(track.X, track.Y, track.W, track.H, ScrollBarWidth / 2, Rgba.Black.WithAlpha(0.35f));
+        Batch.RoundedRect(track.X + 1, ThumbY() + 1, track.W - 2, thumbH - 2, ScrollBarWidth / 2 - 1, lit ? Theme.Accent : Theme.ButtonHover);
     }
 
     /// <summary>Whether a button was clicked this frame (it clicks).</summary>
@@ -153,12 +262,13 @@ public sealed class Ui
         Text(r.X + (r.W - w) / 2, r.Y + (r.H - h) / 2, text, color, size, bold);
     }
 
-    public bool Hover(Rect r) => r.Contains(Input.Mouse);
+    /// <summary>Whether the mouse is over the rectangle, and over the part of it not clipped away.</summary>
+    public bool Hover(Rect r) => r.Contains(Input.Mouse) && (_clips.Count == 0 || _clips.Peek().Contains(Input.Mouse));
 
     /// <summary>True on the frame the button is clicked (pressed and released inside it).</summary>
     public bool Button(Rect r, string label, bool enabled = true, bool active = false, string? tooltip = null, FontSize size = FontSize.Normal)
     {
-        _blockers.Add(r);
+        _blockers.Add(_clips.Count > 0 ? r.Intersect(_clips.Peek()) : r);
         bool hover = Hover(r);
         bool pressed = enabled && hover && Input.LeftDown && r.Contains(Input.LeftPressPosition);
         // Raised when idle, brighter under the mouse, gold when active, sunk while held down.

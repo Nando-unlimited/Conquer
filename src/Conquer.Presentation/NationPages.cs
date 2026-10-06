@@ -32,6 +32,9 @@ public abstract record NationPage;
 /// <summary>A table, under a bold line when there is a <see cref="Title"/>.</summary>
 public sealed record TablePage(Table Table, string? Title = null, Ink TitleInk = default) : NationPage;
 
+/// <summary>Several tables one under the other, scrolling together.</summary>
+public sealed record TablesPage(IReadOnlyList<TablePage> Tables) : NationPage;
+
 /// <summary>Two columns of figures.</summary>
 public sealed record SummaryPage(Document Left, Document Right) : NationPage;
 

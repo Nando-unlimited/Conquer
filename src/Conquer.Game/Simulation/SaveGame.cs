@@ -144,7 +144,7 @@ public sealed record PlayerSave(
     double[] ResearchProgress, double SpareScience, double LastDayScience, List<TemplateSave> Templates,
     int[]? ResearchPriorities = null, List<Tech>? CurrentResearch = null, List<Institution>? Institutions = null,
     List<OfficerSave>? OfficerReserve = null, bool Eliminated = false, double? Manpower = null, int? ReligionId = null,
-    List<int>? Explored = null, Dictionary<string, double>? Equipment = null);
+    List<int>? Explored = null, Dictionary<string, double>? Equipment = null, double[][]? LastDayFlows = null);
 
 /// <summary>Where and when an institution was born.</summary>
 public sealed record InstitutionBirthSave(Institution Institution, int ProvinceId, long Hours);

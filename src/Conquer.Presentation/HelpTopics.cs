@@ -67,7 +67,7 @@ public static class HelpTopics
         ]),
         ("Economía y recursos",
         [
-            "Tus provincias producen comida y madera, y pagan oro en impuestos. Todo va al almacén de la nación (barra superior).",
+            "Tus provincias producen comida y madera, y pagan oro en impuestos. Todo va al almacén de la nación (barra superior). La pestaña Almacén de la nación (N) dice, recurso a recurso, cuánto hay y cuánto entró y salió el último día: producción, comercio, consumo, ejército y talleres.",
             "## Yacimientos",
             "- Carbón, hierro, cobre, oro, plata, silicio, petróleo, aluminio y caucho salen de yacimientos: bolsas finitas que se agotan.",
             "- Al empezar solo conoces el cobre, el oro y la plata; los demás los revelan los avances (Minería el carbón, Trabajo del hierro el hierro, Química el caucho...).",
@@ -116,7 +116,7 @@ public static class HelpTopics
             $"- Las tropas de montaña luchan un {MilitaryRules.MountainTroopsRoughTerrain - 1:P0} mejor en montañas, colinas, bosques y pantanos. Los médicos no combaten, pero salvan un {MilitaryRules.MedicsSaving:P0} de las bajas de su unidad.",
             $"- La antiaérea dispara ×{MilitaryRules.AntiAirAgainstAircraft:0} contra los aviones y cada batallón suyo quita un {MilitaryRules.AntiAirShield:P0} a su fuego (hasta un {MilitaryRules.MaxAntiAirShield:P0}).",
             "## Equipo",
-            "- Cada batallón necesita el equipo de su modelo: un arma por hombre, un caballo por jinete, 5 catapultas (con 50 hombres) o 10 tanques (con 50). Se ve en la pestaña Equipo de la nación (N).",
+            "- Cada batallón necesita el equipo de su modelo: un arma por hombre, un caballo por jinete, 5 catapultas (con 50 hombres) o 10 tanques (con 50). Exploradores, ingenieros y médicos comparten los suministros, uno por hombre. Se ve en la pestaña Almacén de la nación (N), y lo que necesita cada tipo de batallón, en la pestaña Unidades.",
             $"- Lo fabrican los talleres y las fábricas: en la pestaña Edificios de su provincia eliges qué hace cada uno. Un taller hace en los días de instrucción de un batallón el equipo de uno; una fábrica, el doble. Gasta los recursos del batallón salvo el oro; si faltan, fabrica menos o nada.",
             "- El equipo va al almacén de la nación. Entrenar un batallón lo toma de allí y solo cuesta el oro; se entrena con el modelo más moderno del que haya equipo. Sin equipo, no se entrena.",
             "- Reforzar las bajas también gasta equipo, y un batallón con suministro adopta un modelo nuevo cuando hay equipo para él: devuelve el viejo al almacén.",

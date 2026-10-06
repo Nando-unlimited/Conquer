@@ -1,4 +1,5 @@
 using Conquer.Game.Buildings;
+using Conquer.Game.Economy;
 using Conquer.Game.Entities;
 using Conquer.Game.Military;
 using Conquer.Game.Rules;
@@ -16,10 +17,13 @@ public sealed partial class GameSession
     /// <summary>Whether the province has a workshop or the factory it becomes, which can make equipment.</summary>
     public static bool HasWorkshop(Province p) => p.Has(BuildingType.Workshop) || p.Has(BuildingType.Factory);
 
-    /// <summary>The models whose equipment the nation can make: the newest it knows of each line, ships aside.</summary>
+    /// <summary>
+    /// The models whose equipment the nation can make: the newest it knows of each line, ships aside, and the shared
+    /// supplies once (as the scouts', which every nation knows).
+    /// </summary>
     public static IReadOnlyList<(BattalionType Type, BattalionInfo Model)> ProducibleModels(Player player) =>
         [.. Battalions.All.Where(t => t.BestModel(player.Techs) >= 0 && !t.Redundant(player.Techs))
-            .Select(t => (t, t.ModelFor(player.Techs))).Where(x => x.Item2.NeedsEquipment)];
+            .Select(t => (t, t.ModelFor(player.Techs))).Where(x => x.Item2.NeedsEquipment).DistinctBy(x => x.Item2.SupplyKey)];
 
     /// <summary>Pieces a day the province would make of the model: a battalion's worth in its training days, twice that in a factory.</summary>
     public static double ProductionRate(Province p, BattalionInfo model) =>
@@ -50,11 +54,11 @@ public sealed partial class GameSession
             p.Production = null;
             return CommandResult.Success($"El taller de {PlaceName(p)} para.");
         }
-        if (Battalions.ModelByKey(modelKey) is not { } model) return CommandResult.Fail("Equipo no válido.");
+        if (Battalions.ModelByKey(modelKey) is not { } model) return CommandResult.Fail("Suministro no válido.");
         var check = CanProduce(p, model);
         if (!check.Ok) return check;
         p.Production = modelKey;
-        return CommandResult.Success($"{PlaceName(p)} fabrica {model.PieceName} de {model.Name.ToLowerInvariant()}: {ProductionRate(p, model):0.#} al día.");
+        return CommandResult.Success($"{PlaceName(p)} fabrica {model.SupplyName.ToLowerInvariant()}: {ProductionRate(p, model):0.#} al día.");
     }
 
     /// <summary>
@@ -72,7 +76,13 @@ public sealed partial class GameSession
             // The share of the day's work the stores can pay for.
             double share = cost.Items.Length == 0 ? 1 : cost.Items.Min(i => Math.Min(1, player.Stockpile[i.Type] / (i.Amount * pieces / model.Pieces)));
             if (share <= 0) continue;
-            foreach (var (type, amount) in cost.Items) player.Stockpile[type] -= amount * pieces / model.Pieces * share;
+            foreach (var (type, amount) in cost.Items)
+            {
+                double used = amount * pieces / model.Pieces * share;
+                player.Stockpile[type] -= used;
+                player.LastDayNet[(int)type] -= used;
+                player.Record(ResourceFlow.Workshops, type, -used);
+            }
             player.AddEquipment(model, pieces * share);
         }
     }

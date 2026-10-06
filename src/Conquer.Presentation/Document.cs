@@ -171,6 +171,8 @@ public sealed class Document
 {
     public List<Element> Elements { get; } = [];
     public Action? OnClose { get; init; }
+    /// <summary>What the document shows (a unit, a province's tab...); the client scrolls it back to the top when it changes.</summary>
+    public string? Key { get; init; }
     /// <summary>What replaces the <see cref="UnitEntry"/> rows that do not fit ("{0}" is how many).</summary>
     public string Hidden { get; init; } = "y {0} más";
 

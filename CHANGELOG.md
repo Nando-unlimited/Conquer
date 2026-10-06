@@ -2,6 +2,19 @@
 
 Todos los cambios del juego, del más reciente al más antiguo. Cada versión es un commit cuyo título es su número.
 
+## [1.105.0] - 2026-10-06
+
+### Añadido
+- **Pestaña Unidades** en la pantalla de la nación: todos los tipos de batallón y de barco, por grupo y línea, con sus hombres, ataque, defensa, organización, velocidad, días de instrucción, el equipo que necesita un batallón y su coste. El modelo que entrenas ahora va en negrita; los antiguos y los que faltan por descubrir (con su avance), apagados. Su tooltip cuenta qué lo distingue y dónde se instruye.
+- **Barras de desplazamiento** cuando la información no cabe: el panel de la provincia o la unidad, el resumen de la nación, las ramas de la ciencia, las cifras de las plantillas, las tablas, la ayuda y el historial. Se mueven con la rueda, arrastrando la barra o pulsando en ella.
+
+### Cambiado
+- **La pestaña Equipo es ahora Almacén**, y además del equipo muestra todos los recursos: lo que hay, lo que entró y salió el último día por producción, comercio, consumo, ejército y talleres, el balance y en cuántos días se agota si baja.
+- **La producción de los talleres se titula por lo que se fabrica**, no por quién lo usa: «Armas (legionarios)», «Caballos (jinetes)», «Catapultas», «Cañones», «Tanques», «Suministros»... Para quién es, en su tooltip.
+- **Suministros**: exploradores, ingenieros y médicos comparten un mismo suministro, uno por hombre, en lugar de equipos, herramientas y botiquines. Las partidas guardadas juntan lo que tenían. El equipo de los ingenieros cuesta 20 de madera en vez de 40, como el de los demás.
+- Lo que gastan los talleres cuenta ya en el cambio diario de los recursos de la barra superior.
+- Las pestañas de la nación pasan a letra pequeña cuando su nombre no cabe.
+
 ## [1.104.0] - 2026-10-06
 
 ### Añadido

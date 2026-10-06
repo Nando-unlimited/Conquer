@@ -94,6 +94,42 @@ public sealed unsafe class Batch2D : IDisposable
         _screen = screen;
         _count = 0;
         _texture = null;
+        _clips.Clear();
+        _gl.Disable(EnableCap.ScissorTest);
+    }
+
+    private readonly Stack<(float X, float Y, float W, float H)> _clips = new();
+
+    /// <summary>From now on only what falls inside this area (in screen units) is drawn, until <see cref="PopClip"/>.</summary>
+    public void PushClip(float x, float y, float w, float h)
+    {
+        Flush();
+        _clips.Push((x, y, Math.Max(0, w), Math.Max(0, h)));
+        ApplyClip();
+    }
+
+    /// <summary>Goes back to the clipping before the last <see cref="PushClip"/>.</summary>
+    public void PopClip()
+    {
+        Flush();
+        if (_clips.Count > 0) _clips.Pop();
+        ApplyClip();
+    }
+
+    private void ApplyClip()
+    {
+        if (_clips.Count == 0)
+        {
+            _gl.Disable(EnableCap.ScissorTest);
+            return;
+        }
+        // The scissor box is in framebuffer pixels, counted from the bottom.
+        int* viewport = stackalloc int[4];
+        _gl.GetInteger(GetPName.Viewport, viewport);
+        float sx = _screen.X > 0 ? viewport[2] / _screen.X : 1, sy = _screen.Y > 0 ? viewport[3] / _screen.Y : 1;
+        var (x, y, w, h) = _clips.Peek();
+        _gl.Enable(EnableCap.ScissorTest);
+        _gl.Scissor((int)MathF.Floor(x * sx), (int)MathF.Floor(viewport[3] - (y + h) * sy), (uint)MathF.Ceiling(w * sx), (uint)MathF.Ceiling(h * sy));
     }
 
     public void Quad(Texture texture, Vector2 p0, Vector2 p1, Vector2 uv0, Vector2 uv1, Rgba color)

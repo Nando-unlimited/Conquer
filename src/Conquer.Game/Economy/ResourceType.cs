@@ -15,6 +15,21 @@ public enum ResourceType
     Silver,
 }
 
+/// <summary>Where a day's resources came from or went to (<see cref="Entities.Player.LastDayFlows"/>).</summary>
+public enum ResourceFlow
+{
+    /// <summary>What the provinces yield: harvests, wood, taxes and deposits.</summary>
+    Production,
+    /// <summary>Trade deals and tributes: what comes in (positive) or goes out (negative).</summary>
+    Exchange,
+    /// <summary>The food the people and the troops eat, and the share of the stored food that rots.</summary>
+    Consumption,
+    /// <summary>The army's upkeep.</summary>
+    Upkeep,
+    /// <summary>What the workshops and factories use to make equipment.</summary>
+    Workshops,
+}
+
 public static class Resources
 {
     public static readonly ResourceType[] All = Enum.GetValues<ResourceType>();

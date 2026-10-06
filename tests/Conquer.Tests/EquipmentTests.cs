@@ -152,4 +152,51 @@ public class EquipmentTests(WorldFixture world)
         Assert.DoesNotContain(catapults.EquipmentCost.Items, i => i.Type == ResourceType.Gold);
         Assert.False(BattalionType.Trireme.First().NeedsEquipment);
     }
+
+    [Fact]
+    public void WorkshopsAreSetBySupplyAndScoutsEngineersAndMedicsShareTheirs()
+    {
+        var (s, capital) = Game();
+        s.Human.Learn(Tech.Engineering);
+        s.Human.Learn(Tech.Medicine);
+        s.Human.Learn(Tech.SiegeEngines);
+        var producible = GameSession.ProducibleModels(s.Human).Select(x => x.Model.SupplyName).ToList();
+        Assert.Contains("Armas (guerreros)", producible);
+        Assert.Contains("Catapultas", producible);
+        Assert.Single(producible, "Suministros");
+
+        var scouts = BattalionType.Scouts.First();
+        var engineers = BattalionType.Engineers.First();
+        var medics = BattalionType.Medics.First();
+        Assert.True(s.SetProduction(0, capital.Id, scouts.Key).Ok);
+        RunDays(s, 1);
+        double made = GameSession.ProductionRate(capital, scouts);
+        Assert.Equal(made, s.Human.EquipmentOf(engineers), 6);
+        Assert.Equal(made, s.Human.EquipmentOf(medics), 6);
+        // Each piece costs the same whoever takes it.
+        Assert.Equal(scouts.EquipmentCost.Items.Single().Amount / scouts.Pieces, engineers.EquipmentCost.Items.Single().Amount / engineers.Pieces, 6);
+        Assert.Equal("50 suministros", medics.PiecesText(50));
+    }
+
+    [Fact]
+    public void WhatTheWorkshopsUseCountsInTheDaysBalance()
+    {
+        var (s, capital) = Game();
+        Assert.True(s.SetProduction(0, capital.Id, Warriors.Key).Ok);
+        RunDays(s, 1);
+        double wood = Warriors.EquipmentCost.Items.Single(i => i.Type == ResourceType.Wood).Amount * GameSession.ProductionRate(capital, Warriors) / Warriors.Pieces;
+        Assert.Equal(-wood, s.Human.LastDayFlows[(int)ResourceFlow.Workshops][(int)ResourceType.Wood], 6);
+        Assert.Equal(s.Human.LastDayNet[(int)ResourceType.Wood], s.Human.LastDayFlows.Sum(f => f[(int)ResourceType.Wood]), 6);
+    }
+
+    [Fact]
+    public void OldSavesPutTheSupportTroopsSuppliesTogether()
+    {
+        var (s, _) = Game();
+        var save = s.ToSave("test");
+        var human = save.Players[0] with { Equipment = new() { ["scouts"] = 30, ["medics"] = 20 } };
+        save = save with { Players = [human, .. save.Players.Skip(1)] };
+        var loaded = GameSession.Load(_map, save);
+        Assert.Equal(50, loaded.Human.EquipmentOf(BattalionType.Engineers.First()), 6);
+    }
 }
