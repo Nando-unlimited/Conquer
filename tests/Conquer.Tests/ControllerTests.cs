@@ -114,7 +114,7 @@ public class ControllerTests(WorldFixture world)
         capital.AddBuilding(BuildingType.Workshop);
         game.ProvinceTab = ProvinceTab.Buildings;
         var doc = game.SidePanel()!;
-        Assert.Contains(doc.Elements, e => e is Button { Text: var t } && t.StartsWith("Armas (guerreros)"));
+        Assert.Contains(doc.Elements, e => e is Button { Text: var t } && t.StartsWith("Armas antiguas"));
         Button(doc, "Suministros").Press();
         Assert.Equal(BattalionType.Scouts.First().Key, capital.Production);
         // Another tab is another page, which the client scrolls back to the top.

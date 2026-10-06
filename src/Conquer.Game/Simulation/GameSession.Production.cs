@@ -18,8 +18,8 @@ public sealed partial class GameSession
     public static bool HasWorkshop(Province p) => p.Has(BuildingType.Workshop) || p.Has(BuildingType.Factory);
 
     /// <summary>
-    /// The models whose equipment the nation can make: the newest it knows of each line, ships aside, and the shared
-    /// supplies once (as the scouts', which every nation knows).
+    /// The models whose equipment the nation can make: the newest it knows of each line, ships aside, each shared
+    /// supply once (as its first line's model).
     /// </summary>
     public static IReadOnlyList<(BattalionType Type, BattalionInfo Model)> ProducibleModels(Player player) =>
         [.. Battalions.All.Where(t => t.BestModel(player.Techs) >= 0 && !t.Redundant(player.Techs))

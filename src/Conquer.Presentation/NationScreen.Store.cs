@@ -63,11 +63,7 @@ public sealed partial class NationScreen
         int idle = workshops.Count(p => GameSession.ProductionOf(p) is null);
         var models = GameSession.ProducibleModels(Player).Select(x => (x.Type, x.Model)).ToList();
         foreach (string key in Player.Equipment.Where(e => e.Value >= 1).Select(e => e.Key))
-        {
-            // The shared supplies are kept under their own key; the scouts' model stands for them.
-            string modelKey = key == BattalionInfo.Supplies ? BattalionType.Scouts.First().Key : key;
-            if (Battalions.ByKey(modelKey) is var (type, index) && !models.Any(m => m.Model.SupplyKey == key)) models.Add((type, type.Models()[index]));
-        }
+            if (!models.Any(m => m.Model.SupplyKey == key) && Battalions.BySupply(key) is var (type, model)) models.Add((type, model));
 
         // What the nation's battalions wait for: the pieces of their line's newest model, for the men they have left.
         var waiting = new Dictionary<string, double>();
@@ -86,20 +82,21 @@ public sealed partial class NationScreen
             double stock = Player.EquipmentOf(model);
             var making = workshops.Where(p => GameSession.ProductionOf(p)?.SupplyKey == model.SupplyKey).ToList();
             double perDay = making.Sum(p => GameSession.ProductionRate(p, GameSession.ProductionOf(p)!));
-            bool newest = model.TakesSupplies || ReferenceEquals(model, type.ModelFor(Player.Techs));
-            string users = model.TakesSupplies ? "exploradores, ingenieros y médicos" : model.Name.ToLowerInvariant();
+            // A shared supply is current while some line's newest model takes it.
+            bool newest = Battalions.All.Any(t => t.BestModel(Player.Techs) >= 0 && t.ModelFor(Player.Techs).SupplyKey == model.SupplyKey);
+            string users = model.Supply != null ? TextFormat.List(Battalions.UsersOf(model.Supply).Select(m => m.Name.ToLowerInvariant())) : model.Name.ToLowerInvariant();
             rows.Add(
             [
                 new TextCell(model.SupplyName, newest ? Tone.Normal : Tone.Dim, Bold: newest, Suffix: newest ? null : " · antiguo",
-                    Tooltip: $"Para {users}: {(model.TakesSupplies ? "uno por hombre" : model.PiecesText(model.Pieces) + " por batallón")}."),
-                new TextCell($"{stock:N0} {model.PieceName}", stock >= model.Pieces ? Tone.Normal : Tone.Dim,
-                    Suffix: model.TakesSupplies ? null : $" · {Math.Floor(stock / model.Pieces):0} bat."),
+                    Tooltip: $"Para {users}: {(model.Supply != null ? "una pieza por hombre" : model.PiecesText(model.Pieces) + " por batallón")}."),
+                new TextCell($"{stock:N0}", stock >= model.Pieces ? Tone.Normal : Tone.Dim,
+                    Suffix: model.Supply != null ? $" · {Math.Floor(stock / 100):0} bat. de 100" : $" · {Math.Floor(stock / model.Pieces):0} bat."),
                 new TextCell(perDay > 0 ? $"{perDay:0.#}/día" : "-", perDay > 0 ? Tone.Good : Tone.Dim,
                     Suffix: making.Count > 0 ? $" · {TextFormat.Plural(making.Count, "taller", "talleres")}" : null,
                     Tooltip: making.Count > 0 ? string.Join(", ", making.Select(p => Session.PlaceName(p))) : null),
                 new TextCell(waiting.TryGetValue(model.SupplyKey, out double wait) ? $"{wait:N0}" : "-", wait > stock ? Tone.Bad : Tone.Dim),
                 new TextCell(model.EquipmentCost.Items.Length == 0 ? "gratis"
-                    : model.TakesSupplies ? $"{model.EquipmentCost.Times(100.0 / model.Pieces)} por 100" : model.EquipmentCost.ToString(), Tone.Dim, TextSize.Small, Top: 8),
+                    : model.Supply != null ? $"{model.Supply.PieceCost.Times(100)} por 100" : model.EquipmentCost.ToString(), Tone.Dim, TextSize.Small, Top: 8),
             ]);
         }
         string title = workshops.Count == 0

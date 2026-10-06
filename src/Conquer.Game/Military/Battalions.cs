@@ -69,41 +69,62 @@ public sealed record BattalionInfo(
     /// 5 catapults, 10 tanks. Workshops and factories make them; ships need none (they are built whole).
     /// </summary>
     public int Pieces { get; init; } = Naval ? 0 : Men;
-    /// <summary>What its pieces are called: "armas", "caballos", "suministros", "catapultas"...</summary>
+    /// <summary>What its pieces are called: "armas", "caballos", "catapultas"...; a shared supply names them itself.</summary>
     public string PieceName { get; init; } = "armas";
     public bool NeedsEquipment => Pieces > 0;
 
     /// <summary>
-    /// Whether its pieces are of a kind several models share a name for (weapons, horses), so naming them takes the
-    /// model too; catapults, tanks or the shared supplies name themselves.
+    /// The supply it shares with other models, if any: the weapons of its age for the infantry, the general supplies
+    /// for scouts, engineers and medics (<see cref="Supplies"/>). The rest have equipment of their own.
     /// </summary>
-    private bool SharedPieceName => PieceName is "armas" or "caballos";
+    public SupplyInfo? Supply { get; init; }
 
-    /// <summary>The stockpile key of the supplies scouts, engineers and medics share (<see cref="SupplyKey"/>).</summary>
-    public const string Supplies = "supplies";
+    /// <summary>Where its pieces are kept in the nation's stockpile: under its shared supply's key, or its own.</summary>
+    public string SupplyKey => Supply?.Key ?? Key;
 
     /// <summary>
-    /// Whether it takes the general supplies of the troops with no equipment of their own (scouts, engineers, medics),
-    /// which they all share.
+    /// The supply a workshop makes for this model, as its title: "Armas clásicas", "Suministros", "Catapultas",
+    /// "Tanques", or "Caballos (jinetes)" when the kind alone would not tell them apart.
     /// </summary>
-    public bool TakesSupplies => PieceName == "suministros";
-
-    /// <summary>Where its pieces are kept in the nation's stockpile: under its own key, or the shared supplies'.</summary>
-    public string SupplyKey => TakesSupplies ? Supplies : Key;
-
-    /// <summary>
-    /// The supply a workshop makes for this model, as its title: "Suministros", "Catapultas", "Tanques", or
-    /// "Armas (legionarios)" when the kind alone would not tell them apart.
-    /// </summary>
-    public string SupplyName => char.ToUpperInvariant(PieceName[0]) + PieceName[1..] + (SharedPieceName && !TakesSupplies ? $" ({Name.ToLowerInvariant()})" : "");
+    public string SupplyName => Supply?.Name ?? char.ToUpperInvariant(PieceName[0]) + PieceName[1..] + (PieceName == "caballos" ? $" ({Name.ToLowerInvariant()})" : "");
 
     /// <summary>What training a battalion costs: its gold; the rest of its cost goes into its equipment. A ship costs all of it.</summary>
     public ResourceCost TrainingCost => NeedsEquipment ? new([.. Cost.Items.Where(i => i.Type == ResourceType.Gold)]) : Cost;
     /// <summary>What a whole battalion's equipment costs to make: its cost but the gold.</summary>
     public ResourceCost EquipmentCost => NeedsEquipment ? new([.. Cost.Items.Where(i => i.Type != ResourceType.Gold)]) : new();
-    /// <summary>"100 armas de guerreros", "5 catapultas", "50 suministros".</summary>
-    public string PiecesText(double pieces) => SharedPieceName
-        ? $"{pieces:N0} {PieceName} de {Name.ToLowerInvariant()}" : $"{pieces:N0} {PieceName}";
+    /// <summary>"100 armas clásicas", "50 suministros", "100 caballos de jinetes", "5 catapultas".</summary>
+    public string PiecesText(double pieces) =>
+        Supply != null ? $"{pieces:N0} {Supply.Name.ToLowerInvariant()}"
+        : PieceName == "caballos" ? $"{pieces:N0} {PieceName} de {Name.ToLowerInvariant()}"
+        : $"{pieces:N0} {PieceName}";
+}
+
+/// <summary>
+/// A supply several models share, as in Hearts of Iron: what it is called, its key in the stockpile and what each
+/// piece costs to make.
+/// </summary>
+public sealed record SupplyInfo(string Key, string Name, ResourceCost PieceCost);
+
+/// <summary>The shared supplies: the infantry's weapons, one kind per age, and the general supplies.</summary>
+public static class Supplies
+{
+    private const ResourceType W = ResourceType.Wood, Cu = ResourceType.Copper, Fe = ResourceType.Iron, C = ResourceType.Coal, Rub = ResourceType.Rubber;
+
+    /// <summary>Per piece: a battalion of 100 takes a hundred times as much.</summary>
+    private static SupplyInfo Of(string key, string name, params (ResourceType, double PerHundred)[] cost) =>
+        new(key, name, new([.. cost.Select(c => (c.Item1, c.PerHundred / 100))]));
+
+    /// <summary>For scouts, engineers and medics, one per man.</summary>
+    public static readonly SupplyInfo General = Of("supplies", "Suministros", (W, 20));
+
+    public static readonly SupplyInfo AncientArms = Of("arms-ancient", "Armas antiguas", (W, 30));
+    public static readonly SupplyInfo ClassicalArms = Of("arms-classical", "Armas clásicas", (W, 20), (Cu, 15));
+    public static readonly SupplyInfo MedievalArms = Of("arms-medieval", "Armas medievales", (W, 25), (Fe, 20));
+    public static readonly SupplyInfo Firearms = Of("arms-gunpowder", "Armas de pólvora", (W, 20), (Fe, 20), (C, 10));
+    public static readonly SupplyInfo Rifles = Of("arms-rifles", "Fusiles", (W, 20), (Fe, 30), (C, 15));
+    public static readonly SupplyInfo ModernArms = Of("arms-modern", "Armas modernas", (Fe, 30), (C, 15), (Rub, 5));
+
+    public static readonly SupplyInfo[] All = [General, AncientArms, ClassicalArms, MedievalArms, Firearms, Rifles, ModernArms];
 }
 
 /// <summary>A line: its name, its group and its models from the oldest to the newest.</summary>
@@ -115,57 +136,62 @@ public static class Battalions
 
     private static ResourceCost Cost(params (ResourceType, double)[] items) => new(items);
 
+    /// <summary>A model that takes a shared supply: its cost is its gold plus the supply's pieces for its men.</summary>
+    private static BattalionInfo Takes(SupplyInfo supply, BattalionInfo model) =>
+        model with { Cost = new([.. model.Cost.Items.Concat(supply.PieceCost.Times(model.Pieces).Items).OrderBy(i => i.Type)]), Supply = supply };
+
     private const ResourceType W = ResourceType.Wood, G = ResourceType.Gold, Cu = ResourceType.Copper, Fe = ResourceType.Iron,
         C = ResourceType.Coal, Oil = ResourceType.Oil, Rub = ResourceType.Rubber, Al = ResourceType.Aluminium;
 
     /// <summary>The light infantry's last model, which the heavy infantry also becomes once rifles leave no room for armour.</summary>
-    private static readonly BattalionInfo LightInfantry = new("light-infantry", "Infantería ligera", "L", 100, Cost((W, 20), (G, 70), (Fe, 25), (C, 10)), 35,
-        [Tech.Rifling], 18, 16, 60, 1.1);
+    private static readonly BattalionInfo LightInfantry = Takes(Supplies.Rifles, new("light-infantry", "Infantería ligera", "L", 100, Cost((G, 70)), 35,
+        [Tech.Rifling], 18, 16, 60, 1.1));
 
     private static readonly Dictionary<BattalionType, LineInfo> Table = new()
     {
-        // Scouts, engineers and medics share their supplies (BattalionInfo.Supplies), so each piece costs them the same wood.
+        // Infantry, scouts, engineers and medics take shared supplies (Takes): the weapons of their age, or the general
+        // supplies; their cost below is their gold, and Takes adds the supply's.
         // Few men, cheap and quick on their feet: they explore and claim land, but barely fight.
         [BattalionType.Scouts] = new("Exploradores", BattalionGroup.Support,
         [
-            new("scouts", "Exploradores", "S", 50, Cost((W, 10), (G, 5)), 7, [], 1, 1, 15, 1.5) { PieceName = "suministros" },
+            Takes(Supplies.General, new("scouts", "Exploradores", "S", 50, Cost((G, 5)), 7, [], 1, 1, 15, 1.5)),
         ]),
         [BattalionType.LightInfantry] = new("Infantería ligera", BattalionGroup.Infantry,
         [
-            new("warriors", "Guerreros", "G", 100, Cost((W, 30), (G, 15)), 15, [], 2, 3, 30, 1),
-            new("velites", "Vélites", "V", 100, Cost((W, 25), (G, 25), (Cu, 5)), 20, [Tech.MilitaryTactics], 4, 5, 35, 1.1),
-            new("arquebusiers", "Arcabuceros", "Q", 100, Cost((W, 20), (G, 50), (Fe, 20), (C, 10)), 35, [Tech.Gunpowder], 13, 9, 45, 1),
+            Takes(Supplies.AncientArms, new("warriors", "Guerreros", "G", 100, Cost((G, 15)), 15, [], 2, 3, 30, 1)),
+            Takes(Supplies.ClassicalArms, new("velites", "Vélites", "V", 100, Cost((G, 25)), 20, [Tech.MilitaryTactics], 4, 5, 35, 1.1)),
+            Takes(Supplies.Firearms, new("arquebusiers", "Arcabuceros", "Q", 100, Cost((G, 50)), 35, [Tech.Gunpowder], 13, 9, 45, 1)),
             LightInfantry,
         ]),
         [BattalionType.HeavyInfantry] = new("Infantería pesada", BattalionGroup.Infantry,
         [
-            new("swordsmen", "Espadachines", "D", 100, Cost((W, 20), (G, 20), (Cu, 15)), 25, [Tech.BronzeWorking], 3, 6, 35, 1),
-            new("phalanx", "Falanges", "F", 100, Cost((W, 20), (G, 30), (Cu, 20)), 30, [Tech.MilitaryTactics], 5, 8, 40, 0.9),
-            new("legionaries", "Legionarios", "M", 100, Cost((W, 20), (G, 40), (Fe, 25)), 35, [Tech.Drill], 7, 9, 50, 1),
-            new("heavy-infantry", "Infantería pesada", "H", 100, Cost((W, 20), (G, 50), (Fe, 35)), 40, [Tech.Armouries], 10, 12, 55, 0.9),
-            new("pikemen", "Piqueros", "P", 100, Cost((W, 30), (G, 50), (Fe, 25)), 35, [Tech.Gunpowder], 11, 15, 55, 0.9),
+            Takes(Supplies.AncientArms, new("swordsmen", "Espadachines", "D", 100, Cost((G, 20)), 25, [Tech.BronzeWorking], 3, 6, 35, 1)),
+            Takes(Supplies.ClassicalArms, new("phalanx", "Falanges", "F", 100, Cost((G, 30)), 30, [Tech.MilitaryTactics], 5, 8, 40, 0.9)),
+            Takes(Supplies.ClassicalArms, new("legionaries", "Legionarios", "M", 100, Cost((G, 40)), 35, [Tech.Drill], 7, 9, 50, 1)),
+            Takes(Supplies.MedievalArms, new("heavy-infantry", "Infantería pesada", "H", 100, Cost((G, 50)), 40, [Tech.Armouries], 10, 12, 55, 0.9)),
+            Takes(Supplies.Firearms, new("pikemen", "Piqueros", "P", 100, Cost((G, 50)), 35, [Tech.Gunpowder], 11, 15, 55, 0.9)),
             LightInfantry,
         ]),
         [BattalionType.RangedInfantry] = new("Infantería a distancia", BattalionGroup.Infantry,
         [
-            new("archers", "Arqueros", "A", 100, Cost((W, 30), (G, 20)), 20, [Tech.Archery], 4, 2, 25, 1),
-            new("crossbowmen", "Ballesteros", "B", 100, Cost((W, 40), (G, 40), (Fe, 10)), 30, [Tech.Machinery], 10, 5, 35, 1),
-            new("musketeers", "Mosqueteros", "U", 100, Cost((W, 20), (G, 60), (Fe, 25), (C, 10)), 35, [Tech.MilitaryScience], 16, 13, 55, 1),
-            new("riflemen", "Fusileros", "R", 100, Cost((W, 20), (G, 70), (Fe, 30), (C, 15)), 35, [Tech.Rifling], 20, 17, 60, 1),
-            new("machine-gunners", "Ametralladores", "Z", 100, Cost((W, 20), (G, 80), (Fe, 40), (C, 20)), 40, [Tech.MachineGuns], 22, 30, 60, 0.9),
+            Takes(Supplies.AncientArms, new("archers", "Arqueros", "A", 100, Cost((G, 20)), 20, [Tech.Archery], 4, 2, 25, 1)),
+            Takes(Supplies.MedievalArms, new("crossbowmen", "Ballesteros", "B", 100, Cost((G, 40)), 30, [Tech.Machinery], 10, 5, 35, 1)),
+            Takes(Supplies.Firearms, new("musketeers", "Mosqueteros", "U", 100, Cost((G, 60)), 35, [Tech.MilitaryScience], 16, 13, 55, 1)),
+            Takes(Supplies.Rifles, new("riflemen", "Fusileros", "R", 100, Cost((G, 70)), 35, [Tech.Rifling], 20, 17, 60, 1)),
+            Takes(Supplies.Rifles, new("machine-gunners", "Ametralladores", "Z", 100, Cost((G, 80)), 40, [Tech.MachineGuns], 22, 30, 60, 0.9)),
         ]),
         // At home in the mountains, hills, forests and marshes (MilitaryRules.MountainTroopsRoughTerrain).
         [BattalionType.MountainInfantry] = new("Tropas de montaña", BattalionGroup.Infantry,
         [
-            new("mountaineers", "Montañeses", "O", 100, Cost((W, 20), (G, 30), (Cu, 10)), 30, [Tech.MilitaryTactics], 4, 6, 40, 1),
-            new("almogavars", "Almogávares", "O", 100, Cost((W, 20), (G, 40), (Fe, 15)), 35, [Tech.Armouries], 9, 9, 45, 1.1),
-            new("mountain-hunters", "Cazadores de montaña", "O", 100, Cost((W, 20), (G, 55), (Fe, 20), (C, 10)), 35, [Tech.Gunpowder], 14, 12, 50, 1),
-            new("alpine-hunters", "Cazadores alpinos", "O", 100, Cost((W, 20), (G, 75), (Fe, 25), (C, 15)), 40, [Tech.Rifling], 19, 18, 60, 1),
-            new("mountain-troops", "Tropas de montaña", "O", 100, Cost((G, 100), (Fe, 30), (C, 15), (Rub, 5)), 40, [Tech.Combustion], 24, 22, 65, 1.1),
+            Takes(Supplies.ClassicalArms, new("mountaineers", "Montañeses", "O", 100, Cost((G, 30)), 30, [Tech.MilitaryTactics], 4, 6, 40, 1)),
+            Takes(Supplies.MedievalArms, new("almogavars", "Almogávares", "O", 100, Cost((G, 40)), 35, [Tech.Armouries], 9, 9, 45, 1.1)),
+            Takes(Supplies.Firearms, new("mountain-hunters", "Cazadores de montaña", "O", 100, Cost((G, 55)), 35, [Tech.Gunpowder], 14, 12, 50, 1)),
+            Takes(Supplies.Rifles, new("alpine-hunters", "Cazadores alpinos", "O", 100, Cost((G, 75)), 40, [Tech.Rifling], 19, 18, 60, 1)),
+            Takes(Supplies.ModernArms, new("mountain-troops", "Tropas de montaña", "O", 100, Cost((G, 100)), 40, [Tech.Combustion], 24, 22, 65, 1.1)),
         ]),
         [BattalionType.Paratroopers] = new("Paracaidistas", BattalionGroup.Infantry,
         [
-            new("paratroopers", "Paracaidistas", "Y", 100, Cost((G, 120), (Fe, 30), (Al, 10)), 45, [Tech.Aviation], 26, 18, 60, 1.2),
+            Takes(Supplies.ModernArms, new("paratroopers", "Paracaidistas", "Y", 100, Cost((G, 120)), 45, [Tech.Aviation], 26, 18, 60, 1.2)),
         ]),
         [BattalionType.Cavalry] = new("Caballería", BattalionGroup.Cavalry,
         [
@@ -195,12 +221,12 @@ public static class Battalions
         // Sappers and bridge builders: behind the line they blunt the defenders' terrain; they alone build roads and railways.
         [BattalionType.Engineers] = new("Ingenieros", BattalionGroup.Support,
         [
-            new("engineers", "Ingenieros", "E", 100, Cost((W, 20), (G, 40)), 30, [Tech.Engineering], 2, 3, 30, 1) { PieceName = "suministros" },
+            Takes(Supplies.General, new("engineers", "Ingenieros", "E", 100, Cost((G, 40)), 30, [Tech.Engineering], 2, 3, 30, 1)),
         ]),
         // Behind the line they save some of the wounded (MilitaryRules.MedicsSaving).
         [BattalionType.Medics] = new("Médicos", BattalionGroup.Support,
         [
-            new("medics", "Médicos", "+", 50, Cost((W, 10), (G, 30)), 20, [Tech.Medicine], 0, 1, 20, 1) { PieceName = "suministros" },
+            Takes(Supplies.General, new("medics", "Médicos", "+", 50, Cost((G, 30)), 20, [Tech.Medicine], 0, 1, 20, 1)),
         ]),
         [BattalionType.Bombers] = new("Bombarderos", BattalionGroup.Air,
         [
@@ -232,6 +258,14 @@ public static class Battalions
 
     /// <summary>The line and the place in it of the model with this key (<see cref="BattalionInfo.Key"/>); null if there is none.</summary>
     public static (BattalionType Type, int Index)? ByKey(string? key) => key != null && ByKeys.TryGetValue(key, out var found) ? found : null;
+
+    /// <summary>The models that take a shared supply, in the order of their lines.</summary>
+    public static IEnumerable<BattalionInfo> UsersOf(SupplyInfo supply) =>
+        Table.Values.SelectMany(l => l.Models).Where(m => m.Supply == supply).Distinct();
+
+    /// <summary>The first model kept under this stockpile key (a shared supply's or a model's own), with its line; null if none.</summary>
+    public static (BattalionType Type, BattalionInfo Model)? BySupply(string key) =>
+        Table.SelectMany(l => l.Value.Models.Select(m => (l.Key, m))).Where(x => x.m.SupplyKey == key).Cast<(BattalionType, BattalionInfo)?>().FirstOrDefault();
 
     /// <summary>The model with this key; null if there is none.</summary>
     public static BattalionInfo? ModelByKey(string? key) => ByKey(key) is var (type, index) ? Table[type].Models[index] : null;

@@ -60,11 +60,11 @@ public class EquipmentTests(WorldFixture world)
         RunDays(s, 1);
         Assert.Equal(rate, s.Human.EquipmentOf(Warriors), 6);
 
-        // Without the iron it needs (and the nation mines none yet), it makes nothing.
+        // Without the copper its classical weapons need, it makes nothing.
         var legionaries = BattalionType.HeavyInfantry.Models()[2];
         s.Human.Learn(Tech.Drill);
         Assert.True(s.SetProduction(0, capital.Id, legionaries.Key).Ok);
-        s.Human.Stockpile[ResourceType.Iron] = 0;
+        s.Human.Stockpile[ResourceType.Copper] = 0;
         RunDays(s, 1);
         Assert.Equal(0, s.Human.EquipmentOf(legionaries));
 
@@ -146,7 +146,7 @@ public class EquipmentTests(WorldFixture world)
         var tanks = BattalionType.Armour.Models()[1];
         Assert.Equal((10, 50), (tanks.Pieces, tanks.Men));
         Assert.Equal("5 catapultas", catapults.PiecesText(5));
-        Assert.Equal("100 armas de guerreros", Warriors.PiecesText(100));
+        Assert.Equal("100 armas antiguas", Warriors.PiecesText(100));
         // Training costs the gold; the rest of the cost is the equipment's.
         Assert.All(catapults.TrainingCost.Items, i => Assert.Equal(ResourceType.Gold, i.Type));
         Assert.DoesNotContain(catapults.EquipmentCost.Items, i => i.Type == ResourceType.Gold);
@@ -161,7 +161,7 @@ public class EquipmentTests(WorldFixture world)
         s.Human.Learn(Tech.Medicine);
         s.Human.Learn(Tech.SiegeEngines);
         var producible = GameSession.ProducibleModels(s.Human).Select(x => x.Model.SupplyName).ToList();
-        Assert.Contains("Armas (guerreros)", producible);
+        Assert.Contains("Armas antiguas", producible);
         Assert.Contains("Catapultas", producible);
         Assert.Single(producible, "Suministros");
 
@@ -198,5 +198,24 @@ public class EquipmentTests(WorldFixture world)
         save = save with { Players = [human, .. save.Players.Skip(1)] };
         var loaded = GameSession.Load(_map, save);
         Assert.Equal(50, loaded.Human.EquipmentOf(BattalionType.Engineers.First()), 6);
+    }
+
+    [Fact]
+    public void TheInfantryOfAnAgeSharesItsWeapons()
+    {
+        var (s, capital) = Game();
+        s.Human.Learn(Tech.Archery);
+        s.Human.Learn(Tech.BronzeWorking);
+        var archers = BattalionType.RangedInfantry.First();
+        var swordsmen = BattalionType.HeavyInfantry.First();
+        Assert.Equal(Supplies.AncientArms, Warriors.Supply);
+        Assert.Single(GameSession.ProducibleModels(s.Human), x => x.Model.SupplyName == "Armas antiguas");
+        s.Human.AddEquipment(Warriors, 300);
+        Assert.Equal(300, s.Human.EquipmentOf(archers));
+        Assert.Equal(300, s.Human.EquipmentOf(swordsmen));
+        // Every model of an age pays the same for its weapons; only the gold of training tells them apart.
+        Assert.Equal(Warriors.EquipmentCost.ToString(), archers.EquipmentCost.ToString());
+        Assert.Equal("Armas clásicas", BattalionType.HeavyInfantry.Models()[1].SupplyName);
+        Assert.Equal(BattalionType.HeavyInfantry.Models()[1].SupplyKey, BattalionType.HeavyInfantry.Models()[2].SupplyKey);
     }
 }

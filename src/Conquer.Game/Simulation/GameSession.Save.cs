@@ -210,7 +210,8 @@ public sealed partial class GameSession
             player.Manpower = s.Manpower ?? session.ManpowerCapacity(player);
             // Before 1.92.0 nothing was explored: the nation starts knowing what it sees.
             player.Explored.UnionWith(s.Explored ?? []);
-            // Before 1.105.0 scouts, engineers and medics each had their own supplies: they go into the shared ones.
+            // Before 1.106.0 each infantry model had its own weapons, and before 1.105.0 scouts, engineers and medics
+            // their own supplies: they go into the shared ones.
             foreach (var (key, pieces) in s.Equipment ?? [])
             {
                 string supplyKey = Battalions.ModelByKey(key)?.SupplyKey ?? key;

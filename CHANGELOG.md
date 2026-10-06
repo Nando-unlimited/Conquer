@@ -2,6 +2,14 @@
 
 Todos los cambios del juego, del más reciente al más antiguo. Cada versión es un commit cuyo título es su número.
 
+## [1.106.0] - 2026-10-06
+
+### Cambiado
+- **La infantería comparte las armas de su época**, como en Hearts of Iron: armas antiguas (guerreros, espadachines, arqueros), clásicas (vélites, falanges, legionarios, montañeses), medievales (infantería pesada, ballesteros, almogávares), de pólvora (arcabuceros, piqueros, mosqueteros, cazadores de montaña), fusiles (infantería ligera, fusileros, ametralladores, cazadores alpinos) y armas modernas (tropas de montaña, paracaidistas). Un taller fabrica «Armas clásicas» para todos los que las usan.
+- Lo que cuestan las armas es el mismo para todos los modelos de una época; los modelos solo se distinguen por el oro de su instrucción. Las armas clásicas piden cobre; las medievales, hierro; las de pólvora y los fusiles, hierro y carbón; las modernas, hierro, carbón y caucho.
+- Un batallón que pasa a un modelo con las mismas armas (de falanges a legionarios) lo hace al momento, sin gastar equipo.
+- Las partidas guardadas juntan las armas de cada época.
+
 ## [1.105.0] - 2026-10-06
 
 ### Añadido
