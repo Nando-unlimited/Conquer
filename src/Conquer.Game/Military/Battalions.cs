@@ -24,6 +24,10 @@ public enum BattalionType
     Engineers,
     Medics,
     Bombers,
+    Fighters,
+    CloseSupport,
+    NavalBombers,
+    AirTransports,
     Transport,
     LineShip,
     Escort,
@@ -69,6 +73,10 @@ public sealed record BattalionInfo(
     public int Pieces { get; init; } = Naval ? 0 : Men;
     /// <summary>What its pieces are called: "armas", "caballos", "catapultas"...; a shared supply names them itself.</summary>
     public string PieceName { get; init; } = "armas";
+    /// <summary>For aircraft: how far from their base, in km, they fly their missions.</summary>
+    public double RangeKm { get; init; }
+    /// <summary>For aircraft: their fire against other aircraft; <see cref="Attack"/> is their fire on troops, ships and buildings.</summary>
+    public double AirAttack { get; init; }
     public bool NeedsEquipment => Pieces > 0;
 
     /// <summary>
@@ -228,9 +236,37 @@ public static class Battalions
         [
             Takes(Supplies.General, new("medics", "Médicos", "+", 50, Cost((G, 30)), 20, [Tech.Medicine], 0, 1, 20, 1)),
         ]),
-        [BattalionType.Bombers] = new("Bombarderos", BattalionGroup.Air,
+        // Aircraft fly from airfields and carriers in wings of ten planes: Attack is their fire on troops, ships and buildings,
+        // AirAttack on other aircraft, Defense how well they hold out; Men are their crews, Capacity the paratroopers they carry.
+        [BattalionType.Fighters] = Air("Cazas", "cazas",
         [
-            new("bombers", "Bombarderos", "V", 40, Cost((G, 200), (Al, 40), (Oil, 40)), 60, [Tech.Aviation], 55, 8, 40, 4, Machine: true, Flies: true) { Pieces = 10, PieceName = "bombarderos" },
+            new("biplane-fighters", "Cazas biplanos", "F", 10, Cost((G, 80), (Al, 20), (Oil, 10)), 30, [Tech.Aviation], 2, 8, 40, 6) { RangeKm = 400, AirAttack = 12 },
+            new("monoplane-fighters", "Cazas monoplanos", "F", 10, Cost((G, 120), (Al, 30), (Oil, 15)), 35, [Tech.Radar], 3, 14, 50, 8) { RangeKm = 700, AirAttack = 22 },
+            new("jet-fighters", "Cazas a reacción", "F", 10, Cost((G, 180), (Al, 40), (Oil, 25)), 40, [Tech.JetEngine], 5, 22, 60, 12) { RangeKm = 900, AirAttack = 38 },
+        ]),
+        [BattalionType.CloseSupport] = Air("Apoyo cercano", "aviones de ataque",
+        [
+            new("biplane-attack", "Biplanos de ataque", "S", 20, Cost((G, 90), (Al, 20), (Oil, 15)), 35, [Tech.Aviation], 20, 5, 35, 5) { RangeKm = 300, AirAttack = 3 },
+            new("dive-bombers", "Bombarderos en picado", "S", 20, Cost((G, 130), (Al, 30), (Oil, 20)), 40, [Tech.Radar], 35, 8, 45, 6) { RangeKm = 500, AirAttack = 5 },
+            new("jet-attack", "Aviones de ataque a reacción", "S", 20, Cost((G, 190), (Al, 40), (Oil, 30)), 45, [Tech.JetEngine], 55, 14, 55, 10) { RangeKm = 700, AirAttack = 9 },
+        ]),
+        [BattalionType.Bombers] = Air("Bombarderos estratégicos", "bombarderos",
+        [
+            new("bombers", "Bombarderos", "V", 40, Cost((G, 200), (Al, 40), (Oil, 40)), 60, [Tech.Aviation], 55, 8, 40, 4) { RangeKm = 800, AirAttack = 2 },
+            new("heavy-bombers", "Bombarderos pesados", "V", 60, Cost((G, 300), (Al, 60), (Oil, 60)), 70, [Tech.Radar], 90, 14, 50, 5) { RangeKm = 1500, AirAttack = 4 },
+            new("jet-bombers", "Bombarderos a reacción", "V", 60, Cost((G, 400), (Al, 80), (Oil, 80)), 80, [Tech.JetEngine], 140, 20, 60, 9) { RangeKm = 2500, AirAttack = 6 },
+        ]),
+        [BattalionType.NavalBombers] = Air("Aviación naval", "torpederos",
+        [
+            new("seaplanes", "Hidroaviones torpederos", "N", 30, Cost((G, 100), (Al, 25), (Oil, 15)), 40, [Tech.Aviation], 30, 5, 35, 4) { RangeKm = 500, AirAttack = 2 },
+            new("torpedo-bombers", "Torpederos", "N", 30, Cost((G, 150), (Al, 35), (Oil, 25)), 45, [Tech.Radar], 55, 9, 45, 6) { RangeKm = 800, AirAttack = 4 },
+            new("jet-naval", "Aviones navales a reacción", "N", 30, Cost((G, 210), (Al, 45), (Oil, 35)), 50, [Tech.JetEngine], 85, 14, 55, 10) { RangeKm = 1000, AirAttack = 8 },
+        ]),
+        [BattalionType.AirTransports] = Air("Transportes aéreos", "aviones de transporte",
+        [
+            new("transport-planes", "Aviones de transporte", "T", 30, Cost((G, 90), (Al, 25), (Oil, 20)), 35, [Tech.Aviation], 0, 4, 30, 4, Capacity: 200) { RangeKm = 700 },
+            new("heavy-transports", "Transportes pesados", "T", 30, Cost((G, 130), (Al, 35), (Oil, 25)), 40, [Tech.Radar], 0, 7, 40, 5, Capacity: 300) { RangeKm = 1200 },
+            new("jet-transports", "Transportes a reacción", "T", 30, Cost((G, 200), (Al, 45), (Oil, 35)), 45, [Tech.JetEngine], 0, 11, 50, 9, Capacity: 500) { RangeKm = 1800 },
         ]),
 
         // Ships (lower-case symbols) sail at their speed times the sailing speed; their attack is their fire at sea. Each
@@ -275,6 +311,10 @@ public static class Battalions
                 [Tech.NavalEngineering, Tech.Aviation], 120, 50, 70, 2.5, Naval: true, Shipyard: BuildingType.DryDock),
         ]),
     };
+
+    /// <summary>A line of aircraft: each model a wing of <see cref="Rules.MilitaryRules.PlanesPerWing"/> planes, made in the workshops.</summary>
+    private static LineInfo Air(string name, string planes, BattalionInfo[] models) =>
+        new(name, BattalionGroup.Air, [.. models.Select(m => m with { Machine = true, Flies = true, Pieces = Rules.MilitaryRules.PlanesPerWing, PieceName = planes })]);
 
     private static LineInfo Fleet(string name, BattalionInfo[] models) => new(name, BattalionGroup.Navy, models);
 
@@ -337,6 +377,7 @@ public static class Battalions
     /// </summary>
     public static BuildingType? TrainingBuilding(this BattalionInfo model, BattalionType type) =>
         model.Naval || type is BattalionType.Scouts or BattalionType.Engineers or BattalionType.Medics ? null
+        : model.Flies ? BuildingType.Airfield
         : model.Machine ? BuildingType.Workshop
         : BuildingType.Barracks;
 
@@ -348,7 +389,7 @@ public static class Battalions
         BattalionType.Artillery or BattalionType.AntiAir => BattalionRole.Artillery,
         BattalionType.Engineers => BattalionRole.Engineers,
         BattalionType.Medics => BattalionRole.Support,
-        BattalionType.Bombers => BattalionRole.Air,
+        BattalionType.Bombers or BattalionType.Fighters or BattalionType.CloseSupport or BattalionType.NavalBombers or BattalionType.AirTransports => BattalionRole.Air,
         _ when Table[type].Group == BattalionGroup.Navy => BattalionRole.Naval,
         _ => BattalionRole.Infantry,
     };

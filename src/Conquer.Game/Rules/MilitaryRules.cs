@@ -15,6 +15,10 @@ public static class MilitaryRules
     public const int MaxDivisionMen = 10_000;
     /// <summary>Ships in one fleet at most.</summary>
     public const int MaxShipsPerFleet = 10;
+    /// <summary>Planes in an air wing, the pieces of equipment it needs.</summary>
+    public const int PlanesPerWing = 10;
+    /// <summary>Wings an airfield holds, and an aircraft carrier.</summary>
+    public const int WingsPerAirfield = 4, WingsPerCarrier = 2;
     /// <summary>A fleet in a port with a dry dock recovers organisation and crews this many times faster.</summary>
     public const double DryDockRepair = 2;
     /// <summary>Share of the newer model's cost a ship's refit costs, in one of the nation's ports.</summary>

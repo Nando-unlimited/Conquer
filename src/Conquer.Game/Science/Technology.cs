@@ -103,6 +103,8 @@ public enum Tech
     Conscription,
     ArtilleryFoundries,
     WarProduction,
+    Radar,
+    JetEngine,
 }
 
 /// <param name="Level">Its level in its branch, from 1; a level opens once enough of the one below is known (<see cref="GameRules.LevelUnlockShare"/>).</param>
@@ -216,7 +218,7 @@ public static class Techs
         [Tech.Combustion] = new("Motor de combustión", TechBranch.Military, 12, "Caballería mecanizada y tropas de montaña motorizadas.", Modifiers.None, [Tech.OilRefining], Era: Era.Modern),
         [Tech.HeavyArtillery] = new("Artillería pesada", TechBranch.Military, 12, "Obuses de gran calibre.", Modifiers.None, [Tech.Steel], Era: Era.Modern),
         [Tech.Armour] = new("Blindados", TechBranch.Military, 13, "Tanques.", Modifiers.None, [Tech.Combustion, Tech.Steel], Era: Era.Modern),
-        [Tech.Aviation] = new("Aviación", TechBranch.Military, 13, "Bombarderos que vuelan sobre cualquier terreno y sobre el mar, paracaidistas y artillería antiaérea.", Modifiers.None,
+        [Tech.Aviation] = new("Aviación", TechBranch.Military, 13, "Aeródromos y los primeros aviones: cazas, aviones de ataque, bombarderos, torpederos y transportes; paracaidistas y artillería antiaérea.", Modifiers.None,
             [Tech.Combustion, Tech.Electricity], Era: Era.Modern),
 
         // Better weapons and drill: the barracks train the battalions they study faster.
@@ -239,9 +241,14 @@ public static class Techs
             FasterTraining: [BattalionType.LightInfantry, BattalionType.RangedInfantry, BattalionType.MountainInfantry]),
         [Tech.ArtilleryFoundries] = new("Fundiciones de artillería", TechBranch.Military, 11, "La artillería y la antiaérea se construyen un 25 % antes.",
             Modifiers.None, [Tech.Steel], Era: Era.Industrial, FasterTraining: [BattalionType.Artillery, BattalionType.AntiAir]),
-        [Tech.WarProduction] = new("Producción bélica", TechBranch.Military, 13, "Caballería mecanizada, tanques, paracaidistas y bombarderos se instruyen un 25 % antes.",
+        [Tech.WarProduction] = new("Producción bélica", TechBranch.Military, 13, "Caballería mecanizada, tanques, paracaidistas y alas de aviones se instruyen un 25 % antes.",
             Modifiers.None, [Tech.Combustion], Era: Era.Modern,
-            FasterTraining: [BattalionType.Cavalry, BattalionType.Armour, BattalionType.Paratroopers, BattalionType.Bombers]),
+            FasterTraining: [BattalionType.Cavalry, BattalionType.Armour, BattalionType.Paratroopers, BattalionType.Bombers,
+                BattalionType.Fighters, BattalionType.CloseSupport, BattalionType.NavalBombers, BattalionType.AirTransports]),
+        [Tech.Radar] = new("Radar", TechBranch.Military, 14, "Aviones monoplanos: cazas, bombarderos en picado y pesados, torpederos y transportes pesados.",
+            Modifiers.None, [Tech.Aviation, Tech.Electronics], Era: Era.Modern),
+        [Tech.JetEngine] = new("Motor a reacción", TechBranch.Military, 15, "Aviones a reacción, más rápidos, fuertes y de mayor alcance.",
+            Modifiers.None, [Tech.Radar, Tech.OilRefining], Era: Era.Modern),
     };
 
     public static TechInfo Info(this Tech tech) => Table[tech];

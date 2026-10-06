@@ -84,6 +84,8 @@ public sealed partial class GameSession
         RoadProjects = _roadProjects.Select(r => new RoadProjectSave(r.Id, r.OwnerId, r.Kind, [.. r.Route], r.DaysPerLink, r.Next, r.WorkLeft)).ToList(),
         NextRoadProjectId = _nextRoadProjectId,
         NextShipOrderId = _nextShipOrderId,
+        Wings = _wings.Select(w => new WingSave(w.Id, w.OwnerId, ToSave(w.Planes), w.Number, w.BaseProvinceId, w.CarrierId, w.Mission, w.TargetProvinceId)).ToList(),
+        NextWingId = _nextWingId,
     };
 
     /// <summary>
@@ -294,6 +296,10 @@ public sealed partial class GameSession
         }
 
         session._nextShipOrderId = save.NextShipOrderId;
+        session._nextWingId = save.NextWingId;
+        foreach (var w in save.Wings ?? [])
+            session._wings.Add(new AirWing(w.Id, session.Players[w.OwnerId], FromSave(w.Planes), w.Number)
+                { BaseProvinceId = w.BaseProvinceId, CarrierId = w.CarrierId, Mission = w.Mission, TargetProvinceId = w.TargetProvinceId });
         foreach (var s in save.Shipments ?? [])
             session._shipments.Add(new Shipment { OwnerId = s.OwnerId, UnitId = s.UnitId, Men = s.Men, Pieces = new(s.Pieces), Ammo = s.Ammo, ArriveHours = s.ArriveHours,
                 SeaRoute = s.SeaRoute ?? [], Convoys = s.Convoys });

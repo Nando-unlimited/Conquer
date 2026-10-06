@@ -798,7 +798,7 @@ public class MilitaryTests(WorldFixture world)
         a.Population = 3000;
         foreach (var r in Resources.All) s.Human.Stockpile[r] = 5000;
         Assert.Equal(
-            [BattalionType.Armour, BattalionType.Artillery, BattalionType.AntiAir, BattalionType.Bombers],
+            [BattalionType.Armour, BattalionType.Artillery, BattalionType.AntiAir],
             Battalions.All.Where(t => t.Models().Any(m => m.TrainingBuilding(t) == BuildingType.Workshop)));
 
         // The workshop can be built from the start; war machines need their advance.

@@ -283,7 +283,7 @@ public sealed partial class GameSession
     public CommandResult CanTrainIn(int playerId, Province p)
     {
         if (p.OwnerId != playerId) return CommandResult.Fail("La provincia no es tuya.");
-        if (!p.CityId.HasValue && !p.Has(BuildingType.Barracks) && !p.Has(BuildingType.Workshop))
+        if (!p.CityId.HasValue && !p.Has(BuildingType.Barracks) && !p.Has(BuildingType.Workshop) && !p.Has(BuildingType.Airfield))
             return CommandResult.Fail($"Hace falta una ciudad, un cuartel o {BuildingType.Workshop.For(Players[playerId]).Info().WithArticle} en la provincia.");
         if (p.IsOccupied) return CommandResult.Fail("La provincia está ocupada por el enemigo.");
         return CommandResult.Success();
@@ -302,6 +302,7 @@ public sealed partial class GameSession
             return CommandResult.Fail($"Requiere {yard.Info().Name.ToLowerInvariant()} en la ciudad.");
         // Ships go into the shipyards' queue: paid as they are built, crewed when finished.
         if (newest.Naval) return CanOrderShip(player, type);
+        if (newest.Flies && AirfieldRoom(p, p.OwnerId) <= 0 && p.Has(BuildingType.Airfield)) return CommandResult.Fail($"El aeródromo está lleno: {MilitaryRules.WingsPerAirfield} alas como mucho.");
         if (type.BestModel(player.Techs) >= 0 && StockedModel(player, type) is null) return MissingEquipment(player, newest, 1);
         var model = TrainedModel(player, type);
         return CanRaiseTroops(p, model.Men, model.TrainingCost, model.Requires, model.TrainingBuilding(type) is BuildingType b ? [b] : []);
@@ -415,6 +416,12 @@ public sealed partial class GameSession
             {
                 if (--order.DaysLeft > 0) continue;
                 p.Training.Remove(order);
+                if (order.Battalion is BattalionType plane && plane.First().Flies)
+                {
+                    var wing = AddWing(player.Id, id, plane, order.Models.Count > 0 ? order.Models[0] : null);
+                    if (player.IsHuman) Notify(player.Id, $"Nueva ala en {PlaceName(p)}: {wing.Name} ({wing.Info.Name.ToLowerInvariant()}).");
+                    continue;
+                }
                 var unit = order.Battalion is BattalionType ship && ship.First().Naval ? AddFleet(player.Id, id, ship)
                     : order.Battalion is BattalionType type ? AddTrained(player.Id, id, [type], order.Models)
                     : order.TemplateBattalions.Count > 0 ? AddTrained(player.Id, id, order.TemplateBattalions, order.Models)
@@ -462,6 +469,7 @@ public sealed partial class GameSession
     public CommandResult CanAddToTemplate(Player player, RegimentTemplate template, BattalionType type)
     {
         if (type.First().Naval) return CommandResult.Fail("Los barcos no van en plantillas: se construyen sueltos en los puertos.");
+        if (type.First().Flies) return CommandResult.Fail("Los aviones no van en plantillas: forman alas en los aeródromos.");
         if (template.Battalions.Count >= MilitaryRules.MaxBattalionsPerRegiment)
             return CommandResult.Fail($"Como mucho {Formations.BattalionCount(MilitaryRules.MaxBattalionsPerRegiment)} por regimiento.");
         var missing = type.First().Requires.Where(t => !player.Techs.Contains(t)).ToList();
@@ -964,6 +972,7 @@ public sealed partial class GameSession
             if (unit.IsHeadquarters) AddUpkeep(upkeep, CommandLevels.Info(unit.HeadquartersLevel).Cost, factor);
             foreach (var b in unit.Battalions) AddUpkeep(upkeep, b.Info.Cost, factor);
         }
+        foreach (var wing in _wings.Where(w => w.OwnerId == player.Id)) AddUpkeep(upkeep, wing.Info.Cost);
         return upkeep;
     }
 
@@ -1004,6 +1013,7 @@ public sealed partial class GameSession
         DailyManpower(player);
         DailyTraining(player);
         DailyShipyards(player);
+        DailyWings(player);
         _supplied[player.Id] = ComputeSupply(player);
         ModerniseInPlace(player);
         DailyShipments(player);

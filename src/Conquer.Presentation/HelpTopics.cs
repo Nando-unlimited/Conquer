@@ -171,6 +171,18 @@ public static class HelpTopics
             "- Defender es más fácil en montañas, bosques, ríos y detrás de murallas o castillos. La caballería rinde menos en terreno difícil.",
             $"- Asedios: una provincia con murallas o castillo no se ocupa al entrar; hay que sitiarla {MilitaryRules.SiegeDaysPerDefense / 2:0} días (murallas) o {MilitaryRules.SiegeDaysPerDefense:0} (castillo). Catapultas, cañones y artillería lo acortan. Si los sitiadores se van, el asedio se levanta; mientras sitian, reciben suministro si la provincia linda con una tuya abastecida.",
         ]),
+        ("Aviación",
+        [
+            "Los aviones no son fichas en el mapa: forman alas que despegan de aeródromos y portaaviones.",
+            "## Tipos y épocas",
+            "- Cazas (dominan el aire), apoyo cercano (bombardean tropas en batalla), bombarderos estratégicos (ciudades e industria), aviación naval (flotas y convoyes) y transportes (paracaidistas).",
+            "- Cada tipo tiene tres modelos: biplanos con Aviación, monoplanos con Radar y reactores con Motor a reacción. Cada época vuela más lejos y pega más fuerte.",
+            "## Aeródromos y alas",
+            $"- Construye un Aeródromo (Aviación) en cualquier provincia tuya: alberga {MilitaryRules.WingsPerAirfield} alas. Cada ala son {MilitaryRules.PlanesPerWing} aviones, que fabrican los talleres y las fábricas como el resto del equipo.",
+            "- Forma las alas con los botones de aviones de la pestaña Ejército del aeródromo; el panel de la provincia muestra las que tiene.",
+            $"- En su base, si tiene suministro, un ala recupera organización y repone aviones del almacén y tripulaciones de la reserva. Cada portaaviones lleva {MilitaryRules.WingsPerCarrier} alas de cazas, apoyo cercano o aviación naval, y si se hunde caen con él.",
+            "- Un ala puede cambiar de base a otro aeródromo con sitio o a un portaaviones a menos del doble de su alcance. Si pierde su base, vuela al aeródromo tuyo más cercano con sitio; si no hay, se pierde.",
+        ]),
         ("Flotas y mar",
         [
             "Las tropas no cruzan el mar solas: necesitan barcos. Solo los aviones vuelan sobre él.",

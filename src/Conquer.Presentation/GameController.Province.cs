@@ -292,6 +292,26 @@ public sealed partial class GameController
         if (current != null) doc.Add(new Button("Parar", () => Show(Session.SetProduction(Human.Id, p.Id, null)), Size: TextSize.Small, Height: 28, Gap: 4));
     }
 
+    /// <summary>The wings based at the province's airfield: planes, organisation and a button to disband each; wings are formed with the buttons above.</summary>
+    private void AirfieldSection(Document doc, Province p)
+    {
+        doc.Add(new Space(8));
+        var wings = Session.WingsAt(p).ToList();
+        doc.Add(Section($"Aeródromo ({wings.Count}/{MilitaryRules.WingsPerAirfield} alas)"));
+        if (wings.Count == 0) doc.Add(new Label("Sin alas: fórmalas con los botones de aviones de arriba.", Tone.Dim, Height: 22));
+        foreach (var wing in wings)
+        {
+            doc.Add(new Row(wing.Name, $"{wing.PlaneCount:0}/{wing.Info.Pieces} aviones", Tone.Normal, Tone.Dim, Bold: true, Height: 19, Icon: new BattalionIcon(wing.Type),
+                Tooltip: $"{wing.Info.Name}: fuego en tierra {wing.Info.Attack:0}, en el aire {wing.Info.AirAttack:0}, defensa {wing.Info.Defense:0}, alcance {wing.Info.RangeKm:N0} km." +
+                         (wing.Info.Capacity > 0 ? $" Lleva {wing.Info.Capacity} paracaidistas." : "")));
+            doc.Add(new Bar(wing.Planes.StrengthShare, Tone.Strength, Tone.Track, 4, 1));
+            doc.Add(new Bar(wing.Planes.OrganisationShare, Tone.Organisation, Tone.Track, 4, 4));
+            if (p.OwnerId == Human.Id)
+                doc.Add(new Button("Disolver", () => Show(Session.DisbandWing(Human.Id, wing.Id)), Tooltip: "Sus tripulaciones vuelven a la reserva y sus aviones al almacén.",
+                    Size: TextSize.Small, Height: 24, Gap: 6));
+        }
+    }
+
     /// <summary>What sets a line apart in battle, beyond its numbers; null for the plain ones.</summary>
     public static string? LineNote(BattalionType type) => type switch
     {
@@ -428,6 +448,8 @@ public sealed partial class GameController
                 () => Show(Session.Train(Human.Id, p.Id, type)), can.Ok,
                 Tooltip: tip, Size: TextSize.Small, Height: 28, Gap: 4, Icon: new BattalionIcon(type)));
         }
+
+        if (p.Has(BuildingType.Airfield)) AirfieldSection(doc, p);
 
         doc.Add(new Space(8));
         doc.Add(Section("Cuarteles generales"));

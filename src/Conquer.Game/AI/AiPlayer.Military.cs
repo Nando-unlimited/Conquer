@@ -124,7 +124,7 @@ internal sealed partial class AiPlayer
         if (size >= 2 && ArmyTemplate(size, Map.Provinces[city.ProvinceId]) is var template && Spare(template.Cost(_player.Techs))
             && _session.TrainTemplate(_player.Id, city.ProvinceId, template.Id).Ok) return;
         var best = Battalions.All
-            .Where(t => !Model(t).Naval && !Auxiliary(t) && _session.CanTrain(Map.Provinces[city.ProvinceId], t).Ok && Spare(Model(t).Cost))
+            .Where(t => !Model(t).Naval && !Model(t).Flies && !Auxiliary(t) && _session.CanTrain(Map.Provinces[city.ProvinceId], t).Ok && Spare(Model(t).Cost))
             .OrderByDescending(t => Model(t).Attack + Model(t).Defense)
             .Cast<BattalionType?>().FirstOrDefault();
         if (best is BattalionType type) _session.Train(_player.Id, city.ProvinceId, type);
@@ -156,7 +156,7 @@ internal sealed partial class AiPlayer
     /// </summary>
     private RegimentTemplate ArmyTemplate(int size, Province where)
     {
-        var known = Battalions.All.Where(t => !Model(t).Naval && !Auxiliary(t) && t.BestModel(_player.Techs) >= 0 && CanSupply(t)
+        var known = Battalions.All.Where(t => !Model(t).Naval && !Model(t).Flies && !Auxiliary(t) && t.BestModel(_player.Techs) >= 0 && CanSupply(t)
                                               && (Model(t).TrainingBuilding(t) is not BuildingType b || where.Has(b))).ToList();
         var infantry = known.Where(t => !Model(t).Mounted).MaxBy(t => Model(t).Defense);
         var striker = known.MaxBy(t => Model(t).Attack);

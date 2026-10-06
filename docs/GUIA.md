@@ -378,6 +378,18 @@ El equipo, como en Hearts of Iron.
 | `DailyProduction(jugador)` | Cada día, antes de `DailyMilitary`, cada taller hace sus piezas y gasta lo que cuestan (su parte del coste del modelo menos el oro, también en `LastDayNet` y en el flujo de talleres); si el almacén no alcanza, hace solo la parte que puede pagar. |
 | `StockedModel(jugador, tipo, n)` | El modelo más moderno de la línea del que hay equipo para n batallones; nulo si no hay. |
 
+### `Military/Aircraft.cs` y `Simulation/GameSession.Air.cs`
+La aviación, como en Hearts of Iron: los aviones forman alas (`AirWing`: sus aviones como un `Battalion` de una línea del grupo Aviación, su número, su base y su misión) que no son fichas del mapa.
+
+| Elemento | Qué hace |
+| --- | --- |
+| Líneas de aviones | Cazas (`Fighters`), apoyo cercano (`CloseSupport`), bombarderos estratégicos (`Bombers`), aviación naval (`NavalBombers`) y transportes aéreos (`AirTransports`), con un modelo con Aviación, otro con Radar y otro con Motor a reacción. `Attack` es su fuego en tierra y mar, `AirAttack` contra aviones, `RangeKm` su alcance y `Capacity` los paracaidistas que llevan. Sus piezas son 10 aviones (`PlanesPerWing`) que hacen los talleres; se forman en un aeródromo (`TrainingBuilding`). |
+| `AirMission` | Superioridad aérea, apoyo cercano, bombardeo estratégico, ataque naval o lanzamiento de paracaidistas (fase 5b). |
+| `Wings`, `WingById`, `WingsAt(aeródromo)`, `WingsOn(flota)`, `BaseOf(ala)` | Las alas y dónde están: su aeródromo o el mar o puerto de su portaaviones. |
+| `AirfieldRoom`, `CarrierRoom`, `AddWing` | Sitio en un aeródromo (4 alas, contando las que se forman) y en los portaaviones de una flota (2 por portaaviones); `Train` de un avión forma un ala en el aeródromo (`DailyTraining`). |
+| `Rebase`, `InRange`, `DisbandWing` | Cambiar de base a menos del doble de su alcance (a un portaaviones solo cazas, apoyo cercano y aviación naval); disolverla devuelve tripulaciones y aviones. |
+| `DailyWings(jugador)`, `Relocate`, `LoseCarrierWings` | Cada día: un ala sin base vuela al aeródromo más cercano con sitio o se pierde; en su base con suministro (un portaaviones, en puerto) recupera organización y repone aviones y tripulaciones. Las alas de un portaaviones hundido caen con él. Cuestan mantenimiento como los batallones. |
+
 ### `Simulation/GameSession.Convoys.cs`
 La guerra en el mar más allá de las batallas: los convoyes y las misiones de las flotas (`Unit.Mission`, de `FleetMission`).
 
@@ -1370,6 +1382,7 @@ Uso: ver el README.
 | `NationScreenTests.cs` | La pantalla de la nación como datos: la tabla de ciudades lista la capital y su «Ver» la muestra en el mapa; pulsar un título de columna ordena por ella y pulsarlo otra vez lo invierte; el diseñador añade un batallón a una plantilla nueva; declarar la guerra cambia el botón a proponer la paz; la ciencia tiene tres ramas e «Investigar» elige el avance; el resumen muestra la capital. |
 | `ShipyardTests.cs` | Los barcos se encargan sin pagar nada, una grada los toma y avanza un día de trabajo al día pagando su parte del coste (o lo que puede pagar), y al terminar salen como flota en el puerto; un puerto tiene una grada y el dique seco añade otra; la cola se reordena y se cancela; un barco terminado espera a su tripulación; hace falta puerto y su astillero, y entrenar un barco en un puerto lo encarga; la cola se guarda; la pestaña Marina encarga barcos y muestra la cola. |
 | `ConvoyTests.cs` | Los envíos por mar necesitan convoyes y sin ellos se quedan; los atacantes hunden convoyes y las escoltas los protegen; un puerto bloqueado no construye, no envía por mar y pierde su comercio; las patrullas van a por las flotas enemigas vecinas; los astilleros hacen convoyes; convoyes, misiones y rutas se guardan, y las partidas anteriores dan convoyes a quien tiene puerto. |
+| `AirTests.cs` | Cada tipo de avión tiene un modelo por época, cada uno de mayor alcance; las alas se forman en aeródromos hasta llenarlos y no van en plantillas; cambian de base a menos del doble de su alcance y solo algunas a portaaviones; un ala sin base vuela a otro aeródromo o se pierde; se reparan en su base y al disolverlas devuelven sus aviones; un portaaviones hundido se lleva sus alas; las alas se guardan. |
 | `MenuTests.cs` | Los menús como datos, con un navegador falso: la nueva partida empieza con lo elegido (la Tierra no deja elegir semilla ni tamaño, y no hay menos de un jugador ni más de los que admite cada tamaño de mapa: 12, 16, 24 y 32); el menú principal no hace nada más con el historial abierto; los créditos se abren, bloquean el menú y citan «Lord of the Land»; una partida guardada se carga y se borra tras confirmar; Esc cierra lo de arriba y después abre el menú de pausa, cuyos botones abren la ayuda y salen. |
 | `ReleaseTests.cs` | La versión del `.csproj` coincide con la primera entrada del `CHANGELOG.md`. |
 

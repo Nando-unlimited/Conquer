@@ -108,6 +108,9 @@ public sealed record SaveGame
     public List<RoadProjectSave>? RoadProjects { get; init; }
     public int NextRoadProjectId { get; init; }
     public int NextShipOrderId { get; init; }
+    /// <summary>Air wings; missing in saves from before 1.114.0.</summary>
+    public List<WingSave>? Wings { get; init; }
+    public int NextWingId { get; init; }
 
     private static readonly JsonSerializerOptions Options = new()
     {
@@ -265,3 +268,6 @@ public sealed record UnitNumberSave(int PlayerId, int Level, int Number);
 
 /// <summary>A computer rival's plans: where each unit is heading, which regiments claim land, and its army template.</summary>
 public sealed record AiSave(int PlayerId, Dictionary<int, int> Targets, List<int> Claimers, List<int> KnownRegiments, int? ArmyTemplateId);
+
+/// <summary>An air wing: its planes, its base (an airfield or a carrier's fleet) and its mission.</summary>
+public sealed record WingSave(int Id, int OwnerId, BattalionSave Planes, int Number, int? BaseProvinceId, int? CarrierId, AirMission Mission, int? TargetProvinceId);

@@ -2,6 +2,21 @@
 
 Todos los cambios del juego, del más reciente al más antiguo. Cada versión es un commit cuyo título es su número.
 
+## [1.114.0] - 2026-10-06
+
+Última parte de la nueva estructura militar: la aviación (1 de 3).
+
+### Añadido
+- **Alas de aviones**: los aviones ya no son fichas que caminan, sino alas de 10 aviones con base en aeródromos y portaaviones. Hay cinco tipos: cazas, apoyo cercano, bombarderos estratégicos, aviación naval y transportes aéreos.
+- **Dos avances nuevos**, Radar y Motor a reacción. Cada tipo tiene un modelo biplano (Aviación), otro monoplano (Radar) y otro a reacción (Motor a reacción), cada uno con más alcance y fuego.
+- **Aeródromo**: edificio nuevo (Aviación) en cualquier provincia tuya, para 4 alas. Las alas se forman con los botones de aviones de su pestaña Ejército; los aviones los fabrican los talleres y las fábricas. El panel de la provincia muestra sus alas.
+- Las alas se reparan en su base con suministro (reponen aviones del almacén y tripulaciones de la reserva). Pueden cambiar de base a otro aeródromo o a un portaaviones (2 alas por portaaviones: cazas, apoyo cercano o aviación naval). Si pierden su base, vuelan al aeródromo más cercano con sitio; si no hay, se pierden. Las de un portaaviones hundido caen con él.
+- Nueva sección Aviación en la ayuda.
+
+### Cambiado
+- Los bombarderos se forman en aeródromos y no en talleres. Producción bélica acelera también las demás alas.
+- Las misiones de las alas, el combate aéreo y la pestaña Fuerza aérea llegarán en las dos próximas versiones. Los regimientos de bombarderos de las partidas guardadas siguen como estaban hasta entonces.
+
 ## [1.113.0] - 2026-10-06
 
 La marina (3 de 3): convoyes y misiones.

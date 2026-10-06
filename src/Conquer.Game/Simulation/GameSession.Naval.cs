@@ -159,6 +159,7 @@ public sealed partial class GameSession
     private void Sink(Unit fleet)
     {
         foreach (var unit in CargoOf(fleet).ToList()) Destroy(unit, $"hundida con {fleet.Name}");
+        LoseCarrierWings(fleet);
         Destroy(fleet, "hundida");
     }
 
