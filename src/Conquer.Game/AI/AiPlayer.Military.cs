@@ -140,7 +140,7 @@ internal sealed partial class AiPlayer
         var ports = _session.Cities.Where(c => c.OwnerId == _player.Id && _session.IsPort(Map.Provinces[c.ProvinceId], _player.Id)).ToList();
         if (ports.Count == 0) return;
         int fleets = _session.Units.Count(u => u.IsFleet && u.OwnerId == _player.Id)
-                     + ports.Sum(c => Map.Provinces[c.ProvinceId].Training.Count(o => o.Battalion is BattalionType t && Model(t).Naval));
+                     + _player.ShipOrders.Count + ports.Sum(c => Map.Provinces[c.ProvinceId].Training.Count(o => o.Battalion is BattalionType t && Model(t).Naval));
         if (fleets >= (ports.Count + 2) / 3) return;
         var port = ports.MaxBy(c => Map.Provinces[c.ProvinceId].Population)!;
         var warship = Battalions.All

@@ -79,7 +79,7 @@ internal sealed partial class AiPlayer
 
         // Enough ships for everyone: one more transport at a time while they fall short.
         int men = force.Sum(u => u.Citizens) + aboard.Sum(u => u.Citizens);
-        bool building = port.Training.Any(o => o.Battalion is BattalionType t && Model(t).Naval && Model(t).Capacity > 0);
+        bool building = _player.ShipOrders.Any(o => o.Info.Capacity > 0) || port.Training.Any(o => o.Battalion is BattalionType t && Model(t).Naval && Model(t).Capacity > 0);
         if (transports.Sum(f => f.Capacity) < men && !building && TransportType(port) is BattalionType ship && Spare(Model(ship).Cost))
             _session.Train(_player.Id, port.Id, ship);
 

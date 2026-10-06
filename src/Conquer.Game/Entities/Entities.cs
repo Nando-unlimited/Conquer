@@ -85,6 +85,9 @@ public sealed class Player
     /// <summary>Its regiment designs; every nation starts with one of two warrior battalions.</summary>
     public List<RegimentTemplate> Templates { get; } = [];
 
+    /// <summary>Its ships under construction or waiting for a slip, in the order the shipyards take them (see <c>GameSession.DailyShipyards</c>).</summary>
+    public List<ShipOrder> ShipOrders { get; } = [];
+
     /// <summary>Officers recruited but not leading anything, ready to be put at the head of a unit.</summary>
     public List<Officer> OfficerReserve { get; } = [];
 

@@ -420,8 +420,12 @@ public sealed partial class GameController
                          $"organización {info.MaxOrganisation:0}, {info.Speed * GameRules.CitizenSpeedKmh:0.#} km/h." +
                          (info.Mounted ? "\nMontada: ataca a la mitad en bosques, pantanos y montañas." : "") +
                          (LineNote(type) is { } note ? "\n" + note : "") +
-                         $"\nCoste: {info.Cost}. {TextFormat.TrainingDaysText(days, info.TrainingDays)} Mantenimiento: {TextFormat.UpkeepText([info.Cost])}." + (can.Ok ? "" : "\n" + can.Message);
-            doc.Add(new Button($"{info.Name}  ·  {info.TrainingCost}  ·  {days} d", () => Show(Session.Train(Human.Id, p.Id, type)), can.Ok,
+                         (info.Naval
+                             ? $"\nVa a la cola de los astilleros (pestaña Marina de la nación), preferiblemente en este puerto. Cuesta {info.Cost}, que se paga mientras se construye: {days} días de grada. Al terminar toma {info.Men} hombres del puerto."
+                             : $"\nCoste: {info.Cost}. {TextFormat.TrainingDaysText(days, info.TrainingDays)}") +
+                         $" Mantenimiento: {TextFormat.UpkeepText([info.Cost])}." + (can.Ok ? "" : "\n" + can.Message);
+            doc.Add(new Button(info.Naval ? $"Encargar {info.Name.ToLowerInvariant()}  ·  {days} d" : $"{info.Name}  ·  {info.TrainingCost}  ·  {days} d",
+                () => Show(Session.Train(Human.Id, p.Id, type)), can.Ok,
                 Tooltip: tip, Size: TextSize.Small, Height: 28, Gap: 4, Icon: new BattalionIcon(type)));
         }
 

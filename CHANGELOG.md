@@ -2,6 +2,18 @@
 
 Todos los cambios del juego, del más reciente al más antiguo. Cada versión es un commit cuyo título es su número.
 
+## [1.112.0] - 2026-10-06
+
+La marina (2 de 3): los astilleros.
+
+### Añadido
+- **Astilleros con cola**, como en Hearts of Iron: los barcos se encargan a una cola de toda la nación. Cada puerto tiene una grada, y otra más con dique seco; cada grada libre toma el primer barco de la cola que puede construir (un encargo hecho desde un puerto prefiere ese puerto).
+- Cada día la grada avanza su barco y paga la parte de su coste que toca a ese día; si no hay bastante, avanza solo lo que puede pagar. Al terminar, el barco toma su tripulación del puerto y de la reserva y sale como una flota nueva; si faltan hombres, espera y avisa.
+- **Pestaña Marina** en la pantalla de la nación: tus flotas, tus astilleros con sus gradas, la cola de construcción (adelantar, retrasar o cancelar cada encargo, con su progreso, los días que quedan y lo que cuesta al día) y un botón «Encargar» por cada línea de barcos.
+
+### Cambiado
+- Los barcos ya no se pagan de golpe: el botón de un puerto los encarga a la cola. La IA también usa la cola.
+
 ## [1.111.0] - 2026-10-06
 
 Quinta parte de la nueva estructura militar: la marina (1 de 3).

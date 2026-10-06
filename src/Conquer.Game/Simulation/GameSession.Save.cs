@@ -31,7 +31,8 @@ public sealed partial class GameSession
             [.. p.ResearchProgress], p.SpareScience, p.LastDayScience,
             [.. p.Templates.Select(t => new TemplateSave(t.Id, t.Number, [.. t.Battalions]))], [.. p.ResearchPriorities],
             [.. p.Researching.OfType<Tech>()], [.. p.Institutions.Order()], [.. p.OfficerReserve.Select(ToSave)], p.Eliminated, p.Manpower, p.ReligionId,
-            [.. p.Explored.Order()], new(p.Equipment.Where(e => e.Value > 0)), [.. p.LastDayFlows.Select(f => f.ToArray())])).ToList(),
+            [.. p.Explored.Order()], new(p.Equipment.Where(e => e.Value > 0)), [.. p.LastDayFlows.Select(f => f.ToArray())],
+            [.. p.ShipOrders.Select(o => new ShipOrderSave(o.Id, o.Type, o.Model, o.PreferredPortId, o.PortId, o.DaysDone, o.WaitingForCrew))])).ToList(),
         // Provinces nobody has touched keep their generated state, so only the rest are stored.
         Provinces = Map.Provinces.Where(Changed).Select(p => new ProvinceSave(
             p.Id, p.OwnerId, p.ControllerId, p.Population, p.CityId, p.Mood, p.Fertility, [.. p.Reserves],
@@ -82,6 +83,7 @@ public sealed partial class GameSession
         Roads = Roads.Links.OrderBy(l => l.A).ThenBy(l => l.B).Select(l => new RoadLinkSave(l.A, l.B, l.Kind)).ToList(),
         RoadProjects = _roadProjects.Select(r => new RoadProjectSave(r.Id, r.OwnerId, r.Kind, [.. r.Route], r.DaysPerLink, r.Next, r.WorkLeft)).ToList(),
         NextRoadProjectId = _nextRoadProjectId,
+        NextShipOrderId = _nextShipOrderId,
     };
 
     /// <summary>
@@ -199,6 +201,8 @@ public sealed partial class GameSession
             s.LastDayNet.CopyTo(player.LastDayNet, 0);
             // Before 1.105.0 the day's flows were not kept: they fill in at the next day.
             for (int f = 0; f < Math.Min(player.LastDayFlows.Length, s.LastDayFlows?.Length ?? 0); f++) s.LastDayFlows![f].CopyTo(player.LastDayFlows[f], 0);
+            foreach (var o in s.ShipOrders ?? [])
+                player.ShipOrders.Add(new ShipOrder { Id = o.Id, Type = o.Type, Model = o.Model, PreferredPortId = o.PreferredPortId, PortId = o.PortId, DaysDone = o.DaysDone, WaitingForCrew = o.WaitingForCrew });
             player.IsStarving = s.IsStarving;
             player.FoodReserveDays = s.FoodReserveDays;
             foreach (var tech in s.Techs) player.Learn(tech);
@@ -287,6 +291,7 @@ public sealed partial class GameSession
             session._unitsById[unit.Id] = unit;
         }
 
+        session._nextShipOrderId = save.NextShipOrderId;
         foreach (var s in save.Shipments ?? [])
             session._shipments.Add(new Shipment { OwnerId = s.OwnerId, UnitId = s.UnitId, Men = s.Men, Pieces = new(s.Pieces), Ammo = s.Ammo, ArriveHours = s.ArriveHours });
         foreach (var m in save.Migrations)

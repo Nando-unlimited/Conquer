@@ -376,6 +376,17 @@ El equipo, como en Hearts of Iron.
 | `DailyProduction(jugador)` | Cada día, antes de `DailyMilitary`, cada taller hace sus piezas y gasta lo que cuestan (su parte del coste del modelo menos el oro, también en `LastDayNet` y en el flujo de talleres); si el almacén no alcanza, hace solo la parte que puede pagar. |
 | `StockedModel(jugador, tipo, n)` | El modelo más moderno de la línea del que hay equipo para n batallones; nulo si no hay. |
 
+### `Simulation/GameSession.Shipyards.cs`
+Los astilleros, como en Hearts of Iron: la nación encarga barcos a una cola (`Player.ShipOrders`, de `ShipOrder`: línea, modelo, puerto preferido, puerto que lo construye, días de trabajo hechos y si espera tripulación).
+
+| Elemento | Qué hace |
+| --- | --- |
+| `Slips(puerto, jugador)`, `Shipyards(jugador)` | Gradas de un puerto: una, y otra más con dique seco; los puertos de la nación con las suyas. |
+| `CanBuildShipIn`, `CanOrderShip`, `OrderShip(jugador, línea, puerto)` | Encargar el modelo más nuevo de una línea al final de la cola, sin pagar nada; hace falta conocerlo y un puerto con su astillero. `Train` de un barco lo encarga con ese puerto como preferido. |
+| `MoveShipOrder`, `CancelShipOrder` | Subir o bajar un encargo en la cola, o cancelarlo (lo gastado se pierde). |
+| `ShipWorkPerDay`, `DaysLeft` | Días de trabajo que hace una grada al día (uno, más con los avances que estudian la línea) y los que le quedan a un encargo. |
+| `DailyShipyards(jugador)`, `Launch` | Cada día (en `DailyMilitary`): los encargos cuyo puerto ya no puede construirlos sueltan su grada (conservan el trabajo); las gradas libres toman los primeros de la cola que pueden construir (antes el puerto preferido); cada grada trabaja un día pagando su parte del coste (o lo que alcance, en el flujo de talleres); el barco terminado toma su tripulación del puerto y de la reserva y sale como flota nueva, o espera avisando una vez. |
+
 ### `Simulation/GameSession.Logistics.cs`
 La logística, como en Hearts of Iron: el almacén está en la capital y lo que necesitan las tropas les llega en envíos.
 
@@ -972,6 +983,9 @@ La pantalla de la nación (botón «Nación» o tecla N) como datos: `Visible`, 
 | `Templates()` | Diseñador de unidades: tus plantillas a la izquierda (nueva, duplicar, borrar); a la derecha los batallones de la elegida (hasta 12, con «Quitar»), botones para añadir los que conoces y lo que cuesta, su mantenimiento y cómo lucha una unidad de ese diseño (con `TextFormat.UpkeepText` y `TextFormat.TrainingDaysText`). |
 | `Diplomacy()`, `RelationCell`, `OpinionCell`, `PeaceTimeButtons`, `WarScoreCell`, `PeaceButtons`, `TermsButton` | Cada nación que sigue en la partida: relación (en guerra y desde cuándo, vasallo o señor, aliados, tregua o paz; en el tooltip sus aliados, su señor, sus vasallos y las reparaciones), lo que piensa de nosotros (con sus razones), su poder militar frente al tuyo, provincias, lo tomado y perdido, la puntuación de guerra (con su desglose) y los botones: en paz, guerra, alianza (o romperla), pacto (o romperlo), pedir paso, dar paso (o cerrarlo) y regalo (`PactButton`, `Agreement`); con un vasallo, anexionarlo o liberarlo; en guerra, paz blanca, exigir lo ocupado, tributo, vasallo y ceder lo ocupado. |
 
+### `NationScreen.Navy.cs`
+La pestaña Marina (`Navy()`, un `TablesPage`): las flotas (ubicación, barcos, tripulación, organización y si están en puerto, en el mar o combatiendo), los astilleros (gradas ocupadas y lo que construye cada uno), la cola de construcción (astillero, progreso, días que quedan, coste al día y botones para subir, bajar y cancelar) y una fila por línea de barcos con el modelo que se encargaría, sus cifras y «Encargar».
+
 ### `NationScreen.Trade.cs`
 | Función | Qué hace |
 | --- | --- |
@@ -1341,6 +1355,7 @@ Uso: ver el README.
 | `InterfaceTests.cs` | Los nombres se ordenan alfabéticamente en español (sin tildes, ñ tras n); el texto de la ayuda solo usa caracteres que la fuente sabe dibujar (Latin-1); `Conquer.Game` y `Conquer.Presentation` no dependen de ningún motor (ni Silk.NET, ni Stb, ni Godot, ni el cliente); el reloj reanuda a la velocidad que tenía; los mensajes salen del más nuevo al más antiguo y caducan; el historial empieza por la última versión, sin marcas de Markdown. Los tests no usan el cliente. |
 | `ControllerTests.cs` | La partida en pantalla sin pantalla: empieza con los colonos seleccionados y a la vista; seleccionar una provincia quita la unidad; el tiempo no corre congelado ni en pausa; nombrar una ciudad la funda con ese nombre y la selecciona, y un nombre no válido deja el diálogo abierto; el modo de mapa vuelve al terreno tras dar la vuelta; el panel de los colonos ofrece fundar la ciudad; las pestañas de la capital cambian y su botón de cerrar quita la selección; la migración forzada no pide más gente de la que puede salir, y sus migrantes salen «en camino» en la población del destino; los botones de velocidad de la barra superior ponen el reloj; el editor de unidades separa los batallones marcados en una unidad nueva, renombra y recupera el nombre automático; la ventana de carreteras sin destinos lo dice y se cancela; la ventana de una batalla muestra los dos bandos, el fuego y el gráfico, y «Ir a la provincia» centra el mapa en ella; el mapa muestra la ficha de los colonos seleccionados y, una vez fundada, su ciudad con su nombre; el panel de una unidad muestra su munición (en rojo sin ella, con la alerta «Sin munición») y sus envíos en camino, y el de un cuartel, los botones de prioridad de suministro. |
 | `NationScreenTests.cs` | La pantalla de la nación como datos: la tabla de ciudades lista la capital y su «Ver» la muestra en el mapa; pulsar un título de columna ordena por ella y pulsarlo otra vez lo invierte; el diseñador añade un batallón a una plantilla nueva; declarar la guerra cambia el botón a proponer la paz; la ciencia tiene tres ramas e «Investigar» elige el avance; el resumen muestra la capital. |
+| `ShipyardTests.cs` | Los barcos se encargan sin pagar nada, una grada los toma y avanza un día de trabajo al día pagando su parte del coste (o lo que puede pagar), y al terminar salen como flota en el puerto; un puerto tiene una grada y el dique seco añade otra; la cola se reordena y se cancela; un barco terminado espera a su tripulación; hace falta puerto y su astillero, y entrenar un barco en un puerto lo encarga; la cola se guarda; la pestaña Marina encarga barcos y muestra la cola. |
 | `MenuTests.cs` | Los menús como datos, con un navegador falso: la nueva partida empieza con lo elegido (la Tierra no deja elegir semilla ni tamaño, y no hay menos de un jugador ni más de los que admite cada tamaño de mapa: 12, 16, 24 y 32); el menú principal no hace nada más con el historial abierto; los créditos se abren, bloquean el menú y citan «Lord of the Land»; una partida guardada se carga y se borra tras confirmar; Esc cierra lo de arriba y después abre el menú de pausa, cuyos botones abren la ayuda y salen. |
 | `ReleaseTests.cs` | La versión del `.csproj` coincide con la primera entrada del `CHANGELOG.md`. |
 

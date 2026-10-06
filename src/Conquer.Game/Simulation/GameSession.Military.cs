@@ -300,6 +300,8 @@ public sealed partial class GameSession
         if (newest.Naval && !IsPort(p, p.OwnerId)) return CommandResult.Fail("Los barcos solo se construyen en ciudades con puerto.");
         if (newest.Shipyard is BuildingType yard && !p.Buildings.Contains(yard))
             return CommandResult.Fail($"Requiere {yard.Info().Name.ToLowerInvariant()} en la ciudad.");
+        // Ships go into the shipyards' queue: paid as they are built, crewed when finished.
+        if (newest.Naval) return CanOrderShip(player, type);
         if (type.BestModel(player.Techs) >= 0 && StockedModel(player, type) is null) return MissingEquipment(player, newest, 1);
         var model = TrainedModel(player, type);
         return CanRaiseTroops(p, model.Men, model.TrainingCost, model.Requires, model.TrainingBuilding(type) is BuildingType b ? [b] : []);
@@ -351,6 +353,7 @@ public sealed partial class GameSession
         var check = CanTrain(p, type);
         if (!check.Ok) return check;
         var player = Players[playerId];
+        if (ModelFor(player, type).Naval) return OrderShip(playerId, type, provinceId);
         int model = StockedModel(player, type) ?? 0;
         var info = type.Models()[model];
         player.Stockpile.TrySpend(info.TrainingCost);
@@ -1000,6 +1003,7 @@ public sealed partial class GameSession
     {
         DailyManpower(player);
         DailyTraining(player);
+        DailyShipyards(player);
         _supplied[player.Id] = ComputeSupply(player);
         ModerniseInPlace(player);
         DailyShipments(player);

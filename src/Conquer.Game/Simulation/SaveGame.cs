@@ -107,6 +107,7 @@ public sealed record SaveGame
     public List<RoadLinkSave>? Roads { get; init; }
     public List<RoadProjectSave>? RoadProjects { get; init; }
     public int NextRoadProjectId { get; init; }
+    public int NextShipOrderId { get; init; }
 
     private static readonly JsonSerializerOptions Options = new()
     {
@@ -184,7 +185,10 @@ public sealed record PlayerSave(
     double[] ResearchProgress, double SpareScience, double LastDayScience, List<TemplateSave> Templates,
     int[]? ResearchPriorities = null, List<Tech>? CurrentResearch = null, List<Institution>? Institutions = null,
     List<OfficerSave>? OfficerReserve = null, bool Eliminated = false, double? Manpower = null, int? ReligionId = null,
-    List<int>? Explored = null, Dictionary<string, double>? Equipment = null, double[][]? LastDayFlows = null);
+    List<int>? Explored = null, Dictionary<string, double>? Equipment = null, double[][]? LastDayFlows = null, List<ShipOrderSave>? ShipOrders = null);
+
+/// <summary>A ship in the nation's construction queue.</summary>
+public sealed record ShipOrderSave(int Id, BattalionType Type, int Model, int? PreferredPortId, int? PortId, double DaysDone, bool WaitingForCrew);
 
 /// <summary>Where and when an institution was born.</summary>
 public sealed record InstitutionBirthSave(Institution Institution, int ProvinceId, long Hours);

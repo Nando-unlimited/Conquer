@@ -122,3 +122,22 @@ public sealed class Battle
 /// </summary>
 public readonly record struct BattleHour(
     double AttackerMen, double DefenderMen, double AttackerOrganisation, double DefenderOrganisation, double AttackerFire, double DefenderFire);
+
+/// <summary>
+/// A ship in the nation's construction queue: its line and the model ordered, the port it was ordered from (if any),
+/// the port whose slip builds it once one takes it, and the days of work done so far.
+/// </summary>
+public sealed class ShipOrder
+{
+    public required int Id { get; init; }
+    public required BattalionType Type { get; init; }
+    public required int Model { get; init; }
+    public int? PreferredPortId { get; init; }
+    public int? PortId { get; set; }
+    public double DaysDone { get; set; }
+    /// <summary>The nation has been told the finished ship waits for its crew.</summary>
+    public bool WaitingForCrew { get; set; }
+
+    public BattalionInfo Info => Type.Models()[Model];
+    public double Progress => Math.Min(1, DaysDone / Info.TrainingDays);
+}
