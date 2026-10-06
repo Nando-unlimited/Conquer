@@ -360,14 +360,22 @@ public sealed partial class GameScreen : IScreen, IAudibleScreen
         var s = _app.ScreenSize;
         var panel = new Rect(s.X - SidePanelWidth - 8, TopBarHeight + 8, SidePanelWidth, s.Y - TopBarHeight - 70);
         Ui.Panel(panel);
-        if (doc.OnClose != null && Ui.Button(new Rect(panel.Right - 34, panel.Y + 8, 26, 24), "x", size: FontSize.Small))
+        // What does not fit scrolls, with its bar along the right; a different unit, province or tab starts at the top.
+        if (doc.Key != _sidePanelKey)
         {
-            doc.OnClose();
-            return;
+            _sidePanelKey = doc.Key;
+            _sidePanelScroll.Reset();
         }
-        float y = panel.Y + 14;
+        var view = new Rect(panel.X + 2, panel.Y + 4, panel.W - 6, panel.H - 8);
+        float top = Ui.BeginScroll(view, _sidePanelScroll), y = top + 10;
         DocumentView.Draw(Ui, doc, panel.X + 16, ref y, panel.W - 32);
+        Ui.EndScroll(view, _sidePanelScroll, y - top + 10);
+        if (doc.OnClose != null && Ui.Button(new Rect(panel.Right - 34 - (_sidePanelScroll.Overflows(view.H) ? Ui.ScrollBarWidth : 0), panel.Y + 8, 26, 24), "x", size: FontSize.Small))
+            doc.OnClose();
     }
+
+    private readonly ScrollState _sidePanelScroll = new();
+    private string? _sidePanelKey;
 
     private void Paragraph(float x, ref float y, float w, string text, Rgba color, FontSize size = FontSize.Small)
     {

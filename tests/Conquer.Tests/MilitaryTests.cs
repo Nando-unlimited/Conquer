@@ -717,8 +717,9 @@ public class MilitaryTests(WorldFixture world)
         Assert.True(s.TrainTemplate(0, city.ProvinceId, template.Id).Ok);
         Assert.Equal(2000 - 300, a.Population);
         Assert.Equal(500, s.Human.Stockpile[ResourceType.Wood]);
-        Assert.Equal(100_000 - 200, s.Human.EquipmentOf(BattalionType.LightInfantry.First()));
-        Assert.Equal(100_000 - 100, s.Human.EquipmentOf(BattalionType.RangedInfantry.First()));
+        // Warriors and archers share the ancient weapons.
+        Assert.Equal(100_000 - 300, s.Human.EquipmentOf(BattalionType.LightInfantry.First()));
+        Assert.Equal(100_000 - 300, s.Human.EquipmentOf(BattalionType.RangedInfantry.First()));
         Assert.Equal(500 - 50, s.Human.Stockpile[ResourceType.Gold]);
 
         RunHours(s, 24 * 20);
@@ -957,26 +958,27 @@ public class MilitaryTests(WorldFixture world)
     public void ForcesCostUpkeepEveryDay()
     {
         var (s, a, _) = TwoNations();
-        s.Human.Learn(Tech.Armouries); // heavy infantry: 50 gold and 35 iron
+        s.Human.Learn(Tech.Armouries); // heavy infantry: 50 gold and medieval weapons, 20 iron
         s.AddRegiment(0, a.Id, BattalionType.LightInfantry, BattalionType.HeavyInfantry);
         s.AddHeadquarters(0, a.Id, 1);
         var upkeep = s.Upkeep(s.Human);
 
         double gold = (15 + 50 + 60) * MilitaryRules.UpkeepGoldShare; // two battalions and a corps
         Assert.Equal(gold, upkeep[(int)ResourceType.Gold], 6);
-        Assert.Equal(35 * MilitaryRules.UpkeepResourceShare, upkeep[(int)ResourceType.Iron], 6);
+        Assert.Equal(20 * MilitaryRules.UpkeepResourceShare, upkeep[(int)ResourceType.Iron], 6);
         Assert.Equal(0, upkeep[(int)ResourceType.Wood]); // wood only goes into raising them
 
         s.Human.Stockpile[ResourceType.Gold] = s.Human.Stockpile[ResourceType.Iron] = 1000;
         RunHours(s, 24);
         Assert.False(s.Human.ArmyUnpaid);
-        Assert.Equal(1000 - 35 * MilitaryRules.UpkeepResourceShare, s.Human.Stockpile[ResourceType.Iron], 6);
+        Assert.Equal(1000 - 20 * MilitaryRules.UpkeepResourceShare, s.Human.Stockpile[ResourceType.Iron], 6);
     }
 
     [Fact]
     public void AnUnpaidArmyLosesHeartAndMen()
     {
         var (s, a, _) = TwoNations();
+        s.Human.Learn(Tech.Armouries); // heavy infantry, with iron weapons
         var unit = s.AddRegiment(0, a.Id, BattalionType.HeavyInfantry);
         s.Human.Stockpile[ResourceType.Iron] = 0; // nothing to keep its iron weapons
         var b = unit.Battalions[0];

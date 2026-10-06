@@ -9,6 +9,6 @@ public static class Equipment
     public static void Arm(this Player player)
     {
         foreach (var model in Battalions.All.SelectMany(t => t.Models()).Where(m => m.NeedsEquipment))
-            player.Equipment[model.Key] = 100_000;
+            player.Equipment[model.SupplyKey] = 100_000;
     }
 }

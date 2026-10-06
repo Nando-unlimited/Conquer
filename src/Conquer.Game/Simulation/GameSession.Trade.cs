@@ -124,6 +124,8 @@ public sealed partial class GameSession
             to.Stockpile[r] += amount;
             from.LastDayNet[(int)r] -= amount;
             to.LastDayNet[(int)r] += amount;
+            from.Record(ResourceFlow.Exchange, r, -amount);
+            to.Record(ResourceFlow.Exchange, r, amount);
         }
     }
 

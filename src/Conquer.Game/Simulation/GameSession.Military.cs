@@ -331,9 +331,13 @@ public sealed partial class GameSession
                 if (best <= b.Model) continue;
                 var model = b.Type.Models()[best];
                 double share = b.StrengthShare, need = model.Pieces * share;
-                if (player.EquipmentOf(model) < need) continue;
-                player.AddEquipment(model, -need);
-                player.AddEquipment(b.Info, b.Info.Pieces * share);
+                // A newer model with the same weapons (phalanx and legionaries) takes it up at once.
+                if (model.SupplyKey != b.Info.SupplyKey)
+                {
+                    if (player.EquipmentOf(model) < need) continue;
+                    player.AddEquipment(model, -need);
+                    player.AddEquipment(b.Info, b.Info.Pieces * share);
+                }
                 b.Modernise(best);
             }
     }

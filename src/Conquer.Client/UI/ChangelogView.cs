@@ -7,7 +7,7 @@ namespace Conquer.Client.UI;
 public sealed class ChangelogView(string title, IReadOnlyList<MarkupLine> text)
 {
     private readonly List<(string Text, FontSize Size, bool Bold, Rgba Color, float Indent)> _lines = [];
-    private float _scroll;
+    private readonly ScrollState _scroll = new();
     private float _wrappedFor = -1;
 
     public ChangelogView() : this("Historial de versiones", Changelog.Lines) { }
@@ -22,11 +22,10 @@ public sealed class ChangelogView(string title, IReadOnlyList<MarkupLine> text)
         var content = new Rect(area.X + 20, area.Y + 60, area.W - 40, area.H - 76);
         if (_wrappedFor != content.W) Layout(ui.Font, content.W);
 
-        if (ui.Hover(area)) _scroll -= ui.Input.Scroll * 60;
-        float total = _lines.Sum(l => ui.Font.LineHeight(l.Size, l.Bold) + (l.Size == FontSize.Large ? 8 : 0));
-        _scroll = Math.Clamp(_scroll, 0, Math.Max(0, total - content.H));
+        _scroll.Content = _lines.Sum(l => ui.Font.LineHeight(l.Size, l.Bold) + (l.Size == FontSize.Large ? 8 : 0));
+        ui.Wheel(area, _scroll, 60);
 
-        float y = content.Y - _scroll;
+        float y = content.Y - _scroll.Offset;
         foreach (var (text, size, bold, color, indent) in _lines)
         {
             float h = ui.Font.LineHeight(size, bold) + (size == FontSize.Large ? 8 : 0);
@@ -34,12 +33,14 @@ public sealed class ChangelogView(string title, IReadOnlyList<MarkupLine> text)
                 ui.Text(content.X + indent, y + (size == FontSize.Large ? 8 : 0), text, color, size, bold);
             y += h;
         }
+        ui.ScrollBar(content, _scroll);
         return closed;
     }
 
     private void Layout(Font font, float width)
     {
         _wrappedFor = width;
+        width -= Ui.ScrollBarWidth + 12; // room for the scroll bar
         _lines.Clear();
         foreach (var line in text)
         {

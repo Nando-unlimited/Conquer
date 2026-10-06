@@ -92,6 +92,8 @@ public sealed partial class GameSession
             Players[receiverId].Stockpile[ResourceType.Gold] += gold;
             payer.LastDayNet[(int)ResourceType.Gold] -= gold;
             Players[receiverId].LastDayNet[(int)ResourceType.Gold] += gold;
+            payer.Record(ResourceFlow.Exchange, ResourceType.Gold, -gold);
+            Players[receiverId].Record(ResourceFlow.Exchange, ResourceType.Gold, gold);
         }
     }
 

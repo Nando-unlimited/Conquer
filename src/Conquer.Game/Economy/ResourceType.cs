@@ -13,6 +13,26 @@ public enum ResourceType
     Rubber,
     Gold,
     Silver,
+    // New ones go at the end: saved games keep stores and deposits by position.
+    Stone,
+    Sulfur,
+    Saltpeter,
+    Horses,
+}
+
+/// <summary>Where a day's resources came from or went to (<see cref="Entities.Player.LastDayFlows"/>).</summary>
+public enum ResourceFlow
+{
+    /// <summary>What the provinces yield: harvests, wood, taxes and deposits.</summary>
+    Production,
+    /// <summary>Trade deals and tributes: what comes in (positive) or goes out (negative).</summary>
+    Exchange,
+    /// <summary>The food the people and the troops eat, and the share of the stored food that rots.</summary>
+    Consumption,
+    /// <summary>The army's upkeep.</summary>
+    Upkeep,
+    /// <summary>What the workshops and factories use to make equipment.</summary>
+    Workshops,
 }
 
 public static class Resources
@@ -23,7 +43,8 @@ public static class Resources
     public static readonly ResourceType[] Deposits =
     [
         ResourceType.Coal, ResourceType.Iron, ResourceType.Copper, ResourceType.Silicon, ResourceType.Oil,
-        ResourceType.Aluminium, ResourceType.Rubber, ResourceType.Gold, ResourceType.Silver,
+        ResourceType.Aluminium, ResourceType.Rubber, ResourceType.Gold, ResourceType.Silver, ResourceType.Stone, ResourceType.Sulfur,
+        ResourceType.Saltpeter, ResourceType.Horses,
     ];
 
     /// <summary>
@@ -32,8 +53,12 @@ public static class Resources
     /// </summary>
     public static readonly ResourceType[] KnownFromStart =
     [
-        ResourceType.Food, ResourceType.Wood, ResourceType.Copper, ResourceType.Gold, ResourceType.Silver,
+        ResourceType.Food, ResourceType.Wood, ResourceType.Copper, ResourceType.Gold, ResourceType.Silver, ResourceType.Stone,
+        ResourceType.Horses,
     ];
+
+    /// <summary>Herds rather than pockets: their pastures never run out.</summary>
+    public static bool IsRenewable(this ResourceType type) => type == ResourceType.Horses;
 
     public static string Name(this ResourceType type) => type switch
     {
@@ -48,6 +73,10 @@ public static class Resources
         ResourceType.Rubber => "Caucho",
         ResourceType.Gold => "Oro",
         ResourceType.Silver => "Plata",
+        ResourceType.Stone => "Piedra",
+        ResourceType.Sulfur => "Azufre",
+        ResourceType.Saltpeter => "Salitre",
+        ResourceType.Horses => "Caballos",
         _ => type.ToString(),
     };
 }

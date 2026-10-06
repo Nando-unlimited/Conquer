@@ -31,7 +31,7 @@ public sealed partial class GameSession
             [.. p.ResearchProgress], p.SpareScience, p.LastDayScience,
             [.. p.Templates.Select(t => new TemplateSave(t.Id, t.Number, [.. t.Battalions]))], [.. p.ResearchPriorities],
             [.. p.Researching.OfType<Tech>()], [.. p.Institutions.Order()], [.. p.OfficerReserve.Select(ToSave)], p.Eliminated, p.Manpower, p.ReligionId,
-            [.. p.Explored.Order()], new(p.Equipment.Where(e => e.Value > 0)))).ToList(),
+            [.. p.Explored.Order()], new(p.Equipment.Where(e => e.Value > 0)), [.. p.LastDayFlows.Select(f => f.ToArray())])).ToList(),
         // Provinces nobody has touched keep their generated state, so only the rest are stored.
         Provinces = Map.Provinces.Where(Changed).Select(p => new ProvinceSave(
             p.Id, p.OwnerId, p.ControllerId, p.Population, p.CityId, p.Mood, p.Fertility, [.. p.Reserves],
@@ -162,6 +162,8 @@ public sealed partial class GameSession
             p.Mood = ps.Mood;
             p.Fertility = ps.Fertility;
             ps.Reserves.CopyTo(p.Reserves, 0);
+            // Stone and sulfur deposits, from 1.107.0, are full in older saves.
+            for (int r = ps.Reserves.Length; r < p.Reserves.Length; r++) p.Reserves[r] = p.DepositSizes[r] * GameRules.DepositSizeMultiplier;
             // A deposit the old generator did not place has nothing saved; it starts full, like the rest did.
             if (!save.ExtraDeposits)
                 foreach (var r in Resources.Deposits)
@@ -189,8 +191,11 @@ public sealed partial class GameSession
         {
             // Before 1.77.0 there were no faiths: each nation gets one by its number, and its people share it.
             var player = new Player(s.Id, s.Name, s.Color, s.IsHuman) { CapitalCityId = s.CapitalCityId, Eliminated = s.Eliminated, ReligionId = s.ReligionId ?? s.Id % Religions.Count };
-            foreach (var r in Resources.All) player.Stockpile[r] = s.Stockpile[(int)r];
+            // Before 1.107.0 there was no stone nor sulfur: the nation gets the stone it would have started with.
+            foreach (var r in Resources.All) player.Stockpile[r] = (int)r < s.Stockpile.Length ? s.Stockpile[(int)r] : r == ResourceType.Stone ? GameRules.StartingStone : 0;
             s.LastDayNet.CopyTo(player.LastDayNet, 0);
+            // Before 1.105.0 the day's flows were not kept: they fill in at the next day.
+            for (int f = 0; f < Math.Min(player.LastDayFlows.Length, s.LastDayFlows?.Length ?? 0); f++) s.LastDayFlows![f].CopyTo(player.LastDayFlows[f], 0);
             player.IsStarving = s.IsStarving;
             player.FoodReserveDays = s.FoodReserveDays;
             foreach (var tech in s.Techs) player.Learn(tech);
@@ -208,7 +213,13 @@ public sealed partial class GameSession
             player.Manpower = s.Manpower ?? session.ManpowerCapacity(player);
             // Before 1.92.0 nothing was explored: the nation starts knowing what it sees.
             player.Explored.UnionWith(s.Explored ?? []);
-            foreach (var (key, pieces) in s.Equipment ?? []) player.Equipment[key] = pieces;
+            // Before 1.106.0 each infantry model had its own weapons, and before 1.105.0 scouts, engineers and medics
+            // their own supplies: they go into the shared ones.
+            foreach (var (key, pieces) in s.Equipment ?? [])
+            {
+                string supplyKey = Battalions.ModelByKey(key)?.SupplyKey ?? key;
+                player.Equipment[supplyKey] = player.Equipment.GetValueOrDefault(supplyKey) + pieces;
+            }
             session.Players.Add(player);
         }
 

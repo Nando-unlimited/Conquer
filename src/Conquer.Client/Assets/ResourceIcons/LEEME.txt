@@ -7,12 +7,14 @@ con el dibujado. Se ven pequeños (de 14 a 26 px): mejor siluetas claras con bue
 
 comida.png     madera.png     carbon.png     hierro.png     cobre.png      silicio.png
 petroleo.png   aluminio.png   caucho.png     oro.png        plata.png
+piedra.png     azufre.png     salitre.png    caballos.png   (todavía sin imagen: se dibujan)
 
 Y ciencia.png, que no es un recurso: va en el aviso «Ciencia sin elegir», en la pestaña Ciencia de la nación y
 junto a los puntos de ciencia al día.
 
 Van reducidos a 128 px. Los originales a tamaño completo están en originales/ (no se compilan ni se suben a git),
-junto con los que el juego todavía no usa porque no son recursos: acero, electricidad, piedra, polvora y uranio.
+junto con los que el juego todavía no usa porque no son recursos: acero, electricidad, polvora y uranio (y piedra, que ya
+es un recurso: basta con copiarla aquí reducida).
 
 Origen y licencia de las imágenes:
 - Recursos (11 iconos, 2026-10-05): herramienta y plan pendientes de anotar.

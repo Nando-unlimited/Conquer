@@ -17,6 +17,13 @@ public static class TextFormat
 
     public static string Plural(int n, string one, string many) => $"{n:N0} {(n == 1 ? one : many)}";
 
+    /// <summary>"a", "a y b", "a, b y c".</summary>
+    public static string List(IEnumerable<string> items)
+    {
+        var list = items.ToList();
+        return list.Count <= 1 ? string.Concat(list) : string.Join(", ", list[..^1]) + " y " + list[^1];
+    }
+
     /// <summary>Daily upkeep in words: "0,3 oro/día" or "1,2 oro, 0,4 hierro/día".</summary>
     public static string UpkeepText(IEnumerable<ResourceCost> costs)
     {

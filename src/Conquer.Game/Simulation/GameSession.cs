@@ -95,6 +95,7 @@ public sealed partial class GameSession
             player.Stockpile[ResourceType.Food] = GameRules.StartingFood * start;
             player.Stockpile[ResourceType.Gold] = GameRules.StartingGold * start;
             player.Stockpile[ResourceType.Wood] = GameRules.StartingWood * start;
+            player.Stockpile[ResourceType.Stone] = GameRules.StartingStone * start;
             player.Manpower = GameRules.BaseManpower;
             player.ReligionId = faiths.Next(Religions.Count);
             session.Players.Add(player);
@@ -314,15 +315,19 @@ public sealed partial class GameSession
         // Applied after extracting, so a rival's extra output does not empty its deposits faster.
         double multiplier = OutputMultiplier(player);
         for (int i = 0; i < net.Length; i++) net[i] *= multiplier;
+        foreach (var flow in player.LastDayFlows) Array.Clear(flow);
+        foreach (var r in Resources.All) player.Record(ResourceFlow.Production, r, net[(int)r]);
 
         double eaters = population
                         + Units.Where(u => u.OwnerId == player.Id).Sum(u => u.Citizens)
                         + Migrations.Where(m => m.OwnerId == player.Id).Sum(m => m.People);
-        net[(int)ResourceType.Food] -= GameRules.FoodPerCitizen * eaters;
         // Part of what is stored rots, so a surplus does not pile up for ever.
-        net[(int)ResourceType.Food] -= Math.Max(0, player.Stockpile[ResourceType.Food]) * GameRules.FoodSpoilage;
+        double eaten = GameRules.FoodPerCitizen * eaters + Math.Max(0, player.Stockpile[ResourceType.Food]) * GameRules.FoodSpoilage;
+        net[(int)ResourceType.Food] -= eaten;
+        player.Record(ResourceFlow.Consumption, ResourceType.Food, -eaten);
         var upkeep = Upkeep(player);
         for (int i = 0; i < net.Length; i++) net[i] -= upkeep[i];
+        foreach (var r in Resources.All) player.Record(ResourceFlow.Upkeep, r, -upkeep[(int)r]);
 
         foreach (var r in Resources.All) player.Stockpile[r] += net[(int)r];
         Array.Copy(net, player.LastDayNet, net.Length);
@@ -692,6 +697,7 @@ public sealed partial class GameSession
     /// <summary>Takes up to <paramref name="amount"/> from a deposit's pocket and returns what was taken.</summary>
     private double Extract(Province p, ResourceType r, double amount)
     {
+        if (r.IsRenewable()) return amount; // a herd breeds as fast as it is taken
         double taken = Math.Min(amount, p.Reserves[(int)r]);
         p.Reserves[(int)r] -= taken;
         if (p.Reserves[(int)r] <= 0)

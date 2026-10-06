@@ -1,3 +1,4 @@
+using Conquer.Game.Economy;
 using Conquer.Game.Simulation;
 using Conquer.Game.World;
 using Conquer.Presentation;
@@ -110,5 +111,38 @@ public class NationScreenTests(WorldFixture world)
         var game = Game(NationTab.Summary);
         var page = Assert.IsType<SummaryPage>(game.Nation.Page());
         Assert.Contains(page.Left.Elements, e => e is Pair { Label: "Capital" } pair && pair.Value == game.Session.Cities.Single().Name);
+    }
+
+    [Fact]
+    public void TheStoreListsEachResourceWithWhatCameInAndWentOutAndThenTheEquipment()
+    {
+        var game = Game(NationTab.Store);
+        for (int h = 0; h < 24; h++) game.Session.Step();
+        var page = Assert.IsType<TablesPage>(game.Nation.Page());
+        Assert.Equal("Almacén", NationScreen.TabNames[(int)NationTab.Store]);
+        var (resources, equipment) = (page.Tables[0].Table, page.Tables[1].Table);
+        var food = resources.Rows.Single(r => ((TextCell)r[0]).Text == "Comida");
+        Assert.StartsWith("+", ((TextCell)food[2]).Text); // the harvest
+        Assert.StartsWith("-", ((TextCell)food[4]).Text); // what the people eat
+        // The flows add up to the day's balance.
+        var flows = game.Human.LastDayFlows;
+        foreach (var r in Resources.All)
+            Assert.Equal(game.Human.LastDayNet[(int)r], flows.Sum(f => f[(int)r]), 6);
+        Assert.Contains(equipment.Rows, r => ((TextCell)r[0]).Text == "Suministros");
+    }
+
+    [Fact]
+    public void TheUnitsTabShowsEveryModelWithItsFiguresAndEquipment()
+    {
+        var game = Game(NationTab.Units);
+        var table = Assert.IsType<TablePage>(game.Nation.Page()).Table;
+        var catapults = table.Rows.Single(r => ((TextCell)r[0]).Text == "Catapultas");
+        Assert.Equal("50", ((TextCell)catapults[1]).Text);
+        Assert.Equal("5 catapultas", ((TextCell)catapults[7]).Text);
+        var warriors = table.Rows.Single(r => ((TextCell)r[0]).Text == "Guerreros");
+        Assert.True(((TextCell)warriors[0]).Bold); // the model the nation trains now
+        Assert.Contains(table.Rows, r => ((TextCell)r[0]).Text == "Portaaviones" && ((TextCell)r[7]).Text == "Se construye entero");
+        // The light infantry the heavy infantry turns into is listed once.
+        Assert.Single(table.Rows, r => ((TextCell)r[0]).Text == "Infantería ligera" && r.Count > 1);
     }
 }

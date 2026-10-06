@@ -107,6 +107,22 @@ public class ControllerTests(WorldFixture world)
     }
 
     [Fact]
+    public void AWorkshopsChoicesAreTitledByWhatItMakes()
+    {
+        var game = GameWithCapital();
+        var capital = game.Map.Provinces[game.SelectedProvince];
+        capital.AddBuilding(BuildingType.Workshop);
+        game.ProvinceTab = ProvinceTab.Buildings;
+        var doc = game.SidePanel()!;
+        Assert.Contains(doc.Elements, e => e is Button { Text: var t } && t.StartsWith("Armas antiguas"));
+        Button(doc, "Suministros").Press();
+        Assert.Equal(BattalionType.Scouts.First().Key, capital.Production);
+        // Another tab is another page, which the client scrolls back to the top.
+        game.ProvinceTab = ProvinceTab.General;
+        Assert.NotEqual(doc.Key, game.SidePanel()!.Key);
+    }
+
+    [Fact]
     public void TheCapitalsTabsSwitchAndItsCloseButtonDeselects()
     {
         var game = GameWithCapital();

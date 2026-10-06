@@ -19,6 +19,14 @@ public sealed class Player
     public int? CapitalCityId { get; set; }
     /// <summary>Net change of each resource over the last day, for display.</summary>
     public double[] LastDayNet { get; } = new double[Resources.All.Length];
+    /// <summary>
+    /// The last day's change of each resource by where it came from or went to, by <see cref="ResourceFlow"/> and then
+    /// by resource: what is made is positive, what is spent negative. They add up to <see cref="LastDayNet"/>.
+    /// </summary>
+    public double[][] LastDayFlows { get; } = [.. Enum.GetValues<ResourceFlow>().Select(_ => new double[Resources.All.Length])];
+
+    /// <summary>Notes a day's gain (positive) or expense (negative) of a resource under its flow.</summary>
+    public void Record(ResourceFlow flow, ResourceType resource, double amount) => LastDayFlows[(int)flow][(int)resource] += amount;
     public bool IsStarving { get; set; }
     /// <summary>The last day's upkeep could not be paid in full; worked out again every day.</summary>
     public bool ArmyUnpaid { get; set; }
@@ -59,15 +67,16 @@ public sealed class Player
     public double LastDayScience { get; set; }
 
     /// <summary>
-    /// Its stockpile of equipment, in pieces, by battalion model (<see cref="BattalionInfo.Key"/>): made by its workshops
-    /// and factories, taken to train, reinforce and modernise battalions.
+    /// Its stockpile of equipment, in pieces, by battalion model (<see cref="BattalionInfo.SupplyKey"/>: the shared
+    /// supplies of scouts, engineers and medics are kept together): made by its workshops and factories, taken to
+    /// train, reinforce and modernise battalions.
     /// </summary>
     public Dictionary<string, double> Equipment { get; } = [];
 
-    public double EquipmentOf(BattalionInfo model) => Equipment.GetValueOrDefault(model.Key);
+    public double EquipmentOf(BattalionInfo model) => Equipment.GetValueOrDefault(model.SupplyKey);
 
     /// <summary>Puts pieces into the stockpile, or takes them out (negative).</summary>
-    public void AddEquipment(BattalionInfo model, double pieces) => Equipment[model.Key] = Math.Max(0, EquipmentOf(model) + pieces);
+    public void AddEquipment(BattalionInfo model, double pieces) => Equipment[model.SupplyKey] = Math.Max(0, EquipmentOf(model) + pieces);
 
     /// <summary>Its regiment designs; every nation starts with one of two warrior battalions.</summary>
     public List<RegimentTemplate> Templates { get; } = [];

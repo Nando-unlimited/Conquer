@@ -2,6 +2,49 @@
 
 Todos los cambios del juego, del más reciente al más antiguo. Cada versión es un commit cuyo título es su número.
 
+## [1.108.0] - 2026-10-06
+
+### Añadido
+- **Salitre**: lo descubre la Pólvora, junto al azufre. Abunda en los desiertos, algo en estepas y sabanas, y escasea en el resto.
+- **Caballos**: los conoces desde el principio. Salen de pastos en praderas y estepas (menos en sabanas, bosques templados, colinas y desiertos) que, a diferencia de los yacimientos, no se agotan.
+
+### Cambiado
+- La pólvora es salitre y azufre: las armas de pólvora piden 10 de salitre y 5 de azufre por batallón; los cañones, 15 y 10; la artillería de campaña y la pesada, 10 y 5; la antiaérea, 5 y 5. Los fusiles y las armas modernas cambian su azufre por salitre (5).
+- La caballería necesita caballos de verdad: jinetes, catafractos y caballeros, 100 por batallón (y 10 de madera en vez de 20); los carros de guerra, 60 (y 40 de madera en vez de 60). Su mantenimiento gasta algunos cada día.
+- Las partidas guardadas reciben llenos los yacimientos y pastos nuevos; los demás siguen donde estaban.
+
+## [1.107.0] - 2026-10-06
+
+### Añadido
+- **Piedra**: un recurso nuevo que conoces desde el principio. Sale de canteras, que hay en casi todas las colinas y montañas y en algunas llanuras secas. Empiezas con 50.
+- **Azufre**: lo descubre la Pólvora. Sale de yacimientos en las montañas y los desiertos y escasea en el resto, así que se vuelve un bien de comercio.
+
+### Cambiado
+- Los edificios de piedra la piden en vez de parte de su madera: templo (30), acueducto (60), anfiteatro (80), muralla (120), castillo (200), universidad (60) y banco (50).
+- La pólvora pide azufre: las armas de pólvora (10 por batallón en lugar del carbón), los fusiles y las armas modernas (5), los cañones (20 en lugar del carbón), la artillería de campaña y la pesada (15) y la antiaérea (10).
+- Las partidas guardadas reciben la piedra inicial, y sus canteras y yacimientos de azufre empiezan llenos. Los demás yacimientos siguen donde estaban.
+
+## [1.106.0] - 2026-10-06
+
+### Cambiado
+- **La infantería comparte las armas de su época**, como en Hearts of Iron: armas antiguas (guerreros, espadachines, arqueros), clásicas (vélites, falanges, legionarios, montañeses), medievales (infantería pesada, ballesteros, almogávares), de pólvora (arcabuceros, piqueros, mosqueteros, cazadores de montaña), fusiles (infantería ligera, fusileros, ametralladores, cazadores alpinos) y armas modernas (tropas de montaña, paracaidistas). Un taller fabrica «Armas clásicas» para todos los que las usan.
+- Lo que cuestan las armas es el mismo para todos los modelos de una época; los modelos solo se distinguen por el oro de su instrucción. Las armas clásicas piden cobre; las medievales, hierro; las de pólvora y los fusiles, hierro y carbón; las modernas, hierro, carbón y caucho.
+- Un batallón que pasa a un modelo con las mismas armas (de falanges a legionarios) lo hace al momento, sin gastar equipo.
+- Las partidas guardadas juntan las armas de cada época.
+
+## [1.105.0] - 2026-10-06
+
+### Añadido
+- **Pestaña Unidades** en la pantalla de la nación: todos los tipos de batallón y de barco, por grupo y línea, con sus hombres, ataque, defensa, organización, velocidad, días de instrucción, el equipo que necesita un batallón y su coste. El modelo que entrenas ahora va en negrita; los antiguos y los que faltan por descubrir (con su avance), apagados. Su tooltip cuenta qué lo distingue y dónde se instruye.
+- **Barras de desplazamiento** cuando la información no cabe: el panel de la provincia o la unidad, el resumen de la nación, las ramas de la ciencia, las cifras de las plantillas, las tablas, la ayuda y el historial. Se mueven con la rueda, arrastrando la barra o pulsando en ella.
+
+### Cambiado
+- **La pestaña Equipo es ahora Almacén**, y además del equipo muestra todos los recursos: lo que hay, lo que entró y salió el último día por producción, comercio, consumo, ejército y talleres, el balance y en cuántos días se agota si baja.
+- **La producción de los talleres se titula por lo que se fabrica**, no por quién lo usa: «Armas (legionarios)», «Caballos (jinetes)», «Catapultas», «Cañones», «Tanques», «Suministros»... Para quién es, en su tooltip.
+- **Suministros**: exploradores, ingenieros y médicos comparten un mismo suministro, uno por hombre, en lugar de equipos, herramientas y botiquines. Las partidas guardadas juntan lo que tenían. El equipo de los ingenieros cuesta 20 de madera en vez de 40, como el de los demás.
+- Lo que gastan los talleres cuenta ya en el cambio diario de los recursos de la barra superior.
+- Las pestañas de la nación pasan a letra pequeña cuando su nombre no cabe.
+
 ## [1.104.0] - 2026-10-06
 
 ### Añadido

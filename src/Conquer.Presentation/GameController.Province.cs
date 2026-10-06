@@ -17,7 +17,7 @@ public sealed partial class GameController
     {
         var unit = SelectedUnit;
         if (unit == null && SelectedProvince < 0) return null;
-        var doc = new Document { OnClose = ClearSelection };
+        var doc = new Document { OnClose = ClearSelection, Key = unit != null ? $"unidad {unit.Id}" : $"provincia {SelectedProvince} {ProvinceTab}" };
         if (unit != null) UnitPanel(doc, unit);
         else ProvincePanel(doc, Map.Provinces[SelectedProvince]);
         return doc;
@@ -206,6 +206,12 @@ public sealed partial class GameController
         if (p.Info.WoodYield > 0) doc.Add(new Info(ResourceType.Wood.Name(), $"{p.Info.WoodYield:0.#} por mil hab./día", Icon: new ResourceIcon(ResourceType.Wood)));
         foreach (var r in Resources.Deposits.Where(r => p.Deposits[(int)r] > 0 && Human.Knows(r)))
         {
+            if (r.IsRenewable())
+            {
+                doc.Add(new Info(r.Name(), $"{p.Deposits[(int)r]:0.0}/día · pastos", Tone.Normal,
+                    $"Pastos de {r.Name().ToLowerInvariant()}: no se agotan. Dan lo máximo con {GameRules.DepositFullWorkers:N0} habitantes.", new ResourceIcon(r)));
+                continue;
+            }
             double left = p.Reserves[(int)r];
             string tip = left <= 0 ? "Esta bolsa se ha agotado y ya no produce."
                 : $"Bolsa de {r.Name().ToLowerInvariant()}: quedan {left:N0} de {p.DepositSizes[(int)r] * GameRules.DepositSizeMultiplier:N0}.\n" +
@@ -269,8 +275,8 @@ public sealed partial class GameController
         doc.Add(Section("Producción"));
         var current = GameSession.ProductionOf(p);
         doc.Add(new Paragraph(current is { } making
-            ? $"Fabrica {making.PieceName} de {making.Name.ToLowerInvariant()}: {GameSession.ProductionRate(p, making):0.#} al día. En almacén: {Human.EquipmentOf(making):N0}."
-            : "Parado: elige qué fabrica. El equipo va al almacén de la nación (pestaña Equipo, N).", current == null ? Tone.Accent : Tone.Dim, After: 4));
+            ? $"Fabrica {making.SupplyName.ToLowerInvariant()}: {GameSession.ProductionRate(p, making):0.#} al día. En almacén: {Human.EquipmentOf(making):N0}."
+            : "Parado: elige qué fabrica. Lo fabricado va al almacén de la nación (pestaña Almacén, N).", current == null ? Tone.Accent : Tone.Dim, After: 4));
         foreach (var (type, model) in GameSession.ProducibleModels(Human))
         {
             double rate = GameSession.ProductionRate(p, model);
@@ -278,8 +284,9 @@ public sealed partial class GameController
             string costPerDay = cost.Items.Length == 0 ? "gratis"
                 : string.Join(", ", cost.Items.Select(i => $"{i.Amount * rate / model.Pieces:0.#} {i.Type.Name().ToLowerInvariant()}"));
             var can = Session.CanProduce(p, model);
-            doc.Add(new Button($"{model.Name}  ·  {rate:0.#} {model.PieceName}/día", () => Show(Session.SetProduction(Human.Id, p.Id, model.Key)), can.Ok,
-                current?.Key == model.Key, $"{type.Line().Name}. Gasta {costPerDay} al día. En almacén: {Human.EquipmentOf(model):N0}." + (can.Ok ? "" : "\n" + can.Message),
+            doc.Add(new Button($"{model.SupplyName}  ·  {rate:0.#}/día", () => Show(Session.SetProduction(Human.Id, p.Id, model.Key)), can.Ok,
+                current?.Key == model.Key, $"Para {model.Name.ToLowerInvariant()} ({type.Line().Name.ToLowerInvariant()}): {model.PiecesText(model.Pieces)} por batallón. " +
+                $"Gasta {costPerDay} al día. En almacén: {Human.EquipmentOf(model):N0}." + (can.Ok ? "" : "\n" + can.Message),
                 TextSize.Small, Height: 28, Gap: 4, Icon: new BattalionIcon(type)));
         }
         if (current != null) doc.Add(new Button("Parar", () => Show(Session.SetProduction(Human.Id, p.Id, null)), Size: TextSize.Small, Height: 28, Gap: 4));

@@ -13,6 +13,8 @@ public static class GameRules
     public const double StartingFood = 3000;
     public const double StartingGold = 50;
     public const double StartingWood = 100;
+    /// <summary>Stone every nation starts with, for its first stone buildings.</summary>
+    public const double StartingStone = 50;
     /// <summary>A band of settlers a city sends out: this many of its citizens, plus <see cref="SettlersCost"/>.</summary>
     public const int SettlerCitizens = 300;
     /// <summary>What a band of settlers costs besides its <see cref="SettlerCitizens"/>.</summary>
@@ -293,7 +295,9 @@ public static class GameRules
         ResourceType.Food => 0.1,
         ResourceType.Wood => 0.5,
         ResourceType.Coal or ResourceType.Copper => 1.5,
-        ResourceType.Iron or ResourceType.Silver => 2,
+        ResourceType.Stone => 0.5,
+        ResourceType.Horses => 1.5,
+        ResourceType.Iron or ResourceType.Silver or ResourceType.Sulfur or ResourceType.Saltpeter => 2,
         ResourceType.Rubber => 3,
         ResourceType.Silicon or ResourceType.Oil or ResourceType.Aluminium => 4,
         _ => 1,
