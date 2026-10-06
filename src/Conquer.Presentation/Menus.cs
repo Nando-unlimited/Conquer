@@ -85,8 +85,14 @@ public sealed class NewGameMenu(IMenuNavigator navigator)
             [new Button("+", () => _seed++, randomMap), new Button("Azar", () => _seed = Random.Shared.Next(1, 100000), randomMap)]);
     }
 
-    public OptionRow PlayersRow() => new("Jugadores", true, [new Button("-", () => _players--, _players > 1)], _players.ToString(),
-        [new Button("+", () => _players++, _players < 8)]);
+    /// <summary>Most nations the chosen map takes (the Earth is always large).</summary>
+    private int MaxPlayers => (_kind == MapKind.Earth ? MapSize.Large : _size).Info().MaxNations;
+
+    /// <summary>The nations chosen, fewer if the map chosen afterwards takes fewer.</summary>
+    private int Players => Math.Min(_players, MaxPlayers);
+
+    public OptionRow PlayersRow() => new("Jugadores", true, [new Button("-", () => _players = Players - 1, Players > 1)], Players.ToString(),
+        [new Button("+", () => _players = Players + 1, Players < MaxPlayers, Tooltip: $"Hasta {MaxPlayers} naciones en este mapa.")]);
 
     public OptionRow DifficultyRow() => new("Dificultad", true, [new Button("-", () => _difficulty--, _difficulty > Difficulty.VeryEasy)],
         _difficulty.Info().Name, [new Button("+", () => _difficulty++, _difficulty < Difficulty.VeryHard)]);
@@ -104,7 +110,7 @@ public sealed class NewGameMenu(IMenuNavigator navigator)
     }
 
     /// <summary>The Earth map is fixed, but the seed still drives start positions, resources and rivals.</summary>
-    public Button Start => new("Comenzar", () => navigator.StartNewGame(WorldSettings.New(_kind, _seed, _difficulty, _size), _players), Size: TextSize.Large);
+    public Button Start => new("Comenzar", () => navigator.StartNewGame(WorldSettings.New(_kind, _seed, _difficulty, _size), Players), Size: TextSize.Large);
 
     public Button Back => new("Volver", navigator.ShowMainMenu);
 }

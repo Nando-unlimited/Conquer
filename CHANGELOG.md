@@ -2,6 +2,16 @@
 
 Todos los cambios del juego, del más reciente al más antiguo. Cada versión es un commit cuyo título es su número.
 
+## [1.109.0] - 2026-10-06
+
+### Añadido
+- **Países reales**: las naciones son 49 países de verdad (España, Francia, China, México, Perú, Etiopía...), cada una con sus ciudades y regiones reales. Tu primera ciudad es la capital de tu país (Madrid, París, Pekín...) y «Otro nombre» propone la siguiente; las provincias toman el nombre de sus regiones (Castilla, Normandía, Lanna...). Cuando se acaban, una nación toma nombres de los países que no juegan, luego de los demás y luego variantes como «Norte de Castilla»; solo al final inventa uno.
+- **Más naciones**: hasta 12 en el mapa diminuto, 16 en el pequeño, 24 en el mediano y 32 en el grande y la Tierra (antes, 8). A partir de la decimotercera, sus colores se generan para que todas se distingan.
+
+### Cambiado
+- **La mitad de provincias**, el doble de grandes, en todos los mapas: el grande tiene 12.500 (unas 10.750 de tierra) en vez de 25.000. Cada una alberga el doble de gente; los yacimientos siguen siendo uno por provincia.
+- Las partidas guardadas conservan su mapa y sus nombres.
+
 ## [1.108.0] - 2026-10-06
 
 ### Añadido

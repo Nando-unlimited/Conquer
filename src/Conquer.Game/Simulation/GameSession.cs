@@ -82,14 +82,15 @@ public sealed partial class GameSession
     {
         ResetProvinces(map);
         var session = new GameSession(map, seed) { _computerRivals = computerRivals };
-        var names = PlayerNames.Pick(playerCount, session._random);
+        if (playerCount > Countries.MaxNations) throw new ArgumentOutOfRangeException(nameof(playerCount), $"Como mucho {Countries.MaxNations} naciones.");
+        var countries = Countries.Pick(playerCount, session._random);
         // Faiths come from a generator of their own, so the rest of the game stays as it was.
         var faiths = new Random(seed ^ 0x7E11);
         var starts = session.PickStartProvinces(playerCount);
 
         for (int i = 0; i < playerCount; i++)
         {
-            var player = new Player(i, names[i], PlayerNames.Colors[i % PlayerNames.Colors.Length], i == HumanPlayerId);
+            var player = new Player(i, countries[i].Name, Countries.Color(i), i == HumanPlayerId);
             // The difficulty sets how much the human starts with; rivals always start with the standard stockpile.
             double start = player.IsHuman ? session.Difficulty.Info().StartingResources : 1;
             player.Stockpile[ResourceType.Food] = GameRules.StartingFood * start;
@@ -599,6 +600,7 @@ public sealed partial class GameSession
         if (!nameCheck.Ok) return nameCheck;
         Players[playerId].Stockpile.TrySpend(GameRules.CityCost);
         p.PlannedCityName = name.Trim();
+        _usedCityNames.Add(p.PlannedCityName);
         p.ConstructionDaysLeft = BuildDays(Players[playerId], GameRules.CityBuildingDays);
         return CommandResult.Success($"La ciudad de {p.PlannedCityName} en obras: {p.ConstructionDaysLeft} días.");
     }
@@ -614,12 +616,6 @@ public sealed partial class GameSession
             return CommandResult.Fail($"Ya hay una ciudad llamada {name}.");
         return CommandResult.Success();
     }
-
-    /// <summary>A city name nobody uses yet, to offer the player; it is not reserved.</summary>
-    public string SuggestCityName() => CityNames.Suggest(_usedCityNames, Random.Shared);
-
-    /// <summary>A free city name from the game's own random numbers, so computer rivals stay deterministic.</summary>
-    internal string NextCityName() => CityNames.Suggest(_usedCityNames, _random);
 
     /// <summary>What to call a place in messages: its city if it has one, otherwise the province.</summary>
     public string PlaceName(Province p) => CityIn(p)?.Name ?? p.DisplayName;
@@ -815,7 +811,7 @@ public sealed partial class GameSession
         SetOwner(p, playerId);
         Settle(p, unit.Citizens, GameRules.StartingMood);
         RemoveUnit(unit);
-        AddCity(Players[playerId], p, name?.Trim() ?? CityNames.Next(_usedCityNames, _random));
+        AddCity(Players[playerId], p, name?.Trim() ?? NextCityName(playerId));
         return CommandResult.Success();
     }
 
@@ -960,14 +956,8 @@ public sealed partial class GameSession
         if (p.ReligionId < 0 || p.Population < 1) p.ReligionId = Players[playerId].ReligionId;
         p.OwnerId = p.ControllerId = playerId;
         Players[playerId].Provinces.Add(p.Id);
-        NameProvince(p);
+        NameProvince(p, playerId);
         OwnershipChanged?.Invoke(p.Id);
-    }
-
-    /// <summary>The first nation to claim a province names it; the name stays whoever holds it later.</summary>
-    private void NameProvince(Province p)
-    {
-        if (p.Name.Length == 0 && p.IsClaimable) p.Name = ProvinceNames.Next(_usedProvinceNames, _random);
     }
 
     /// <summary>Raised with the province id whenever a province changes hands (the client recolours the map).</summary>
@@ -1021,7 +1011,7 @@ public sealed partial class GameSession
     /// </summary>
     private List<int> PickStartProvinces(int count)
     {
-        const int MinLandmassProvinces = 200;
+        const int MinLandmassProvinces = 100;
         var landmassSize = LandmassSizes();
         var candidates = Map.Provinces
             .Where(p => p.IsClaimable && p.Info.FoodYield >= 1.0 && p.Info.Carrying >= 6 && p.Neighbors.Length > 2)

@@ -175,6 +175,7 @@ public sealed partial class GameSession
             p.Institutions.UnionWith(ps.Institutions ?? []);
             p.Name = ps.Name ?? "";
             if (p.Name.Length > 0) session._usedProvinceNames.Add(p.Name);
+            if (p.PlannedCityName != null) session._usedCityNames.Add(p.PlannedCityName);
             foreach (var o in ps.Training ?? []) p.Training.Add(FromSave(o, Level));
             // Before 1.61.0 there were no cultures: the people share their ruler's.
             p.CultureId = ps.CultureId ?? (p.Population >= 1 ? p.OwnerId : -1);
@@ -342,7 +343,7 @@ public sealed partial class GameSession
             session._ais.Add(ai);
         }
         // Saves from before provinces were named on claiming: those with an owner get their name now.
-        foreach (var p in map.Provinces.Where(p => p.IsOwned && p.Name.Length == 0)) session.NameProvince(p);
+        foreach (var p in map.Provinces.Where(p => p.IsOwned && p.Name.Length == 0)) session.NameProvince(p, p.OwnerId);
         if (!save.RealisticPopulation)
             foreach (var p in map.Provinces.Where(p => p.Population > 0)) p.Population = Math.Min(p.Population, session.CapacityOf(p));
         return session;

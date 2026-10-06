@@ -61,6 +61,21 @@ public class MenuTests(WorldFixture world)
         Assert.Equal(music, AudioSettings.Current.Music);
     }
     [Fact]
+    public void EachMapSizeTakesUpToItsNumberOfNations()
+    {
+        var nav = new FakeNavigator();
+        var menu = new NewGameMenu(nav);
+        for (int i = 0; i < 60; i++) menu.PlayersRow().After![0].Press();
+        Assert.Equal(MapSize.Large.Info().MaxNations.ToString(), menu.PlayersRow().Value);
+        Assert.False(menu.PlayersRow().After![0].Enabled);
+        menu.SizeRow().Buttons[(int)MapSize.Tiny].Press();
+        Assert.Equal(MapSize.Tiny.Info().MaxNations.ToString(), menu.PlayersRow().Value);
+        menu.Start.Press();
+        Assert.Equal(MapSize.Tiny.Info().MaxNations, nav.Players);
+        Assert.All(MapSizes.All, size => Assert.InRange(size.Info().MaxNations, 2, Countries.MaxNations));
+    }
+
+    [Fact]
     public void TheNewGameMenuStartsTheChosenGame()
     {
         var nav = new FakeNavigator();

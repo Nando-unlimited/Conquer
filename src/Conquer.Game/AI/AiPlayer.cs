@@ -150,7 +150,7 @@ internal sealed partial class AiPlayer
         if (site == null) return false;
         bool spare = GameRules.CityCost.Items.All(i =>
             _player.Stockpile[i.Type] - i.Amount >= (i.Type == ResourceType.Wood ? WoodKeptForRecruiting : GoldKeptForRecruiting));
-        if (spare) _session.BuildCity(_player.Id, site.Id, _session.NextCityName());
+        if (spare) _session.BuildCity(_player.Id, site.Id, _session.NextCityName(_player.Id));
         return true;
     }
 

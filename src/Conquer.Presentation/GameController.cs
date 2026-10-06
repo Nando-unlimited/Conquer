@@ -264,10 +264,10 @@ public sealed partial class GameController
     public void OpenCityNaming(int? unitId, int provinceId)
     {
         Naming = new CityNaming(unitId, provinceId);
-        CityName = Session.SuggestCityName();
+        CityName = Session.SuggestCityName(Human.Id);
     }
 
-    public void SuggestCityName() => CityName = Session.SuggestCityName();
+    public void SuggestCityName() => CityName = Session.SuggestCityName(Human.Id, CityName);
 
     public void CancelCityNaming() => Naming = null;
 

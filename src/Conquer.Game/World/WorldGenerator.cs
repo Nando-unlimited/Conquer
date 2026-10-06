@@ -34,7 +34,8 @@ public enum MapSize
 
 /// <param name="LandFraction">Share of the planet that is land.</param>
 /// <param name="ProvinceCount">Provinces the whole map is split into, sea included: fewer for the land makes them bigger.</param>
-public sealed record MapSizeInfo(string Name, string Description, double LandFraction, int ProvinceCount);
+/// <param name="MaxNations">Most nations a game on it can have: enough land for each to grow, and time running smoothly at the top speed.</param>
+public sealed record MapSizeInfo(string Name, string Description, double LandFraction, int ProvinceCount, int MaxNations);
 
 public static class MapSizes
 {
@@ -42,10 +43,10 @@ public static class MapSizes
 
     private static readonly Dictionary<MapSize, MapSizeInfo> Table = new()
     {
-        [MapSize.Tiny] = new("Diminuto", "Unas islas y un continente pequeño, en provincias grandes: unas seis veces menos provincias que el grande.", 0.12, 5100),
-        [MapSize.Small] = new("Pequeño", "Poca tierra, en provincias más grandes: unas tres veces menos provincias que el grande.", 0.18, 9300),
-        [MapSize.Medium] = new("Mediano", "Menos tierra y provincias algo más grandes: unos dos tercios de las provincias del grande.", 0.24, 17500),
-        [MapSize.Large] = new("Grande", "Un 30 % de tierra en provincias del tamaño de siempre.", 0.3, 25000),
+        [MapSize.Tiny] = new("Diminuto", "Unas islas y un continente pequeño, en provincias grandes: unas seis veces menos provincias que el grande.", 0.12, 2550, 12),
+        [MapSize.Small] = new("Pequeño", "Poca tierra, en provincias más grandes: unas tres veces menos provincias que el grande.", 0.18, 4650, 16),
+        [MapSize.Medium] = new("Mediano", "Menos tierra y provincias algo más grandes: unos dos tercios de las provincias del grande.", 0.24, 8750, 24),
+        [MapSize.Large] = new("Grande", "Un 30 % de tierra, en las provincias más pequeñas.", 0.3, 12500, 32),
     };
 
     public static MapSizeInfo Info(this MapSize size) => Table[size];
