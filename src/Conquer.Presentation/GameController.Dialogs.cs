@@ -20,10 +20,11 @@ public sealed record OfficerColumn(string Title, OfficerCard? Current, Button? R
 
 /// <summary>
 /// The window to edit one of the player's units: its name (typed into <see cref="GameController.UnitName"/>), its
-/// battalions or ships to split off, the units it can merge with and, for those with one, its officer.
+/// battalions or ships to split off, the parts of a brigade or division that can leave it (<see cref="Parts"/>), the units it
+/// can merge with or take in and, for those with one, its officer.
 /// </summary>
 public sealed record UnitEditorWindow(string Title, Button Rename, Button? AutomaticName, string? BattalionsTitle, IReadOnlyList<Button> Battalions,
-    Button? Split, IReadOnlyList<Button> Merges, OfficerColumn? Officer);
+    Button? Split, IReadOnlyList<Button> Merges, OfficerColumn? Officer, IReadOnlyList<Button> Parts);
 
 /// <summary>
 /// The window to lay a road or railway: the destinations nearest first (<see cref="Hidden"/> for those that do not fit),
@@ -112,19 +113,47 @@ public sealed partial class GameController
                 _splitSelection.Clear();
             }, can.Ok, Tooltip: can.Ok ? "Salen juntos y forman una unidad nueva, sin oficial." : can.Message, Size: TextSize.Small);
 
-            // The player's other units in the province that can join this one.
+            // The player's other units in the province: their battalions can join this regiment (or their ships this fleet),
+            // or they can go into this unit, or this one into them, as a part.
             foreach (var other in Session.Units.Where(u => u.IsFleet == unit.IsFleet && (u.IsMilitary || u.IsFleet) && !u.IsAboard
                                                           && u.OwnerId == Human.Id && u.ProvinceId == unit.ProvinceId && u.Id != unit.Id))
             {
-                var canMerge = Session.CanMerge(unit, other);
                 string size = other.IsFleet ? Formations.ShipCount(other.Battalions.Count) : Formations.BattalionCount(other.Battalions.Count);
-                string tip = canMerge.Ok
-                    ? "Sus tropas pasan a esta unidad." + (other.Officer is { } o ? $" Su oficial, {o.Title}, " + (unit.Officer == null ? "toma el mando." : "vuelve a la reserva.") : "")
-                    : canMerge.Message;
-                merges.Add(new Button($"Unir {other.Name} ({size})", () => Show(Session.Merge(Human.Id, unit.Id, other.Id)), canMerge.Ok, Tooltip: tip, Size: TextSize.Small));
+                string officer = other.Officer is { } o ? $" Su oficial, {o.Title}, " + (unit.Officer == null ? "toma el mando." : "vuelve a la reserva.") : "";
+                var canMerge = Session.CanMerge(unit, other);
+                if (unit.IsFleet || canMerge.Ok)
+                    merges.Add(new Button($"Unir {other.Name} ({size})", () => Show(Session.Merge(Human.Id, unit.Id, other.Id)), canMerge.Ok,
+                        Tooltip: canMerge.Ok ? (unit.IsFleet ? "Sus barcos pasan a esta flota." : "Sus batallones pasan a este regimiento.") + officer : canMerge.Message,
+                        Size: TextSize.Small));
+                if (unit.IsFleet) continue;
+                var canIncorporate = Session.CanIncorporate(unit, other);
+                bool intoOther = other.Size > unit.Size;
+                merges.Add(new Button(intoOther ? $"Incorporarse a {other.Name}" : $"Incorporar {other.Name} ({size})",
+                    () => Show(Session.Incorporate(Human.Id, unit.Id, other.Id)), canIncorporate.Ok,
+                    Tooltip: canIncorporate.Ok
+                        ? (intoOther ? "Esta unidad pasa a ser parte de aquella, con su número y su nombre." : "Pasa a ser parte de esta unidad, con su número y su nombre." + officer)
+                        : canIncorporate.Message,
+                    Size: TextSize.Small));
             }
         }
-        return new UnitEditorWindow($"Editar {unit.Name}", rename, automatic, battalionsTitle, battalions, split, merges, unit.HasOfficer ? OfficerColumn(unit) : null);
+
+        // A brigade's or division's parts, each of which can leave as a unit of its own.
+        var parts = new List<Button>();
+        if (unit.IsMilitary && unit.Size != Echelon.Regiment)
+        {
+            var canDetach = Session.CanDetach(unit);
+            var list = GameSession.PartsOf(unit);
+            for (int i = 0; i < list.Count; i++)
+            {
+                int index = i;
+                var (name, size, count) = list[i];
+                parts.Add(new Button($"Separar {name} ({(size == Echelon.Brigade ? "brigada, " : "")}{Formations.BattalionCount(count)})",
+                    () => Show(Session.Detach(Human.Id, unit.Id, index)), canDetach.Ok,
+                    Tooltip: canDetach.Ok ? "Sale como una unidad propia en la misma provincia, sin oficial." : canDetach.Message, Size: TextSize.Small));
+            }
+        }
+        return new UnitEditorWindow($"Editar {unit.Name}", rename, automatic, battalionsTitle, battalions, split, merges, unit.HasOfficer ? OfficerColumn(unit) : null,
+            parts);
     }
 
     /// <summary>

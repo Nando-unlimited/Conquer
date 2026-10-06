@@ -242,6 +242,27 @@ public class ControllerTests(WorldFixture world)
     }
 
     [Fact]
+    public void TheUnitEditorFormsABrigadeAndLetsARegimentGo()
+    {
+        var game = GameWithRegiment(out var regiment);
+        var other = game.Session.AddRegiment(game.Human.Id, regiment.ProvinceId, BattalionType.LightInfantry);
+        string otherName = other.Name;
+        game.OpenUnitEditor(regiment);
+        var editor = game.UnitEditor()!;
+        Assert.Contains(editor.Merges, b => b.Text.StartsWith("Unir ") && b.Enabled);
+        Assert.Empty(editor.Parts);
+
+        editor.Merges.First(b => b.Text.StartsWith("Incorporar ")).Press();
+        Assert.Equal(Echelon.Brigade, regiment.Size);
+        editor = game.UnitEditor()!;
+        Assert.Equal(2, editor.Parts.Count);
+        editor.Parts.First(b => b.Text.Contains(otherName)).Press();
+        Assert.Contains(game.Session.Units, u => u.Name == otherName && u.Size == Echelon.Regiment);
+        Assert.Single(regiment.Regiments);
+        Assert.All(game.UnitEditor()!.Parts, b => Assert.False(b.Enabled)); // the last part stays
+    }
+
+    [Fact]
     public void TheUnitEditorRenamesAndTheAutomaticNameComesBack()
     {
         var game = GameWithRegiment(out var regiment);

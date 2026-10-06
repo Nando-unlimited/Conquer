@@ -2,6 +2,23 @@
 
 Todos los cambios del juego, del más reciente al más antiguo. Cada versión es un commit cuyo título es su número.
 
+## [1.102.0] - 2026-10-06
+
+Segunda parte de la nueva estructura militar: las formaciones.
+
+### Cambiado
+- **Regimientos, brigadas y divisiones**: un regimiento tiene hasta 5 batallones; una brigada, hasta 4 regimientos; una división, hasta 5 brigadas y regimientos y nunca más de 10.000 hombres. Cada una es una sola ficha en el mapa (III, X o XX), que se mueve y combate entera.
+- **Organizar las unidades** desde el editor de la unidad, con las de la misma provincia:
+  - «Unir» junta los batallones de dos regimientos en uno (hasta 5).
+  - «Incorporar» mete una unidad en otra: dos regimientos forman una brigada; un regimiento entra en una brigada, o forma una división con ella si ya tiene cuatro; dos brigadas forman una división; una división acoge regimientos y brigadas.
+  - «Separar» saca un regimiento de una brigada, o una brigada o un regimiento de una división, como unidad propia, con su número y su nombre.
+  - Los batallones marcados se separan como un regimiento nuevo (hasta 5).
+- Regimientos, brigadas y divisiones se numeran aparte. Al crecer, una unidad toma el siguiente número de su nuevo tamaño; el nombre que le diste se queda en la parte que era.
+- El oficial asciende con su unidad: coronel para un regimiento, brigadier para una brigada y general de división para una división.
+- El panel de la unidad la describe por sus partes («División de 1 brigada y 1 regimiento») y agrupa sus batallones por brigada y regimiento, con sus hombres respecto a su plantilla completa.
+- Las plantillas diseñan un regimiento: hasta 5 batallones.
+- Los rivales llenan sus regimientos y los agrupan en brigadas y divisiones.
+
 ## [1.101.0] - 2026-10-06
 
 Primera parte de la nueva estructura militar: los tipos de batallón.

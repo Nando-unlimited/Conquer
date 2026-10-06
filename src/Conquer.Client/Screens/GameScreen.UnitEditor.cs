@@ -40,8 +40,10 @@ public sealed partial class GameScreen
         NameSection(editor, x, ref left, column);
         if (editor.BattalionsTitle != null)
         {
-            BattalionSection(editor, x, ref left, column, bottom);
+            // Parts and organising first: a division's battalions can run past the window.
+            PartsSection(editor, x, ref left, column, bottom);
             MergeSection(editor, x, ref left, column, bottom);
+            BattalionSection(editor, x, ref left, column, bottom);
         }
         if (editor.Officer != null)
         {
@@ -81,11 +83,11 @@ public sealed partial class GameScreen
         y += 44;
     }
 
-    /// <summary>The player's other units in the province that can join this one.</summary>
+    /// <summary>The player's other units in the province: to join this one, go into it or take it in.</summary>
     private void MergeSection(UnitEditorWindow editor, float x, ref float y, float w, float bottom)
     {
         if (editor.Merges.Count == 0) return;
-        Ui.Text(x, y, "Unir con esta unidad", Theme.Text, bold: true);
+        Ui.Text(x, y, "Unir e incorporar", Theme.Text, bold: true);
         y += 26;
         foreach (var merge in editor.Merges)
         {
@@ -93,6 +95,22 @@ public sealed partial class GameScreen
             DocumentView.Press(Ui, merge, new Rect(x, y, w, 26));
             y += 30;
         }
+        y += 10;
+    }
+
+    /// <summary>A brigade's or division's parts, each with its button to leave as a unit of its own.</summary>
+    private void PartsSection(UnitEditorWindow editor, float x, ref float y, float w, float bottom)
+    {
+        if (editor.Parts.Count == 0) return;
+        Ui.Text(x, y, "Partes", Theme.Text, bold: true);
+        y += 26;
+        foreach (var part in editor.Parts)
+        {
+            if (y + 28 > bottom) break;
+            DocumentView.Press(Ui, part, new Rect(x, y, w, 26));
+            y += 30;
+        }
+        y += 10;
     }
 
     /// <summary>Who leads the unit, the reserve to choose a replacement from and the button to recruit another.</summary>

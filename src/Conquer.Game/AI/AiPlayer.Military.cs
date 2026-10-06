@@ -20,8 +20,8 @@ internal sealed partial class AiPlayer
     private const double PeacefulDays = 2 * 365;
     /// <summary>Units attack once they have recovered this share of their organisation.</summary>
     private const double ReadyOrganisation = 0.6;
-    /// <summary>It builds its combat units up to brigades.</summary>
-    private const int BattalionsPerUnit = 6;
+    /// <summary>It fills its regiments up to a full regiment, and gathers them into brigades and divisions.</summary>
+    private const int BattalionsPerUnit = MilitaryRules.MaxBattalionsPerRegiment;
     /// <summary>The highest HQ level it raises: corps and armies.</summary>
     private const int HighestHeadquarters = 2;
     /// <summary>A big nation keeps a battalion for this many provinces, even with few cities.</summary>
@@ -144,17 +144,26 @@ internal sealed partial class AiPlayer
     private bool Spare(ResourceCost cost) => cost.Items.All(i =>
         _player.Stockpile[i.Type] - i.Amount >= (i.Type == ResourceType.Wood ? WoodKeptForRecruiting : i.Type == ResourceType.Gold ? GoldKeptForRecruiting : 0));
 
-    /// <summary>Merges small units into brigades, raises corps and army HQs as the army grows, and attaches everyone.</summary>
+    /// <summary>
+    /// Fills small regiments up, gathers the units standing together into brigades and divisions, raises corps and
+    /// army HQs as the army grows, and attaches everyone.
+    /// </summary>
     private void OrganiseArmy()
     {
         foreach (var group in Army.Where(u => !u.IsMoving && !_session.InBattle(u)).GroupBy(u => u.ProvinceId))
         {
-            var regiments = group.OrderByDescending(u => u.Battalions.Count).ToList();
+            var regiments = group.Where(u => u.Size == Echelon.Regiment).OrderByDescending(u => u.Battalions.Count).ToList();
             foreach (var small in regiments.Where(u => u.Battalions.Count < BattalionsPerUnit).ToList())
             {
                 var host = regiments.FirstOrDefault(u => u != small && _session.UnitById(u.Id) != null && u.Battalions.Count + small.Battalions.Count <= BattalionsPerUnit);
                 if (host != null && _session.UnitById(small.Id) != null) _session.Merge(_player.Id, host.Id, small.Id);
             }
+            // The biggest formation takes in the others while they fit.
+            var units = group.Where(u => _session.UnitById(u.Id) != null).OrderByDescending(u => u.Size).ThenByDescending(u => u.Battalions.Count).ToList();
+            for (int i = 0; i < units.Count; i++)
+                for (int j = i + 1; j < units.Count; j++)
+                    if (_session.UnitById(units[i].Id) != null && _session.UnitById(units[j].Id) != null && _session.CanIncorporate(units[i], units[j]).Ok)
+                        _session.Incorporate(_player.Id, units[i].Id, units[j].Id);
         }
 
         var army = Army.ToList();

@@ -88,13 +88,14 @@ public class OfficerTests(WorldFixture world)
         s.AssignOfficer(0, unit.Id, officer.Id);
         Assert.Equal(OfficerRank.Colonel, officer.Rank);
 
-        Assert.True(s.Merge(0, unit.Id, s.AddRegiment(0, home.Id, [.. Enumerable.Repeat(BattalionType.LightInfantry, 3)]).Id).Ok);
+        // Taking in a regiment makes a brigade; taking in a brigade, a division.
+        Assert.True(s.Incorporate(0, unit.Id, s.AddRegiment(0, home.Id, [.. Enumerable.Repeat(BattalionType.LightInfantry, 3)]).Id).Ok);
         Assert.Equal(OfficerRank.Brigadier, officer.Rank);
-        Assert.True(s.Merge(0, unit.Id, s.AddRegiment(0, home.Id, BattalionType.LightInfantry).Id).Ok);
+        Assert.True(s.Incorporate(0, unit.Id, s.AddRegiment(0, home.Id, [.. Enumerable.Repeat(BattalionType.LightInfantry, 7)]).Id).Ok);
         Assert.Equal(OfficerRank.MajorGeneral, officer.Rank);
 
-        // Promotions stick when the unit shrinks, and a senior officer keeps their rank at the head of a regiment.
-        Assert.True(s.Split(0, unit.Id, [0, 1, 2, 3, 4]).Ok);
+        // Promotions stick when the unit shrinks, and a senior officer keeps their rank at the head of a smaller unit.
+        Assert.True(s.Detach(0, unit.Id, 0).Ok);
         Assert.Equal(OfficerRank.MajorGeneral, officer.Rank);
     }
 
@@ -149,9 +150,14 @@ public class OfficerTests(WorldFixture world)
         Assert.False(s.RenameUnit(0, unit.Id, new string('x', MilitaryRules.MaxUnitNameLength + 1)).Ok);
         Assert.Equal("Los Tercios", unit.Name);
 
-        // A custom name stays when the unit grows; an empty one brings back the automatic name, which follows the size.
-        s.Merge(0, unit.Id, s.AddRegiment(0, home.Id, [.. Enumerable.Repeat(BattalionType.LightInfantry, 3)]).Id);
+        // A custom name stays when battalions join; an empty one brings back the automatic name.
+        Assert.True(s.Merge(0, unit.Id, s.AddRegiment(0, home.Id, [.. Enumerable.Repeat(BattalionType.LightInfantry, 3)]).Id).Ok);
         Assert.Equal("Los Tercios", unit.Name);
+        // Grown into a brigade, the regiment keeps its name inside it, and the brigade is named for its own number.
+        Assert.True(s.Incorporate(0, unit.Id, s.AddRegiment(0, home.Id, BattalionType.LightInfantry).Id).Ok);
+        Assert.EndsWith("Brigada", unit.Name);
+        Assert.Contains("Los Tercios", unit.Regiments.Select(r => r.Name));
+        Assert.True(s.RenameUnit(0, unit.Id, "La Vieja").Ok);
         Assert.True(s.RenameUnit(0, unit.Id, "").Ok);
         Assert.Null(unit.CustomName);
         Assert.NotEqual(automatic, unit.Name);

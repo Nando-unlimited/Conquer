@@ -112,7 +112,7 @@ public sealed partial class NationScreen
         ];
 
         var slots = new List<TemplateSlot>();
-        for (int i = 0; i < MilitaryRules.MaxBattalionsPerUnit; i++)
+        for (int i = 0; i < MilitaryRules.MaxBattalionsPerRegiment; i++)
         {
             if (i >= template.Battalions.Count)
             {
@@ -138,7 +138,7 @@ public sealed partial class NationScreen
 
         // What a unit of this design is like.
         var details = new Document();
-        details.Add(new Heading(Formations.CombatName(template.Battalions.Count), Tone.Accent, Height: 28));
+        details.Add(new Heading(Formations.CombatName(Echelon.Regiment), Tone.Accent, Height: 28));
         var known = Player.Techs;
         details.Add(new Pair("Hombres", $"{template.Men(known):N0}"));
         details.Add(new Pair("Instrucción", $"{GameSession.TrainingDays(Player, template)} días"));
@@ -155,7 +155,7 @@ public sealed partial class NationScreen
         if (template.AnyMounted(known)) details.Add(new Paragraph("Los montados atacan a la mitad en bosques, pantanos y montañas.", Tone.Dim));
 
         return new TemplatesPage(list, actions, template.Name,
-            $"{Formations.CombatName(template.Battalions.Count)} de {Formations.BattalionCount(template.Battalions.Count)}", slots, add, details);
+            $"{Formations.CombatName(Echelon.Regiment)} de {Formations.BattalionCount(template.Battalions.Count)}", slots, add, details);
     }
 
     // ------------------------------------------------------------------ diplomacy

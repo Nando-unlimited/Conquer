@@ -1,9 +1,9 @@
 namespace Conquer.Game.Military;
 
 /// <summary>
-/// The formations of an army. Battalions, trained in cities, form the units that march and fight, named
-/// by their size: a regiment (1 to 3 battalions), a brigade (4 to 6) or a division (7 to 12); merging
-/// and splitting them moves them up and down. Above them only headquarters: corps command combat units,
+/// The formations of an army. Battalions, trained in cities, form regiments (up to 5); regiments form brigades (up
+/// to 4) and brigades and regiments form divisions (up to 5 of them, 10,000 men). Each regiment, brigade or division
+/// goes about the map as one unit (<see cref="Echelon"/>). Above them only headquarters: corps command combat units,
 /// armies command corps and army groups command armies (the HQ levels 1-3).
 /// </summary>
 public static class Formations
@@ -23,11 +23,20 @@ public static class Formations
         new("Grupo de ejércitos", "grupos de ejércitos", false),
     ];
 
-    /// <summary>A combat unit of so many battalions: regiment up to 3, brigade up to 6, division beyond.</summary>
-    private static Names CombatSize(int battalions) => battalions <= 3 ? Regiment : battalions <= 6 ? Brigade : Division;
+    private static Names Size(Echelon echelon) => echelon switch
+    {
+        Echelon.Regiment => Regiment,
+        Echelon.Brigade => Brigade,
+        _ => Division,
+    };
 
-    /// <summary>NATO echelon marks over a combat unit of so many battalions: "III" regiment, "X" brigade, "XX" division.</summary>
-    public static string CombatEchelon(int battalions) => battalions <= 3 ? "III" : battalions <= 6 ? "X" : "XX";
+    /// <summary>NATO echelon marks over a combat unit: "III" regiment, "X" brigade, "XX" division.</summary>
+    public static string CombatEchelon(Echelon echelon) => echelon switch
+    {
+        Echelon.Regiment => "III",
+        Echelon.Brigade => "X",
+        _ => "XX",
+    };
 
     /// <summary>
     /// The NATO symbol a combat unit shows for its battalions: the role most of them share (ties go to the front line);
@@ -73,8 +82,14 @@ public static class Formations
         },
     };
 
-    /// <summary>"Regimiento", "Brigada" or "División" for a combat unit of so many battalions.</summary>
-    public static string CombatName(int battalions) => CombatSize(battalions).Singular;
+    /// <summary>"Regimiento", "Brigada" or "División".</summary>
+    public static string CombatName(Echelon echelon) => Size(echelon).Singular;
+
+    /// <summary>"regimientos", "brigadas", "divisiones".</summary>
+    public static string CombatPluralOf(Echelon echelon) => Size(echelon).Plural;
+
+    /// <summary>"1 regimiento", "3 brigadas".</summary>
+    public static string Count(int n, Echelon echelon) => n == 1 ? $"1 {Size(echelon).Singular.ToLowerInvariant()}" : $"{n} {Size(echelon).Plural}";
 
     /// <summary>What combat units are called together, for headings and messages.</summary>
     public const string CombatPlural = "unidades de combate";
@@ -98,9 +113,9 @@ public static class Formations
         type.Line().Group == BattalionGroup.Navy ? type.Line().Name : "Batallón de " + type.Line().Name.ToLowerInvariant();
 
     /// <summary>A combat unit's name from its number and size: "3.er Regimiento", "3.ª Brigada", "3.ª División".</summary>
-    public static string CombatUnitName(int number, int battalions)
+    public static string CombatUnitName(int number, Echelon echelon)
     {
-        var names = CombatSize(battalions);
+        var names = Size(echelon);
         return $"{number}{Ordinal(number, names.Feminine)} {names.Singular}";
     }
 

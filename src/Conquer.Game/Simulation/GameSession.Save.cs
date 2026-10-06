@@ -41,9 +41,11 @@ public sealed partial class GameSession
         Cities = Cities.Select(c => new CitySave(c.Id, c.Name, c.OwnerId, c.ProvinceId, c.FoundedHours, c.FestivalUntilHours)).ToList(),
         Units = Units.Select(u => new UnitSave(
             u.Id, u.OwnerId, u.Type, u.ProvinceId, u.Type is UnitType.Regiment or UnitType.Fleet ? 0 : u.Citizens, u.Number, u.HeadquartersLevel,
-            [.. u.Battalions.Select(b => new BattalionSave(b.Type, b.Strength, b.Organisation, b.Experience, b.Model))],
+            [.. u.Ships.Select(ToSave)],
             u.CommanderId, u.AttackingProvinceId, [.. u.Path], u.HoursToNext, u.StepHours, u.CarrierId,
-            Officer: u.Officer is { } o ? ToSave(o) : null, CustomName: u.CustomName, AutoClaim: u.AutoClaim)).ToList(),
+            Officer: u.Officer is { } o ? ToSave(o) : null, CustomName: u.CustomName, AutoClaim: u.AutoClaim,
+            Size: u.Size, Regiments: u.IsMilitary ? [.. u.Regiments.Select(ToSave)] : null,
+            Brigades: u.Brigades.Count > 0 ? [.. u.Brigades.Select(b => new BrigadeSave(b.Number, b.CustomName, [.. b.Regiments.Select(ToSave)]))] : null)).ToList(),
         Migrations = Migrations.Select(m => new MigrationSave(m.Id, m.OwnerId, m.FromProvinceId, m.ToProvinceId, m.People,
             m.DepartHours, m.ArriveHours, m.Forced, m.Mood)).ToList(),
         Battles = _battles.Select(b => new BattleSave(b.ProvinceId, b.AttackerId, b.DefenderId, b.StartHours, [.. b.Attackers], b.AttackerLosses, b.DefenderLosses)).ToList(),
@@ -103,6 +105,19 @@ public sealed partial class GameSession
     private static OfficerSave ToSave(Officer o) => new(o.Id, o.Name, [.. o.Traits], o.StartingSkill, o.Victories, o.Rank, o.Branch);
 
     private static Officer FromSave(OfficerSave o) => new(o.Id, o.Name, o.Traits, o.StartingSkill, o.Victories, o.Rank, o.Branch);
+
+    private static BattalionSave ToSave(Battalion b) => new(b.Type, b.Strength, b.Organisation, b.Experience, b.Model);
+
+    private static Battalion FromSave(BattalionSave b) => new(b.Type, b.Model) { Strength = b.Strength, Organisation = b.Organisation, Experience = b.Experience };
+
+    private static RegimentSave ToSave(Regiment r) => new(r.Number, r.CustomName, [.. r.Battalions.Select(ToSave)]);
+
+    private static Regiment FromSave(RegimentSave r)
+    {
+        var regiment = new Regiment(r.Number, r.CustomName);
+        regiment.Battalions.AddRange(r.Battalions.Select(FromSave));
+        return regiment;
+    }
 
     /// <summary>Whether the province differs from how <see cref="ResetProvinces"/> leaves it.</summary>
     private static TrainingSave ToSave(TrainingOrder o) =>
@@ -218,6 +233,7 @@ public sealed partial class GameSession
                 if (BuildingType.Workshop.Info().RequiresTech is { } tech && owner.Techs.Contains(tech)) p.AddBuilding(BuildingType.Workshop.For(owner));
             }
 
+        var flat = new Dictionary<Unit, List<Battalion>>();
         foreach (var u in save.Units)
         {
             var unit = new Unit(u.Id, session.Players[u.OwnerId], u.Type, u.ProvinceId, u.Citizens, u.Number, Level(u.HeadquartersLevel))
@@ -228,7 +244,20 @@ public sealed partial class GameSession
                 HoursToNext = u.HoursToNext,
                 StepHours = u.StepHours,
             };
-            foreach (var b in u.Battalions) unit.Battalions.Add(new Battalion(b.Type, b.Model) { Strength = b.Strength, Organisation = b.Organisation, Experience = b.Experience });
+            if (unit.IsFleet) unit.Ships.AddRange(u.Battalions.Select(FromSave));
+            else if (u.Regiments != null)
+            {
+                unit.Size = u.Size;
+                unit.Regiments.AddRange(u.Regiments.Select(FromSave));
+                foreach (var b in u.Brigades ?? [])
+                {
+                    var brigade = new Brigade(b.Number, b.CustomName);
+                    brigade.Regiments.AddRange(b.Regiments.Select(FromSave));
+                    unit.Brigades.Add(brigade);
+                }
+            }
+            // Saves from 1.101.0 kept a combat unit's battalions in one list: they are arranged once the numbers are back.
+            else if (u.Battalions.Count > 0) flat[unit] = [.. u.Battalions.Select(FromSave)];
             unit.CustomName = u.CustomName;
             unit.AutoClaim = u.AutoClaim;
             // Generals from before officers become officers of their HQ's rank, and HQs from before generals get one now.
@@ -278,6 +307,12 @@ public sealed partial class GameSession
         {
             var key = (n.PlayerId, n.Level > 0 ? Level(n.Level) : n.Level);
             session._unitNumbers[key] = Math.Max(session._unitNumbers.GetValueOrDefault(key), n.Number);
+        }
+        foreach (var (unit, battalions) in flat)
+        {
+            string? name = unit.CustomName;
+            session.Organise(unit, battalions);
+            if (unit.Size == Echelon.Regiment) unit.CustomName = name;
         }
         // A chain of command that no longer fits the levels (after moving old HQs) comes apart.
         foreach (var unit in session.Units.Where(u => u.CommanderId is int c && (session.UnitById(c) is not { } hq || hq.HeadquartersLevel != u.CommandLevel + 1)))

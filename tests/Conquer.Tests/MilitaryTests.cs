@@ -49,9 +49,9 @@ public class MilitaryTests(WorldFixture world)
     [Fact]
     public void UnitsShowTheNatoSymbolOfTheirSizeAndArm()
     {
-        Assert.Equal("III", Formations.CombatEchelon(3));
-        Assert.Equal("X", Formations.CombatEchelon(4));
-        Assert.Equal("XX", Formations.CombatEchelon(7));
+        Assert.Equal("III", Formations.CombatEchelon(Echelon.Regiment));
+        Assert.Equal("X", Formations.CombatEchelon(Echelon.Brigade));
+        Assert.Equal("XX", Formations.CombatEchelon(Echelon.Division));
         Assert.Equal(["XXX", "XXXX", "XXXXX"], CommandLevels.All.Select(l => l.Symbol));
 
         Assert.Equal(UnitFunction.Infantry, Formations.Function([BattalionType.LightInfantry, BattalionType.RangedInfantry]));
@@ -687,12 +687,12 @@ public class MilitaryTests(WorldFixture world)
 
         Assert.False(s.AddToTemplate(0, template.Id, BattalionType.RangedInfantry).Ok); // archery not known yet
         s.Human.Learn(Tech.Archery);
-        for (int i = 1; i < MilitaryRules.MaxBattalionsPerUnit; i++) Assert.True(s.AddToTemplate(0, template.Id, BattalionType.RangedInfantry).Ok);
+        for (int i = 1; i < MilitaryRules.MaxBattalionsPerRegiment; i++) Assert.True(s.AddToTemplate(0, template.Id, BattalionType.RangedInfantry).Ok);
         Assert.False(s.AddToTemplate(0, template.Id, BattalionType.LightInfantry).Ok); // full
 
         Assert.True(s.DuplicateTemplate(0, template.Id).Ok);
         Assert.Equal(template.Battalions, s.Human.Templates[^1].Battalions);
-        for (int i = 0; i < MilitaryRules.MaxBattalionsPerUnit - 1; i++) Assert.True(s.RemoveFromTemplate(0, template.Id, 0).Ok);
+        for (int i = 0; i < MilitaryRules.MaxBattalionsPerRegiment - 1; i++) Assert.True(s.RemoveFromTemplate(0, template.Id, 0).Ok);
         Assert.False(s.RemoveFromTemplate(0, template.Id, 0).Ok); // at least one battalion
 
         foreach (var t in s.Human.Templates.Skip(1).ToList()) Assert.True(s.DeleteTemplate(0, t.Id).Ok);
@@ -890,25 +890,15 @@ public class MilitaryTests(WorldFixture world)
     [Fact]
     public void CombatUnitsAreNamedByTheirSize()
     {
-        Assert.Equal("3.er Regimiento", Formations.CombatUnitName(3, 3));
-        Assert.Equal("12.º Regimiento", Formations.CombatUnitName(12, 1));
-        Assert.Equal("3.ª Brigada", Formations.CombatUnitName(3, 4));
-        Assert.Equal("3.ª División", Formations.CombatUnitName(3, 7));
+        Assert.Equal("3.er Regimiento", Formations.CombatUnitName(3, Echelon.Regiment));
+        Assert.Equal("12.º Regimiento", Formations.CombatUnitName(12, Echelon.Regiment));
+        Assert.Equal("3.ª Brigada", Formations.CombatUnitName(3, Echelon.Brigade));
+        Assert.Equal("3.ª División", Formations.CombatUnitName(3, Echelon.Division));
         Assert.Equal("IV Cuerpo", Formations.HeadquartersName(1, 4));
         Assert.Equal("1.er Ejército", Formations.HeadquartersName(2, 1));
         Assert.Equal("2.º Grupo de ejércitos", Formations.HeadquartersName(3, 2));
         Assert.Equal("Batallón de arqueros", Formations.BattalionName(BattalionType.RangedInfantry.First()));
         Assert.Equal("Trirreme", Formations.BattalionName(BattalionType.Trireme.First()));
-
-        // A regiment that grows into a division keeps its number.
-        var (s, a, _) = TwoNations();
-        var unit = s.AddRegiment(0, a.Id, BattalionType.LightInfantry);
-        string number = unit.Name.Split(' ')[0].TrimEnd('º', '.', 'e', 'r');
-        var other = s.AddRegiment(0, a.Id, [.. Enumerable.Repeat(BattalionType.LightInfantry, 6)]);
-        Assert.True(s.Merge(0, unit.Id, other.Id).Ok);
-        Assert.Equal(7, unit.Battalions.Count);
-        Assert.EndsWith("División", unit.Name);
-        Assert.StartsWith(number, unit.Name);
     }
 
     [Fact]

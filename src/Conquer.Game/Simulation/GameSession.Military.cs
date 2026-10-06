@@ -26,12 +26,69 @@ public sealed partial class GameSession
 
     // ------------------------------------------------------------------ units
 
-    /// <summary>Puts a new regiment of the given battalions on the map, at full strength (tests and training).</summary>
+    /// <summary>
+    /// Puts a new combat unit of the given battalions on the map, at full strength (tests and training): a regiment,
+    /// or a brigade or a division if they are more than a regiment holds (see <see cref="Organise"/>).
+    /// </summary>
     internal Unit AddRegiment(int ownerId, int provinceId, params BattalionType[] battalions)
     {
-        var unit = AddUnit(ownerId, UnitType.Regiment, provinceId, 0, NextUnitNumber(ownerId, CommandLevels.Combat));
-        foreach (var type in battalions) unit.Battalions.Add(NewBattalion(Players[ownerId], type));
+        var unit = AddUnit(ownerId, UnitType.Regiment, provinceId, 0);
+        Organise(unit, [.. battalions.Select(t => NewBattalion(Players[ownerId], t))]);
         return unit;
+    }
+
+    /// <summary>The numbering key of brigades and divisions, apart from the regiments' (<see cref="CommandLevels.Combat"/>) and the HQ levels.</summary>
+    private const int BrigadeNumbering = -3, DivisionNumbering = -4;
+
+    private int NextNumber(int playerId, Echelon echelon) => NextUnitNumber(playerId, echelon switch
+    {
+        Echelon.Regiment => CommandLevels.Combat,
+        Echelon.Brigade => BrigadeNumbering,
+        _ => DivisionNumbering,
+    });
+
+    /// <summary>
+    /// Arranges a combat unit's battalions: into regiments of up to <see cref="MilitaryRules.MaxBattalionsPerRegiment"/>;
+    /// one makes a regiment, up to <see cref="MilitaryRules.MaxRegimentsPerBrigade"/> a brigade, more a division of
+    /// brigades. Each new formation gets the next number of its size.
+    /// </summary>
+    private void Organise(Unit unit, IReadOnlyList<Battalion> battalions)
+    {
+        unit.Regiments.Clear();
+        unit.Brigades.Clear();
+        var regiments = battalions.Chunk(MilitaryRules.MaxBattalionsPerRegiment).Select(chunk =>
+        {
+            var regiment = new Regiment(NextNumber(unit.OwnerId, Echelon.Regiment));
+            regiment.Battalions.AddRange(chunk);
+            return regiment;
+        }).ToList();
+        if (regiments.Count <= 1)
+        {
+            unit.Size = Echelon.Regiment;
+            unit.Regiments.Add(regiments.FirstOrDefault() ?? new Regiment(NextNumber(unit.OwnerId, Echelon.Regiment)));
+            unit.Number = unit.Regiments[0].Number;
+            return;
+        }
+        if (regiments.Count <= MilitaryRules.MaxRegimentsPerBrigade)
+        {
+            unit.Size = Echelon.Brigade;
+            unit.Number = NextNumber(unit.OwnerId, Echelon.Brigade);
+            unit.Regiments.AddRange(regiments);
+            return;
+        }
+        unit.Size = Echelon.Division;
+        unit.Number = NextNumber(unit.OwnerId, Echelon.Division);
+        foreach (var chunk in regiments.Chunk(MilitaryRules.MaxRegimentsPerBrigade))
+        {
+            if (chunk.Length == 1)
+            {
+                unit.Regiments.Add(chunk[0]);
+                continue;
+            }
+            var brigade = new Brigade(NextNumber(unit.OwnerId, Echelon.Brigade));
+            brigade.Regiments.AddRange(chunk);
+            unit.Brigades.Add(brigade);
+        }
     }
 
     /// <summary>A new HQ, with a newly recruited general of the right rank at its head.</summary>
@@ -395,8 +452,8 @@ public sealed partial class GameSession
     public CommandResult CanAddToTemplate(Player player, RegimentTemplate template, BattalionType type)
     {
         if (type.First().Naval) return CommandResult.Fail("Los barcos no van en plantillas: se construyen sueltos en los puertos.");
-        if (template.Battalions.Count >= MilitaryRules.MaxBattalionsPerUnit)
-            return CommandResult.Fail($"Como mucho {Formations.BattalionCount(MilitaryRules.MaxBattalionsPerUnit)} por unidad.");
+        if (template.Battalions.Count >= MilitaryRules.MaxBattalionsPerRegiment)
+            return CommandResult.Fail($"Como mucho {Formations.BattalionCount(MilitaryRules.MaxBattalionsPerRegiment)} por regimiento.");
         var missing = type.First().Requires.Where(t => !player.Techs.Contains(t)).ToList();
         if (missing.Count > 0) return CommandResult.Fail("Requiere " + string.Join(" y ", missing.Select(t => t.Info().Name.ToLowerInvariant())) + ".");
         return CommandResult.Success();
@@ -438,21 +495,33 @@ public sealed partial class GameSession
         Players[playerId].Manpower -= template.Men(known);
         int days = TrainingDays(Players[playerId], template);
         p.Training.Add(new TrainingOrder(template, days));
-        return CommandResult.Success($"{Formations.CombatName(template.Battalions.Count)} de la {template.Name} en instrucción: {days} días.");
+        return CommandResult.Success($"{Formations.CombatName(Echelon.Regiment)} de la {template.Name} en instrucción: {days} días.");
     }
 
     // ------------------------------------------------------------------ organisation
 
-    public CommandResult CanMerge(Unit unit, Unit other)
+    /// <summary>What both organising commands check first: two combat units (or two fleets) of the nation, together in a province and at rest.</summary>
+    private static CommandResult CanOrganise(Unit unit, Unit other)
     {
         if (unit.Id == other.Id || unit.IsAboard || other.IsAboard || !(unit.IsMilitary && other.IsMilitary || unit.IsFleet && other.IsFleet))
             return CommandResult.Fail($"Solo se unen {Formations.CombatPlural} entre sí, o flotas entre sí.");
         if (unit.OwnerId != other.OwnerId || unit.ProvinceId != other.ProvinceId) return CommandResult.Fail("Deben estar en la misma provincia.");
         if (unit.AttackingProvinceId.HasValue || other.AttackingProvinceId.HasValue) return CommandResult.Fail("Una de ellas está atacando.");
-        if (unit.IsFleet && unit.Battalions.Count + other.Battalions.Count > MilitaryRules.MaxShipsPerFleet)
-            return CommandResult.Fail($"Como mucho {Formations.ShipCount(MilitaryRules.MaxShipsPerFleet)} por flota.");
-        if (unit.IsMilitary && unit.Battalions.Count + other.Battalions.Count > MilitaryRules.MaxBattalionsPerUnit)
-            return CommandResult.Fail($"Como mucho {Formations.BattalionCount(MilitaryRules.MaxBattalionsPerUnit)} por unidad.");
+        return CommandResult.Success();
+    }
+
+    /// <summary>Whether the other's battalions can join this one: two regiments with no more than a regiment's battalions between them, or two fleets.</summary>
+    public CommandResult CanMerge(Unit unit, Unit other)
+    {
+        var check = CanOrganise(unit, other);
+        if (!check.Ok) return check;
+        if (unit.IsFleet)
+            return unit.Ships.Count + other.Ships.Count > MilitaryRules.MaxShipsPerFleet
+                ? CommandResult.Fail($"Como mucho {Formations.ShipCount(MilitaryRules.MaxShipsPerFleet)} por flota.") : CommandResult.Success();
+        if (unit.Size != Echelon.Regiment || other.Size != Echelon.Regiment)
+            return CommandResult.Fail("Solo se juntan los batallones de dos regimientos: una brigada o una división se incorpora entera.");
+        if (unit.Battalions.Count + other.Battalions.Count > MilitaryRules.MaxBattalionsPerRegiment)
+            return CommandResult.Fail($"Un regimiento lleva como mucho {Formations.BattalionCount(MilitaryRules.MaxBattalionsPerRegiment)}: incorpóralo para formar una brigada.");
         return CommandResult.Success();
     }
 
@@ -462,11 +531,28 @@ public sealed partial class GameSession
         if (UnitById(unitId) is not { } unit || unit.OwnerId != playerId || UnitById(otherId) is not { } other) return CommandResult.Fail("Unidad no válida.");
         var check = CanMerge(unit, other);
         if (!check.Ok) return check;
-        unit.Battalions.AddRange(other.Battalions);
-        other.Battalions.Clear();
-        foreach (var cargo in CargoOf(other).ToList()) cargo.CarrierId = unit.Id;
+        if (unit.IsFleet)
+        {
+            unit.Ships.AddRange(other.Ships);
+            other.Ships.Clear();
+            foreach (var cargo in CargoOf(other).ToList()) cargo.CarrierId = unit.Id;
+        }
+        else
+        {
+            unit.Regiments[0].Battalions.AddRange(other.Regiments[0].Battalions);
+            other.Regiments[0].Battalions.Clear();
+        }
+        Absorb(unit, other);
+        return CommandResult.Success($"{other.Name} se une a {unit.Name}.");
+    }
+
+    /// <summary>
+    /// The other unit is gone into this one: this one stops to take it in and keeps its own officer; the other's takes over
+    /// only if it had none, or else goes to the reserve. The officer rises to the rank of what he leads now.
+    /// </summary>
+    private void Absorb(Unit unit, Unit other)
+    {
         unit.CommanderId ??= other.CommanderId;
-        // The unit keeps its own officer; the other's takes over only if it had none, or else goes to the reserve.
         if (unit.Officer == null)
         {
             unit.Officer = other.Officer;
@@ -476,29 +562,188 @@ public sealed partial class GameSession
         unit.Path.Clear();
         unit.StepHours = unit.HoursToNext = 0;
         Promote(unit);
-        return CommandResult.Success($"{other.Name} se une a {unit.Name}.");
+    }
+
+    /// <summary>Of two combat units, the one the other goes into: the bigger formation, or this one if they are alike.</summary>
+    private static (Unit Host, Unit Part) HostAndPart(Unit unit, Unit other) => other.Size > unit.Size ? (other, unit) : (unit, other);
+
+    /// <summary>
+    /// Whether one combat unit can go into the other as a part of it: two regiments make a brigade; a regiment joins a
+    /// brigade (or makes a division with it once it has its four); two brigades make a division; a division takes in
+    /// regiments and brigades up to five parts and ten thousand men. A division never goes into another.
+    /// </summary>
+    public CommandResult CanIncorporate(Unit unit, Unit other)
+    {
+        var check = CanOrganise(unit, other);
+        if (!check.Ok) return check;
+        if (unit.IsFleet) return CommandResult.Fail("Las flotas se unen barco a barco.");
+        var (host, part) = HostAndPart(unit, other);
+        if (part.Size == Echelon.Division) return CommandResult.Fail("Una división no cabe en otra.");
+        bool division = host.Size == Echelon.Division || part.Size == Echelon.Brigade
+                        || host.Size == Echelon.Brigade && host.Regiments.Count >= MilitaryRules.MaxRegimentsPerBrigade;
+        if (!division) return CommandResult.Success();
+        if (host.Size == Echelon.Division && host.Parts >= MilitaryRules.MaxDivisionParts)
+            return CommandResult.Fail($"Una división tiene como mucho {MilitaryRules.MaxDivisionParts} brigadas y regimientos.");
+        if (host.FullMen + part.FullMen > MilitaryRules.MaxDivisionMen)
+            return CommandResult.Fail($"Una división tiene como mucho {MilitaryRules.MaxDivisionMen:N0} hombres.");
+        return CommandResult.Success();
+    }
+
+    /// <summary>
+    /// One combat unit goes into the other as a part of it (see <see cref="CanIncorporate"/>), keeping its number and name
+    /// inside it. The one that grows into a brigade or a division takes the next number of its new size.
+    /// </summary>
+    public CommandResult Incorporate(int playerId, int unitId, int otherId)
+    {
+        if (UnitById(unitId) is not { } unit || unit.OwnerId != playerId || UnitById(otherId) is not { } other) return CommandResult.Fail("Unidad no válida.");
+        var check = CanIncorporate(unit, other);
+        if (!check.Ok) return check;
+        var (host, part) = HostAndPart(unit, other);
+        string partName = part.Name;
+        switch (host.Size)
+        {
+            case Echelon.Regiment:
+                AsRegiment(host);
+                host.Regiments.Add(AsRegiment(part));
+                Grow(host, Echelon.Brigade);
+                break;
+            case Echelon.Brigade when part.Size == Echelon.Regiment && host.Regiments.Count < MilitaryRules.MaxRegimentsPerBrigade:
+                host.Regiments.Add(AsRegiment(part));
+                break;
+            case Echelon.Brigade:
+                var brigade = AsBrigade(host);
+                host.Regiments.Clear();
+                host.Brigades.Add(brigade);
+                AddPart(host, part);
+                Grow(host, Echelon.Division);
+                break;
+            default:
+                AddPart(host, part);
+                break;
+        }
+        Absorb(host, part);
+        return CommandResult.Success($"{partName} se incorpora a {host.Name}.");
+    }
+
+    /// <summary>The unit takes the next number of its new size and loses the name it had at the old one.</summary>
+    private void Grow(Unit unit, Echelon echelon)
+    {
+        unit.Size = echelon;
+        unit.Number = NextNumber(unit.OwnerId, echelon);
+        unit.CustomName = null;
+    }
+
+    /// <summary>A regiment or brigade unit as a part of a division.</summary>
+    private static void AddPart(Unit division, Unit part)
+    {
+        if (part.Size == Echelon.Brigade) division.Brigades.Add(AsBrigade(part));
+        else division.Regiments.Add(AsRegiment(part));
+    }
+
+    /// <summary>A regiment unit's regiment, carrying the unit's number and name to wherever it goes.</summary>
+    private static Regiment AsRegiment(Unit unit)
+    {
+        var regiment = unit.Regiments[0];
+        regiment.Number = unit.Number;
+        regiment.CustomName = unit.CustomName;
+        return regiment;
+    }
+
+    /// <summary>A brigade unit as a brigade, with its number, name and regiments.</summary>
+    private static Brigade AsBrigade(Unit unit)
+    {
+        var brigade = new Brigade(unit.Number, unit.CustomName);
+        brigade.Regiments.AddRange(unit.Regiments);
+        return brigade;
+    }
+
+    /// <summary>
+    /// What a brigade or division can let go of, in order: a division's brigades, then its regiments; a brigade's
+    /// regiments. The index of one is what <see cref="Detach"/> takes.
+    /// </summary>
+    public static IReadOnlyList<(string Name, Echelon Echelon, int Battalions)> PartsOf(Unit unit) =>
+        [.. unit.Brigades.Select(b => (b.Name, Echelon.Brigade, b.Battalions.Count())),
+         .. unit.Regiments.Select(r => (r.Name, Echelon.Regiment, r.Battalions.Count))];
+
+    public CommandResult CanDetach(Unit unit)
+    {
+        if (!unit.IsMilitary || unit.IsAboard || unit.Size == Echelon.Regiment) return CommandResult.Fail("Solo las brigadas y las divisiones se separan en partes.");
+        if (unit.Parts < 2) return CommandResult.Fail("Debe quedarle al menos una parte.");
+        if (unit.AttackingProvinceId.HasValue) return CommandResult.Fail("Está atacando.");
+        return CommandResult.Success();
+    }
+
+    /// <summary>
+    /// A brigade or regiment of the unit (by its index in <see cref="PartsOf"/>) leaves it and goes about on its own in the
+    /// same province, with its own number and name and no officer.
+    /// </summary>
+    public CommandResult Detach(int playerId, int unitId, int part)
+    {
+        if (UnitById(unitId) is not { } unit || unit.OwnerId != playerId) return CommandResult.Fail("Unidad no válida.");
+        var check = CanDetach(unit);
+        if (!check.Ok) return check;
+        if (part < 0 || part >= unit.Parts) return CommandResult.Fail("Parte no válida.");
+        var leaving = AddUnit(playerId, UnitType.Regiment, unit.ProvinceId, 0);
+        if (part < unit.Brigades.Count)
+        {
+            var brigade = unit.Brigades[part];
+            unit.Brigades.RemoveAt(part);
+            leaving.Size = Echelon.Brigade;
+            leaving.Number = brigade.Number;
+            leaving.CustomName = brigade.CustomName;
+            leaving.Regiments.AddRange(brigade.Regiments);
+        }
+        else
+        {
+            var regiment = unit.Regiments[part - unit.Brigades.Count];
+            unit.Regiments.Remove(regiment);
+            leaving.Size = Echelon.Regiment;
+            leaving.Number = regiment.Number;
+            leaving.CustomName = regiment.CustomName;
+            leaving.Regiments.Add(regiment);
+        }
+        return CommandResult.Success($"{leaving.Name} se separa de {unit.Name}.");
     }
 
     /// <summary>One battalion leaves its regiment and forms a new one in the same province.</summary>
     public CommandResult Split(int playerId, int unitId, int battalionIndex) => Split(playerId, unitId, [battalionIndex]);
 
     /// <summary>
-    /// The chosen battalions (or ships) leave their unit together and form a new one in the same province, with no
-    /// officer; the officer stays with the unit they leave.
+    /// The chosen battalions (or ships; by their place in <see cref="Unit.Battalions"/>) leave their unit together and
+    /// form a new regiment (or fleet) in the same province, with no officer; the officer stays with the unit they leave.
+    /// Regiments and brigades left empty are disbanded.
     /// </summary>
     public CommandResult Split(int playerId, int unitId, IReadOnlyCollection<int> battalionIndexes)
     {
         if (UnitById(unitId) is not { } unit || unit.OwnerId != playerId || !(unit.IsMilitary || unit.IsFleet) || unit.IsAboard) return CommandResult.Fail("Unidad no válida.");
-        var indexes = battalionIndexes.Distinct().OrderDescending().ToList();
+        var all = unit.Battalions;
+        var indexes = battalionIndexes.Distinct().Order().ToList();
         if (indexes.Count == 0) return CommandResult.Fail(unit.IsFleet ? "Elige qué barcos separar." : "Elige qué batallones separar.");
-        if (indexes.Any(i => i < 0 || i >= unit.Battalions.Count)) return CommandResult.Fail("Tropa no válida.");
-        if (indexes.Count >= unit.Battalions.Count) return CommandResult.Fail(unit.IsFleet ? "Debe quedar al menos un barco." : "Debe quedar al menos un batallón.");
+        if (indexes.Any(i => i < 0 || i >= all.Count)) return CommandResult.Fail("Tropa no válida.");
+        if (indexes.Count >= all.Count) return CommandResult.Fail(unit.IsFleet ? "Debe quedar al menos un barco." : "Debe quedar al menos un batallón.");
+        if (unit.IsMilitary && indexes.Count > MilitaryRules.MaxBattalionsPerRegiment)
+            return CommandResult.Fail($"Salen como un regimiento: como mucho {Formations.BattalionCount(MilitaryRules.MaxBattalionsPerRegiment)}.");
         if (unit.AttackingProvinceId.HasValue) return CommandResult.Fail("Está atacando.");
-        var leaving = indexes.Select(i => unit.Battalions[i]).Reverse().ToList();
+        var leaving = indexes.Select(i => all[i]).ToList();
         if (unit.IsFleet && CargoMen(unit) > unit.Capacity - leaving.Sum(b => b.Info.Capacity)) return CommandResult.Fail("La carga no cabría en el resto de la flota.");
-        foreach (int i in indexes) unit.Battalions.RemoveAt(i);
-        var split = AddUnit(playerId, unit.Type, unit.ProvinceId, 0, NextUnitNumber(playerId, unit.IsFleet ? FleetNumbering : CommandLevels.Combat));
-        split.Battalions.AddRange(leaving);
+
+        Unit split;
+        if (unit.IsFleet)
+        {
+            foreach (var ship in leaving) unit.Ships.Remove(ship);
+            split = AddUnit(playerId, UnitType.Fleet, unit.ProvinceId, 0, NextUnitNumber(playerId, FleetNumbering));
+            split.Ships.AddRange(leaving);
+        }
+        else
+        {
+            foreach (var regiment in unit.Brigades.SelectMany(b => b.Regiments).Concat(unit.Regiments))
+                regiment.Battalions.RemoveAll(leaving.Contains);
+            foreach (var brigade in unit.Brigades) brigade.Regiments.RemoveAll(r => r.Battalions.Count == 0);
+            unit.Brigades.RemoveAll(b => b.Regiments.Count == 0);
+            unit.Regiments.RemoveAll(r => r.Battalions.Count == 0);
+            split = AddUnit(playerId, UnitType.Regiment, unit.ProvinceId, 0);
+            Organise(split, leaving);
+        }
         string what = leaving.Count == 1 ? Formations.BattalionName(leaving[0].Info) : unit.IsFleet ? $"{leaving.Count} barcos" : Formations.BattalionCount(leaving.Count);
         return CommandResult.Success($"{what} {(leaving.Count == 1 ? "forma" : "forman")} una unidad nueva: {split.Name}.");
     }

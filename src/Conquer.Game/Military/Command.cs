@@ -76,7 +76,7 @@ public sealed class TrainingOrder
     /// <summary>"Batallón de arqueros", "Brigada (Plantilla II)", "Cuartel general de cuerpo".</summary>
     public string Name =>
         Battalion is BattalionType b ? Formations.BattalionName(b)
-        : TemplateName != null ? $"{Formations.CombatName(TemplateBattalions.Count)} ({TemplateName})"
+        : TemplateName != null ? $"{Formations.CombatName(Echelon.Regiment)} ({TemplateName})"
         : $"Cuartel general de {Formations.LevelName(HeadquartersLevel).ToLowerInvariant()}";
 }
 

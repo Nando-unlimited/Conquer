@@ -115,9 +115,8 @@ public sealed class City
 }
 
 /// <summary>
-/// Something on the map that walks or sails: a band of settlers, a regiment of 1 to 6 battalions (the
-/// smallest unit that fights on land), the headquarters of a brigade, division, corps, army or army group,
-/// or a fleet of ships.
+/// Something on the map that walks or sails: a band of settlers, a combat unit (a regiment, a brigade or a division,
+/// which goes about as one and fights on land), the headquarters of a corps, army or army group, or a fleet of ships.
 /// </summary>
 public sealed class Unit
 {
@@ -128,10 +127,27 @@ public sealed class Unit
     public int OwnerId => Owner.Id;
     public UnitType Type { get; }
     public int ProvinceId { get; set; }
-    /// <summary>Its number among its nation's units of the same level (0 for settlers).</summary>
-    public int Number { get; }
-    /// <summary>A regiment's battalions; empty for other units.</summary>
-    public List<Battalion> Battalions { get; } = [];
+    /// <summary>Its number among its nation's units of the same level and size (0 for settlers); a new one when it grows into a brigade or a division.</summary>
+    public int Number { get; set; }
+    /// <summary>A combat unit's size: regiment, brigade or division.</summary>
+    public Echelon Size { get; set; }
+    /// <summary>A combat unit's regiments: a regiment's one, a brigade's, or those a division has outside its brigades.</summary>
+    public List<Regiment> Regiments { get; } = [];
+    /// <summary>A division's brigades; empty for the rest.</summary>
+    public List<Brigade> Brigades { get; } = [];
+    /// <summary>A fleet's ships; empty for other units.</summary>
+    public List<Battalion> Ships { get; } = [];
+
+    /// <summary>All of a combat unit's battalions, through its brigades and regiments, or a fleet's ships; empty for other units.</summary>
+    public IReadOnlyList<Battalion> Battalions =>
+        Type == UnitType.Fleet ? Ships
+        : Brigades.Count == 0 && Regiments.Count == 1 ? Regiments[0].Battalions
+        : [.. Brigades.SelectMany(b => b.Battalions).Concat(Regiments.SelectMany(r => r.Battalions))];
+
+    /// <summary>What a combat unit is made of at the first level: a brigade's regiments, a division's brigades and regiments.</summary>
+    public int Parts => Brigades.Count + Regiments.Count;
+    /// <summary>A combat unit's men at full strength.</summary>
+    public int FullMen => Battalions.Sum(b => b.Info.Men);
     /// <summary>For an HQ, 1 (brigade) to 5 (army group); 0 for regiments.</summary>
     public int HeadquartersLevel { get; }
     /// <summary>The HQ this unit reports to, one level up; null while unattached.</summary>
@@ -176,7 +192,7 @@ public sealed class Unit
         UnitType.Settlers => "Colonos",
         UnitType.Fleet => Formations.FleetName(Number),
         UnitType.Headquarters => Formations.HeadquartersName(HeadquartersLevel, Number),
-        _ => Formations.CombatUnitName(Number, Battalions.Count),
+        _ => Formations.CombatUnitName(Number, Size),
     };
 
     /// <summary>Citizens in the unit: its settlers or staff, or the men left in a regiment's battalions or a fleet's crews.</summary>
@@ -193,10 +209,16 @@ public sealed class Unit
     public bool HasOfficer => Type is UnitType.Regiment or UnitType.Headquarters or UnitType.Fleet;
     /// <summary>The arm of the officer it needs: the navy for a fleet, the air force for a regiment of aircraft, the army otherwise.</summary>
     public OfficerBranch OfficerBranch => IsFleet ? OfficerBranch.Navy : Flies ? OfficerBranch.Air : OfficerBranch.Army;
-    /// <summary>The rank that goes with its size: colonel to major general for combat units and fleets (by battalions or ships), lieutenant general up for HQs.</summary>
-    public OfficerRank RequiredRank => Type == UnitType.Headquarters
-        ? OfficerRank.MajorGeneral + HeadquartersLevel
-        : Battalions.Count <= 3 ? OfficerRank.Colonel : Battalions.Count <= 6 ? OfficerRank.Brigadier : OfficerRank.MajorGeneral;
+    /// <summary>
+    /// The rank that goes with its size: colonel for a regiment, brigadier for a brigade, major general for a division;
+    /// for a fleet, the same by its ships; lieutenant general up for HQs.
+    /// </summary>
+    public OfficerRank RequiredRank => Type switch
+    {
+        UnitType.Headquarters => OfficerRank.MajorGeneral + HeadquartersLevel,
+        UnitType.Fleet => Ships.Count <= 3 ? OfficerRank.Colonel : Ships.Count <= 6 ? OfficerRank.Brigadier : OfficerRank.MajorGeneral,
+        _ => OfficerRank.Colonel + (int)Size,
+    };
     /// <summary>0 for regiments, 1-5 for HQs, -1 for units outside the chain of command.</summary>
     public int CommandLevel => Type switch
     {
@@ -229,7 +251,7 @@ public sealed class Unit
     /// <summary>NATO echelon marks over its symbol: III, X or XX for combat units by size, XXX to XXXXX for HQs; none otherwise.</summary>
     public string Echelon => Type switch
     {
-        UnitType.Regiment => Formations.CombatEchelon(Battalions.Count),
+        UnitType.Regiment => Formations.CombatEchelon(Size),
         UnitType.Headquarters => CommandLevels.Info(HeadquartersLevel).Symbol,
         _ => "",
     };

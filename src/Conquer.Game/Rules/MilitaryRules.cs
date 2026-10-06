@@ -5,8 +5,14 @@ namespace Conquer.Game.Rules;
 /// <summary>Tuning numbers for armies, combat, supply and command. Combat rates are per hour; the rest per day.</summary>
 public static class MilitaryRules
 {
-    /// <summary>Battalions in one combat unit at most: a division.</summary>
-    public const int MaxBattalionsPerUnit = 12;
+    /// <summary>Battalions in a regiment at most; a template designs one regiment.</summary>
+    public const int MaxBattalionsPerRegiment = 5;
+    /// <summary>Regiments in a brigade at most.</summary>
+    public const int MaxRegimentsPerBrigade = 4;
+    /// <summary>Brigades and regiments in a division at most...</summary>
+    public const int MaxDivisionParts = 5;
+    /// <summary>...and its men at full strength.</summary>
+    public const int MaxDivisionMen = 10_000;
     /// <summary>Ships in one fleet at most.</summary>
     public const int MaxShipsPerFleet = 10;
     /// <summary>A fleet in a port with a dry dock recovers organisation and crews this many times faster.</summary>

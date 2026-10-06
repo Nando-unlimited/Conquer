@@ -19,7 +19,7 @@ public sealed partial class GameSession
     internal Unit AddFleet(int ownerId, int provinceId, params BattalionType[] ships)
     {
         var fleet = AddUnit(ownerId, UnitType.Fleet, provinceId, 0, NextUnitNumber(ownerId, FleetNumbering));
-        foreach (var type in ships) fleet.Battalions.Add(NewBattalion(Players[ownerId], type));
+        foreach (var type in ships) fleet.Ships.Add(NewBattalion(Players[ownerId], type));
         return fleet;
     }
 
