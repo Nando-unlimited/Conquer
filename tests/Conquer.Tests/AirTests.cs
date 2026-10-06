@@ -168,4 +168,37 @@ public class AirTests(WorldFixture world)
             (again.Id, again.Name, again.BaseProvinceId, again.Mission, again.TargetProvinceId, again.Planes.Strength));
         Assert.Equal("2.ª Ala de cazas", loaded.AddWing(0, capital.Id, BattalionType.Fighters).Name);
     }
+
+    [Fact]
+    public void BomberRegimentsOfOldSavesBecomeWings()
+    {
+        var (s, capital) = WithAirfield();
+        capital.RemoveBuilding(BuildingType.Airfield);
+        var mixed = s.AddRegiment(0, capital.Id, BattalionType.LightInfantry, BattalionType.Bombers);
+        var bombers = s.AddRegiment(0, capital.Id, BattalionType.Bombers);
+        bombers.Battalions[0].Strength = 20;
+        var loaded = GameSession.Load(_map, s.ToSave("test"));
+        Assert.True(loaded.Map.Provinces[capital.Id].Has(BuildingType.Airfield)); // the capital gets one
+        Assert.Equal(2, loaded.Wings.Count);
+        Assert.All(loaded.Wings, w => Assert.Equal(capital.Id, w.BaseProvinceId));
+        Assert.Contains(loaded.Wings, w => w.Planes.Strength == 20);
+        Assert.Equal([BattalionType.LightInfantry], loaded.UnitById(mixed.Id)!.Battalions.Select(b => b.Type));
+        Assert.Null(loaded.UnitById(bombers.Id));
+    }
+
+    [Fact]
+    public void TheAirForceTabListsWingsAndAirfieldsAndFormsWings()
+    {
+        var (s, capital) = WithAirfield();
+        s.AddWing(0, capital.Id, BattalionType.Fighters);
+        var game = new Conquer.Presentation.GameController(s);
+        game.Nation.Visible = true;
+        game.Nation.Tab = Conquer.Presentation.NationTab.AirForce;
+        var page = Assert.IsType<Conquer.Presentation.TablesPage>(game.Nation.Page());
+        Assert.Equal(["Alas", "Aeródromos"], page.Tables.Take(2).Select(t => t.Title));
+        Assert.Single(page.Tables[0].Table.Rows);
+        var form = page.Tables[2].Table.Rows.SelectMany(r => r).OfType<Conquer.Presentation.ButtonsCell>().SelectMany(c => c.Buttons).First(b => b.Text == "Formar" && b.Enabled);
+        form.Press();
+        Assert.Single(capital.Training);
+    }
 }

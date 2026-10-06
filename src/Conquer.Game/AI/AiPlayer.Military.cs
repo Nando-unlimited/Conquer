@@ -62,6 +62,8 @@ internal sealed partial class AiPlayer
         var lines = (_armyTemplate?.Battalions ?? [BattalionType.LightInfantry]).Append(BattalionType.Scouts).Distinct()
             .Where(t => t.BestModel(_player.Techs) >= 0).ToList();
         if (_player.Techs.Contains(Tech.Engineering)) lines.Add(BattalionType.Engineers);
+        // With an airfield, the planes of the wings it forms (see BuildAirForce).
+        if (HasAirfield) lines.AddRange(AirLines.Where(t => t.BestModel(_player.Techs) >= 0));
         var planned = new Dictionary<BattalionType, double>();
         // The suministros also feed the army in battle: a full refill of every unit's ammunition is kept aside.
         double ammoReserve = _session.Units.Where(u => u.OwnerId == _player.Id && u.IsMilitary).Sum(GameSession.AmmoCapacity);

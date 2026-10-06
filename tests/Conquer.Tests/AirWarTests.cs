@@ -183,4 +183,16 @@ public class AirWarTests(WorldFixture world)
         var loaded = GameSession.Load(_map, s.ToSave("test"));
         Assert.Equal(1, loaded.AirSuperiority(0, loaded.Map.Provinces[b.Id]));
     }
+
+    [Fact]
+    public void TheComputerFliesItsWingsAtWar()
+    {
+        var (s, a, b) = War();
+        var fighters = s.AddWing(1, b.Id, BattalionType.Fighters);
+        var bombers = s.AddWing(1, b.Id, BattalionType.Bombers);
+        var ai = new Conquer.Game.AI.AiPlayer(s, s.Players[1], 3);
+        ai.Think(dailyDecisions: true);
+        Assert.Equal((AirMission.StrategicBombing, a.Id), (bombers.Mission, bombers.TargetProvinceId!.Value));
+        Assert.Equal(AirMission.AirSuperiority, fighters.Mission);
+    }
 }

@@ -179,7 +179,7 @@ public static class HelpTopics
             "- Cada tipo tiene tres modelos: biplanos con Aviación, monoplanos con Radar y reactores con Motor a reacción. Cada época vuela más lejos y pega más fuerte.",
             "## Aeródromos y alas",
             $"- Construye un Aeródromo (Aviación) en cualquier provincia tuya: alberga {MilitaryRules.WingsPerAirfield} alas. Cada ala son {MilitaryRules.PlanesPerWing} aviones, que fabrican los talleres y las fábricas como el resto del equipo.",
-            "- Forma las alas con los botones de aviones de la pestaña Ejército del aeródromo; el panel de la provincia muestra las que tiene.",
+            "- Forma las alas en la pestaña Fuerza aérea de la nación (N) o con los botones de aviones de la pestaña Ejército del aeródromo. La pestaña Fuerza aérea muestra todas tus alas con su misión y tus aeródromos.",
             $"- En su base, si tiene suministro, un ala recupera organización y repone aviones del almacén y tripulaciones de la reserva. Cada portaaviones lleva {MilitaryRules.WingsPerCarrier} alas de cazas, apoyo cercano o aviación naval, y si se hunde caen con él.",
             "- Un ala puede cambiar de base a otro aeródromo con sitio o a un portaaviones a menos del doble de su alcance. Si pierde su base, vuela al aeródromo tuyo más cercano con sitio; si no hay, se pierde.",
             "## Misiones",

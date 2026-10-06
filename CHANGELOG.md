@@ -2,6 +2,17 @@
 
 Todos los cambios del juego, del más reciente al más antiguo. Cada versión es un commit cuyo título es su número.
 
+## [1.116.0] - 2026-10-07
+
+La aviación (3 de 3), y con ella termina la nueva estructura militar.
+
+### Añadido
+- **Pestaña Fuerza aérea** en la pantalla de la nación: todas tus alas con su base, aviones, organización y misión (y si vuelan o se quedan en tierra), tus aeródromos con las alas que tienen y las que se forman, y un botón «Formar» por cada tipo de avión en el aeródromo con sitio más cercano a la capital.
+- **La IA usa la aviación**: construye aeródromos, fabrica aviones y forma alas (la mitad cazas, una cuarta parte apoyo cercano y el resto bombarderos). En guerra pone cazas y apoyo cercano sobre sus batallas, bombarderos sobre las ciudades enemigas y aviación naval sobre las flotas enemigas.
+
+### Cambiado
+- Los regimientos de bombarderos de las partidas guardadas pasan a ser alas en el aeródromo más cercano; si la nación no tiene ninguno, su capital recibe uno.
+
 ## [1.115.0] - 2026-10-06
 
 La aviación (2 de 3): misiones y combate aéreo.

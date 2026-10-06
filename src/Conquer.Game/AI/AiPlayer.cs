@@ -32,7 +32,7 @@ internal sealed partial class AiPlayer
         BuildingType.Barracks, BuildingType.Farm, BuildingType.Granary, BuildingType.Workshop, BuildingType.Temple, BuildingType.Library, BuildingType.Market,
         BuildingType.Mine, BuildingType.Sawmill, BuildingType.Aqueduct, BuildingType.HerbalistHut, BuildingType.Amphitheatre,
         BuildingType.Walls, BuildingType.University, BuildingType.Bank, BuildingType.Castle,
-        BuildingType.Factory, BuildingType.Hospital, BuildingType.PowerPlant, BuildingType.Port, BuildingType.DryDock,
+        BuildingType.Factory, BuildingType.Hospital, BuildingType.PowerPlant, BuildingType.Port, BuildingType.DryDock, BuildingType.Airfield,
     ];
     /// <summary>Within each branch, the first of these it can research: food, then the advances that pay for themselves.</summary>
     private static readonly Tech[] ResearchOrder =
@@ -106,6 +106,8 @@ internal sealed partial class AiPlayer
             BuildArmy();
             BuildNavy();
             ConvoysAndMissions(atWar);
+            BuildAirForce();
+            AirMissions(atWar);
             OrganiseArmy();
             Diplomacy();
             SeekAlliances();
@@ -168,6 +170,9 @@ internal sealed partial class AiPlayer
         // A workshop beside its barracks for the war machines; factories in its cities, as they pay off there.
         BuildingType.Workshop => p.Buildings.Contains(BuildingType.Barracks),
         BuildingType.Factory => p.CityId.HasValue,
+        // One airfield, and another for every eight cities, in the biggest ones.
+        BuildingType.Airfield => p.CityId.HasValue && _player.Provinces.Count(id => Map.Provinces[id].Has(BuildingType.Airfield))
+            < 1 + _session.Cities.Count(c => c.OwnerId == _player.Id) / 8,
         _ => true,
     };
 

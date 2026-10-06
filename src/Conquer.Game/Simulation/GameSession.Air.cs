@@ -76,6 +76,7 @@ public sealed partial class GameSession
         if (Map.DistanceKm(BaseOf(wing), target) > 2 * wing.Info.RangeKm) return CommandResult.Fail($"Está a más de {2 * wing.Info.RangeKm:N0} km.");
         wing.BaseProvinceId = carrierId is null ? target.Id : null;
         wing.CarrierId = carrierId;
+        _flyingAt = -1;
         // A new base: the old mission may be out of reach.
         if (wing.TargetProvinceId is int t && !InRange(wing, Map.Provinces[t])) wing.TargetProvinceId = null;
         return CommandResult.Success($"{wing.Name} se traslada a {(carrierId is int c ? UnitById(c)!.Name : PlaceName(target))}.");
@@ -91,6 +92,7 @@ public sealed partial class GameSession
         ReturnToReserve(wing.Owner, (int)Math.Round(wing.Planes.Strength));
         wing.Owner.AddEquipment(wing.Info, wing.PlaneCount);
         _wings.Remove(wing);
+        _flyingAt = -1;
         return CommandResult.Success($"{wing.Name} disuelta.");
     }
 
@@ -139,6 +141,42 @@ public sealed partial class GameSession
         wing.CarrierId = null;
         if (wing.Owner.IsHuman) Notify(wing.OwnerId, $"{wing.Name} ha perdido su base y aterriza en {PlaceName(airfield)}.");
         return true;
+    }
+
+    /// <summary>
+    /// Saves from before the air wings kept aircraft in regiments: each such battalion becomes a wing at its nation's
+    /// nearest airfield with room (the capital gets one if the nation has none), keeping its crews, organisation and
+    /// experience; with no room anywhere its planes go to the stockpile and its crews to the reserve. Regiments left
+    /// empty are gone.
+    /// </summary>
+    private void TurnFlyingBattalionsIntoWings()
+    {
+        foreach (var unit in Units.Where(u => u.IsMilitary && u.Battalions.Any(b => b.Info.Flies)).ToList())
+        {
+            var owner = unit.Owner;
+            var from = Map.Provinces[unit.ProvinceId];
+            foreach (var regiment in unit.Regiments.Concat(unit.Brigades.SelectMany(b => b.Regiments)))
+                foreach (var b in regiment.Battalions.Where(b => b.Info.Flies).ToList())
+                {
+                    regiment.Battalions.Remove(b);
+                    if (!owner.Provinces.Any(id => Map.Provinces[id].Has(BuildingType.Airfield))
+                        && CapitalProvince(owner) is { } capital) capital.AddBuilding(BuildingType.Airfield);
+                    var airfield = owner.Provinces.Select(id => Map.Provinces[id]).Where(p => AirfieldRoom(p, owner.Id) > 0).MinBy(p => Map.DistanceKm(p, from));
+                    if (airfield == null)
+                    {
+                        owner.AddEquipment(b.Info, b.StrengthShare * b.Info.Pieces);
+                        ReturnToReserve(owner, (int)Math.Round(b.Strength));
+                        continue;
+                    }
+                    var wing = new AirWing(_nextWingId++, owner, b, NextUnitNumber(owner.Id, WingNumbering)) { BaseProvinceId = airfield.Id };
+                    _wings.Add(wing);
+                    if (owner.IsHuman) Notify(owner.Id, $"Tus bombarderos de {unit.Name} forman ahora la {wing.Name} en {PlaceName(airfield)}.");
+                }
+            foreach (var brigade in unit.Brigades) brigade.Regiments.RemoveAll(r => r.Battalions.Count == 0);
+            unit.Brigades.RemoveAll(b => b.Regiments.Count == 0);
+            if (unit.Regiments.Count > 1) unit.Regiments.RemoveAll(r => r.Battalions.Count == 0);
+            if (unit.Battalions.Count == 0) RemoveUnit(unit);
+        }
     }
 
     /// <summary>The wings carried by a fleet go down with it.</summary>

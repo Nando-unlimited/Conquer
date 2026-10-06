@@ -53,6 +53,7 @@ public sealed partial class GameSession
         if (mission == AirMission.None)
         {
             wing.Mission = AirMission.None;
+            _flyingAt = -1;
             wing.TargetProvinceId = null;
             return CommandResult.Success($"{wing.Name} se queda en su base.");
         }
@@ -60,6 +61,7 @@ public sealed partial class GameSession
         if (targetProvinceId is not int target) return CommandResult.Fail("Elige la provincia de la misión.");
         if (!InRange(wing, Map.Provinces[target])) return CommandResult.Fail($"Está fuera de su alcance ({wing.Info.RangeKm:N0} km).");
         wing.Mission = mission;
+        _flyingAt = -1;
         wing.TargetProvinceId = target;
         return CommandResult.Success($"{wing.Name}: {AirMissionName(mission).ToLowerInvariant()} sobre {PlaceName(Map.Provinces[target])}.");
     }
@@ -68,6 +70,20 @@ public sealed partial class GameSession
     public bool IsFlying(AirWing wing) =>
         wing.Mission != AirMission.None && wing.Mission != AirMission.Paradrop && wing.TargetProvinceId is int t && InRange(wing, Map.Provinces[t])
         && wing.Planes.OrganisationShare >= MilitaryRules.MinFlyingOrganisation && wing.PlaneCount >= 1;
+
+    private long _flyingAt = -1;
+    private List<AirWing> _flying = [];
+
+    /// <summary>The wings flying their missions this hour (worked out once an hour, or again when a mission changes).</summary>
+    private List<AirWing> Flying()
+    {
+        if (_flyingAt != Date.Hours)
+        {
+            _flyingAt = Date.Hours;
+            _flying = [.. _wings.Where(IsFlying)];
+        }
+        return _flying;
+    }
 
     /// <summary>Whether the wing's mission reaches the province.</summary>
     public bool Covers(AirWing wing, Province p) =>
@@ -81,9 +97,9 @@ public sealed partial class GameSession
     public (double Mine, double Enemies) FighterCover(int playerId, Province p)
     {
         double mine = 0, enemies = 0;
-        foreach (var w in _wings)
+        foreach (var w in Flying())
         {
-            if (w.Mission != AirMission.AirSuperiority || !IsFlying(w) || !Covers(w, p)) continue;
+            if (w.Mission != AirMission.AirSuperiority || !Covers(w, p)) continue;
             double power = w.Info.AirAttack * Effectiveness(w);
             if (w.OwnerId == playerId) mine += power;
             else if (AtWar(w.OwnerId, playerId)) enemies += power;
@@ -108,7 +124,7 @@ public sealed partial class GameSession
     /// <summary>The fire a nation's attack aircraft add to its battles in a province, each hour.</summary>
     public double CloseAirSupport(int playerId, Province p)
     {
-        double fire = _wings.Where(w => w.OwnerId == playerId && w.Mission == AirMission.CloseSupport && IsFlying(w) && Covers(w, p))
+        double fire = Flying().Where(w => w.OwnerId == playerId && w.Mission == AirMission.CloseSupport && Covers(w, p))
             .Sum(w => w.Info.Attack * Effectiveness(w));
         return fire * (EnemyRulesTheAir(playerId, p) ? MilitaryRules.UnescortedBomberEffect : 1);
     }

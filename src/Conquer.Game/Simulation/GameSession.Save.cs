@@ -364,6 +364,7 @@ public sealed partial class GameSession
         }
         // Saves from before provinces were named on claiming: those with an owner get their name now.
         foreach (var p in map.Provinces.Where(p => p.IsOwned && p.Name.Length == 0)) session.NameProvince(p, p.OwnerId);
+        session.TurnFlyingBattalionsIntoWings();
         // Saves from before convoys: nations with a port get some to carry what they send over the sea.
         foreach (var player in session.Players.Where(p => p.Convoys < 0))
             player.Convoys = session.Shipyards(player).Any() ? MilitaryRules.ConvoysInOldSaves : 0;
