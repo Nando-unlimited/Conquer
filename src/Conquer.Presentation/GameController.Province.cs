@@ -259,6 +259,32 @@ public sealed partial class GameController
             "Haz clic en una de tus provincias. Los ciudadanos viajan a 10 km/h.", Height: 34));
     }
 
+    /// <summary>
+    /// What the province's workshop or factory makes: a button for each model the nation can make (the one it makes
+    /// lit), with how many pieces a day and what they cost, and one to stop it.
+    /// </summary>
+    private void ProductionSection(Document doc, Province p)
+    {
+        doc.Add(new Space(10));
+        doc.Add(Section("Producción"));
+        var current = GameSession.ProductionOf(p);
+        doc.Add(new Paragraph(current is { } making
+            ? $"Fabrica {making.PieceName} de {making.Name.ToLowerInvariant()}: {GameSession.ProductionRate(p, making):0.#} al día. En almacén: {Human.EquipmentOf(making):N0}."
+            : "Parado: elige qué fabrica. El equipo va al almacén de la nación (pestaña Equipo, N).", current == null ? Tone.Accent : Tone.Dim, After: 4));
+        foreach (var (type, model) in GameSession.ProducibleModels(Human))
+        {
+            double rate = GameSession.ProductionRate(p, model);
+            var cost = model.EquipmentCost;
+            string costPerDay = cost.Items.Length == 0 ? "gratis"
+                : string.Join(", ", cost.Items.Select(i => $"{i.Amount * rate / model.Pieces:0.#} {i.Type.Name().ToLowerInvariant()}"));
+            var can = Session.CanProduce(p, model);
+            doc.Add(new Button($"{model.Name}  ·  {rate:0.#} {model.PieceName}/día", () => Show(Session.SetProduction(Human.Id, p.Id, model.Key)), can.Ok,
+                current?.Key == model.Key, $"{type.Line().Name}. Gasta {costPerDay} al día. En almacén: {Human.EquipmentOf(model):N0}." + (can.Ok ? "" : "\n" + can.Message),
+                TextSize.Small, Height: 28, Gap: 4, Icon: new BattalionIcon(type)));
+        }
+        if (current != null) doc.Add(new Button("Parar", () => Show(Session.SetProduction(Human.Id, p.Id, null)), Size: TextSize.Small, Height: 28, Gap: 4));
+    }
+
     /// <summary>What sets a line apart in battle, beyond its numbers; null for the plain ones.</summary>
     public static string? LineNote(BattalionType type) => type switch
     {
@@ -310,6 +336,7 @@ public sealed partial class GameController
         }
 
         if (p.OwnerId != Human.Id) return;
+        if (GameSession.HasWorkshop(p)) ProductionSection(doc, p);
         doc.Add(new Space(10));
         doc.Add(Section("Construir"));
         var missing = new List<(string Name, string Reason)>();
@@ -368,7 +395,7 @@ public sealed partial class GameController
             int days = GameSession.TrainingDays(Human, template);
             var known = Human.Techs;
             string tip = $"{template.Name}: {template.Composition(known)}.\n{template.Men(known)} hombres de la provincia. Ataque {template.Attack(known):0.#}, defensa {template.Defense(known):0.#}." +
-                         $"\nCoste: {template.Cost(known)}. {TextFormat.TrainingDaysText(days, template.TrainingDays(known))}" + (can.Ok ? "" : "\n" + can.Message);
+                         $"\nCoste: {template.Cost(known)}. Equipo: {template.Equipment(known)}. {TextFormat.TrainingDaysText(days, template.TrainingDays(known))}" + (can.Ok ? "" : "\n" + can.Message);
             doc.Add(new Button($"{template.Name}  ·  {Formations.BattalionCount(template.Battalions.Count)}  ·  {days} d",
                 () => Show(Session.TrainTemplate(Human.Id, p.Id, template.Id)), can.Ok, Tooltip: tip, Size: TextSize.Small, Height: 28, Gap: 4));
         }
@@ -378,7 +405,7 @@ public sealed partial class GameController
         doc.Add(Section("Entrenar batallones sueltos"));
         foreach (var type in Battalions.All.Where(t => t.BestModel(Human.Techs) >= 0 && !t.Redundant(Human.Techs)))
         {
-            var info = GameSession.ModelFor(Human, type);
+            var info = GameSession.TrainedModel(Human, type);
             var can = Session.CanTrain(p, type);
             int days = GameSession.TrainingDays(Human, type);
             string tip = $"{Formations.BattalionName(info)} ({type.Line().Name.ToLowerInvariant()}, {type.Line().Group.Name().ToLowerInvariant()}): " +
@@ -387,7 +414,7 @@ public sealed partial class GameController
                          (info.Mounted ? "\nMontada: ataca a la mitad en bosques, pantanos y montañas." : "") +
                          (LineNote(type) is { } note ? "\n" + note : "") +
                          $"\nCoste: {info.Cost}. {TextFormat.TrainingDaysText(days, info.TrainingDays)} Mantenimiento: {TextFormat.UpkeepText([info.Cost])}." + (can.Ok ? "" : "\n" + can.Message);
-            doc.Add(new Button($"{info.Name}  ·  {info.Cost}  ·  {days} d", () => Show(Session.Train(Human.Id, p.Id, type)), can.Ok,
+            doc.Add(new Button($"{info.Name}  ·  {info.TrainingCost}  ·  {days} d", () => Show(Session.Train(Human.Id, p.Id, type)), can.Ok,
                 Tooltip: tip, Size: TextSize.Small, Height: 28, Gap: 4, Icon: new BattalionIcon(type)));
         }
 

@@ -111,6 +111,12 @@ public static class MilitaryRules
     /// <summary>Longest name a player may give a unit.</summary>
     public const int MaxUnitNameLength = 30;
 
+    // Equipment, every day
+    /// <summary>A factory makes this many times what a workshop does.</summary>
+    public const double FactoryOutput = 2;
+    /// <summary>Battalions of warriors and of scouts each nation starts with the equipment for.</summary>
+    public const int StartingWarriorKits = 4, StartingScoutKits = 2;
+
     // Supply and recovery, every day
     /// <summary>Supply reaches this many hours of marching through territory the nation controls from a city, or from its roads and railways joined to one.</summary>
     public const double SupplyRangeHours = 24 * 10;

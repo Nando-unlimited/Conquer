@@ -37,21 +37,26 @@ public sealed class TrainingOrder
     /// <summary>A whole regiment trained from a template: its name and battalions.</summary>
     public string? TemplateName { get; }
     public IReadOnlyList<BattalionType> TemplateBattalions { get; } = [];
+    /// <summary>The model each battalion was given the equipment of, in order (one for a lone battalion); empty for an HQ.</summary>
+    public IReadOnlyList<int> Models { get; } = [];
     public int HeadquartersLevel { get; }
     public int DaysLeft { get; set; }
     public int TotalDays { get; }
 
     /// <param name="days">Days it takes the nation (see <see cref="Simulation.GameSession.TrainingDays(Entities.Player, BattalionType)"/>).</param>
-    public TrainingOrder(BattalionType battalion, int days)
+    /// <param name="model">The model whose equipment it was given.</param>
+    public TrainingOrder(BattalionType battalion, int days, int model = 0)
     {
         Battalion = battalion;
+        Models = [model];
         DaysLeft = TotalDays = days;
     }
 
-    public TrainingOrder(RegimentTemplate template, int days)
+    public TrainingOrder(RegimentTemplate template, int days, IReadOnlyList<int>? models = null)
     {
         TemplateName = template.Name;
         TemplateBattalions = [.. template.Battalions];
+        Models = [.. models ?? []];
         DaysLeft = TotalDays = days;
     }
 
@@ -63,11 +68,12 @@ public sealed class TrainingOrder
 
     /// <summary>An order as it was saved, part-way through its training.</summary>
     internal TrainingOrder(BattalionType? battalion, string? templateName, IReadOnlyList<BattalionType> templateBattalions,
-        int headquartersLevel, int daysLeft, int totalDays)
+        int headquartersLevel, int daysLeft, int totalDays, IReadOnlyList<int>? models = null)
     {
         Battalion = battalion;
         TemplateName = templateName;
         TemplateBattalions = [.. templateBattalions];
+        Models = [.. models ?? []];
         HeadquartersLevel = headquartersLevel;
         DaysLeft = daysLeft;
         TotalDays = totalDays;

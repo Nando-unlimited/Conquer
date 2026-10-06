@@ -102,6 +102,7 @@ internal sealed partial class AiPlayer
             ChooseResearch();
             AdoptInstitutions();
             Recruit();
+            ChooseProduction();
             BuildArmy();
             BuildNavy();
             OrganiseArmy();

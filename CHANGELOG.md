@@ -2,6 +2,25 @@
 
 Todos los cambios del juego, del más reciente al más antiguo. Cada versión es un commit cuyo título es su número.
 
+## [1.103.0] - 2026-10-06
+
+Tercera parte de la nueva estructura militar: el equipo.
+
+### Añadido
+- **Equipo**: cada batallón necesita el equipo de su modelo, como en Hearts of Iron. Es un arma por hombre, un caballo por jinete, 30 carros o, siguiendo la nueva estructura, 5 catapultas con 50 hombres o 10 tanques con 50.
+- **Los talleres y las fábricas lo fabrican**: en la pestaña Edificios de su provincia eliges qué hace cada uno. Un taller hace el equipo de un batallón en sus días de instrucción; una fábrica, el doble. Gasta los recursos del batallón salvo el oro; si faltan, fabrica menos o nada.
+- **Almacén de la nación**: nueva pestaña Equipo en la pantalla de la nación, con lo que hay de cada modelo, lo que se fabrica al día, lo que esperan tus batallones para modernizarse y lo que cuesta.
+- Entrenar toma el equipo del almacén y solo cuesta el oro. Se entrena con el modelo más moderno del que haya equipo; sin equipo, no se entrena.
+- Reforzar las bajas también gasta equipo.
+- Cada nación empieza con equipo para 4 batallones de guerreros y 2 de exploradores.
+- Los rivales eligen qué fabrican sus talleres según lo que necesitan.
+
+### Cambiado
+- **Modernizar ya no es inmediato**: un batallón con suministro adopta el modelo nuevo de su línea cuando hay equipo para él en el almacén, y devuelve el viejo.
+- **El taller se puede construir desde el principio**; las máquinas de guerra siguen pidiendo su avance.
+- La artillería y los tanques llevan menos hombres: catapultas y trabuquetes 50, cañones y antiaérea 80, tanques 50.
+- Las pestañas de la pantalla de la nación se estrechan para caber todas.
+
 ## [1.102.0] - 2026-10-06
 
 Segunda parte de la nueva estructura militar: las formaciones.

@@ -37,6 +37,14 @@ public sealed partial class GameSession
         return unit;
     }
 
+    /// <summary>A newly trained unit: its battalions of the models whose equipment they were given (the newest known for orders that kept none).</summary>
+    private Unit AddTrained(int ownerId, int provinceId, IReadOnlyList<BattalionType> types, IReadOnlyList<int> models)
+    {
+        var unit = AddUnit(ownerId, UnitType.Regiment, provinceId, 0);
+        Organise(unit, [.. types.Select((t, i) => i < models.Count ? new Battalion(t, models[i]) : NewBattalion(Players[ownerId], t))]);
+        return unit;
+    }
+
     /// <summary>The numbering key of brigades and divisions, apart from the regiments' (<see cref="CommandLevels.Combat"/>) and the HQ levels.</summary>
     private const int BrigadeNumbering = -3, DivisionNumbering = -4;
 
@@ -287,12 +295,22 @@ public sealed partial class GameSession
     /// </summary>
     public CommandResult CanTrain(Province p, BattalionType type)
     {
-        var model = ModelFor(Players[p.OwnerId], type);
-        if (model.Naval && !IsPort(p, p.OwnerId)) return CommandResult.Fail("Los barcos solo se construyen en ciudades con puerto.");
-        if (model.Shipyard is BuildingType yard && !p.Buildings.Contains(yard))
+        var player = Players[p.OwnerId];
+        var newest = ModelFor(player, type);
+        if (newest.Naval && !IsPort(p, p.OwnerId)) return CommandResult.Fail("Los barcos solo se construyen en ciudades con puerto.");
+        if (newest.Shipyard is BuildingType yard && !p.Buildings.Contains(yard))
             return CommandResult.Fail($"Requiere {yard.Info().Name.ToLowerInvariant()} en la ciudad.");
-        return CanRaiseTroops(p, model.Men, model.Cost, model.Requires, model.TrainingBuilding(type) is BuildingType b ? [b] : []);
+        if (type.BestModel(player.Techs) >= 0 && StockedModel(player, type) is null) return MissingEquipment(player, newest, 1);
+        var model = TrainedModel(player, type);
+        return CanRaiseTroops(p, model.Men, model.TrainingCost, model.Requires, model.TrainingBuilding(type) is BuildingType b ? [b] : []);
     }
+
+    /// <summary>The model a battalion of the line is trained with: the newest the nation has the equipment for, or else its newest.</summary>
+    public static BattalionInfo TrainedModel(Player player, BattalionType type) =>
+        type.Models()[StockedModel(player, type) ?? Math.Max(0, type.BestModel(player.Techs))];
+
+    private static CommandResult MissingEquipment(Player player, BattalionInfo model, int battalions) =>
+        CommandResult.Fail($"Falta equipo: {model.PiecesText(model.Pieces * battalions)} (hay {player.EquipmentOf(model):N0}). Fabrícalo en un taller.");
 
     /// <summary>The model of the line a nation raises now: the newest whose advances it knows (the first while it knows none).</summary>
     public static BattalionInfo ModelFor(Player player, BattalionType type) => type.ModelFor(player.Techs);
@@ -301,17 +319,23 @@ public sealed partial class GameSession
     private static Battalion NewBattalion(Player player, BattalionType type) => new(type, Math.Max(0, type.BestModel(player.Techs)));
 
     /// <summary>
-    /// Every battalion of the nation takes up the newest model of its line it knows. For now the new arms reach them at once;
-    /// they will have to be made and sent to them.
+    /// Battalions in supply and out of battle take up the newest model of their line the nation knows as its equipment
+    /// reaches them: as many pieces as the men they have left need, from the stockpile, into which their old ones go back.
     /// </summary>
-    private static void Modernise(Player player, IEnumerable<Unit> units)
+    private void Modernise(Player player)
     {
-        var best = new Dictionary<BattalionType, int>();
-        foreach (var b in units.SelectMany(u => u.Battalions))
-        {
-            if (!best.TryGetValue(b.Type, out int model)) best[b.Type] = model = b.Type.BestModel(player.Techs);
-            b.Modernise(model);
-        }
+        foreach (var unit in Units.Where(u => u.OwnerId == player.Id && u.IsMilitary && !u.IsAboard && IsInSupply(u) && !InBattle(u)))
+            foreach (var b in unit.Battalions)
+            {
+                int best = b.Type.BestModel(player.Techs);
+                if (best <= b.Model) continue;
+                var model = b.Type.Models()[best];
+                double share = b.StrengthShare, need = model.Pieces * share;
+                if (player.EquipmentOf(model) < need) continue;
+                player.AddEquipment(model, -need);
+                player.AddEquipment(b.Info, b.Info.Pieces * share);
+                b.Modernise(best);
+            }
     }
 
     /// <summary>
@@ -346,12 +370,15 @@ public sealed partial class GameSession
         if (p.OwnerId != playerId) return CommandResult.Fail("La provincia no es tuya.");
         var check = CanTrain(p, type);
         if (!check.Ok) return check;
-        var info = ModelFor(Players[playerId], type);
-        Players[playerId].Stockpile.TrySpend(info.Cost);
+        var player = Players[playerId];
+        int model = StockedModel(player, type) ?? 0;
+        var info = type.Models()[model];
+        player.Stockpile.TrySpend(info.TrainingCost);
+        player.AddEquipment(info, -info.Pieces);
         p.Population -= info.Men;
-        Players[playerId].Manpower -= info.Men;
-        int days = TrainingDays(Players[playerId], type);
-        p.Training.Add(new TrainingOrder(type, days));
+        player.Manpower -= info.Men;
+        int days = (int)Math.Ceiling(info.TrainingDays / (1 + TrainingSpeed(player, type)));
+        p.Training.Add(new TrainingOrder(type, days, model));
         return CommandResult.Success($"{info.Name} en instrucción: {days} días.");
     }
 
@@ -361,7 +388,7 @@ public sealed partial class GameSession
 
     /// <summary>Days a battalion takes the player to train: its normal days, fewer with the advances that study it.</summary>
     public static int TrainingDays(Player player, BattalionType type) =>
-        (int)Math.Ceiling(ModelFor(player, type).TrainingDays / (1 + TrainingSpeed(player, type)));
+        (int)Math.Ceiling(TrainedModel(player, type).TrainingDays / (1 + TrainingSpeed(player, type)));
 
     /// <summary>Days a regiment of the template takes the player: its battalions train side by side, so the slowest sets the time.</summary>
     public static int TrainingDays(Player player, RegimentTemplate template) =>
@@ -406,8 +433,8 @@ public sealed partial class GameSession
                 if (--order.DaysLeft > 0) continue;
                 p.Training.Remove(order);
                 var unit = order.Battalion is BattalionType ship && ship.First().Naval ? AddFleet(player.Id, id, ship)
-                    : order.Battalion is BattalionType type ? AddRegiment(player.Id, id, type)
-                    : order.TemplateBattalions.Count > 0 ? AddRegiment(player.Id, id, [.. order.TemplateBattalions])
+                    : order.Battalion is BattalionType type ? AddTrained(player.Id, id, [type], order.Models)
+                    : order.TemplateBattalions.Count > 0 ? AddTrained(player.Id, id, order.TemplateBattalions, order.Models)
                     : AddHeadquarters(player.Id, id, order.HeadquartersLevel);
                 if (player.IsHuman) Notify(player.Id, $"Nueva unidad en {PlaceName(p)}: {unit.Name} ({order.Name.ToLowerInvariant()}).");
             }
@@ -478,8 +505,29 @@ public sealed partial class GameSession
         return CommandResult.Success();
     }
 
-    public CommandResult CanTrainTemplate(Province p, RegimentTemplate template) =>
-        CanRaiseTroops(p, template.Men(Players[p.OwnerId].Techs), template.Cost(Players[p.OwnerId].Techs), template.Requires, template.TrainingBuildings(Players[p.OwnerId].Techs));
+    /// <summary>
+    /// The model each battalion of a template would be trained with: for each line, the newest the nation has the
+    /// equipment for all its battalions of that line; null for a line it has none for.
+    /// </summary>
+    public static int?[] TemplateModels(Player player, RegimentTemplate template)
+    {
+        var counts = template.Battalions.GroupBy(t => t).ToDictionary(g => g.Key, g => g.Count());
+        return [.. template.Battalions.Select(t => StockedModel(player, t, counts[t]))];
+    }
+
+    public CommandResult CanTrainTemplate(Province p, RegimentTemplate template)
+    {
+        var player = Players[p.OwnerId];
+        var models = TemplateModels(player, template);
+        // The first line it lacks the equipment for, if it knows it at all (an unknown one says what it requires).
+        for (int i = 0; i < models.Length; i++)
+            if (models[i] is null && template.Battalions[i].BestModel(player.Techs) >= 0)
+                return MissingEquipment(player, ModelFor(player, template.Battalions[i]), template.Battalions.Count(t => t == template.Battalions[i]));
+        var chosen = template.Battalions.Select((t, i) => t.Models()[models[i] ?? 0]).ToList();
+        var cost = new Economy.ResourceCost([.. chosen.SelectMany(m => m.TrainingCost.Items).GroupBy(i => i.Type).Select(g => (g.Key, g.Sum(i => i.Amount)))]);
+        var buildings = template.Battalions.Select((t, i) => chosen[i].TrainingBuilding(t)).OfType<BuildingType>().Distinct();
+        return CanRaiseTroops(p, chosen.Sum(m => m.Men), cost, template.Requires, buildings);
+    }
 
     /// <summary>Pays for every battalion of a template at once; they train side by side and form one regiment.</summary>
     public CommandResult TrainTemplate(int playerId, int provinceId, int templateId)
@@ -489,12 +537,18 @@ public sealed partial class GameSession
         if (TemplateById(Players[playerId], templateId) is not { } template) return CommandResult.Fail("Plantilla no válida.");
         var check = CanTrainTemplate(p, template);
         if (!check.Ok) return check;
-        var known = Players[playerId].Techs;
-        Players[playerId].Stockpile.TrySpend(template.Cost(known));
-        p.Population -= template.Men(known);
-        Players[playerId].Manpower -= template.Men(known);
-        int days = TrainingDays(Players[playerId], template);
-        p.Training.Add(new TrainingOrder(template, days));
+        var player = Players[playerId];
+        var models = TemplateModels(player, template).Select(m => m ?? 0).ToList();
+        int days = TrainingDays(player, template); // with the equipment still in store, as the models chosen
+        for (int i = 0; i < models.Count; i++)
+        {
+            var model = template.Battalions[i].Models()[models[i]];
+            player.Stockpile.TrySpend(model.TrainingCost);
+            player.AddEquipment(model, -model.Pieces);
+            p.Population -= model.Men;
+            player.Manpower -= model.Men;
+        }
+        p.Training.Add(new TrainingOrder(template, days, models));
         return CommandResult.Success($"{Formations.CombatName(Echelon.Regiment)} de la {template.Name} en instrucción: {days} días.");
     }
 
@@ -965,8 +1019,8 @@ public sealed partial class GameSession
     {
         DailyManpower(player);
         DailyTraining(player);
-        Modernise(player, Units.Where(u => u.OwnerId == player.Id));
         _supplied[player.Id] = ComputeSupply(player);
+        Modernise(player);
         var capital = player.CapitalCityId is int c && CityById(c) is { } city && !Map.Provinces[city.ProvinceId].IsOccupied
             ? Map.Provinces[city.ProvinceId] : null;
 
@@ -1018,7 +1072,10 @@ public sealed partial class GameSession
                 double missing = b.Info.Men - b.Strength;
                 if (missing <= 0 || capital == null) continue;
                 double men = Math.Min(Math.Min(missing, player.Manpower), Math.Min(b.Info.Men * MilitaryRules.ReinforcementRate * repair, capital.Population - GameRules.MinCityPopulation));
+                // New men need their equipment: as many as the stockpile arms.
+                if (b.Info.NeedsEquipment) men = Math.Min(men, player.EquipmentOf(b.Info) / b.Info.Pieces * b.Info.Men);
                 if (men <= 0) continue;
+                if (b.Info.NeedsEquipment) player.AddEquipment(b.Info, -men / b.Info.Men * b.Info.Pieces);
                 // Recruits are green: they water down the battalion's experience.
                 b.Experience = b.Experience * b.Strength / (b.Strength + men);
                 b.Strength += men;

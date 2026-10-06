@@ -31,13 +31,13 @@ public sealed partial class GameSession
             [.. p.ResearchProgress], p.SpareScience, p.LastDayScience,
             [.. p.Templates.Select(t => new TemplateSave(t.Id, t.Number, [.. t.Battalions]))], [.. p.ResearchPriorities],
             [.. p.Researching.OfType<Tech>()], [.. p.Institutions.Order()], [.. p.OfficerReserve.Select(ToSave)], p.Eliminated, p.Manpower, p.ReligionId,
-            [.. p.Explored.Order()])).ToList(),
+            [.. p.Explored.Order()], new(p.Equipment.Where(e => e.Value > 0)))).ToList(),
         // Provinces nobody has touched keep their generated state, so only the rest are stored.
         Provinces = Map.Provinces.Where(Changed).Select(p => new ProvinceSave(
             p.Id, p.OwnerId, p.ControllerId, p.Population, p.CityId, p.Mood, p.Fertility, [.. p.Reserves],
             [.. p.Buildings.Order()], p.Constructing, p.ConstructionDaysLeft, p.PlannedCityName, [.. p.Institutions.Order()], p.Name,
             p.Training.Count == 0 ? null : [.. p.Training.Select(ToSave)], p.CultureId, p.Assimilation, p.RevoltProgress, p.ReligionId, p.Conversion,
-            p.PlagueDaysLeft, p.PlagueImmuneUntil)).ToList(),
+            p.PlagueDaysLeft, p.PlagueImmuneUntil, p.Production)).ToList(),
         Cities = Cities.Select(c => new CitySave(c.Id, c.Name, c.OwnerId, c.ProvinceId, c.FoundedHours, c.FestivalUntilHours)).ToList(),
         Units = Units.Select(u => new UnitSave(
             u.Id, u.OwnerId, u.Type, u.ProvinceId, u.Type is UnitType.Regiment or UnitType.Fleet ? 0 : u.Citizens, u.Number, u.HeadquartersLevel,
@@ -121,11 +121,11 @@ public sealed partial class GameSession
 
     /// <summary>Whether the province differs from how <see cref="ResetProvinces"/> leaves it.</summary>
     private static TrainingSave ToSave(TrainingOrder o) =>
-        new(o.Battalion, o.TemplateName, [.. o.TemplateBattalions], o.HeadquartersLevel, o.DaysLeft, o.TotalDays);
+        new(o.Battalion, o.TemplateName, [.. o.TemplateBattalions], o.HeadquartersLevel, o.DaysLeft, o.TotalDays, o.Models.Count > 0 ? [.. o.Models] : null);
 
     /// <summary>A saved order, its HQ level moved to the current levels by <paramref name="level"/>.</summary>
     private static TrainingOrder FromSave(TrainingSave o, Func<int, int> level) =>
-        new(o.Battalion, o.TemplateName, o.TemplateBattalions, level(o.HeadquartersLevel), o.DaysLeft, o.TotalDays);
+        new(o.Battalion, o.TemplateName, o.TemplateBattalions, level(o.HeadquartersLevel), o.DaysLeft, o.TotalDays, o.Models);
 
     private static bool Changed(Province p) =>
         p.OwnerId != -1 || p.ControllerId != -1 || p.Population != 0 || p.CityId.HasValue
@@ -182,6 +182,7 @@ public sealed partial class GameSession
             p.Conversion = ps.Conversion;
             p.PlagueDaysLeft = ps.PlagueDaysLeft;
             p.PlagueImmuneUntil = ps.PlagueImmuneUntil;
+            p.Production = ps.Production;
         }
 
         foreach (var s in save.Players)
@@ -207,6 +208,7 @@ public sealed partial class GameSession
             player.Manpower = s.Manpower ?? session.ManpowerCapacity(player);
             // Before 1.92.0 nothing was explored: the nation starts knowing what it sees.
             player.Explored.UnionWith(s.Explored ?? []);
+            foreach (var (key, pieces) in s.Equipment ?? []) player.Equipment[key] = pieces;
             session.Players.Add(player);
         }
 
@@ -230,7 +232,7 @@ public sealed partial class GameSession
             foreach (var p in map.Provinces.Where(p => p.OwnerId >= 0 && p.Buildings.Contains(BuildingType.Barracks)))
             {
                 var owner = session.Players[p.OwnerId];
-                if (BuildingType.Workshop.Info().RequiresTech is { } tech && owner.Techs.Contains(tech)) p.AddBuilding(BuildingType.Workshop.For(owner));
+                if (owner.Techs.Contains(Tech.SiegeEngines)) p.AddBuilding(BuildingType.Workshop.For(owner));
             }
 
         var flat = new Dictionary<Unit, List<Battalion>>();

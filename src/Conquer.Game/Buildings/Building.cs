@@ -94,7 +94,7 @@ public static class Buildings
             new ResourceCost((ResourceType.Wood, 100), (ResourceType.Gold, 150)), 80, Tech.Banking, true, false, new() { Taxes = 0.5 }),
         [BuildingType.Castle] = new("Castillo", "Quien defiende la provincia hace el doble de daño, y el enemigo tiene que sitiarla 60 días para tomarla.",
             new ResourceCost((ResourceType.Wood, 250), (ResourceType.Gold, 100), (ResourceType.Iron, 20)), 150, Tech.Castles, true, false, new() { Defense = 1 }),
-        [BuildingType.Factory] = new("Fábrica", "Construye las máquinas de guerra, como el taller. +50 % de madera y de yacimientos en la provincia.",
+        [BuildingType.Factory] = new("Fábrica", "Fabrica equipo al doble que un taller y construye las máquinas de guerra. +50 % de madera y de yacimientos en la provincia.",
             new ResourceCost((ResourceType.Wood, 200), (ResourceType.Gold, 200), (ResourceType.Iron, 50), (ResourceType.Coal, 50)), 120, Tech.Industrialization, false, false,
             new() { Wood = 0.5, Deposits = 0.5 }),
         [BuildingType.Hospital] = new("Hospital", "+20 % de fertilidad, la tierra alimenta un 10 % más y las epidemias matan un 40 % menos.",
@@ -107,8 +107,8 @@ public static class Buildings
         [BuildingType.DryDock] = new("Dique seco", "Construye los barcos más avanzados y repara las flotas el doble de rápido.",
             new ResourceCost((ResourceType.Gold, 300), (ResourceType.Iron, 150), (ResourceType.Coal, 50)), 120, Tech.NavalEngineering, true, false, Modifiers.None,
             NeedsCoast: true, RequiresBuilding: BuildingType.Port),
-        [BuildingType.Workshop] = new("Taller", "Construye las máquinas de guerra: catapultas, cañones, artillería, tanques y bombarderos. Con la industrialización pasa a ser una fábrica.",
-            new ResourceCost((ResourceType.Wood, 80), (ResourceType.Gold, 40)), 40, Tech.SiegeEngines, false, false, Modifiers.None, BecomesWith: BuildingType.Factory),
+        [BuildingType.Workshop] = new("Taller", "Fabrica el equipo de las tropas (armas, caballos, catapultas, cañones...) y construye las máquinas de guerra. Con la industrialización pasa a ser una fábrica.",
+            new ResourceCost((ResourceType.Wood, 80), (ResourceType.Gold, 40)), 40, null, false, false, Modifiers.None, BecomesWith: BuildingType.Factory),
     };
 
     public static BuildingInfo Info(this BuildingType type) => Table[type];

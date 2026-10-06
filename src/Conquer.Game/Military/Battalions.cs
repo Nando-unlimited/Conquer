@@ -62,7 +62,25 @@ public enum BattalionGroup
 public sealed record BattalionInfo(
     string Key, string Name, string Symbol, int Men, ResourceCost Cost, int TrainingDays, Tech[] Requires,
     double Attack, double Defense, double MaxOrganisation, double Speed, bool Mounted = false, bool Machine = false, bool Flies = false,
-    bool Naval = false, int Capacity = 0, BuildingType? Shipyard = null);
+    bool Naval = false, int Capacity = 0, BuildingType? Shipyard = null)
+{
+    /// <summary>
+    /// The pieces of equipment a battalion of this model needs at full strength: a weapon per man, a horse per rider,
+    /// 5 catapults, 10 tanks. Workshops and factories make them; ships need none (they are built whole).
+    /// </summary>
+    public int Pieces { get; init; } = Naval ? 0 : Men;
+    /// <summary>What its pieces are called: "armas", "caballos", "catapultas"...</summary>
+    public string PieceName { get; init; } = "armas";
+    public bool NeedsEquipment => Pieces > 0;
+
+    /// <summary>What training a battalion costs: its gold; the rest of its cost goes into its equipment. A ship costs all of it.</summary>
+    public ResourceCost TrainingCost => NeedsEquipment ? new([.. Cost.Items.Where(i => i.Type == ResourceType.Gold)]) : Cost;
+    /// <summary>What a whole battalion's equipment costs to make: its cost but the gold.</summary>
+    public ResourceCost EquipmentCost => NeedsEquipment ? new([.. Cost.Items.Where(i => i.Type != ResourceType.Gold)]) : new();
+    /// <summary>"100 armas de guerreros", "5 catapultas".</summary>
+    public string PiecesText(double pieces) => PieceName == "armas" || PieceName == "caballos" || PieceName == "equipos" || PieceName == "herramientas" || PieceName == "botiquines"
+        ? $"{pieces:N0} {PieceName} de {Name.ToLowerInvariant()}" : $"{pieces:N0} {PieceName}";
+}
 
 /// <summary>A line: its name, its group and its models from the oldest to the newest.</summary>
 public sealed record LineInfo(string Name, BattalionGroup Group, BattalionInfo[] Models);
@@ -85,7 +103,7 @@ public static class Battalions
         // Few men, cheap and quick on their feet: they explore and claim land, but barely fight.
         [BattalionType.Scouts] = new("Exploradores", BattalionGroup.Support,
         [
-            new("scouts", "Exploradores", "S", 50, Cost((W, 10), (G, 5)), 7, [], 1, 1, 15, 1.5),
+            new("scouts", "Exploradores", "S", 50, Cost((W, 10), (G, 5)), 7, [], 1, 1, 15, 1.5) { PieceName = "equipos" },
         ]),
         [BattalionType.LightInfantry] = new("Infantería ligera", BattalionGroup.Infantry,
         [
@@ -126,42 +144,42 @@ public static class Battalions
         ]),
         [BattalionType.Cavalry] = new("Caballería", BattalionGroup.Cavalry,
         [
-            new("horsemen", "Jinetes", "J", 100, Cost((W, 20), (G, 40)), 30, [Tech.HorsebackRiding], 5, 2, 30, 1.8, Mounted: true),
-            new("cataphracts", "Catafractos", "K", 100, Cost((W, 20), (G, 60), (Fe, 30)), 40, [Tech.HeavyCavalry], 10, 5, 45, 1.6, Mounted: true),
-            new("knights", "Caballeros", "N", 100, Cost((W, 20), (G, 80), (Fe, 35)), 45, [Tech.Stirrup], 14, 6, 50, 1.5, Mounted: true),
-            new("mechanised-cavalry", "Caballería mecanizada", "W", 100, Cost((G, 100), (Fe, 30), (Oil, 20), (Rub, 10)), 40, [Tech.Combustion], 24, 20, 65, 2.2),
+            new("horsemen", "Jinetes", "J", 100, Cost((W, 20), (G, 40)), 30, [Tech.HorsebackRiding], 5, 2, 30, 1.8, Mounted: true) { PieceName = "caballos" },
+            new("cataphracts", "Catafractos", "K", 100, Cost((W, 20), (G, 60), (Fe, 30)), 40, [Tech.HeavyCavalry], 10, 5, 45, 1.6, Mounted: true) { PieceName = "caballos" },
+            new("knights", "Caballeros", "N", 100, Cost((W, 20), (G, 80), (Fe, 35)), 45, [Tech.Stirrup], 14, 6, 50, 1.5, Mounted: true) { PieceName = "caballos" },
+            new("mechanised-cavalry", "Caballería mecanizada", "W", 100, Cost((G, 100), (Fe, 30), (Oil, 20), (Rub, 10)), 40, [Tech.Combustion], 24, 20, 65, 2.2) { Pieces = 20, PieceName = "vehículos" },
         ]),
         [BattalionType.Armour] = new("Carros y tanques", BattalionGroup.Cavalry,
         [
-            new("chariots", "Carros de guerra", "C", 100, Cost((W, 60), (G, 40), (Cu, 10)), 35, [Tech.TheWheel], 7, 3, 30, 1.5, Mounted: true),
-            new("tanks", "Tanques", "X", 100, Cost((G, 150), (Fe, 80), (Oil, 40), (Rub, 20)), 50, [Tech.Armour], 45, 25, 60, 2, Mounted: true, Machine: true),
+            new("chariots", "Carros de guerra", "C", 100, Cost((W, 60), (G, 40), (Cu, 10)), 35, [Tech.TheWheel], 7, 3, 30, 1.5, Mounted: true) { Pieces = 30, PieceName = "carros" },
+            new("tanks", "Tanques", "X", 50, Cost((G, 150), (Fe, 80), (Oil, 40), (Rub, 20)), 50, [Tech.Armour], 45, 25, 60, 2, Mounted: true, Machine: true) { Pieces = 10, PieceName = "tanques" },
         ]),
         [BattalionType.Artillery] = new("Artillería", BattalionGroup.Artillery,
         [
-            new("catapults", "Catapultas", "T", 100, Cost((W, 90), (G, 40), (Cu, 10)), 40, [Tech.SiegeEngines], 12, 1, 20, 0.7, Machine: true),
-            new("trebuchets", "Trabuquetes", "T", 100, Cost((W, 120), (G, 50), (Fe, 10)), 45, [Tech.SiegeWorkshops], 16, 2, 22, 0.6, Machine: true),
-            new("cannons", "Cañones", "T", 100, Cost((W, 60), (G, 60), (Fe, 40), (C, 20)), 45, [Tech.Metallurgy], 20, 3, 25, 0.6, Machine: true),
-            new("field-artillery", "Artillería de campaña", "T", 100, Cost((W, 40), (G, 80), (Fe, 60), (C, 30)), 45, [Tech.Steel], 28, 5, 30, 0.7, Machine: true),
-            new("heavy-artillery", "Artillería pesada", "T", 100, Cost((G, 120), (Fe, 80), (C, 30), (Oil, 10)), 50, [Tech.HeavyArtillery], 38, 6, 30, 0.6, Machine: true),
+            new("catapults", "Catapultas", "T", 50, Cost((W, 90), (G, 40), (Cu, 10)), 40, [Tech.SiegeEngines], 12, 1, 20, 0.7, Machine: true) { Pieces = 5, PieceName = "catapultas" },
+            new("trebuchets", "Trabuquetes", "T", 50, Cost((W, 120), (G, 50), (Fe, 10)), 45, [Tech.SiegeWorkshops], 16, 2, 22, 0.6, Machine: true) { Pieces = 4, PieceName = "trabuquetes" },
+            new("cannons", "Cañones", "T", 80, Cost((W, 60), (G, 60), (Fe, 40), (C, 20)), 45, [Tech.Metallurgy], 20, 3, 25, 0.6, Machine: true) { Pieces = 8, PieceName = "cañones" },
+            new("field-artillery", "Artillería de campaña", "T", 100, Cost((W, 40), (G, 80), (Fe, 60), (C, 30)), 45, [Tech.Steel], 28, 5, 30, 0.7, Machine: true) { Pieces = 12, PieceName = "cañones de campaña" },
+            new("heavy-artillery", "Artillería pesada", "T", 100, Cost((G, 120), (Fe, 80), (C, 30), (Oil, 10)), 50, [Tech.HeavyArtillery], 38, 6, 30, 0.6, Machine: true) { Pieces = 8, PieceName = "obuses" },
         ]),
         // Guns pointed at the sky: they shoot down aircraft and shield the troops beside them (MilitaryRules.AntiAirShield).
         [BattalionType.AntiAir] = new("Antiaérea", BattalionGroup.Artillery,
         [
-            new("anti-air", "Artillería antiaérea", "Á", 100, Cost((G, 100), (Fe, 50), (C, 20)), 40, [Tech.Aviation], 8, 12, 40, 0.8, Machine: true),
+            new("anti-air", "Artillería antiaérea", "Á", 80, Cost((G, 100), (Fe, 50), (C, 20)), 40, [Tech.Aviation], 8, 12, 40, 0.8, Machine: true) { Pieces = 12, PieceName = "cañones antiaéreos" },
         ]),
         // Sappers and bridge builders: behind the line they blunt the defenders' terrain; they alone build roads and railways.
         [BattalionType.Engineers] = new("Ingenieros", BattalionGroup.Support,
         [
-            new("engineers", "Ingenieros", "E", 100, Cost((W, 40), (G, 40)), 30, [Tech.Engineering], 2, 3, 30, 1),
+            new("engineers", "Ingenieros", "E", 100, Cost((W, 40), (G, 40)), 30, [Tech.Engineering], 2, 3, 30, 1) { PieceName = "herramientas" },
         ]),
         // Behind the line they save some of the wounded (MilitaryRules.MedicsSaving).
         [BattalionType.Medics] = new("Médicos", BattalionGroup.Support,
         [
-            new("medics", "Médicos", "+", 50, Cost((W, 10), (G, 30)), 20, [Tech.Medicine], 0, 1, 20, 1),
+            new("medics", "Médicos", "+", 50, Cost((W, 10), (G, 30)), 20, [Tech.Medicine], 0, 1, 20, 1) { PieceName = "botiquines" },
         ]),
         [BattalionType.Bombers] = new("Bombarderos", BattalionGroup.Air,
         [
-            new("bombers", "Bombarderos", "V", 100, Cost((G, 200), (Al, 40), (Oil, 40)), 60, [Tech.Aviation], 55, 8, 40, 4, Machine: true, Flies: true),
+            new("bombers", "Bombarderos", "V", 40, Cost((G, 200), (Al, 40), (Oil, 40)), 60, [Tech.Aviation], 55, 8, 40, 4, Machine: true, Flies: true) { Pieces = 10, PieceName = "bombarderos" },
         ]),
 
         // Ships (lower-case symbols) sail at their speed times the sailing speed; their attack is their fire at sea.
@@ -182,6 +200,16 @@ public static class Battalions
     private static LineInfo Ship(BattalionInfo model) => new(model.Name, BattalionGroup.Navy, [model]);
 
     public static LineInfo Line(this BattalionType type) => Table[type];
+
+    private static readonly Dictionary<string, (BattalionType Type, int Index)> ByKeys =
+        Table.SelectMany(line => line.Value.Models.Select((m, i) => (ModelKey: m.Key, Type: line.Key, Index: i))).GroupBy(x => x.ModelKey)
+            .ToDictionary(g => g.Key, g => (g.First().Type, g.First().Index));
+
+    /// <summary>The line and the place in it of the model with this key (<see cref="BattalionInfo.Key"/>); null if there is none.</summary>
+    public static (BattalionType Type, int Index)? ByKey(string? key) => key != null && ByKeys.TryGetValue(key, out var found) ? found : null;
+
+    /// <summary>The model with this key; null if there is none.</summary>
+    public static BattalionInfo? ModelByKey(string? key) => ByKey(key) is var (type, index) ? Table[type].Models[index] : null;
 
     public static IReadOnlyList<BattalionInfo> Models(this BattalionType type) => Table[type].Models;
 

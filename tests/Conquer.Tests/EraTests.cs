@@ -28,6 +28,7 @@ public class EraTests(WorldFixture world)
         s.FoundCity(0, s.AddUnit(0, UnitType.Settlers, a.Id, 300).Id);
         a.Population = 3000;
         foreach (var r in Resources.All) s.Human.Stockpile[r] = 5000;
+        s.Human.Arm();
         return (s, a);
     }
 

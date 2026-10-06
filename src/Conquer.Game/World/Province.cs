@@ -72,6 +72,8 @@ public sealed class Province
     public string? PlannedCityName { get; set; }
     /// <summary>Battalions and HQs being trained here (in its city, its barracks or its workshop), in order; each counts down on its own.</summary>
     public List<TrainingOrder> Training { get; } = [];
+    /// <summary>What its workshop or factory makes: the key of a battalion model (<see cref="Military.BattalionInfo.Key"/>), or null when idle.</summary>
+    public string? Production { get; set; }
 
     public void AddBuilding(BuildingType type)
     {

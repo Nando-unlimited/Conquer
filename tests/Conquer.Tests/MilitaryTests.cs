@@ -27,6 +27,7 @@ public class MilitaryTests(WorldFixture world)
     private (GameSession S, Province A, Province B) TwoNations()
     {
         var s = GameSession.Create(_map, 2, seed: 7, computerRivals: false);
+        s.Human.Arm();
         var (a, b) = Pair();
         s.FoundCity(0, s.AddUnit(0, UnitType.Settlers, a.Id, 300).Id);
         a.AddBuilding(BuildingType.Barracks);
@@ -84,7 +85,9 @@ public class MilitaryTests(WorldFixture world)
 
         Assert.True(s.Train(0, city.ProvinceId, BattalionType.LightInfantry).Ok);
         Assert.Equal(1000 - info.Men, a.Population);
-        Assert.Equal(500 - 30, s.Human.Stockpile[ResourceType.Wood]);
+        Assert.Equal(500, s.Human.Stockpile[ResourceType.Wood]); // the wood went into the weapons, made apart
+        Assert.Equal(500 - 15, s.Human.Stockpile[ResourceType.Gold]);
+        Assert.Equal(100_000 - info.Pieces, s.Human.EquipmentOf(info));
         Assert.Single(a.Training);
 
         RunHours(s, 24 * info.TrainingDays);
@@ -713,7 +716,9 @@ public class MilitaryTests(WorldFixture world)
         Assert.Equal(20, template.TrainingDays(s.Human.Techs)); // the archers are the slowest
         Assert.True(s.TrainTemplate(0, city.ProvinceId, template.Id).Ok);
         Assert.Equal(2000 - 300, a.Population);
-        Assert.Equal(500 - 90, s.Human.Stockpile[ResourceType.Wood]);
+        Assert.Equal(500, s.Human.Stockpile[ResourceType.Wood]);
+        Assert.Equal(100_000 - 200, s.Human.EquipmentOf(BattalionType.LightInfantry.First()));
+        Assert.Equal(100_000 - 100, s.Human.EquipmentOf(BattalionType.RangedInfantry.First()));
         Assert.Equal(500 - 50, s.Human.Stockpile[ResourceType.Gold]);
 
         RunHours(s, 24 * 20);
@@ -795,8 +800,9 @@ public class MilitaryTests(WorldFixture world)
             [BattalionType.Armour, BattalionType.Artillery, BattalionType.AntiAir, BattalionType.Bombers],
             Battalions.All.Where(t => t.Models().Any(m => m.TrainingBuilding(t) == BuildingType.Workshop)));
 
-        // The workshop comes with siege engines, the first war machine.
-        Assert.Equal("Requiere maquinaria de asedio.", s.IsBuildingAvailable(a, BuildingType.Workshop).Message);
+        // The workshop can be built from the start; war machines need their advance.
+        Assert.True(s.IsBuildingAvailable(a, BuildingType.Workshop).Ok);
+        Assert.Equal("Requiere maquinaria de asedio.", s.CanTrain(a, BattalionType.Artillery).Message);
         s.Human.Learn(Tech.SiegeEngines);
         Assert.Equal("Requiere un taller en la provincia.", s.CanTrain(a, BattalionType.Artillery).Message);
         var siege = s.AddTemplate(s.Human, [BattalionType.LightInfantry, BattalionType.Artillery]);

@@ -58,6 +58,17 @@ public sealed class Player
     public double SpareScience { get; set; }
     public double LastDayScience { get; set; }
 
+    /// <summary>
+    /// Its stockpile of equipment, in pieces, by battalion model (<see cref="BattalionInfo.Key"/>): made by its workshops
+    /// and factories, taken to train, reinforce and modernise battalions.
+    /// </summary>
+    public Dictionary<string, double> Equipment { get; } = [];
+
+    public double EquipmentOf(BattalionInfo model) => Equipment.GetValueOrDefault(model.Key);
+
+    /// <summary>Puts pieces into the stockpile, or takes them out (negative).</summary>
+    public void AddEquipment(BattalionInfo model, double pieces) => Equipment[model.Key] = Math.Max(0, EquipmentOf(model) + pieces);
+
     /// <summary>Its regiment designs; every nation starts with one of two warrior battalions.</summary>
     public List<RegimentTemplate> Templates { get; } = [];
 

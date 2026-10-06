@@ -100,6 +100,9 @@ public sealed partial class GameSession
             session.Players.Add(player);
             session.AddUnit(i, UnitType.Settlers, starts[i], GameRules.StartingCitizens);
             session.AddTemplate(player, [BattalionType.LightInfantry, BattalionType.LightInfantry]);
+            // Equipment to raise the first warriors and scouts, while the first workshops go up.
+            player.AddEquipment(BattalionType.LightInfantry.First(), MilitaryRules.StartingWarriorKits * BattalionType.LightInfantry.First().Pieces);
+            player.AddEquipment(BattalionType.Scouts.First(), MilitaryRules.StartingScoutKits * BattalionType.Scouts.First().Pieces);
             if (!player.IsHuman && computerRivals) session._ais.Add(new AiPlayer(session, player, seed + 100 + i));
         }
 
@@ -239,6 +242,7 @@ public sealed partial class GameSession
             DailyInstitutions();
             foreach (var player in Players) DailyConstruction(player);
             DailyRoadWork();
+            foreach (var player in Players) DailyProduction(player);
             foreach (var player in Players) DailyMilitary(player);
             DailySieges();
             DailyMemories();
@@ -942,6 +946,7 @@ public sealed partial class GameSession
         if (p.OwnerId != playerId)
         {
             p.PlannedCityName = null;
+            p.Production = null;
             // People keep their culture and start assimilating afresh; empty land takes its new ruler's.
             p.Assimilation = p.RevoltProgress = p.Conversion = 0;
         }

@@ -19,10 +19,12 @@ public sealed class NationView(NationScreen screen)
         ui.Panel(area, opaque: true); // opaque: the map would clutter the tables
         ui.Text(area.X + 20, area.Y + 14, screen.Title, Theme.Accent, FontSize.Large, bold: true);
         float tx = area.X + 40 + ui.Font.Measure(screen.Title, FontSize.Large, true);
+        // The tabs share the room up to the close button, 102 pixels each at most.
+        float step = Math.Min(108, (area.Right - 130 - tx) / NationScreen.TabNames.Length);
         for (int i = 0; i < NationScreen.TabNames.Length; i++)
         {
             // The science tab carries its picture, if there is one, and its name moves over to make room.
-            var tab = new Rect(tx + i * 108, area.Y + 12, 102, 32);
+            var tab = new Rect(tx + i * step, area.Y + 12, step - 6, 32);
             bool picture = (NationTab)i == NationTab.Science && Icons.HasPicture(ScienceIcon.Name);
             if (ui.Button(tab, picture ? "     " + NationScreen.TabNames[i] : NationScreen.TabNames[i], active: (int)screen.Tab == i)) screen.Tab = (NationTab)i;
             if (picture) Icons.Picture(ui.Batch, ScienceIcon.Name, new Vector2(tab.X + 18, tab.Y + tab.H / 2), 22);

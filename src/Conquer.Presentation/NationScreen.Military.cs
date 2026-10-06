@@ -150,6 +150,9 @@ public sealed partial class NationScreen
         details.Add(new Space(6));
         details.Add(new Label("Coste", Tone.Dim, TextSize.Normal));
         foreach (var (type, amount) in template.Cost(known).Items) details.Add(new Pair(type.Name(), $"{amount:0}", Indent: 12));
+        details.Add(new Space(6));
+        details.Add(new Label("Equipo", Tone.Dim, TextSize.Normal));
+        details.Add(new Paragraph(template.Equipment(known) + ". Se fabrica en los talleres (pestaña Equipo).", Tone.Normal, Indent: 12));
         details.Add(new Space(10));
         details.Add(new Paragraph("Se entrena entero en la pestaña Ejército de tus ciudades; sus batallones se instruyen a la vez.", Tone.Dim));
         if (template.AnyMounted(known)) details.Add(new Paragraph("Los montados atacan a la mitad en bosques, pantanos y montañas.", Tone.Dim));

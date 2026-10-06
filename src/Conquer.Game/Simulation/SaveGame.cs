@@ -144,7 +144,7 @@ public sealed record PlayerSave(
     double[] ResearchProgress, double SpareScience, double LastDayScience, List<TemplateSave> Templates,
     int[]? ResearchPriorities = null, List<Tech>? CurrentResearch = null, List<Institution>? Institutions = null,
     List<OfficerSave>? OfficerReserve = null, bool Eliminated = false, double? Manpower = null, int? ReligionId = null,
-    List<int>? Explored = null);
+    List<int>? Explored = null, Dictionary<string, double>? Equipment = null);
 
 /// <summary>Where and when an institution was born.</summary>
 public sealed record InstitutionBirthSave(Institution Institution, int ProvinceId, long Hours);
@@ -157,13 +157,14 @@ public sealed record ProvinceSave(
     double[] Reserves, List<BuildingType> Buildings, BuildingType? Constructing, int ConstructionDaysLeft, string? PlannedCityName = null,
     List<Institution>? Institutions = null, string? Name = null, List<TrainingSave>? Training = null,
     int? CultureId = null, double Assimilation = 0, double RevoltProgress = 0, int? ReligionId = null, double Conversion = 0,
-    int PlagueDaysLeft = 0, long PlagueImmuneUntil = 0);
+    int PlagueDaysLeft = 0, long PlagueImmuneUntil = 0, string? Production = null);
 
 /// <param name="Training">What the city was training, in saves from before 1.44.1; since then it is the province's (<see cref="ProvinceSave.Training"/>).</param>
 public sealed record CitySave(int Id, string Name, int OwnerId, int ProvinceId, long FoundedHours, long FestivalUntilHours, List<TrainingSave>? Training = null);
 
 public sealed record TrainingSave(
-    BattalionType? Battalion, string? TemplateName, List<BattalionType> TemplateBattalions, int HeadquartersLevel, int DaysLeft, int TotalDays);
+    BattalionType? Battalion, string? TemplateName, List<BattalionType> TemplateBattalions, int HeadquartersLevel, int DaysLeft, int TotalDays,
+    List<int>? Models = null);
 
 public sealed record UnitSave(
     int Id, int OwnerId, UnitType Type, int ProvinceId, int Citizens, int Number, int HeadquartersLevel,

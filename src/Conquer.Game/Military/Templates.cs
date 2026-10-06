@@ -29,8 +29,11 @@ public sealed class RegimentTemplate
     public IEnumerable<BattalionInfo> Models(IReadOnlySet<Tech> known) => Battalions.Select(b => b.ModelFor(known));
 
     public int Men(IReadOnlySet<Tech> known) => Models(known).Sum(m => m.Men);
-    /// <summary>What all its battalions cost together.</summary>
-    public ResourceCost Cost(IReadOnlySet<Tech> known) => new(Models(known).SelectMany(m => m.Cost.Items)
+    /// <summary>The equipment its battalions need, by model: "200 armas de guerreros, 100 armas de arqueros".</summary>
+    public string Equipment(IReadOnlySet<Tech> known) => string.Join(", ", Models(known).Where(m => m.NeedsEquipment).GroupBy(m => m)
+        .Select(g => g.Key.PiecesText(g.Key.Pieces * g.Count())));
+    /// <summary>What training all its battalions costs together: their gold (their equipment is made apart, see <see cref="Equipment"/>).</summary>
+    public ResourceCost Cost(IReadOnlySet<Tech> known) => new(Models(known).SelectMany(m => m.TrainingCost.Items)
         .GroupBy(i => i.Type).Select(g => (g.Key, g.Sum(i => i.Amount))).OrderBy(i => i.Key).ToArray());
     /// <summary>The buildings its battalions train in (<see cref="Military.Battalions.TrainingBuilding"/>): barracks, a workshop, both or none.</summary>
     public IEnumerable<Buildings.BuildingType> TrainingBuildings(IReadOnlySet<Tech> known) =>

@@ -3,6 +3,7 @@ using Conquer.Game.Economy;
 using Conquer.Game.Entities;
 using Conquer.Game.Military;
 using Conquer.Game.Rules;
+using Conquer.Game.Science;
 using Conquer.Game.Simulation;
 using Conquer.Game.World;
 
@@ -46,6 +47,35 @@ internal sealed partial class AiPlayer
 
     /// <summary>Battalions that stay out of its fighting army: scouts claim land and engineers build.</summary>
     private static bool Auxiliary(BattalionType type) => type is BattalionType.Scouts or BattalionType.Engineers or BattalionType.Medics or BattalionType.AntiAir;
+
+    /// <summary>Battalions' worth of each line's equipment it keeps in store; beyond that its workshops rest, to spare the resources.</summary>
+    private const double KitsInStore = 6;
+
+    /// <summary>
+    /// Sets each of its workshops and factories to the equipment it lacks most for its army design, its scouts and its
+    /// engineers: the line whose stockpile, with what the other workshops make in a month, would arm the fewest
+    /// battalions. With enough of everything in store (<see cref="KitsInStore"/>), they stop.
+    /// </summary>
+    private void ChooseProduction()
+    {
+        var lines = (_armyTemplate?.Battalions ?? [BattalionType.LightInfantry]).Append(BattalionType.Scouts).Distinct()
+            .Where(t => t.BestModel(_player.Techs) >= 0).ToList();
+        if (_player.Techs.Contains(Tech.Engineering)) lines.Add(BattalionType.Engineers);
+        var planned = new Dictionary<BattalionType, double>();
+        double Kits(BattalionType type) => (_player.EquipmentOf(Model(type)) / Model(type).Pieces) + planned.GetValueOrDefault(type) * 30;
+        foreach (var p in _player.Provinces.Select(id => Map.Provinces[id]).Where(GameSession.HasWorkshop))
+        {
+            if (lines.Where(t => _session.CanProduce(p, Model(t)).Ok).OrderBy(Kits).Cast<BattalionType?>().FirstOrDefault() is not BattalionType type) continue;
+            if (Kits(type) >= KitsInStore)
+            {
+                if (p.Production != null) _session.SetProduction(_player.Id, p.Id, null);
+                continue;
+            }
+            var model = Model(type);
+            planned[type] = planned.GetValueOrDefault(type) + GameSession.ProductionRate(p, model) / model.Pieces;
+            if (p.Production != model.Key) _session.SetProduction(_player.Id, p.Id, model.Key);
+        }
+    }
 
     /// <summary>The model of the line the nation would raise now.</summary>
     private BattalionInfo Model(BattalionType type) => GameSession.ModelFor(_player, type);

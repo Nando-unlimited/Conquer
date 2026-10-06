@@ -123,7 +123,8 @@ public class SaveGameTests(WorldFixture world)
         // The barracks built catapults before workshops: where the owner knew how, they get a workshop to go on doing so.
         var barracks = _map.Provinces.Where(p => p.OwnerId >= 0 && p.Buildings.Contains(BuildingType.Barracks)).ToList();
         Assert.Contains(barracks, p => p.OwnerId == loaded.Human.Id);
-        Assert.All(barracks, p => Assert.Equal(loaded.Players[p.OwnerId].Techs.Contains(Tech.SiegeEngines), p.Buildings.Contains(BuildingType.Workshop)));
+        // (Since 1.103.0 anyone may build a workshop, so others can have one too.)
+        Assert.All(barracks.Where(p => loaded.Players[p.OwnerId].Techs.Contains(Tech.SiegeEngines)), p => Assert.Contains(BuildingType.Workshop, p.Buildings));
     }
 
     [Fact]
