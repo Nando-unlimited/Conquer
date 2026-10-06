@@ -95,6 +95,7 @@ public sealed partial class GameSession
             player.Stockpile[ResourceType.Food] = GameRules.StartingFood * start;
             player.Stockpile[ResourceType.Gold] = GameRules.StartingGold * start;
             player.Stockpile[ResourceType.Wood] = GameRules.StartingWood * start;
+            player.Stockpile[ResourceType.Stone] = GameRules.StartingStone * start;
             player.Manpower = GameRules.BaseManpower;
             player.ReligionId = faiths.Next(Religions.Count);
             session.Players.Add(player);

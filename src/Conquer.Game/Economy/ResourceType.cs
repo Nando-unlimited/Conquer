@@ -13,6 +13,9 @@ public enum ResourceType
     Rubber,
     Gold,
     Silver,
+    // New ones go at the end: saved games keep stores and deposits by position.
+    Stone,
+    Sulfur,
 }
 
 /// <summary>Where a day's resources came from or went to (<see cref="Entities.Player.LastDayFlows"/>).</summary>
@@ -38,7 +41,7 @@ public static class Resources
     public static readonly ResourceType[] Deposits =
     [
         ResourceType.Coal, ResourceType.Iron, ResourceType.Copper, ResourceType.Silicon, ResourceType.Oil,
-        ResourceType.Aluminium, ResourceType.Rubber, ResourceType.Gold, ResourceType.Silver,
+        ResourceType.Aluminium, ResourceType.Rubber, ResourceType.Gold, ResourceType.Silver, ResourceType.Stone, ResourceType.Sulfur,
     ];
 
     /// <summary>
@@ -47,7 +50,7 @@ public static class Resources
     /// </summary>
     public static readonly ResourceType[] KnownFromStart =
     [
-        ResourceType.Food, ResourceType.Wood, ResourceType.Copper, ResourceType.Gold, ResourceType.Silver,
+        ResourceType.Food, ResourceType.Wood, ResourceType.Copper, ResourceType.Gold, ResourceType.Silver, ResourceType.Stone,
     ];
 
     public static string Name(this ResourceType type) => type switch
@@ -63,6 +66,8 @@ public static class Resources
         ResourceType.Rubber => "Caucho",
         ResourceType.Gold => "Oro",
         ResourceType.Silver => "Plata",
+        ResourceType.Stone => "Piedra",
+        ResourceType.Sulfur => "Azufre",
         _ => type.ToString(),
     };
 }

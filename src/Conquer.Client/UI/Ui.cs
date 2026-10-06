@@ -225,8 +225,8 @@ public sealed class Ui
             else scroll.Grab = null;
         }
         bool lit = scroll.Grab != null || Hover(track);
-        Batch.RoundedRect(track.X, track.Y, track.W, track.H, ScrollBarWidth / 2, Rgba.Black.WithAlpha(0.35f));
-        Batch.RoundedRect(track.X + 1, ThumbY() + 1, track.W - 2, thumbH - 2, ScrollBarWidth / 2 - 1, lit ? Theme.Accent : Theme.ButtonHover);
+        Batch.RoundedRect(track.X, track.Y, track.W, track.H, ScrollBarWidth / 2, Rgba.Black.WithAlpha(0.5f));
+        Batch.RoundedRect(track.X + 1, ThumbY() + 1, track.W - 2, thumbH - 2, ScrollBarWidth / 2 - 1, lit ? Theme.Accent : new Rgba(0xFF7A889C));
     }
 
     /// <summary>Whether a button was clicked this frame (it clicks).</summary>

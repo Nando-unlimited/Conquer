@@ -69,8 +69,9 @@ public static class HelpTopics
         [
             "Tus provincias producen comida y madera, y pagan oro en impuestos. Todo va al almacén de la nación (barra superior). La pestaña Almacén de la nación (N) dice, recurso a recurso, cuánto hay y cuánto entró y salió el último día: producción, comercio, consumo, ejército y talleres.",
             "## Yacimientos",
-            "- Carbón, hierro, cobre, oro, plata, silicio, petróleo, aluminio y caucho salen de yacimientos: bolsas finitas que se agotan.",
-            "- Al empezar solo conoces el cobre, el oro y la plata; los demás los revelan los avances (Minería el carbón, Trabajo del hierro el hierro, Química el caucho...).",
+            "- Piedra, carbón, hierro, cobre, azufre, oro, plata, silicio, petróleo, aluminio y caucho salen de yacimientos: bolsas finitas que se agotan.",
+            "- Al empezar solo conoces la piedra, el cobre, el oro y la plata; los demás los revelan los avances (Minería el carbón, Trabajo del hierro el hierro, Pólvora el azufre, Química el caucho...).",
+            "- La piedra levanta templos, acueductos, anfiteatros, murallas, castillos, universidades y bancos; hay canteras en casi todas las colinas y montañas. El azufre hace la pólvora: lo piden las armas de pólvora, los fusiles, los cañones y la artillería, y escasea fuera de las montañas y los desiertos.",
             $"- Un yacimiento rinde al máximo con {GameRules.DepositFullWorkers:N0} habitantes en su provincia. El modo de mapa Recursos los muestra.",
             "## Edificios",
             "En la pestaña Edificios de cada provincia. Granjas, graneros, aserraderos y minas van en cualquier provincia habitada; el resto, solo en ciudades. Cada edificio pide un avance.",

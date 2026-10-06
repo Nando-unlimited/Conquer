@@ -2,6 +2,17 @@
 
 Todos los cambios del juego, del más reciente al más antiguo. Cada versión es un commit cuyo título es su número.
 
+## [1.107.0] - 2026-10-06
+
+### Añadido
+- **Piedra**: un recurso nuevo que conoces desde el principio. Sale de canteras, que hay en casi todas las colinas y montañas y en algunas llanuras secas. Empiezas con 50.
+- **Azufre**: lo descubre la Pólvora. Sale de yacimientos en las montañas y los desiertos y escasea en el resto, así que se vuelve un bien de comercio.
+
+### Cambiado
+- Los edificios de piedra la piden en vez de parte de su madera: templo (30), acueducto (60), anfiteatro (80), muralla (120), castillo (200), universidad (60) y banco (50).
+- La pólvora pide azufre: las armas de pólvora (10 por batallón en lugar del carbón), los fusiles y las armas modernas (5), los cañones (20 en lugar del carbón), la artillería de campaña y la pesada (15) y la antiaérea (10).
+- Las partidas guardadas reciben la piedra inicial, y sus canteras y yacimientos de azufre empiezan llenos. Los demás yacimientos siguen donde estaban.
+
 ## [1.106.0] - 2026-10-06
 
 ### Cambiado

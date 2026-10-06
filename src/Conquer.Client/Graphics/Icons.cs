@@ -47,7 +47,14 @@ public static class Icons
                 Lump(b, c + new Vector2(0, -0.25f) * s, 0.5f * s, color.Scale(1.3f));
                 break;
             case ResourceType.Gold or ResourceType.Silver: Coin(b, c, s, color); break;
-            case ResourceType.Silicon: Crystal(b, c, s, color); break;
+            case ResourceType.Silicon or ResourceType.Sulfur: Crystal(b, c, s, color); break;
+            case ResourceType.Stone:
+                // Two blocks of cut stone, one on the other.
+                b.Rect(c.X - 0.9f * s - 1, c.Y - 1, 1.8f * s + 2, 0.8f * s + 2, Outline);
+                b.Rect(c.X - 0.9f * s, c.Y, 1.8f * s, 0.8f * s, color);
+                b.Rect(c.X - 0.5f * s - 1, c.Y - 0.75f * s - 1, 1.1f * s + 2, 0.75f * s + 2, Outline);
+                b.Rect(c.X - 0.5f * s, c.Y - 0.75f * s, 1.1f * s, 0.75f * s, color.Scale(1.15f));
+                break;
             case ResourceType.Oil: Drop(b, c, s, color); break;
             case ResourceType.Rubber:
                 b.Circle(c, 0.9f * s, Outline, 0.35f * s);

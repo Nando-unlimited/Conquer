@@ -108,7 +108,8 @@ public sealed record SupplyInfo(string Key, string Name, ResourceCost PieceCost)
 /// <summary>The shared supplies: the infantry's weapons, one kind per age, and the general supplies.</summary>
 public static class Supplies
 {
-    private const ResourceType W = ResourceType.Wood, Cu = ResourceType.Copper, Fe = ResourceType.Iron, C = ResourceType.Coal, Rub = ResourceType.Rubber;
+    private const ResourceType W = ResourceType.Wood, Cu = ResourceType.Copper, Fe = ResourceType.Iron, C = ResourceType.Coal, Rub = ResourceType.Rubber,
+        S = ResourceType.Sulfur;
 
     /// <summary>Per piece: a battalion of 100 takes a hundred times as much.</summary>
     private static SupplyInfo Of(string key, string name, params (ResourceType, double PerHundred)[] cost) =>
@@ -120,9 +121,9 @@ public static class Supplies
     public static readonly SupplyInfo AncientArms = Of("arms-ancient", "Armas antiguas", (W, 30));
     public static readonly SupplyInfo ClassicalArms = Of("arms-classical", "Armas clásicas", (W, 20), (Cu, 15));
     public static readonly SupplyInfo MedievalArms = Of("arms-medieval", "Armas medievales", (W, 25), (Fe, 20));
-    public static readonly SupplyInfo Firearms = Of("arms-gunpowder", "Armas de pólvora", (W, 20), (Fe, 20), (C, 10));
-    public static readonly SupplyInfo Rifles = Of("arms-rifles", "Fusiles", (W, 20), (Fe, 30), (C, 15));
-    public static readonly SupplyInfo ModernArms = Of("arms-modern", "Armas modernas", (Fe, 30), (C, 15), (Rub, 5));
+    public static readonly SupplyInfo Firearms = Of("arms-gunpowder", "Armas de pólvora", (W, 20), (Fe, 20), (S, 10));
+    public static readonly SupplyInfo Rifles = Of("arms-rifles", "Fusiles", (W, 20), (Fe, 30), (C, 10), (S, 5));
+    public static readonly SupplyInfo ModernArms = Of("arms-modern", "Armas modernas", (Fe, 30), (C, 10), (Rub, 5), (S, 5));
 
     public static readonly SupplyInfo[] All = [General, AncientArms, ClassicalArms, MedievalArms, Firearms, Rifles, ModernArms];
 }
@@ -141,7 +142,7 @@ public static class Battalions
         model with { Cost = new([.. model.Cost.Items.Concat(supply.PieceCost.Times(model.Pieces).Items).OrderBy(i => i.Type)]), Supply = supply };
 
     private const ResourceType W = ResourceType.Wood, G = ResourceType.Gold, Cu = ResourceType.Copper, Fe = ResourceType.Iron,
-        C = ResourceType.Coal, Oil = ResourceType.Oil, Rub = ResourceType.Rubber, Al = ResourceType.Aluminium;
+        C = ResourceType.Coal, Oil = ResourceType.Oil, Rub = ResourceType.Rubber, Al = ResourceType.Aluminium, S = ResourceType.Sulfur;
 
     /// <summary>The light infantry's last model, which the heavy infantry also becomes once rifles leave no room for armour.</summary>
     private static readonly BattalionInfo LightInfantry = Takes(Supplies.Rifles, new("light-infantry", "Infantería ligera", "L", 100, Cost((G, 70)), 35,
@@ -209,14 +210,14 @@ public static class Battalions
         [
             new("catapults", "Catapultas", "T", 50, Cost((W, 90), (G, 40), (Cu, 10)), 40, [Tech.SiegeEngines], 12, 1, 20, 0.7, Machine: true) { Pieces = 5, PieceName = "catapultas" },
             new("trebuchets", "Trabuquetes", "T", 50, Cost((W, 120), (G, 50), (Fe, 10)), 45, [Tech.SiegeWorkshops], 16, 2, 22, 0.6, Machine: true) { Pieces = 4, PieceName = "trabuquetes" },
-            new("cannons", "Cañones", "T", 80, Cost((W, 60), (G, 60), (Fe, 40), (C, 20)), 45, [Tech.Metallurgy], 20, 3, 25, 0.6, Machine: true) { Pieces = 8, PieceName = "cañones" },
-            new("field-artillery", "Artillería de campaña", "T", 100, Cost((W, 40), (G, 80), (Fe, 60), (C, 30)), 45, [Tech.Steel], 28, 5, 30, 0.7, Machine: true) { Pieces = 12, PieceName = "cañones de campaña" },
-            new("heavy-artillery", "Artillería pesada", "T", 100, Cost((G, 120), (Fe, 80), (C, 30), (Oil, 10)), 50, [Tech.HeavyArtillery], 38, 6, 30, 0.6, Machine: true) { Pieces = 8, PieceName = "obuses" },
+            new("cannons", "Cañones", "T", 80, Cost((W, 60), (G, 60), (Fe, 40), (S, 20)), 45, [Tech.Metallurgy], 20, 3, 25, 0.6, Machine: true) { Pieces = 8, PieceName = "cañones" },
+            new("field-artillery", "Artillería de campaña", "T", 100, Cost((W, 40), (G, 80), (Fe, 60), (C, 20), (S, 15)), 45, [Tech.Steel], 28, 5, 30, 0.7, Machine: true) { Pieces = 12, PieceName = "cañones de campaña" },
+            new("heavy-artillery", "Artillería pesada", "T", 100, Cost((G, 120), (Fe, 80), (C, 20), (Oil, 10), (S, 15)), 50, [Tech.HeavyArtillery], 38, 6, 30, 0.6, Machine: true) { Pieces = 8, PieceName = "obuses" },
         ]),
         // Guns pointed at the sky: they shoot down aircraft and shield the troops beside them (MilitaryRules.AntiAirShield).
         [BattalionType.AntiAir] = new("Antiaérea", BattalionGroup.Artillery,
         [
-            new("anti-air", "Artillería antiaérea", "Á", 80, Cost((G, 100), (Fe, 50), (C, 20)), 40, [Tech.Aviation], 8, 12, 40, 0.8, Machine: true) { Pieces = 12, PieceName = "cañones antiaéreos" },
+            new("anti-air", "Artillería antiaérea", "Á", 80, Cost((G, 100), (Fe, 50), (C, 10), (S, 10)), 40, [Tech.Aviation], 8, 12, 40, 0.8, Machine: true) { Pieces = 12, PieceName = "cañones antiaéreos" },
         ]),
         // Sappers and bridge builders: behind the line they blunt the defenders' terrain; they alone build roads and railways.
         [BattalionType.Engineers] = new("Ingenieros", BattalionGroup.Support,

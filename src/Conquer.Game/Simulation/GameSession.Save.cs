@@ -162,6 +162,8 @@ public sealed partial class GameSession
             p.Mood = ps.Mood;
             p.Fertility = ps.Fertility;
             ps.Reserves.CopyTo(p.Reserves, 0);
+            // Stone and sulfur deposits, from 1.107.0, are full in older saves.
+            for (int r = ps.Reserves.Length; r < p.Reserves.Length; r++) p.Reserves[r] = p.DepositSizes[r] * GameRules.DepositSizeMultiplier;
             // A deposit the old generator did not place has nothing saved; it starts full, like the rest did.
             if (!save.ExtraDeposits)
                 foreach (var r in Resources.Deposits)
@@ -189,7 +191,8 @@ public sealed partial class GameSession
         {
             // Before 1.77.0 there were no faiths: each nation gets one by its number, and its people share it.
             var player = new Player(s.Id, s.Name, s.Color, s.IsHuman) { CapitalCityId = s.CapitalCityId, Eliminated = s.Eliminated, ReligionId = s.ReligionId ?? s.Id % Religions.Count };
-            foreach (var r in Resources.All) player.Stockpile[r] = s.Stockpile[(int)r];
+            // Before 1.107.0 there was no stone nor sulfur: the nation gets the stone it would have started with.
+            foreach (var r in Resources.All) player.Stockpile[r] = (int)r < s.Stockpile.Length ? s.Stockpile[(int)r] : r == ResourceType.Stone ? GameRules.StartingStone : 0;
             s.LastDayNet.CopyTo(player.LastDayNet, 0);
             // Before 1.105.0 the day's flows were not kept: they fill in at the next day.
             for (int f = 0; f < Math.Min(player.LastDayFlows.Length, s.LastDayFlows?.Length ?? 0); f++) s.LastDayFlows![f].CopyTo(player.LastDayFlows[f], 0);
