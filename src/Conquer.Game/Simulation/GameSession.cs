@@ -254,6 +254,7 @@ public sealed partial class GameSession
             foreach (var player in Players) DailyProduction(player);
             foreach (var player in Players) DailyMilitary(player);
             DailyConvoyRaids();
+            DailyAir();
             DailySieges();
             DailyMemories();
             DailyTributes();

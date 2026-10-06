@@ -117,20 +117,30 @@ public sealed partial class GameSession
             double share = Math.Min(MilitaryRules.MaxDailyConvoyLoss, raid / (raid + MilitaryRules.EscortWeight * escort + MilitaryRules.ConvoyEvasion));
             if (share <= 0) continue;
 
-            var owner = Players[s.OwnerId];
-            double lost = s.Convoys * share;
-            s.Convoys -= lost;
-            owner.Convoys = Math.Max(0, owner.Convoys - lost);
-            owner.ConvoysLostLastDay += lost;
-            s.Men *= 1 - share;
-            s.Ammo *= 1 - share;
-            foreach (var key in s.Pieces.Keys.ToList()) s.Pieces[key] *= 1 - share;
-            foreach (var raider in hunting) Players[raider.OwnerId].ConvoysSunkLastDay += lost / hunting.Count;
+            SinkConvoys(s, share, [.. hunting.Select(r => r.OwnerId)]);
         }
         if (Human.ConvoysLostLastDay >= 0.05)
             Notify(HumanPlayerId, $"El enemigo ha hundido {Human.ConvoysLostLastDay:0.#} convoyes con lo que llevaban. Escolta sus rutas con tus flotas.");
         if (Human.ConvoysSunkLastDay >= 0.05)
             Notify(HumanPlayerId, $"Tus flotas han hundido {Human.ConvoysSunkLastDay:0.#} convoyes enemigos.");
+    }
+
+/// <summary>    /// Sinks this share of a shipment's convoys and of its cargo; its nation loses the convoys, and the raiders (one entry    /// per raiding wing or fleet) share the credit.    /// </summary>    private void SinkConvoys(Shipment s, double share, IReadOnlyList<int> raiders)    {        var owner = Players[s.OwnerId];        double lost = s.Convoys * share;        s.Convoys -= lost;        owner.Convoys = Math.Max(0, owner.Convoys - lost);        owner.ConvoysLostLastDay += lost;        s.Men *= 1 - share;        s.Ammo *= 1 - share;        foreach (var key in s.Pieces.Keys.ToList()) s.Pieces[key] *= 1 - share;        foreach (int raider in raiders) Players[raider].ConvoysSunkLastDay += lost / raiders.Count;    }
+    /// <summary>
+    /// Sinks this share of a shipment's convoys and of its cargo; its nation loses the convoys, and the raiders (one entry
+    /// per raiding fleet or wing) share the credit.
+    /// </summary>
+    private void SinkConvoys(Shipment s, double share, IReadOnlyList<int> raiders)
+    {
+        var owner = Players[s.OwnerId];
+        double lost = s.Convoys * share;
+        s.Convoys -= lost;
+        owner.Convoys = Math.Max(0, owner.Convoys - lost);
+        owner.ConvoysLostLastDay += lost;
+        s.Men *= 1 - share;
+        s.Ammo *= 1 - share;
+        foreach (var key in s.Pieces.Keys.ToList()) s.Pieces[key] *= 1 - share;
+        foreach (int raider in raiders) Players[raider].ConvoysSunkLastDay += lost / raiders.Count;
     }
 
     /// <summary>

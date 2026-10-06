@@ -71,7 +71,8 @@ public sealed partial class GameSession
         {
             var p = Map.Provinces[id];
             if (ProductionOf(p) is not { } model || p.IsOccupied || !CanProduce(p, model).Ok) continue;
-            double pieces = ProductionRate(p, model);
+            // Yesterday's bombing holds back the work.
+            double pieces = ProductionRate(p, model) * (1 - BombingDamage(p));
             var cost = model.EquipmentCost;
             // The share of the day's work the stores can pay for.
             double share = cost.Items.Length == 0 ? 1 : cost.Items.Min(i => Math.Min(1, player.Stockpile[i.Type] / (i.Amount * pieces / model.Pieces)));

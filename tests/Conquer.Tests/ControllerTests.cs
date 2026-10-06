@@ -96,7 +96,37 @@ public class ControllerTests(WorldFixture world)
     private static Button Button(Document doc, string text) =>
         doc.Elements.OfType<Button>().Concat(doc.Elements.OfType<ButtonRow>().SelectMany(r => r.Buttons)).First(b => b.Text.StartsWith(text));
 
-[Fact]    public void FleetPanelsSetTheirMission()    {        var game = GameWithCapital();        var sea = game.Session.Map.Provinces.First(p => p.IsWater);        var fleet = game.Session.AddFleet(0, sea.Id, BattalionType.LineShip);        game.SelectUnit(fleet.Id);        Assert.Equal("Sin misión", game.SidePanel()!.Elements.OfType<Info>().Single(i => i.Label == "Misión").Value);        Button(game.SidePanel()!, "Atacar convoyes").Press();        Assert.Equal(FleetMission.Raid, fleet.Mission);        Assert.True(Button(game.SidePanel()!, "Atacar convoyes").Active);    }
+    [Fact]
+    public void FleetPanelsSetTheirMission()
+    {
+        var game = GameWithCapital();
+        var sea = game.Session.Map.Provinces.First(p => p.IsWater);
+        var fleet = game.Session.AddFleet(0, sea.Id, BattalionType.LineShip);
+        game.SelectUnit(fleet.Id);
+        Assert.Equal("Sin misión", game.SidePanel()!.Elements.OfType<Info>().Single(i => i.Label == "Misión").Value);
+        Button(game.SidePanel()!, "Atacar convoyes").Press();
+        Assert.Equal(FleetMission.Raid, fleet.Mission);
+        Assert.True(Button(game.SidePanel()!, "Atacar convoyes").Active);
+    }
+
+    [Fact]
+    public void AnAirMissionIsGivenFromTheAirfieldByClickingItsTarget()
+    {
+        var game = GameWithCapital();
+        int home = game.SelectedProvince;
+        var s = game.Session;
+        foreach (var t in new[] { Conquer.Game.Science.Tech.Combustion, Conquer.Game.Science.Tech.Electricity, Conquer.Game.Science.Tech.Aviation }) s.Human.Learn(t);
+        s.Map.Provinces[home].AddBuilding(BuildingType.Airfield);
+        var wing = s.AddWing(0, home, BattalionType.Fighters);
+        game.ProvinceTab = ProvinceTab.Army;
+        Button(game.SidePanel()!, "Superioridad aérea...").Press();
+        Assert.NotNull(game.TargetPrompt);
+        game.HoverProvince = s.Map.Provinces[home].Neighbors[0];
+        game.ClickProvince();
+        Assert.Null(game.TargetPrompt);
+        Assert.Equal((AirMission.AirSuperiority, game.HoverProvince), (wing.Mission, wing.TargetProvinceId!.Value));
+        Assert.Equal(home, game.SelectedProvince); // the click picked the target, not a province
+    }
     [Fact]
     public void UnitPanelsShowAmmunitionShipmentsAndTheHeadquartersPriority()
     {

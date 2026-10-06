@@ -19,6 +19,27 @@ public static class MilitaryRules
     public const int PlanesPerWing = 10;
     /// <summary>Wings an airfield holds, and an aircraft carrier.</summary>
     public const int WingsPerAirfield = 4, WingsPerCarrier = 2;
+    /// <summary>An air mission covers the provinces this close to its target.</summary>
+    public const double MissionRadiusKm = 300;
+    /// <summary>Ground troops fight up to this much better with the sky theirs, and as much worse with it the enemy's.</summary>
+    public const double AirSuperiorityBonus = 0.15;
+    /// <summary>The share of the fighters over a province a side needs to rule its sky.</summary>
+    public const double AirRuleShare = 0.6;
+    /// <summary>Under a sky the enemy rules, troops march this many times slower and their shipments take as much longer.</summary>
+    public const double UnderEnemyAirSlowdown = 1.5;
+    /// <summary>Share of what is shipped to troops under a sky the enemy rules that does not get through (it goes back).</summary>
+    public const double UnderEnemyAirSupplyLoss = 0.25;
+    /// <summary>Bombers and attack aircraft under a sky the enemy rules do this share of their harm.</summary>
+    public const double UnescortedBomberEffect = 0.5;
+    /// <summary>
+    /// A wing loses each day incoming / (incoming + AirDefenseWeight * defence * planes share + AirEvasion) of its planes, at most
+    /// MaxDailyAirLoss, where incoming is the fire of the enemy wings and anti-air in its area.
+    /// </summary>
+    public const double AirDefenseWeight = 5, AirEvasion = 20, MaxDailyAirLoss = 0.4;
+    /// <summary>A wing with less organisation than this share stays on the ground.</summary>
+    public const double MinFlyingOrganisation = 0.2;
+    /// <summary>Hours of fire a naval strike deals once a day.</summary>
+    public const double NavalStrikeHours = 4;
     /// <summary>A fleet in a port with a dry dock recovers organisation and crews this many times faster.</summary>
     public const double DryDockRepair = 2;
     /// <summary>Share of the newer model's cost a ship's refit costs, in one of the nation's ports.</summary>

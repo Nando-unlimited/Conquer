@@ -132,7 +132,9 @@ public sealed partial class GameSession
         var (routeHours, previous) = SupplyRoutes(player, capital.Id, served.Select(s => s.Unit.ProvinceId).ToHashSet());
         var queue = new List<(Unit Unit, int Rank, double Hours)>();
         foreach (var (unit, rank, slowdown) in served)
-            if (!double.IsPositiveInfinity(routeHours[unit.ProvinceId])) queue.Add((unit, rank, routeHours[unit.ProvinceId] * slowdown));
+            if (!double.IsPositiveInfinity(routeHours[unit.ProvinceId]))
+                queue.Add((unit, rank, routeHours[unit.ProvinceId] * slowdown
+                    * (EnemyRulesTheAir(player.Id, Map.Provinces[unit.ProvinceId]) ? MilitaryRules.UnderEnemyAirSlowdown : 1)));
 
         player.CargoLeftForWantOfConvoys = 0;
         foreach (var (unit, _, hours) in queue.OrderBy(q => q.Rank).ThenBy(q => q.Hours))
@@ -173,6 +175,8 @@ public sealed partial class GameSession
                 player.AddEquipment(Supplies.General.Key, -ammo);
                 shipment.Ammo = ammo;
             }
+            // Under a sky the enemy rules, part of it cannot get through.
+            if (EnemyRulesTheAir(player.Id, Map.Provinces[unit.ProvinceId])) Unload(player, shipment, MilitaryRules.UnderEnemyAirSupplyLoss);
             // Over the sea it needs convoys for its cargo; what they cannot carry stays behind.
             if (shipment.SeaRoute.Count > 0 && Cargo(shipment) > 0)
             {

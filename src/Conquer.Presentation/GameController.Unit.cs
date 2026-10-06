@@ -194,6 +194,12 @@ public sealed partial class GameController
             doc.Add(new Info("Reparaciones", port ? "En puerto" : "Solo en puerto", port ? Tone.Good : Tone.Dim));
             RefitLine(doc, unit);
             MissionLines(doc, unit);
+            var carried = Session.WingsOn(unit).ToList();
+            if (Session.CarrierRoom(unit) + carried.Count > 0)
+            {
+                doc.Add(new Label($"Alas embarcadas ({carried.Count}/{Session.CarrierRoom(unit) + carried.Count})", Tone.Accent, Bold: true, Height: 22));
+                foreach (var wing in carried) WingRows(doc, wing);
+            }
             doc.Add(OfficerLine("Oficial", unit.Officer, "Manda esta flota: sus rasgos y su habilidad afectan al fuego de sus barcos."));
             doc.Add(PortraitsOf(unit, ("Oficial", unit.Officer)));
             if (unit.Capacity > 0)
@@ -238,6 +244,7 @@ public sealed partial class GameController
             foreach (var regiment in unit.Regiments) RegimentRows(doc, regiment, 0);
         }
         if (unit.OwnerId != Human.Id || unit.IsAboard) return;
+        if (!unit.IsFleet) ParadropButton(doc, unit);
         if (!unit.IsFleet) AttachButtons(doc, unit);
     }
 

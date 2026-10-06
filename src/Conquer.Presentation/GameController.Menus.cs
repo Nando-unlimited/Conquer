@@ -20,6 +20,7 @@ public sealed partial class GameController
         else if (RoadWindowOpen) CloseRoadWindow();
         else if (ChangelogOpen) ChangelogOpen = false;
         else if (Nation.Visible) Nation.Visible = false;
+        else if (TargetPrompt != null) CancelTarget();
         else if (ChoosingMigrationTarget) ChoosingMigrationTarget = false;
         else if (HasSelection) ClearSelection();
         else MenuOpen = !MenuOpen;

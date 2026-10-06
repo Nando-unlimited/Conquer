@@ -174,6 +174,7 @@ public sealed partial class GameController
         {
             var owner = Session.Players[p.OwnerId];
             doc.Add(new Info("Dueño", owner.Name, Ink.Nation(owner.Color)));
+            SkyLine(doc, p);
             int incoming = IncomingMigrants(p.Id);
             int outgoing = Session.Migrations.Where(m => m.FromProvinceId == p.Id).Sum(m => m.People);
             doc.Add(new Info("Población", $"{p.Population:N0} / {Session.CapacityOf(p):N0}" + (incoming > 0 ? $" (+{incoming:N0} en camino)" : ""), Tone.Normal,
@@ -299,17 +300,7 @@ public sealed partial class GameController
         var wings = Session.WingsAt(p).ToList();
         doc.Add(Section($"Aeródromo ({wings.Count}/{MilitaryRules.WingsPerAirfield} alas)"));
         if (wings.Count == 0) doc.Add(new Label("Sin alas: fórmalas con los botones de aviones de arriba.", Tone.Dim, Height: 22));
-        foreach (var wing in wings)
-        {
-            doc.Add(new Row(wing.Name, $"{wing.PlaneCount:0}/{wing.Info.Pieces} aviones", Tone.Normal, Tone.Dim, Bold: true, Height: 19, Icon: new BattalionIcon(wing.Type),
-                Tooltip: $"{wing.Info.Name}: fuego en tierra {wing.Info.Attack:0}, en el aire {wing.Info.AirAttack:0}, defensa {wing.Info.Defense:0}, alcance {wing.Info.RangeKm:N0} km." +
-                         (wing.Info.Capacity > 0 ? $" Lleva {wing.Info.Capacity} paracaidistas." : "")));
-            doc.Add(new Bar(wing.Planes.StrengthShare, Tone.Strength, Tone.Track, 4, 1));
-            doc.Add(new Bar(wing.Planes.OrganisationShare, Tone.Organisation, Tone.Track, 4, 4));
-            if (p.OwnerId == Human.Id)
-                doc.Add(new Button("Disolver", () => Show(Session.DisbandWing(Human.Id, wing.Id)), Tooltip: "Sus tripulaciones vuelven a la reserva y sus aviones al almacén.",
-                    Size: TextSize.Small, Height: 24, Gap: 6));
-        }
+        foreach (var wing in wings) WingRows(doc, wing);
     }
 
     /// <summary>What sets a line apart in battle, beyond its numbers; null for the plain ones.</summary>

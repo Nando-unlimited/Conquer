@@ -2,6 +2,20 @@
 
 Todos los cambios del juego, del más reciente al más antiguo. Cada versión es un commit cuyo título es su número.
 
+## [1.115.0] - 2026-10-06
+
+La aviación (2 de 3): misiones y combate aéreo.
+
+### Añadido
+- **Misiones de las alas**: en el panel del aeródromo (o del portaaviones) cada ala recibe su misión y eliges en el mapa la provincia sobre la que vuela, a su alcance. Cubre las provincias a menos de 300 km. Con poca organización se queda en tierra.
+  - **Superioridad aérea** (cazas): quien tiene el 60 % de los cazas sobre una provincia domina su cielo. Sus tropas luchan hasta un 15 % mejor y las enemigas peor; bajo un cielo enemigo las tropas marchan 1,5 veces más despacio, sus envíos tardan más y una cuarta parte no llega. El panel de la provincia dice quién domina.
+  - **Apoyo cercano**: suma su fuego a tus batallas de la zona.
+  - **Bombardeo estratégico**: quita moral a la provincia enemiga, frena sus talleres al día siguiente y puede derribar edificios.
+  - **Ataque naval**: daña las flotas enemigas y hunde convoyes en los mares de la zona.
+  - **Paracaidistas**: una unidad de paracaidistas en un aeródromo con aviones de transporte se lanza («Lanzar en paracaídas...» en su panel) sobre una provincia sin tropas enemigas a su alcance, y la ocupa si es enemiga.
+- **Combate aéreo**: cada día las alas enemigas que se cruzan se derriban aviones y la antiaérea dispara a las que atacan su zona. Bajo un cielo enemigo, bombarderos, apoyo cercano y aviación naval hacen la mitad. Nueva alerta «Aviones derribados».
+- La ventana de batalla muestra el apoyo aéreo de cada bando y el efecto del cielo.
+
 ## [1.114.0] - 2026-10-06
 
 Última parte de la nueva estructura militar: la aviación (1 de 3).

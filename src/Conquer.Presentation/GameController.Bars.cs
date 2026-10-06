@@ -78,7 +78,8 @@ public sealed partial class GameController
         return buttons;
     }
 
-    public Hints Hints() => ChoosingMigrationTarget
+    public Hints Hints() => TargetPrompt != null ? new([TargetPrompt, "Esc: cancelar"], Tone.Accent)
+        : ChoosingMigrationTarget
         ? new(["Clic izquierdo: elegir provincia de destino", "Esc: cancelar"], Tone.Accent)
         : new(["Clic: seleccionar", "Arrastrar: mover mapa", "Clic dcho: mover unidad", "Rueda: zoom", "Espacio: pausa", "1-5: velocidad", "Inicio: tu capital", "F1: ayuda"], Tone.Dim);
 
@@ -114,6 +115,7 @@ public sealed partial class GameController
             text += Session.HasOtherFaith(p) ? $"\n{GameSession.ReligionName(p.ReligionId)} ({p.Conversion:P0} convertida)" : $"\n{GameSession.ReligionName(p.ReligionId)}";
         if (GameSession.IsSick(p) && Session.VisibleProvinces(Human.Id).Contains(p.Id)) text += $"\nEpidemia: {p.PlagueDaysLeft} días";
         if (ChoosingMigrationTarget) text += "\nClic para enviar aquí a los migrantes";
+        if (TargetPrompt != null) text += $"\n{TargetPrompt}";
         return text;
     }
 

@@ -153,7 +153,8 @@ public sealed partial class GameSession
 
     /// <summary>Hours a unit needs for one step: the way there at its speed, slowed on land by snow and mud.</summary>
     private double UnitStepHours(Unit unit, int from, int to) =>
-        Pathfinder.StepHours(from, to) / unit.Speed * (unit.IsFleet ? 1 : SeasonSlowdown(Map.Provinces[to]));
+        Pathfinder.StepHours(from, to) / unit.Speed * (unit.IsFleet ? 1 : SeasonSlowdown(Map.Provinces[to]))
+        * (!unit.IsFleet && EnemyRulesTheAir(unit.OwnerId, Map.Provinces[to]) ? MilitaryRules.UnderEnemyAirSlowdown : 1);
 
     public CommandResult MoveUnit(int playerId, int unitId, int targetProvinceId)
     {
@@ -1129,7 +1130,8 @@ public sealed partial class GameSession
             var attacking = Engage(attackers, province, attacking: true);
             var defending = Engage(defenders, province, attacking: false, HasEngineers(attackers));
             (attacking, defending) = FaceEachOther(attacking, defending);
-            double attackFire = SideFire(attacking), defenseFire = SideFire(defending);
+            // The attack aircraft over the battle add their fire to their side's.
+            double attackFire = SideFire(attacking) + CloseAirSupport(battle.AttackerId, province), defenseFire = SideFire(defending) + CloseAirSupport(battle.DefenderId, province);
             battle.DefenderLosses += Damage(defending, attackFire);
             battle.AttackerLosses += Damage(attacking, defenseFire);
             SpendAmmo(attacking.Concat(defending));
@@ -1203,7 +1205,7 @@ public sealed partial class GameSession
         foreach (var unit in units)
         {
             double multiplier = Math.Max(0, 1 + CommandBonus(unit) + (GeneralOf(unit)?.FireBonus(attacking) ?? 0) + (unit.Officer?.FireBonus(attacking) ?? 0))
-                                * (IsInSupply(unit) ? 1 : MilitaryRules.OutOfSupplyEfficiency) * AmmoEfficiency(unit)
+                                * (IsInSupply(unit) ? 1 : MilitaryRules.OutOfSupplyEfficiency) * AmmoEfficiency(unit) * AirSuperiorityMultiplier(unit.OwnerId, province)
                                 * (attacking ? 1 : DefenseMultiplier(province, enemyEngineers));
             foreach (var b in unit.Battalions)
             {

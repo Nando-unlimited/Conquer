@@ -51,6 +51,24 @@ public sealed partial class GameController
     public bool ChoosingMigrationTarget { get; set; }
     public int MigrationAmount { get; set; } = 50;
 
+    /// <summary>What the next click on the map picks a province for (an air mission, a drop), shown as a hint; null when nothing.</summary>
+    public string? TargetPrompt { get; private set; }
+    private Func<int, CommandResult>? _onTarget;
+
+    /// <summary>The next left click on the map picks a province for <paramref name="act"/>; Esc cancels.</summary>
+    public void ChooseTarget(string prompt, Func<int, CommandResult> act)
+    {
+        TargetPrompt = prompt;
+        _onTarget = act;
+        ChoosingMigrationTarget = false;
+    }
+
+    public void CancelTarget()
+    {
+        TargetPrompt = null;
+        _onTarget = null;
+    }
+
     public CityNaming? Naming { get; private set; }
 
     /// <summary>The nation screen (button «Nación» or key N).</summary>
@@ -222,6 +240,12 @@ public sealed partial class GameController
     /// </summary>
     public void ClickProvince()
     {
+        if (_onTarget is { } act)
+        {
+            CancelTarget();
+            if (HoverProvince >= 0) Show(act(HoverProvince));
+            return;
+        }
         if (ChoosingMigrationTarget)
         {
             ChoosingMigrationTarget = false;

@@ -1,3 +1,4 @@
+using Conquer.Game.World;
 using Conquer.Game.Entities;
 using Conquer.Game.Military;
 using Conquer.Game.Rules;
@@ -112,13 +113,13 @@ public sealed partial class GameController
 
         return new BattleWindow($"Batalla por {Session.PlaceName(p)}", state, ongoing ? Tone.Bad : Tone.Accent, note, 26, fire,
         [
-            BattleSide("Atacante", battle.AttackerId, attackSide, battle.AttackerLosses, attackers, attacking, true, ongoing),
-            BattleSide("Defensor", battle.DefenderId, defenseSide, battle.DefenderLosses, defenders, defending, false, ongoing),
+            BattleSide("Atacante", battle.AttackerId, attackSide, battle.AttackerLosses, attackers, attacking, true, ongoing, p),
+            BattleSide("Defensor", battle.DefenderId, defenseSide, battle.DefenderLosses, defenders, defending, false, ongoing, p),
         ], null, battle.History.Count >= 2 ? Chart(battle) : null, goTo, close);
     }
 
     private Document BattleSide(string role, int playerId, SideStats side, double losses, List<Unit> units, List<GameSession.Engaged> engaged,
-        bool attacking, bool ongoing)
+        bool attacking, bool ongoing, Province where)
     {
         var player = Session.Players[playerId];
         var doc = new Document();
@@ -139,6 +140,9 @@ public sealed partial class GameController
         int support = engaged.Count(e => e.Exposure < 1);
         doc.Add(Stat("Combaten", $"{engaged.Count - support} en el frente, {support} detrás, {total - engaged.Count} en reserva"));
         doc.Add(Stat("Armas combinadas", $"+{GameSession.CombinedArms(engaged.Select(e => e.Role)):P0}"));
+        double cas = Session.CloseAirSupport(playerId, where), sky = Session.AirSuperiorityMultiplier(playerId, where);
+        if (cas > 0 || Math.Abs(sky - 1) > 1e-9)
+            doc.Add(Stat("Aviación", (cas > 0 ? $"apoyo {cas:0.#}/h" : "sin apoyo") + (Math.Abs(sky - 1) > 1e-9 ? $" · cielo {sky - 1:+0%;-0%}" : ""), sky < 1 ? Tone.Bad : Tone.Normal));
         doc.Add(new Space(8));
         doc.Add(new Label(units.Count == 1 ? "1 unidad" : $"{units.Count} unidades", Tone.Normal, Bold: true));
         foreach (var unit in units) doc.Add(BattleUnit(unit, engaged.Where(e => e.Unit == unit).ToList(), attacking));

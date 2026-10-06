@@ -78,6 +78,10 @@ public sealed partial class GameController
             alerts.Add(new Alert("Faltan convoyes", Tone.Bad,
                 $"Los envíos a tus tropas al otro lado del mar dejaron atrás {Human.CargoLeftForWantOfConvoys:N0} hombres, piezas o suministros por falta de convoyes. Encarga más en la pestaña Marina.",
                 () => OpenNation(NationTab.Navy)));
+        if (Session.PlanesLostLastDay(Human.Id) >= 0.5)
+            alerts.Add(new Alert("Aviones derribados", Tone.Bad,
+                $"Ayer perdimos {Session.PlanesLostLastDay(Human.Id):0} aviones y derribamos {Session.PlanesDownedLastDay(Human.Id):0}. Los cazas en superioridad aérea protegen a tus bombarderos; la antiaérea enemiga dispara a los que bombardean.",
+                () => { }));
         if (Human.ConvoysLostLastDay >= 0.05)
             alerts.Add(new Alert("Convoyes hundidos", Tone.Bad,
                 $"Ayer el enemigo hundió {Human.ConvoysLostLastDay:0.#} de tus convoyes con su carga. Pon flotas a escoltar los mares de sus rutas o cambia de ruta.",

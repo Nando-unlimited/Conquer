@@ -182,6 +182,12 @@ public static class HelpTopics
             "- Forma las alas con los botones de aviones de la pestaña Ejército del aeródromo; el panel de la provincia muestra las que tiene.",
             $"- En su base, si tiene suministro, un ala recupera organización y repone aviones del almacén y tripulaciones de la reserva. Cada portaaviones lleva {MilitaryRules.WingsPerCarrier} alas de cazas, apoyo cercano o aviación naval, y si se hunde caen con él.",
             "- Un ala puede cambiar de base a otro aeródromo con sitio o a un portaaviones a menos del doble de su alcance. Si pierde su base, vuela al aeródromo tuyo más cercano con sitio; si no hay, se pierde.",
+            "## Misiones",
+            $"- En el panel del aeródromo (o del portaaviones) eliges la misión de cada ala y la provincia sobre la que vuela, a su alcance: cubre las provincias a menos de {MilitaryRules.MissionRadiusKm:N0} km. Con menos del {MilitaryRules.MinFlyingOrganisation:P0} de organización no despega.",
+            $"- Superioridad aérea (cazas): quien tiene al menos el {MilitaryRules.AirRuleShare:P0} de los cazas sobre una provincia domina su cielo. Sus tropas luchan hasta un {MilitaryRules.AirSuperiorityBonus:P0} mejor y las enemigas peor; las tropas bajo un cielo enemigo marchan más despacio y reciben menos suministro. El panel de la provincia dice quién domina.",
+            "- Apoyo cercano: suma su fuego a tus batallas de la zona. Bombardeo estratégico: quita moral a la provincia enemiga, frena sus talleres y puede derribar edificios. Ataque naval: daña las flotas enemigas y hunde convoyes en los mares de la zona.",
+            $"- Bajo un cielo enemigo, los bombarderos, el apoyo cercano y la aviación naval hacen la mitad ({MilitaryRules.UnescortedBomberEffect:P0}). Cada día las alas enemigas que se cruzan se derriban aviones, y la antiaérea dispara a los que atacan su zona.",
+            "- Paracaidistas: una unidad solo de paracaidistas en un aeródromo con aviones de transporte puede lanzarse («Lanzar en paracaídas...» en su panel) sobre una provincia sin tropas enemigas a su alcance; si es enemiga, la ocupa.",
         ]),
         ("Flotas y mar",
         [
