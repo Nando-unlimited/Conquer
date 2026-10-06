@@ -1,5 +1,6 @@
 using Conquer.Game.Buildings;
 using Conquer.Game.Economy;
+using Conquer.Game.Entities;
 using Conquer.Game.Military;
 using Conquer.Game.Rules;
 using Conquer.Game.Science;
@@ -61,5 +62,39 @@ public class StoneAndSulfurTests(WorldFixture world)
         Assert.Equal(GameRules.StartingStone, loaded.Human.Stockpile[ResourceType.Stone]);
         Assert.All(_map.Provinces.Where(p => p.Deposits[(int)ResourceType.Stone] > 0),
             p => Assert.Equal(p.DepositSizes[(int)ResourceType.Stone] * GameRules.DepositSizeMultiplier, p.Reserves[(int)ResourceType.Stone], 3));
+    }
+}
+
+/// <summary>Saltpeter, for gunpowder with the sulfur, and horses, for the cavalry.</summary>
+[Collection("World")]
+public class SaltpeterAndHorsesTests(WorldFixture world)
+{
+    private readonly WorldMap _map = world.Map;
+
+    [Fact]
+    public void HerdsGrazeTheGrasslandsAndNeverRunOut()
+    {
+        Assert.Contains(_map.Provinces, p => p.Deposits[(int)ResourceType.Horses] > 0 && p.Biome is Biome.Grassland or Biome.Steppe);
+        Assert.Contains(_map.Provinces, p => p.Deposits[(int)ResourceType.Saltpeter] > 0);
+
+        var s = GameSession.Create(_map, 1, seed: 7, computerRivals: false);
+        Assert.True(s.Human.Knows(ResourceType.Horses));
+        s.Human.Learn(Tech.Gunpowder);
+        Assert.True(s.Human.Knows(ResourceType.Saltpeter));
+        var p = _map.Provinces.First(p => p.IsClaimable && p.Neighbors.Length > 3 && p.Deposits[(int)ResourceType.Horses] > 0);
+        double before = p.Reserves[(int)ResourceType.Horses];
+        Assert.True(s.FoundCity(0, s.AddUnit(0, UnitType.Settlers, p.Id, 300).Id).Ok);
+        p.Population = 2000;
+        for (int h = 0; h < 48; h++) s.Step();
+        Assert.Equal(before, p.Reserves[(int)ResourceType.Horses]);
+        Assert.True(s.Human.Stockpile[ResourceType.Horses] > 0);
+    }
+
+    [Fact]
+    public void GunpowderTakesSaltpeterAndCavalryTakesHorses()
+    {
+        Assert.Contains(Supplies.Firearms.PieceCost.Items, i => i.Type == ResourceType.Saltpeter);
+        Assert.Equal(100, BattalionType.Cavalry.First().EquipmentCost.Items.Single(i => i.Type == ResourceType.Horses).Amount);
+        Assert.Contains(BattalionType.Armour.First().EquipmentCost.Items, i => i.Type == ResourceType.Horses);
     }
 }

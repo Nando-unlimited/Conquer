@@ -100,7 +100,8 @@ public sealed partial class GameController
         if (p.IsOwned && p.Population >= 1) text += $"\nMoral {p.Mood:0} ({GameRules.MoodName(p.Mood)})  ·  Fertilidad {p.Fertility:P0}";
         if (Mode == MapMode.Resources)
             foreach (var r in Resources.Deposits.Where(r => p.Deposits[(int)r] > 0 && Human.Knows(r)))
-                text += p.HasDeposit(r) ? $"\n{r.Name()}: {p.Deposits[(int)r]:0.0}/día, quedan {TextFormat.Compact(p.Reserves[(int)r])}" : $"\n{r.Name()}: agotado";
+                text += r.IsRenewable() ? $"\n{r.Name()}: {p.Deposits[(int)r]:0.0}/día, pastos"
+                    : p.HasDeposit(r) ? $"\n{r.Name()}: {p.Deposits[(int)r]:0.0}/día, quedan {TextFormat.Compact(p.Reserves[(int)r])}" : $"\n{r.Name()}: agotado";
         if (Mode == MapMode.Institutions)
             text += p.Institutions.Count > 0 ? "\n" + string.Join(", ", Institutions.All.Where(p.Institutions.Contains).Select(i => i.Info().Name))
                 : Institutions.All.Any(Session.IsBorn) ? "\nSin instituciones" : "\nTodavía no ha nacido ninguna institución";

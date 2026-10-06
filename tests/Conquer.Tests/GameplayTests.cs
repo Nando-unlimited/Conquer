@@ -417,11 +417,15 @@ public class GameplayTests(WorldFixture world)
     public void ManyProvincesHoldDepositsAndSomeSeveral()
     {
         var land = _map.Provinces.Where(p => p.IsClaimable).ToList();
-        int DepositsIn(Province p) => Resources.Deposits.Count(r => p.Deposits[(int)r] > 0);
+        // The quarries, sulfur, saltpeter and pastures came later and are counted apart.
+        ResourceType[] later = [ResourceType.Stone, ResourceType.Sulfur, ResourceType.Saltpeter, ResourceType.Horses];
+        int DepositsIn(Province p) => Resources.Deposits.Except(later).Count(r => p.Deposits[(int)r] > 0);
 
         // On normal difficulty about three in ten have a deposit, and about one in twenty two or more.
         Assert.InRange(land.Count(p => DepositsIn(p) > 0), land.Count * 25 / 100, land.Count * 40 / 100);
         Assert.InRange(land.Count(p => DepositsIn(p) > 1), land.Count * 3 / 100, land.Count * 8 / 100);
+        // With them, most land has something to work.
+        Assert.True(land.Count(p => Resources.Deposits.Any(r => p.Deposits[(int)r] > 0)) > land.Count * 40 / 100);
     }
 
     [Fact]

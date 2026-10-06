@@ -148,7 +148,7 @@ public sealed partial class NationScreen
         foreach (var res in Resources.All.Where(res => res != ResourceType.Food && Player.Knows(res)))
         {
             double net = Player.LastDayNet[(int)res];
-            bool mined = Resources.Deposits.Contains(res);
+            bool mined = Resources.Deposits.Contains(res) && !res.IsRenewable();
             right.Add(new Columns(res.Name(),
             [
                 new($"{Player.Stockpile[res]:N0}"),

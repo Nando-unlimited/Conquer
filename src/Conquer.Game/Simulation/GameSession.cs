@@ -697,6 +697,7 @@ public sealed partial class GameSession
     /// <summary>Takes up to <paramref name="amount"/> from a deposit's pocket and returns what was taken.</summary>
     private double Extract(Province p, ResourceType r, double amount)
     {
+        if (r.IsRenewable()) return amount; // a herd breeds as fast as it is taken
         double taken = Math.Min(amount, p.Reserves[(int)r]);
         p.Reserves[(int)r] -= taken;
         if (p.Reserves[(int)r] <= 0)

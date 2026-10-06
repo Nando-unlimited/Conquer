@@ -47,7 +47,8 @@ public static class Icons
                 Lump(b, c + new Vector2(0, -0.25f) * s, 0.5f * s, color.Scale(1.3f));
                 break;
             case ResourceType.Gold or ResourceType.Silver: Coin(b, c, s, color); break;
-            case ResourceType.Silicon or ResourceType.Sulfur: Crystal(b, c, s, color); break;
+            case ResourceType.Silicon or ResourceType.Sulfur or ResourceType.Saltpeter: Crystal(b, c, s, color); break;
+            case ResourceType.Horses: Horseshoe(b, c, s, color); break;
             case ResourceType.Stone:
                 // Two blocks of cut stone, one on the other.
                 b.Rect(c.X - 0.9f * s - 1, c.Y - 1, 1.8f * s + 2, 0.8f * s + 2, Outline);
@@ -106,6 +107,19 @@ public static class Icons
         b.Triangle(tl, tr, c + new Vector2(0.45f, -0.45f) * s, top);
         b.Triangle(tl, c + new Vector2(0.45f, -0.45f) * s, c + new Vector2(-0.45f, -0.45f) * s, top);
         b.Line(bl, br, Outline, 1);
+    }
+
+    /// <summary>A horseshoe, open at the bottom.</summary>
+    private static void Horseshoe(Batch2D b, Vector2 c, float s, Rgba color)
+    {
+        const int Steps = 10;
+        Vector2 At(int i)
+        {
+            float a = MathF.PI * (0.85f + 1.3f * i / Steps); // from the lower left, over the top, to the lower right
+            return c + new Vector2(MathF.Cos(a), MathF.Sin(a)) * 0.68f * s + new Vector2(0, 0.1f * s);
+        }
+        for (int i = 0; i < Steps; i++) b.Line(At(i), At(i + 1), Outline, MathF.Max(2, 0.42f * s));
+        for (int i = 0; i < Steps; i++) b.Line(At(i), At(i + 1), color, MathF.Max(1.5f, 0.3f * s));
     }
 
     private static void Coin(Batch2D b, Vector2 c, float s, Rgba color)

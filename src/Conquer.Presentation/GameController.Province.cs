@@ -206,6 +206,12 @@ public sealed partial class GameController
         if (p.Info.WoodYield > 0) doc.Add(new Info(ResourceType.Wood.Name(), $"{p.Info.WoodYield:0.#} por mil hab./día", Icon: new ResourceIcon(ResourceType.Wood)));
         foreach (var r in Resources.Deposits.Where(r => p.Deposits[(int)r] > 0 && Human.Knows(r)))
         {
+            if (r.IsRenewable())
+            {
+                doc.Add(new Info(r.Name(), $"{p.Deposits[(int)r]:0.0}/día · pastos", Tone.Normal,
+                    $"Pastos de {r.Name().ToLowerInvariant()}: no se agotan. Dan lo máximo con {GameRules.DepositFullWorkers:N0} habitantes.", new ResourceIcon(r)));
+                continue;
+            }
             double left = p.Reserves[(int)r];
             string tip = left <= 0 ? "Esta bolsa se ha agotado y ya no produce."
                 : $"Bolsa de {r.Name().ToLowerInvariant()}: quedan {left:N0} de {p.DepositSizes[(int)r] * GameRules.DepositSizeMultiplier:N0}.\n" +

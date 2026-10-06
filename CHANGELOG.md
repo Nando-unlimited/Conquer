@@ -2,6 +2,17 @@
 
 Todos los cambios del juego, del más reciente al más antiguo. Cada versión es un commit cuyo título es su número.
 
+## [1.108.0] - 2026-10-06
+
+### Añadido
+- **Salitre**: lo descubre la Pólvora, junto al azufre. Abunda en los desiertos, algo en estepas y sabanas, y escasea en el resto.
+- **Caballos**: los conoces desde el principio. Salen de pastos en praderas y estepas (menos en sabanas, bosques templados, colinas y desiertos) que, a diferencia de los yacimientos, no se agotan.
+
+### Cambiado
+- La pólvora es salitre y azufre: las armas de pólvora piden 10 de salitre y 5 de azufre por batallón; los cañones, 15 y 10; la artillería de campaña y la pesada, 10 y 5; la antiaérea, 5 y 5. Los fusiles y las armas modernas cambian su azufre por salitre (5).
+- La caballería necesita caballos de verdad: jinetes, catafractos y caballeros, 100 por batallón (y 10 de madera en vez de 20); los carros de guerra, 60 (y 40 de madera en vez de 60). Su mantenimiento gasta algunos cada día.
+- Las partidas guardadas reciben llenos los yacimientos y pastos nuevos; los demás siguen donde estaban.
+
 ## [1.107.0] - 2026-10-06
 
 ### Añadido

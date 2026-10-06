@@ -23,6 +23,8 @@ internal static class ResourceGenerator
         var extraSizes = new Random(seed + 27);
         // Stone and sulfur came later: they draw from generators of their own, so the older deposits stay where they were.
         var later = (Random: new Random(seed + 26), Sizes: new Random(seed + 25), Extra: new Random(seed + 24), ExtraSizes: new Random(seed + 23));
+        // And so do saltpeter and horses, which came after them.
+        var latest = (Random: new Random(seed + 22), Sizes: new Random(seed + 21), Extra: new Random(seed + 20), ExtraSizes: new Random(seed + 19));
         var regional = Resources.Deposits.ToDictionary(r => r, r => new Noise(seed + 31 + (int)r));
 
         foreach (var p in provinces)
@@ -36,7 +38,12 @@ internal static class ResourceGenerator
                 double chance = Chance(resource, p.Biome, Math.Abs(p.Latitude));
                 if (chance <= 0) continue;
                 double cluster = Math.Clamp(regional[resource].Fractal(sx * 3, sy * 3, sz * 3, 3) * 1.8 + 0.6, 0, 2);
-                var (first, firstSizes, second, secondSizes) = resource is ResourceType.Stone or ResourceType.Sulfur ? later : (random, sizes, extra, extraSizes);
+                var (first, firstSizes, second, secondSizes) = resource switch
+                {
+                    ResourceType.Stone or ResourceType.Sulfur => later,
+                    ResourceType.Saltpeter or ResourceType.Horses => latest,
+                    _ => (random, sizes, extra, extraSizes),
+                };
                 if (first.NextDouble() < chance * cluster) AddDeposit(p, resource, first, firstSizes, difficulty.DepositSize);
                 // A resource that misses its first roll may get a second one, as likely as the difficulty says.
                 else if (second.NextDouble() < chance * cluster * difficulty.ExtraDepositChance) AddDeposit(p, resource, second, secondSizes, difficulty.DepositSize);
@@ -72,6 +79,11 @@ internal static class ResourceGenerator
             ResourceType.Stone => rugged ? 0.3 : biome is Biome.Desert or Biome.Steppe or Biome.Grassland ? 0.06 : 0.03,
             // Volcanoes and hot springs: in the mountains and the deserts, scarce elsewhere.
             ResourceType.Sulfur => biome is Biome.Mountains or Biome.HighMountains ? 0.07 : biome is Biome.Desert or Biome.Wetland ? 0.04 : 0.01,
+            // Nitre crusts of the dry lands, and caves elsewhere.
+            ResourceType.Saltpeter => biome == Biome.Desert ? 0.1 : biome is Biome.Steppe or Biome.Savanna ? 0.04 : 0.01,
+            // Pastures: herds on the open grasslands, a few in the woods and hills, none in the jungle, ice or high mountains.
+            ResourceType.Horses => biome is Biome.Grassland or Biome.Steppe ? 0.25 : biome == Biome.Savanna ? 0.12
+                : biome is Biome.TemperateForest or Biome.Hills or Biome.Desert ? 0.04 : 0,
             _ => 0,
         };
     }

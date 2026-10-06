@@ -617,6 +617,8 @@ public sealed class MapRenderer : IDisposable
         ResourceType.Silver => 0xFFF4F4F4u,
         ResourceType.Stone => 0xFF9C958Au,
         ResourceType.Sulfur => 0xFFE6D23Cu,
+        ResourceType.Saltpeter => 0xFFD8CBA8u,
+        ResourceType.Horses => 0xFF8C5A30u,
         _ => 0xFF808080u,
     });
 

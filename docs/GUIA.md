@@ -232,9 +232,9 @@ Las instituciones, como en Europa Universalis: ideas que abren cada era. **Aquí
 ### `Economy/ResourceType.cs`
 | Elemento | Qué es |
 | --- | --- |
-| `ResourceType` | Los 13 recursos: comida, madera, carbón, hierro, cobre, silicio, petróleo, aluminio, caucho, oro, plata, piedra y azufre (los nuevos van al final: las partidas guardan por posición). |
+| `ResourceType` | Los 15 recursos: comida, madera, carbón, hierro, cobre, silicio, petróleo, aluminio, caucho, oro, plata, piedra, azufre, salitre y caballos (los nuevos van al final: las partidas guardan por posición). `IsRenewable`: los caballos salen de pastos que no se agotan. |
 | `Resources.All` / `Resources.Deposits` | Todos los recursos / los que salen de yacimientos (todos menos comida y madera). |
-| `Resources.KnownFromStart` | Recursos que todos conocen desde el principio: comida, madera, piedra, cobre, oro y plata. Los demás están ocultos, y no se pueden explotar, hasta que un avance los revela. |
+| `Resources.KnownFromStart` | Recursos que todos conocen desde el principio: comida, madera, piedra, caballos, cobre, oro y plata. Los demás están ocultos, y no se pueden explotar, hasta que un avance los revela. |
 | `Resources.Name(type)` | Nombre en español para la interfaz. |
 | `Stockpile` | Almacén nacional de recursos de un jugador (`stockpile[recurso]`). |
 | `Stockpile.Has(cost)` | ¿Hay suficiente para pagar un coste? |
@@ -792,7 +792,7 @@ Divide el mapa en provincias.
 ### `World/Generation/ResourceGenerator.cs`
 | Función | Qué hace |
 | --- | --- |
-| `Place(provincias, semilla, dificultad)` | Reparte yacimientos en las provincias habitables, agrupados por regiones; una provincia puede tener varios. Cada recurso se sortea una vez y, si falla, una segunda con la probabilidad multiplicada por `ExtraDepositChance` de la dificultad y con otros generadores, para que la primera tirada ponga los mismos yacimientos en todas las dificultades. La piedra y el azufre, que llegaron después, tiran con generadores propios, así que los demás yacimientos siguen donde estaban. Provincias con yacimiento (sin contar piedra ni azufre): 52 % en Muy fácil, 43 % en Fácil, 30 % en Normal, 24 % en Difícil y 17 % en Muy difícil (con dos o más: 15 %, 9 %, 5 %, 3 % y 1 %). |
+| `Place(provincias, semilla, dificultad)` | Reparte yacimientos en las provincias habitables, agrupados por regiones; una provincia puede tener varios. Cada recurso se sortea una vez y, si falla, una segunda con la probabilidad multiplicada por `ExtraDepositChance` de la dificultad y con otros generadores, para que la primera tirada ponga los mismos yacimientos en todas las dificultades. La piedra y el azufre, y luego el salitre y los caballos, que llegaron después, tiran con generadores propios, así que los demás yacimientos siguen donde estaban. Provincias con yacimiento (sin contar piedra, azufre, salitre ni caballos): 52 % en Muy fácil, 43 % en Fácil, 30 % en Normal, 24 % en Difícil y 17 % en Muy difícil (con dos o más: 15 %, 9 %, 5 %, 3 % y 1 %). |
 | `AddDeposit(...)` | Pone un yacimiento: una bolsa finita con producción diaria (`Deposits`) y tamaño total (`DepositSizes`) de 10 a 50 años de producción máxima por `DepositSize` de la dificultad, sorteado con su propio generador. |
 | `Chance(recurso, bioma, latitud)` | Probabilidad de cada recurso según el terreno (caucho en selvas tropicales, petróleo en desiertos, etc.). |
 | `Richness(recurso)` | Producción típica diaria de un yacimiento. |
