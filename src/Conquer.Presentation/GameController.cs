@@ -1,6 +1,7 @@
 using System.Numerics;
 using Conquer.Game.Economy;
 using Conquer.Game.Entities;
+using Conquer.Game.Rules;
 using Conquer.Game.Simulation;
 using Conquer.Game.World;
 
@@ -237,7 +238,7 @@ public sealed partial class GameController
         if (SelectedUnit is not { } unit || unit.OwnerId != Human.Id || HoverProvince < 0) return;
         var result = Session.MoveUnit(Human.Id, unit.Id, HoverProvince);
         // An order of the player's own takes over from exploring.
-        if (result.Ok && unit.AutoClaim) Session.SetAutoClaim(Human.Id, unit.Id, false);
+        if (result.Ok && unit.ExploresAlone) Session.SetScoutOrders(Human.Id, unit.Id, ScoutOrders.None);
         Show(result);
     }
 

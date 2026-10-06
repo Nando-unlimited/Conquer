@@ -170,7 +170,8 @@ public sealed record UnitSave(
     int Id, int OwnerId, UnitType Type, int ProvinceId, int Citizens, int Number, int HeadquartersLevel,
     List<BattalionSave> Battalions, int? CommanderId, int? AttackingProvinceId, List<int> Path, double HoursToNext, double StepHours,
     int? CarrierId = null, GeneralSave? General = null, OfficerSave? Officer = null, string? CustomName = null, bool AutoClaim = false,
-    Echelon Size = Echelon.Regiment, List<RegimentSave>? Regiments = null, List<BrigadeSave>? Brigades = null);
+    Echelon Size = Echelon.Regiment, List<RegimentSave>? Regiments = null, List<BrigadeSave>? Brigades = null,
+    bool AutoExplore = false);
 
 /// <summary>A regiment inside a combat unit (a regiment unit has one, carrying the unit's number and name).</summary>
 public sealed record RegimentSave(int Number, string? CustomName, List<BattalionSave> Battalions);

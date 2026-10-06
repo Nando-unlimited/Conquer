@@ -43,8 +43,8 @@ public sealed partial class GameSession
             u.Id, u.OwnerId, u.Type, u.ProvinceId, u.Type is UnitType.Regiment or UnitType.Fleet ? 0 : u.Citizens, u.Number, u.HeadquartersLevel,
             [.. u.Ships.Select(ToSave)],
             u.CommanderId, u.AttackingProvinceId, [.. u.Path], u.HoursToNext, u.StepHours, u.CarrierId,
-            Officer: u.Officer is { } o ? ToSave(o) : null, CustomName: u.CustomName, AutoClaim: u.AutoClaim,
-            Size: u.Size, Regiments: u.IsMilitary ? [.. u.Regiments.Select(ToSave)] : null,
+            Officer: u.Officer is { } o ? ToSave(o) : null, CustomName: u.CustomName, AutoClaim: u.ScoutOrders == ScoutOrders.Claim,
+            AutoExplore: u.ScoutOrders == ScoutOrders.Explore, Size: u.Size, Regiments: u.IsMilitary ? [.. u.Regiments.Select(ToSave)] : null,
             Brigades: u.Brigades.Count > 0 ? [.. u.Brigades.Select(b => new BrigadeSave(b.Number, b.CustomName, [.. b.Regiments.Select(ToSave)]))] : null)).ToList(),
         Migrations = Migrations.Select(m => new MigrationSave(m.Id, m.OwnerId, m.FromProvinceId, m.ToProvinceId, m.People,
             m.DepartHours, m.ArriveHours, m.Forced, m.Mood)).ToList(),
@@ -261,7 +261,7 @@ public sealed partial class GameSession
             // Saves from 1.101.0 kept a combat unit's battalions in one list: they are arranged once the numbers are back.
             else if (u.Battalions.Count > 0) flat[unit] = [.. u.Battalions.Select(FromSave)];
             unit.CustomName = u.CustomName;
-            unit.AutoClaim = u.AutoClaim;
+            unit.ScoutOrders = u.AutoClaim ? ScoutOrders.Claim : u.AutoExplore ? ScoutOrders.Explore : ScoutOrders.None;
             // Generals from before officers become officers of their HQ's rank, and HQs from before generals get one now.
             if (u.Officer is { } o) unit.Officer = FromSave(o);
             else if (u.General is { } g) unit.Officer = new Officer(session._nextOfficerId++, g.Name, [g.Trait], g.StartingSkill, g.Victories, unit.RequiredRank);

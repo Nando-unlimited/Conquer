@@ -171,8 +171,10 @@ public sealed class Unit
     public Officer? Officer { get; set; }
     /// <summary>A name the player gave it; null keeps the one that goes with its number and size.</summary>
     public string? CustomName { get; set; }
-    /// <summary>Scouts left to explore on their own: they walk to free land along their nation's borders and claim it.</summary>
-    public bool AutoClaim { get; set; }
+    /// <summary>What scouts left on their own do: explore unknown land, or claim free land along their nation's borders.</summary>
+    public ScoutOrders ScoutOrders { get; set; }
+    /// <summary>Scouts left to explore on their own, claiming land or not.</summary>
+    public bool ExploresAlone => ScoutOrders != ScoutOrders.None;
 
     /// <summary>Provinces still to enter, in order; empty when the unit is idle.</summary>
     public List<int> Path { get; } = [];
@@ -251,7 +253,7 @@ public sealed class Unit
     public bool Flies => Type == UnitType.Regiment && Battalions.Count > 0 && Battalions.All(b => b.Info.Flies);
     /// <summary>A regiment with at least one battalion of scouts: only these claim free land.</summary>
     public bool HasScouts => Type == UnitType.Regiment && Battalions.Any(b => b.Type == BattalionType.Scouts);
-    /// <summary>A regiment made only of scouts, which may explore and claim land on its own (<see cref="AutoClaim"/>).</summary>
+    /// <summary>A regiment made only of scouts, which may explore and claim land on its own (<see cref="ScoutOrders"/>).</summary>
     public bool IsScouting => Type == UnitType.Regiment && Battalions.Count > 0 && Battalions.All(b => b.Type == BattalionType.Scouts);
     /// <summary>A regiment's organisation as a share of its maximum (0..1).</summary>
     public double OrganisationShare =>

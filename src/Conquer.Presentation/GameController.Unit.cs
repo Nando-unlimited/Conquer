@@ -65,15 +65,16 @@ public sealed partial class GameController
                 Tooltip: can.Ok ? "Esta provincia libre pasará a ser tuya." : can.Message));
             if (unit.IsScouting)
             {
-                string label = unit.AutoClaim ? "Dejar de explorar" : "Explorar y reclamar";
-                string tip = unit.AutoClaim ? "Se detiene donde está y vuelve a esperar órdenes."
-                    : "Va sola a la mejor provincia libre junto a tus fronteras, la reclama y sigue con la siguiente, sin entrar en tierras ajenas. " +
-                      "Darle una orden de movimiento la detiene.";
-                doc.Add(new Button(label, () =>
-                {
-                    if (unit.AutoClaim) Session.MoveUnit(Human.Id, unit.Id, unit.ProvinceId);
-                    Show(Session.SetAutoClaim(Human.Id, unit.Id, !unit.AutoClaim));
-                }, Active: unit.AutoClaim, Tooltip: tip));
+                const string stopTip = "Se detiene donde está y vuelve a esperar órdenes.";
+                doc.Add(new ButtonRow(
+                [
+                    ScoutOrdersButton(unit, ScoutOrders.Explore, "Explorar",
+                        "Va sola a la tierra desconocida más cercana, y luego a la siguiente, sin reclamar nada ni entrar en tierras enemigas. " +
+                        "Darle una orden de movimiento la detiene.", stopTip),
+                    ScoutOrdersButton(unit, ScoutOrders.Claim, "Explorar y reclamar",
+                        "Va sola a la mejor provincia libre junto a tus fronteras, la reclama y sigue con la siguiente, sin entrar en tierras ajenas. " +
+                        "Darle una orden de movimiento la detiene.", stopTip),
+                ]));
             }
             EngineerButtons(doc, unit, here);
         }
@@ -88,15 +89,26 @@ public sealed partial class GameController
                 Tooltip: canSettle ? "Disuelve la unidad; sus ciudadanos se quedan a vivir en esta provincia." : "Solo en una provincia tuya.", Size: TextSize.Small),
             new Button("Detener", () =>
                 {
-                    if (unit.AutoClaim) Session.SetAutoClaim(Human.Id, unit.Id, false);
+                    if (unit.ExploresAlone) Session.SetScoutOrders(Human.Id, unit.Id, ScoutOrders.None);
                     Session.MoveUnit(Human.Id, unit.Id, unit.ProvinceId);
-                }, unit.IsMoving || unit.AttackingProvinceId.HasValue || unit.AutoClaim, Size: TextSize.Small),
+                }, unit.IsMoving || unit.AttackingProvinceId.HasValue || unit.ExploresAlone, Size: TextSize.Small),
         ]));
         doc.Add(new Paragraph(unit.IsFleet
             ? "Clic derecho para navegar: por mares costeros con Navegación a vela y por el océano con Cartografía; atraca en tus ciudades con costa. Las flotas enemigas que se encuentran combaten."
             : unit.IsMilitary
             ? "Clic derecho para mover. Mover a una provincia enemiga con tropas la ataca; sin tropas, la ocupa. Solo se entra en tierras de naciones con las que estás en guerra. Para cruzar el mar, clic derecho sobre una flota tuya con transportes."
             : "Clic derecho para mover. No puede entrar en tierras de otras naciones. Para cruzar el mar, clic derecho sobre una flota tuya con transportes.", Tone.Dim));
+    }
+
+    /// <summary>Gives scouts the orders to explore on their own; on the orders they already have, it stops them instead.</summary>
+    private Button ScoutOrdersButton(Unit unit, ScoutOrders orders, string label, string tip, string stopTip)
+    {
+        bool active = unit.ScoutOrders == orders;
+        return new Button(active ? "Dejar de explorar" : label, () =>
+        {
+            if (active) Session.MoveUnit(Human.Id, unit.Id, unit.ProvinceId);
+            Show(Session.SetScoutOrders(Human.Id, unit.Id, active ? ScoutOrders.None : orders));
+        }, Active: active, Tooltip: active ? stopTip : tip, Size: TextSize.Small);
     }
 
     /// <summary>
@@ -167,9 +179,9 @@ public sealed partial class GameController
         {
             double hours = unit.HoursToNext;
             for (int i = 0; i + 1 < unit.Path.Count; i++) hours += Session.Pathfinder.StepHours(unit.Path[i], unit.Path[i + 1]) / unit.Speed;
-            return (unit.AutoClaim ? "Explorando hacia " : "Hacia ") + $"{Session.PlaceName(Map.Provinces[dest])} ({GameSession.FormatHours(hours)})";
+            return (unit.ExploresAlone ? "Explorando hacia " : "Hacia ") + $"{Session.PlaceName(Map.Provinces[dest])} ({GameSession.FormatHours(hours)})";
         }
-        return unit.AutoClaim ? "Explorando" : "Esperando órdenes";
+        return unit.ExploresAlone ? "Explorando" : "Esperando órdenes";
     }
 
     /// <summary>A regiment's battalions, or a fleet's ships and cargo (split and merged in the unit editor).</summary>

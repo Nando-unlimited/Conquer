@@ -26,7 +26,7 @@ public class ExplorationTests(WorldFixture world)
         var scouts = s.AddRegiment(0, capital.Id, BattalionType.Scouts);
         int before = s.Human.Provinces.Count;
 
-        var result = s.SetAutoClaim(0, scouts.Id, true);
+        var result = s.SetScoutOrders(0, scouts.Id, ScoutOrders.Claim);
         Assert.True(result.Ok, result.Message);
         Assert.True(scouts.IsMoving);
         int target = scouts.Destination!.Value;
@@ -36,9 +36,31 @@ public class ExplorationTests(WorldFixture world)
 
         Assert.Equal(0, _map.Provinces[target].OwnerId);
         Assert.True(s.Human.Provinces.Count >= before + 2);
-        Assert.True(scouts.AutoClaim);
+        Assert.Equal(ScoutOrders.Claim, scouts.ScoutOrders);
         // Every province it claimed touches land the nation already had.
         Assert.All(s.Human.Provinces, id => Assert.True(id == capital.Id || _map.Provinces[id].Neighbors.Any(n => _map.Provinces[n].OwnerId == 0)));
+    }
+
+    [Fact]
+    public void ScoutsExploringOnlyDiscoverUnknownLandWithoutClaimingIt()
+    {
+        var (s, capital) = WithCapital();
+        var scouts = s.AddRegiment(0, capital.Id, BattalionType.Scouts);
+        s.VisibleProvinces(0);
+        int provinces = s.Human.Provinces.Count, explored = s.Human.Explored.Count;
+
+        var result = s.SetScoutOrders(0, scouts.Id, ScoutOrders.Explore);
+        Assert.True(result.Ok, result.Message);
+        Assert.True(scouts.IsMoving);
+        Assert.DoesNotContain(scouts.Destination!.Value, s.Human.Explored);
+
+        for (int h = 0; h < 24 * 20; h++) s.Step();
+
+        Assert.Equal(provinces, s.Human.Provinces.Count);
+        Assert.True(s.Human.Explored.Count > explored + 10);
+        Assert.Equal(ScoutOrders.Explore, scouts.ScoutOrders);
+        Assert.True(scouts.IsMoving);
+        Assert.Equal(ScoutOrders.Explore, GameSession.Load(_map, s.ToSave("test")).UnitById(scouts.Id)!.ScoutOrders);
     }
 
     [Fact]
@@ -46,15 +68,15 @@ public class ExplorationTests(WorldFixture world)
     {
         var (s, capital) = WithCapital();
         var warriors = s.AddRegiment(0, capital.Id, BattalionType.LightInfantry);
-        Assert.False(s.SetAutoClaim(0, warriors.Id, true).Ok);
-        Assert.False(warriors.AutoClaim);
+        Assert.False(s.SetScoutOrders(0, warriors.Id, ScoutOrders.Claim).Ok);
+        Assert.Equal(ScoutOrders.None, warriors.ScoutOrders);
 
         var scouts = s.AddRegiment(0, capital.Id, BattalionType.Scouts);
-        Assert.True(s.SetAutoClaim(0, scouts.Id, true).Ok);
+        Assert.True(s.SetScoutOrders(0, scouts.Id, ScoutOrders.Claim).Ok);
         var loaded = GameSession.Load(_map, s.ToSave("test"));
-        Assert.True(loaded.UnitById(scouts.Id)!.AutoClaim);
+        Assert.Equal(ScoutOrders.Claim, loaded.UnitById(scouts.Id)!.ScoutOrders);
 
-        Assert.True(s.SetAutoClaim(0, scouts.Id, false).Ok);
-        Assert.False(scouts.AutoClaim);
+        Assert.True(s.SetScoutOrders(0, scouts.Id, ScoutOrders.None).Ok);
+        Assert.Equal(ScoutOrders.None, scouts.ScoutOrders);
     }
 }

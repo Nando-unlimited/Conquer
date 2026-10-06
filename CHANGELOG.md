@@ -2,6 +2,11 @@
 
 Todos los cambios del juego, del más reciente al más antiguo. Cada versión es un commit cuyo título es su número.
 
+## [1.104.0] - 2026-10-06
+
+### Añadido
+- **Exploradores que solo exploran**: el nuevo botón «Explorar» manda a una unidad de exploradores a la tierra desconocida más cercana, y luego a la siguiente, sin reclamar nada ni entrar en tierras enemigas, hasta que no quede nada por descubrir a su alcance. Las unidades que exploran a la vez se reparten. «Explorar y reclamar» sigue como antes.
+
 ## [1.103.0] - 2026-10-06
 
 Tercera parte de la nueva estructura militar: el equipo.

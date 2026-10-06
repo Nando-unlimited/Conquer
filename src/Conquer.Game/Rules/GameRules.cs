@@ -366,3 +366,13 @@ public enum UnitType
     /// <summary>Ships: warships fight other fleets, transports carry troops over the sea.</summary>
     Fleet,
 }
+
+/// <summary>What scouts left on their own do.</summary>
+public enum ScoutOrders
+{
+    None,
+    /// <summary>They walk to the nearest land the nation has never seen, without claiming anything.</summary>
+    Explore,
+    /// <summary>They walk to the best free province along the nation's borders and claim it.</summary>
+    Claim,
+}

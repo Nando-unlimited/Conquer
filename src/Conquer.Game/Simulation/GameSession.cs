@@ -229,7 +229,7 @@ public sealed partial class GameSession
         ResolveBattles();
         ResolveNavalBattles();
         ArriveMigrations();
-        AutoClaimUnits();
+        AutoScoutUnits();
         VisibleProvinces(HumanPlayerId); // explores what the player sees this hour, however fast time runs
         CheckObjectives();
         if (Date.Hour == 0)
