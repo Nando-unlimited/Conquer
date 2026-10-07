@@ -32,7 +32,7 @@ public sealed partial class GameScreen : IScreen, IAudibleScreen
     private readonly HelpView _help = new();
     private readonly NationView _nation;
     private readonly SpriteAtlas _sprites;
-    private readonly List<(int UnitId, Rect Bounds)> _unitHitBoxes = [];
+    private readonly List<(int UnitId, IReadOnlyList<int> Stack, Rect Bounds)> _unitHitBoxes = [];
 
     private bool _mapDirty = true, _dragging;
     private long _lastRefreshDay = -1;
@@ -259,7 +259,7 @@ public sealed partial class GameScreen : IScreen, IAudibleScreen
             var hit = _unitHitBoxes.LastOrDefault(h => h.Bounds.Contains(Ui.Input.Mouse));
             if (hit.Bounds.W > 0)
             {
-                _game.SelectUnit(hit.UnitId);
+                _game.SelectInStack(hit.Stack);
                 return;
             }
         }
@@ -284,9 +284,8 @@ public sealed partial class GameScreen : IScreen, IAudibleScreen
         var bar = _game.TopBar();
         Ui.Panel(TopBarRect, radius: 0);
         float x = 12;
-        Batch.Rect(x, 16, 24, 24, Rgba.Black);
-        Batch.Rect(x + 2, 18, 20, 20, new Rgba(bar.Color));
-        x += 32;
+        FlagPainter.Draw(Batch, Flags.Of(bar.Nation, bar.Color), x, 18, 30, 20);
+        x += 38;
         Ui.Text(x, 8, bar.Nation, Theme.Text, FontSize.Normal, bold: true);
         Ui.Text(x, 30, bar.People, Theme.Of(bar.PeopleInk), FontSize.Small);
         if (Ui.Hover(new Rect(x, 28, 150, 20))) Ui.Tooltip(bar.PeopleTooltip);

@@ -32,13 +32,20 @@ public enum CounterKind
 /// <summary>
 /// A unit's counter on screen with what goes with it: its route (screen points, fuller when selected), the line to
 /// its HQ (green in range, red out of it) and the arrow of an attack. <see cref="Scale"/> shrinks counters when zoomed out.
-/// <see cref="Entrenchment"/> is how far an emplaced unit has dug in (null when it is not emplaced); <see cref="Battalions"/>,
-/// how many battalions (ships for a fleet) a combat unit has, the number on its counter.
+/// <see cref="Entrenchment"/> is how far an emplaced unit has dug in (null when it is not emplaced). The units of a nation
+/// standing together in a province make one stack, as in Hearts of Iron III: the counter is its top unit's, and
+/// <see cref="Stack"/> holds them all, the top one first (or in their order when the selected one is among them).
+/// <see cref="ShortName"/> is the unit's name abbreviated (<see cref="UnitLabels.Short"/>), <see cref="Flag"/> its nation's.
 /// </summary>
 public sealed record UnitCounter(int UnitId, Vector2 Screen, float Scale, uint Color, bool Selected, CounterKind Kind, UnitFunction Function,
     string Symbol, int Aboard, string Echelon, double Strength, double Organisation,
     IReadOnlyList<Vector2>? Path, (Vector2 To, bool InRange)? Command, (Vector2 From, Vector2 To)? Attack,
-    bool Moving = false, bool Fighting = false, Vector2 Heading = default, string? Model = null, double? Entrenchment = null, int Battalions = 0);
+    bool Moving = false, bool Fighting = false, Vector2 Heading = default, string? Model = null, double? Entrenchment = null,
+    NationFlag? Flag = null, string ShortName = "", IReadOnlyList<int>? Stack = null)
+{
+    /// <summary>How many units the counter stands for: the number on it.</summary>
+    public int Count => Stack?.Count ?? 1;
+}
 
 /// <summary>Crossed swords over a battle; <see cref="Battle"/> is null at sea. The tooltip is worked out only when hovered.</summary>
 public sealed record BattleMarker(int ProvinceId, Battle? Battle, Vector2 Screen, Func<string> Tooltip);
@@ -175,59 +182,76 @@ public sealed partial class GameController
         return labels;
     }
 
-    /// <summary>From this zoom on, the units in a province deploy around its centre; further out they sit on top of each other.</summary>
+    /// <summary>From this zoom on, the stacks in a province with a city stand above it, clear of the city and its name.</summary>
     public const float UnitSpreadZoom = 6f;
 
     /// <summary>
-    /// The units on the map. Zoomed out, those standing in a province are piled on top of each other on its centre (over
-    /// its city), the selected one on top; zoomed in from <see cref="UnitSpreadZoom"/>, they deploy in a ring around it,
-    /// wider the more there are. Units on the march are where their route has got them. Units aboard show in their
-    /// fleet's panel.
+    /// The units on the map, stacked as in Hearts of Iron III: those of one nation standing in a province (attacking the
+    /// same province, or not attacking) make one counter with their number on it, the selected one on top, or else the
+    /// first of them by kind (combat units, fleets, HQs, settlers) and number. Stacks sharing a province stand side by
+    /// side on its centre (over its city), and from <see cref="UnitSpreadZoom"/> above the city. Units on the march go on
+    /// their own, where their route has got them. Units aboard show in their fleet's panel.
     /// </summary>
     private List<UnitCounter> Counters()
     {
         var counters = new List<UnitCounter>();
-        bool spread = Camera.Zoom >= UnitSpreadZoom;
         // The fog of war hides units the player cannot see.
         var shown = Session.Units.Where(u => !u.IsAboard && Session.CanSee(Human.Id, u)).ToList();
         bool Standing(Unit u) => !u.IsMoving || u.AttackingProvinceId.HasValue;
-        var standing = shown.Where(Standing).GroupBy(u => u.ProvinceId).ToDictionary(g => g.Key, g => g.Select(u => u.Id).ToList());
-        // The selected unit goes last, so it is drawn (and clicked) on top of the pile.
-        foreach (var unit in shown.OrderBy(u => u.Id == SelectedUnitId))
+        var stacks = shown.Where(Standing)
+            .GroupBy(u => (u.ProvinceId, u.OwnerId, u.AttackingProvinceId))
+            .Select(g => g.OrderBy(u => u.IsMilitary ? 0 : u.IsFleet ? 1 : u.IsHeadquarters ? 2 : 3).ThenBy(u => u.Id).ToList())
+            .ToList();
+        var marching = shown.Where(u => !Standing(u)).Select(u => new List<Unit> { u });
+        // Each province's stacks side by side, in the order of their nations.
+        var inProvince = stacks.GroupBy(st => st[0].ProvinceId)
+            .ToDictionary(g => g.Key, g => g.OrderBy(st => st[0].OwnerId).ThenBy(st => st[0].AttackingProvinceId ?? -1).ToList());
+        // The selected unit's stack goes last, so it is drawn (and clicked) on top.
+        foreach (var stack in stacks.Concat(marching).OrderBy(st => st.Any(u => u.Id == SelectedUnitId)))
         {
-            var pos = Standing(unit) ? Center(unit.ProvinceId) : Between(unit.ProvinceId, unit.Path[0], unit.StepProgress);
+            var top = stack.FirstOrDefault(u => u.Id == SelectedUnitId) ?? stack[0];
+            bool standing = Standing(top);
+            var pos = standing ? Center(top.ProvinceId) : Between(top.ProvinceId, top.Path[0], top.StepProgress);
             var s = Camera.MapToScreen(pos);
-            if (!OnScreen(s)) continue;
-            float scale = unit.Id == SelectedUnitId ? 1 : Math.Clamp(Camera.Zoom / 3, 0.45f, 1);
-            if (spread && Standing(unit))
+            float scale = top.Id == SelectedUnitId ? 1 : Math.Clamp(Camera.Zoom / 3, 0.45f, 1);
+            if (standing)
             {
-                var here = standing[unit.ProvinceId];
-                bool city = Map.Provinces[unit.ProvinceId].CityId.HasValue;
-                if (here.Count > 1 || city)
-                {
-                    // Evenly round a ring that clears the city and leaves each unit room (about 36 pixels apart).
-                    float radius = Math.Max(city ? 34 : 22, here.Count * 36 / MathF.Tau) * Math.Clamp(Camera.Zoom / 6, 1, 1.6f);
-                    // From the top, or for an even number half a step round, so none stands right under the city's name.
-                    float step = MathF.Tau / here.Count;
-                    float angle = -MathF.PI / 2 + (here.Count % 2 == 0 ? step / 2 : 0) + here.IndexOf(unit.Id) * step;
-                    s += new Vector2(MathF.Cos(angle), MathF.Sin(angle)) * radius;
-                }
+                var here = inProvince[top.ProvinceId];
+                int index = here.IndexOf(stack);
+                s.X += (index - (here.Count - 1) / 2f) * 170 * scale;
+                if (Camera.Zoom >= UnitSpreadZoom && Map.Provinces[top.ProvinceId].CityId.HasValue) s.Y -= 34 * Math.Clamp(Camera.Zoom / 6, 1, 1.6f);
             }
+            if (!OnScreen(s)) continue;
 
-            bool selected = unit.Id == SelectedUnitId;
-            var path = selected || (unit.OwnerId == Human.Id && Camera.Zoom >= 1.5f) ? Route(unit, pos) : null;
-            (Vector2, bool)? command = selected && Session.CommanderOf(unit) is { } hq
-                ? (Camera.MapToScreen(Center(hq.ProvinceId)), Session.InCommandRange(unit)) : null;
-            (Vector2, Vector2)? attack = unit.AttackingProvinceId is int target
-                ? (Camera.MapToScreen(pos), Camera.MapToScreen(Between(unit.ProvinceId, target, 1))) : null;
-            var kind = unit.IsMilitary ? CounterKind.Military : unit.IsFleet ? CounterKind.Fleet : unit.IsHeadquarters ? CounterKind.Headquarters : CounterKind.Settlers;
-            counters.Add(new UnitCounter(unit.Id, s, scale, Session.Players[unit.OwnerId].Color, selected,
-                kind, unit.Function, unit.Symbol, unit.IsFleet ? Session.CargoOf(unit).Count() : 0, unit.Echelon, unit.StrengthShare, unit.OrganisationShare,
-                path, command, attack, unit.IsMoving, Fighting(unit), Heading(unit), Models.Of(unit),
-                GameSession.IsEmplaced(unit) ? unit.Entrenchment : null,
-                unit.IsMilitary || unit.IsFleet ? unit.Battalions.Count : 0));
+            bool selected = top.Id == SelectedUnitId;
+            var path = selected || (top.OwnerId == Human.Id && Camera.Zoom >= 1.5f) ? Route(top, pos) : null;
+            (Vector2, bool)? command = selected && Session.CommanderOf(top) is { } hq
+                ? (Camera.MapToScreen(Center(hq.ProvinceId)), Session.InCommandRange(top)) : null;
+            (Vector2, Vector2)? attack = top.AttackingProvinceId is int target
+                ? (Camera.MapToScreen(pos), Camera.MapToScreen(Between(top.ProvinceId, target, 1))) : null;
+            var kind = top.IsMilitary ? CounterKind.Military : top.IsFleet ? CounterKind.Fleet : top.IsHeadquarters ? CounterKind.Headquarters : CounterKind.Settlers;
+            var owner = Session.Players[top.OwnerId];
+            // The top unit first, then the rest in their order, so clicking again goes through them.
+            var ids = stack.Select(u => u.Id).ToList();
+            if (!selected) { ids.Remove(top.Id); ids.Insert(0, top.Id); }
+            counters.Add(new UnitCounter(top.Id, s, scale, owner.Color, selected,
+                kind, top.Function, top.Symbol, top.IsFleet ? Session.CargoOf(top).Count() : 0, top.Echelon, top.StrengthShare, top.OrganisationShare,
+                path, command, attack, top.IsMoving, Fighting(top), Heading(top), Models.Of(top),
+                GameSession.IsEmplaced(top) ? top.Entrenchment : null,
+                Flags.Of(owner.Name, owner.Color), UnitLabels.Short(top.Name), ids));
         }
         return counters;
+    }
+
+    /// <summary>
+    /// Clicking a stack: selects its top unit, or, when one of its units is already selected, the next one in it (after
+    /// the last, the first again), as clicking a stack over and over goes through its units.
+    /// </summary>
+    public void SelectInStack(IReadOnlyList<int> stack)
+    {
+        if (stack.Count == 0) return;
+        int at = SelectedUnitId is int id ? stack.ToList().IndexOf(id) : -1;
+        SelectUnit(stack[at < 0 ? 0 : (at + 1) % stack.Count]);
     }
 
     /// <summary>Whether the unit is attacking, or defending a province under attack, so its counter shakes.</summary>

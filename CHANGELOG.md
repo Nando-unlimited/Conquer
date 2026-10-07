@@ -2,6 +2,17 @@
 
 Todos los cambios del juego, del más reciente al más antiguo. Cada versión es un commit cuyo título es su número.
 
+## [1.124.0] - 2026-10-07
+
+Banderas de los países y fichas apiladas, como en Hearts of Iron III.
+
+### Añadido
+- **Banderas**: cada país lleva su bandera, simplificada para leerse en pequeño (las naciones con otro nombre llevan una de su color). Se ven en las fichas, en un mástil junto a las maquetas de «Figuras 3D» y en la barra superior.
+- **Unidades apiladas**: las unidades de una nación que están juntas en una provincia forman una sola ficha con su número, y detrás asoman las de debajo. Un clic selecciona la de arriba y cada clic más pasa a la siguiente. Las pilas de varias naciones en una provincia se ponen una al lado de otra; de cerca van por encima de la ciudad. Ya no se despliegan en círculo.
+
+### Cambiado
+- **Fichas como las de HOI3, más holgadas**: de izquierda a derecha, las barras de hombres y organización, la bandera, el símbolo OTAN con las marcas de tamaño encima, el número de unidades de la pila y el nombre de la unidad abreviado («3.er Rgto.», «II Cpo.»). Las maquetas también muestran el nombre abreviado.
+
 ## [1.123.0] - 2026-10-07
 
 Fichas de las unidades como las de Hearts of Iron III.
