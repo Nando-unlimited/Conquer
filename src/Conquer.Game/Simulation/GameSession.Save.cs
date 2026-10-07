@@ -38,7 +38,7 @@ public sealed partial class GameSession
             p.Id, p.OwnerId, p.ControllerId, p.Population, p.CityId, p.Mood, p.Fertility, [.. p.Reserves],
             [.. p.Buildings.Order()], p.Constructing, p.ConstructionDaysLeft, p.PlannedCityName, [.. p.Institutions.Order()], p.Name,
             p.Training.Count == 0 ? null : [.. p.Training.Select(ToSave)], p.CultureId, p.Assimilation, p.RevoltProgress, p.ReligionId, p.Conversion,
-            p.PlagueDaysLeft, p.PlagueImmuneUntil, p.Production)).ToList(),
+            p.PlagueDaysLeft, p.PlagueImmuneUntil, p.Production, p.Damage.Count > 0 ? new(p.Damage) : null)).ToList(),
         Cities = Cities.Select(c => new CitySave(c.Id, c.Name, c.OwnerId, c.ProvinceId, c.FoundedHours, c.FestivalUntilHours)).ToList(),
         Units = Units.Select(u => new UnitSave(
             u.Id, u.OwnerId, u.Type, u.ProvinceId, u.Type is UnitType.Regiment or UnitType.Fleet ? 0 : u.Citizens, u.Number, u.HeadquartersLevel,
@@ -84,8 +84,12 @@ public sealed partial class GameSession
         RoadProjects = _roadProjects.Select(r => new RoadProjectSave(r.Id, r.OwnerId, r.Kind, [.. r.Route], r.DaysPerLink, r.Next, r.WorkLeft)).ToList(),
         NextRoadProjectId = _nextRoadProjectId,
         NextShipOrderId = _nextShipOrderId,
-        Wings = _wings.Select(w => new WingSave(w.Id, w.OwnerId, ToSave(w.Planes), w.Number, w.BaseProvinceId, w.CarrierId, w.Mission, w.TargetProvinceId)).ToList(),
-        NextWingId = _nextWingId,
+        AirUnits = _airUnits.Select(u => new AirUnitSave(u.Id, u.OwnerId, [.. u.Flights.Select(ToSave)], u.Number, u.BaseProvinceId, u.CarrierId, u.Mission,
+            u.TargetProvinceId, u.CommanderId)).ToList(),
+        AirHeadquarters = _airHeadquarters.Select(h => new AirHeadquartersSave(h.Id, h.OwnerId, h.Level, h.Number, h.BaseProvinceId,
+            h.Officer is { } o ? ToSave(o) : null)).ToList(),
+        NextAirUnitId = _nextAirUnitId,
+        NextAirHeadquartersId = _nextAirHeadquartersId,
     };
 
     /// <summary>
@@ -192,6 +196,8 @@ public sealed partial class GameSession
             p.PlagueDaysLeft = ps.PlagueDaysLeft;
             p.PlagueImmuneUntil = ps.PlagueImmuneUntil;
             p.Production = ps.Production;
+            foreach (var (building, damage) in ps.Damage ?? []) p.SetDamage(building, damage);
+            if (p.Damage.Count > 0) session._damagedProvinces.Add(p.Id);
         }
 
         foreach (var s in save.Players)
@@ -296,10 +302,22 @@ public sealed partial class GameSession
         }
 
         session._nextShipOrderId = save.NextShipOrderId;
-        session._nextWingId = save.NextWingId;
+        session._nextAirUnitId = save.NextAirUnitId;
+        session._nextAirHeadquartersId = save.NextAirHeadquartersId;
+        foreach (var u in save.AirUnits ?? [])
+            session._airUnits.Add(new AirUnit(u.Id, session.Players[u.OwnerId], u.Flights.Select(FromSave), u.Number)
+                { BaseProvinceId = u.BaseProvinceId, CarrierId = u.CarrierId, Mission = u.Mission, TargetProvinceId = u.TargetProvinceId, CommanderId = u.CommanderId });
+        foreach (var h in save.AirHeadquarters ?? [])
+            session._airHeadquarters.Add(new AirHeadquarters(h.Id, session.Players[h.OwnerId], h.Level, h.Number, h.BaseProvinceId)
+                { Officer = h.Officer is { } o ? FromSave(o) : null });
+        // Saves of 1.114.0 to 1.116.0 had wings of ten planes: each becomes an escuadrón of two escuadrillas, as it was.
         foreach (var w in save.Wings ?? [])
-            session._wings.Add(new AirWing(w.Id, session.Players[w.OwnerId], FromSave(w.Planes), w.Number)
+        {
+            var owner = session.Players[w.OwnerId];
+            var flights = Enumerable.Range(0, 2).Select(_ => new Battalion(w.Planes.Type, w.Planes.Model) { Experience = w.Planes.Experience });
+            session._airUnits.Add(new AirUnit(session._nextAirUnitId++, owner, flights, session.NextUnitNumber(owner.Id, AirNumbering(AirEchelon.Squadron)))
                 { BaseProvinceId = w.BaseProvinceId, CarrierId = w.CarrierId, Mission = w.Mission, TargetProvinceId = w.TargetProvinceId });
+        }
         foreach (var s in save.Shipments ?? [])
             session._shipments.Add(new Shipment { OwnerId = s.OwnerId, UnitId = s.UnitId, Men = s.Men, Pieces = new(s.Pieces), Ammo = s.Ammo, ArriveHours = s.ArriveHours,
                 SeaRoute = s.SeaRoute ?? [], Convoys = s.Convoys });
@@ -364,7 +382,7 @@ public sealed partial class GameSession
         }
         // Saves from before provinces were named on claiming: those with an owner get their name now.
         foreach (var p in map.Provinces.Where(p => p.IsOwned && p.Name.Length == 0)) session.NameProvince(p, p.OwnerId);
-        session.TurnFlyingBattalionsIntoWings();
+        session.TurnFlyingBattalionsIntoAirUnits();
         // Saves from before convoys: nations with a port get some to carry what they send over the sea.
         foreach (var player in session.Players.Where(p => p.Convoys < 0))
             player.Convoys = session.Shipyards(player).Any() ? MilitaryRules.ConvoysInOldSaves : 0;

@@ -48,11 +48,11 @@ public class AirWarTests(WorldFixture world)
     }
 
     [Fact]
-    public void WingsFlyOnlyTheirOwnMissionsWithinRange()
+    public void AirUnitsFlyOnlyTheirOwnMissionsWithinRange()
     {
         var (s, a, b) = War();
-        var fighters = s.AddWing(0, a.Id, BattalionType.Fighters);
-        Assert.StartsWith("Un ala de cazas no puede", s.SetAirMission(0, fighters.Id, AirMission.StrategicBombing, b.Id).Message);
+        var fighters = s.AddAirUnit(0, a.Id, BattalionType.Fighters);
+        Assert.StartsWith("Los cazas no pueden", s.SetAirMission(0, fighters.Id, AirMission.StrategicBombing, b.Id).Message);
         var far = _map.Provinces.First(p => !p.IsWater && _map.DistanceKm(p, a) > fighters.Info.RangeKm + 50);
         Assert.StartsWith("Está fuera de su alcance", s.SetAirMission(0, fighters.Id, AirMission.AirSuperiority, far.Id).Message);
         Assert.True(s.SetAirMission(0, fighters.Id, AirMission.AirSuperiority, b.Id).Ok);
@@ -66,22 +66,22 @@ public class AirWarTests(WorldFixture world)
     {
         var (s, a, b) = War();
         Assert.Null(s.AirSuperiority(0, b));
-        var mine = s.AddWing(0, a.Id, BattalionType.Fighters);
+        var mine = s.AddAirUnit(0, a.Id, BattalionType.Fighters);
         s.SetAirMission(0, mine.Id, AirMission.AirSuperiority, b.Id);
         Assert.Equal(1, s.AirSuperiority(0, b));
         Assert.True(s.EnemyRulesTheAir(1, b));
         Assert.Equal(1 + MilitaryRules.AirSuperiorityBonus, s.AirSuperiorityMultiplier(0, b), 6);
         Assert.Equal(1 - MilitaryRules.AirSuperiorityBonus, s.AirSuperiorityMultiplier(1, b), 6);
 
-        var theirs = s.AddWing(1, b.Id, BattalionType.Fighters);
+        var theirs = s.AddAirUnit(1, b.Id, BattalionType.Fighters);
         s.SetAirMission(1, theirs.Id, AirMission.AirSuperiority, b.Id);
         Assert.Equal(0.5, s.AirSuperiority(0, b)!.Value, 6);
         Assert.False(s.EnemyRulesTheAir(1, b));
 
         // A day of fighting in the air costs both sides planes.
         ToMidnight(s);
-        Assert.True(mine.PlaneCount < MilitaryRules.PlanesPerWing);
-        Assert.True(theirs.PlaneCount < MilitaryRules.PlanesPerWing);
+        Assert.True(mine.PlaneCount < MilitaryRules.PlanesPerFlight);
+        Assert.True(theirs.PlaneCount < MilitaryRules.PlanesPerFlight);
         Assert.True(s.PlanesLostLastDay(0) > 0 && s.PlanesDownedLastDay(0) > 0);
     }
 
@@ -89,11 +89,11 @@ public class AirWarTests(WorldFixture world)
     public void AttackAircraftAddFireToBattlesAndDoLessUnderAnEnemySky()
     {
         var (s, a, b) = War();
-        var attack = s.AddWing(0, a.Id, BattalionType.CloseSupport);
+        var attack = s.AddAirUnit(0, a.Id, BattalionType.CloseSupport);
         s.SetAirMission(0, attack.Id, AirMission.CloseSupport, b.Id);
         double fire = s.CloseAirSupport(0, b);
-        Assert.Equal(attack.Info.Attack * GameSession.Effectiveness(attack), fire, 6);
-        var fighters = s.AddWing(1, b.Id, BattalionType.Fighters);
+        Assert.Equal(attack.Info.Attack * 1, fire, 6);
+        var fighters = s.AddAirUnit(1, b.Id, BattalionType.Fighters);
         s.SetAirMission(1, fighters.Id, AirMission.AirSuperiority, b.Id);
         Assert.Equal(fire * MilitaryRules.UnescortedBomberEffect, s.CloseAirSupport(0, b), 6);
     }
@@ -102,24 +102,32 @@ public class AirWarTests(WorldFixture world)
     public void AntiAirShootsDownTheAircraftOverItsProvince()
     {
         var (s, a, b) = War();
-        var attack = s.AddWing(0, a.Id, BattalionType.CloseSupport);
+        var attack = s.AddAirUnit(0, a.Id, BattalionType.CloseSupport);
         s.SetAirMission(0, attack.Id, AirMission.CloseSupport, b.Id);
         s.AddRegiment(1, b.Id, BattalionType.AntiAir, BattalionType.AntiAir);
         ToMidnight(s);
-        Assert.True(attack.PlaneCount < MilitaryRules.PlanesPerWing);
+        Assert.True(attack.PlaneCount < MilitaryRules.PlanesPerFlight);
     }
 
     [Fact]
-    public void BombersHurtTheEnemysProvinceAndItsWorkshops()
+    public void BombersHurtTheEnemysProvinceAndDamageItsBuildings()
     {
         var (s, a, b) = War();
-        var bombers = s.AddWing(0, a.Id, BattalionType.Bombers);
+        var bombers = s.AddAirUnit(0, a.Id, BattalionType.Bombers, 3);
         s.SetAirMission(0, bombers.Id, AirMission.StrategicBombing, b.Id);
+        foreach (var building in b.Buildings.ToList()) b.RemoveBuilding(building);
+        b.AddBuilding(BuildingType.Workshop);
         b.Mood = 80;
         ToMidnight(s);
         Assert.True(b.Mood < 80);
-        Assert.True(s.BombingDamage(b) > 0);
-        Assert.Equal(0, s.BombingDamage(a));
+        Assert.True(b.WorkshopDamage > 0);
+        Assert.Equal(0, a.WorkshopDamage);
+
+        // Left alone, the damage is repaired a little each day.
+        double damage = b.WorkshopDamage;
+        s.SetAirMission(0, bombers.Id, AirMission.None);
+        ToMidnight(s);
+        Assert.Equal(damage - MilitaryRules.BuildingRepairPerDay, b.WorkshopDamage, 6);
     }
 
     [Fact]
@@ -127,7 +135,7 @@ public class AirWarTests(WorldFixture world)
     {
         var (s, a, _) = War();
         var sea = _map.Provinces.Where(p => p.IsWater).MinBy(p => _map.DistanceKm(p, a))!;
-        var naval = s.AddWing(0, a.Id, BattalionType.NavalBombers);
+        var naval = s.AddAirUnit(0, a.Id, BattalionType.NavalBombers);
         naval.BaseProvinceId = sea.Neighbors.First(n => !_map.Provinces[n].IsWater); // flown to the coast
         _map.Provinces[naval.BaseProvinceId.Value].AddBuilding(BuildingType.Airfield);
         Assert.True(s.SetAirMission(0, naval.Id, AirMission.NavalStrike, sea.Id).Ok);
@@ -144,7 +152,7 @@ public class AirWarTests(WorldFixture world)
         var (s, a, b) = War();
         var paras = s.AddRegiment(0, a.Id, BattalionType.Paratroopers);
         Assert.StartsWith("Hacen falta aviones de transporte", s.CanParadrop(paras, b).Message);
-        s.AddWing(0, a.Id, BattalionType.AirTransports);
+        s.AddAirUnit(0, a.Id, BattalionType.AirTransports);
         var guard = s.AddRegiment(1, b.Id, BattalionType.LightInfantry);
         Assert.StartsWith("Hay tropas enemigas", s.CanParadrop(paras, b).Message);
         s.Disband(1, guard.Id);
@@ -168,7 +176,7 @@ public class AirWarTests(WorldFixture world)
             return unit.HoursToNext;
         }
         double clear = Step();
-        var fighters = s.AddWing(1, b.Id, BattalionType.Fighters);
+        var fighters = s.AddAirUnit(1, b.Id, BattalionType.Fighters);
         s.SetAirMission(1, fighters.Id, AirMission.AirSuperiority, next.Id);
         Assert.True(s.EnemyRulesTheAir(0, next));
         Assert.Equal(clear * MilitaryRules.UnderEnemyAirSlowdown, Step(), 3);
@@ -178,7 +186,7 @@ public class AirWarTests(WorldFixture world)
     public void MissionsAreSaved()
     {
         var (s, a, b) = War();
-        var wing = s.AddWing(0, a.Id, BattalionType.Fighters);
+        var wing = s.AddAirUnit(0, a.Id, BattalionType.Fighters);
         s.SetAirMission(0, wing.Id, AirMission.AirSuperiority, b.Id);
         var loaded = GameSession.Load(_map, s.ToSave("test"));
         Assert.Equal(1, loaded.AirSuperiority(0, loaded.Map.Provinces[b.Id]));
@@ -188,8 +196,8 @@ public class AirWarTests(WorldFixture world)
     public void TheComputerFliesItsWingsAtWar()
     {
         var (s, a, b) = War();
-        var fighters = s.AddWing(1, b.Id, BattalionType.Fighters);
-        var bombers = s.AddWing(1, b.Id, BattalionType.Bombers);
+        var fighters = s.AddAirUnit(1, b.Id, BattalionType.Fighters);
+        var bombers = s.AddAirUnit(1, b.Id, BattalionType.Bombers);
         var ai = new Conquer.Game.AI.AiPlayer(s, s.Players[1], 3);
         ai.Think(dailyDecisions: true);
         Assert.Equal((AirMission.StrategicBombing, a.Id), (bombers.Mission, bombers.TargetProvinceId!.Value));

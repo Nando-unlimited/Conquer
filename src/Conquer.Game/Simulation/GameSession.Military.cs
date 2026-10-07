@@ -303,7 +303,7 @@ public sealed partial class GameSession
             return CommandResult.Fail($"Requiere {yard.Info().Name.ToLowerInvariant()} en la ciudad.");
         // Ships go into the shipyards' queue: paid as they are built, crewed when finished.
         if (newest.Naval) return CanOrderShip(player, type);
-        if (newest.Flies && AirfieldRoom(p, p.OwnerId) <= 0 && p.Has(BuildingType.Airfield)) return CommandResult.Fail($"El aeródromo está lleno: {MilitaryRules.WingsPerAirfield} alas como mucho.");
+        if (newest.Flies && AirfieldRoom(p, p.OwnerId) <= 0 && p.Has(BuildingType.Airfield)) return CommandResult.Fail($"El aeródromo está lleno: {MilitaryRules.FlightsPerAirfield} escuadrillas como mucho.");
         if (type.BestModel(player.Techs) >= 0 && StockedModel(player, type) is null) return MissingEquipment(player, newest, 1);
         var model = TrainedModel(player, type);
         return CanRaiseTroops(p, model.Men, model.TrainingCost, model.Requires, model.TrainingBuilding(type) is BuildingType b ? [b] : []);
@@ -419,8 +419,8 @@ public sealed partial class GameSession
                 p.Training.Remove(order);
                 if (order.Battalion is BattalionType plane && plane.First().Flies)
                 {
-                    var wing = AddWing(player.Id, id, plane, order.Models.Count > 0 ? order.Models[0] : null);
-                    if (player.IsHuman) Notify(player.Id, $"Nueva ala en {PlaceName(p)}: {wing.Name} ({wing.Info.Name.ToLowerInvariant()}).");
+                    var air = AddAirUnit(player.Id, id, plane, 1, order.Models.Count > 0 ? order.Models[0] : null);
+                    if (player.IsHuman) Notify(player.Id, $"Nueva escuadrilla en {PlaceName(p)}: {air.Name} ({air.Info.Name.ToLowerInvariant()}).");
                     continue;
                 }
                 var unit = order.Battalion is BattalionType ship && ship.First().Naval ? AddFleet(player.Id, id, ship)
@@ -973,7 +973,8 @@ public sealed partial class GameSession
             if (unit.IsHeadquarters) AddUpkeep(upkeep, CommandLevels.Info(unit.HeadquartersLevel).Cost, factor);
             foreach (var b in unit.Battalions) AddUpkeep(upkeep, b.Info.Cost, factor);
         }
-        foreach (var wing in _wings.Where(w => w.OwnerId == player.Id)) AddUpkeep(upkeep, wing.Info.Cost);
+        foreach (var air in _airUnits.Where(u => u.OwnerId == player.Id)) foreach (var f in air.Flights) AddUpkeep(upkeep, f.Info.Cost);
+        foreach (var hq in _airHeadquarters.Where(h => h.OwnerId == player.Id)) AddUpkeep(upkeep, AirHeadquartersCost(hq.Level));
         return upkeep;
     }
 
@@ -1014,7 +1015,7 @@ public sealed partial class GameSession
         DailyManpower(player);
         DailyTraining(player);
         DailyShipyards(player);
-        DailyWings(player);
+        DailyAirUnits(player);
         _supplied[player.Id] = ComputeSupply(player);
         ModerniseInPlace(player);
         DailyShipments(player);

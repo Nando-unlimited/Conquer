@@ -297,10 +297,10 @@ public sealed partial class GameController
     private void AirfieldSection(Document doc, Province p)
     {
         doc.Add(new Space(8));
-        var wings = Session.WingsAt(p).ToList();
-        doc.Add(Section($"Aeródromo ({wings.Count}/{MilitaryRules.WingsPerAirfield} alas)"));
-        if (wings.Count == 0) doc.Add(new Label("Sin alas: fórmalas con los botones de aviones de arriba.", Tone.Dim, Height: 22));
-        foreach (var wing in wings) WingRows(doc, wing);
+        var units = Session.AirUnitsAt(p).ToList();
+        doc.Add(Section($"Aeródromo ({units.Sum(u => u.Flights.Count)}/{MilitaryRules.FlightsPerAirfield} escuadrillas)"));
+        if (units.Count == 0) doc.Add(new Label("Sin aviones: forma escuadrillas con los botones de aviones de arriba.", Tone.Dim, Height: 22));
+        foreach (var unit in units) AirUnitRows(doc, unit);
     }
 
     /// <summary>What sets a line apart in battle, beyond its numbers; null for the plain ones.</summary>
@@ -346,7 +346,10 @@ public sealed partial class GameController
         if (p.Buildings.Count == 0) doc.Add(new Label("Ninguno todavía.", Tone.Dim));
         foreach (var built in Buildings.All.Where(p.Buildings.Contains))
         {
-            doc.Add(new Label(built.Info().Name, Tone.Good, TextSize.Normal, Icon: new BuildingIcon(built)));
+            double damage = p.DamageOf(built);
+            doc.Add(new Label(built.Info().Name + (damage > 0 ? $" · dañado {damage:P0}" : ""), damage > 0 ? Tone.Bad : Tone.Good, TextSize.Normal,
+                Icon: new BuildingIcon(built),
+                Tooltip: damage > 0 ? $"Los bombardeos lo han dañado: da un {damage:P0} menos de lo que da. Se repara un {MilitaryRules.BuildingRepairPerDay:P0} al día si no lo bombardean; dañado del todo, se derrumba." : null));
             doc.Add(new Label(built.Info().Description, Tone.Dim, Height: 24, Indent: 10));
             // Barracks, and the workshop or the factory it became, list the troops they train faster.
             var trains = built == BuildingType.Factory ? BuildingType.Workshop : built;

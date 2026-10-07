@@ -244,7 +244,7 @@ public static class Techs
         [Tech.WarProduction] = new("Producción bélica", TechBranch.Military, 13, "Caballería mecanizada, tanques, paracaidistas y alas de aviones se instruyen un 25 % antes.",
             Modifiers.None, [Tech.Combustion], Era: Era.Modern,
             FasterTraining: [BattalionType.Cavalry, BattalionType.Armour, BattalionType.Paratroopers, BattalionType.Bombers,
-                BattalionType.Fighters, BattalionType.CloseSupport, BattalionType.NavalBombers, BattalionType.AirTransports]),
+                BattalionType.Fighters, BattalionType.CloseSupport, BattalionType.TacticalBombers, BattalionType.NavalBombers, BattalionType.AirTransports]),
         [Tech.Radar] = new("Radar", TechBranch.Military, 14, "Aviones monoplanos: cazas, bombarderos en picado y pesados, torpederos y transportes pesados.",
             Modifiers.None, [Tech.Aviation, Tech.Electronics], Era: Era.Modern),
         [Tech.JetEngine] = new("Motor a reacción", TechBranch.Military, 15, "Aviones a reacción, más rápidos, fuertes y de mayor alcance.",

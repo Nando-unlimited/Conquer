@@ -2,6 +2,26 @@
 
 Todos los cambios del juego, del más reciente al más antiguo. Cada versión es un commit cuyo título es su número.
 
+## [1.117.0] - 2026-10-07
+
+La aviación, como se acordó: escuadrillas y su jerarquía.
+
+### Cambiado
+- **La unidad básica es la escuadrilla de 6 aviones**, no el ala de 10. Cada tipo lleva sus hombres por avión: cazas 1, bombarderos en picado 2, bombarderos tácticos 4, estratégicos 10, aviación naval 2 y transportes 4.
+- **Jerarquía**: las escuadrillas de un tipo en una misma base se unen («Unir» en el panel de la base) en escuadrón (hasta 3 escuadrillas), grupo (hasta 6 escuadrones) y ala (hasta 3 grupos), y se separan («Separar»). Cada tamaño tiene su numeración: «1.ª Escuadrilla de cazas», «2.º Grupo de bombarderos estratégicos».
+- Un aeródromo alberga 18 escuadrillas (un grupo) y cada portaaviones, 6.
+- **Los bombardeos dañan los edificios**: un edificio dañado da menos de lo que da según su daño (un taller dañado fabrica menos) y se repara un 2 % al día si no lo vuelven a bombardear; dañado del todo, se derrumba. La pestaña Edificios muestra el daño.
+- La pestaña Fuerza aérea lista las unidades con su tamaño y su división.
+
+### Añadido
+- **Bombarderos tácticos**: bombarderos ligeros (Aviación), medios (Radar) y tácticos a reacción, que hacen apoyo cercano y bombardeo.
+- **Cuarteles generales aéreos**: la División aérea manda hasta 6 unidades con base a menos de 1.500 km (+10 % y la habilidad de su general de aviación); el Mando aéreo, uno por nación, manda las divisiones (+5 % más). Se forman en un aeródromo desde la pestaña Fuerza aérea, y cada unidad se asigna a su división desde el panel de su base.
+- La IA une sus escuadrillas en unidades mayores, forma divisiones aéreas y su Mando aéreo, y usa los bombarderos tácticos.
+
+### Corregido
+- La flecha del aviso de modernización de los barcos no se veía en la fuente del juego.
+- Las partidas guardadas convierten cada ala de 10 aviones en un escuadrón de 2 escuadrillas.
+
 ## [1.116.0] - 2026-10-07
 
 La aviación (3 de 3), y con ella termina la nueva estructura militar.

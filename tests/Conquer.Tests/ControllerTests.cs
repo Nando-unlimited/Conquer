@@ -117,7 +117,7 @@ public class ControllerTests(WorldFixture world)
         var s = game.Session;
         foreach (var t in new[] { Conquer.Game.Science.Tech.Combustion, Conquer.Game.Science.Tech.Electricity, Conquer.Game.Science.Tech.Aviation }) s.Human.Learn(t);
         s.Map.Provinces[home].AddBuilding(BuildingType.Airfield);
-        var wing = s.AddWing(0, home, BattalionType.Fighters);
+        var wing = s.AddAirUnit(0, home, BattalionType.Fighters);
         game.ProvinceTab = ProvinceTab.Army;
         Button(game.SidePanel()!, "Superioridad aérea...").Press();
         Assert.NotNull(game.TargetPrompt);

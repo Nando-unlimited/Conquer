@@ -194,11 +194,12 @@ public sealed partial class GameController
             doc.Add(new Info("Reparaciones", port ? "En puerto" : "Solo en puerto", port ? Tone.Good : Tone.Dim));
             RefitLine(doc, unit);
             MissionLines(doc, unit);
-            var carried = Session.WingsOn(unit).ToList();
-            if (Session.CarrierRoom(unit) + carried.Count > 0)
+            var carried = Session.AirUnitsOn(unit).ToList();
+            int aboard = carried.Sum(a => a.Flights.Count);
+            if (Session.CarrierRoom(unit) + aboard > 0)
             {
-                doc.Add(new Label($"Alas embarcadas ({carried.Count}/{Session.CarrierRoom(unit) + carried.Count})", Tone.Accent, Bold: true, Height: 22));
-                foreach (var wing in carried) WingRows(doc, wing);
+                doc.Add(new Label($"Aviones embarcados ({aboard}/{Session.CarrierRoom(unit) + aboard} escuadrillas)", Tone.Accent, Bold: true, Height: 22));
+                foreach (var air in carried) AirUnitRows(doc, air);
             }
             doc.Add(OfficerLine("Oficial", unit.Officer, "Manda esta flota: sus rasgos y su habilidad afectan al fuego de sus barcos."));
             doc.Add(PortraitsOf(unit, ("Oficial", unit.Officer)));
@@ -293,7 +294,7 @@ public sealed partial class GameController
         if (due.Count == 0 || fleet.OwnerId != Human.Id) return;
         var checks = due.Select(d => (d.Ship, d.Model, Check: Session.CanRefit(fleet, d.Ship, d.Model))).ToList();
         int ready = checks.Count(c => c.Check.Ok);
-        string tip = string.Join("\n", checks.Select(c => $"{c.Ship.Info.Name} → {c.Model.Name}: " +
+        string tip = string.Join("\n", checks.Select(c => $"{c.Ship.Info.Name} a {c.Model.Name.ToLowerInvariant()}: " +
                                                          (c.Check.Ok ? $"{GameSession.RefitCost(c.Model)}" : c.Check.Message)));
         doc.Add(new Info("Modernización", ready > 0 ? $"{ready} de {due.Count} barcos, mañana" : $"{due.Count} barcos esperan",
             ready > 0 ? Tone.Good : Tone.Accent, tip + $"\nEn uno de tus puertos, cada barco pasa al modelo más nuevo de su línea por el {MilitaryRules.RefitCostShare:P0} de su coste."));

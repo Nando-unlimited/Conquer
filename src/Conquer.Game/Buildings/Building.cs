@@ -39,7 +39,7 @@ public enum BuildingType
     DryDock,
     /// <summary>Builds the war machines (<see cref="Military.Battalions.TrainingBuilding"/>); it becomes a <see cref="Factory"/> once its owner knows industrialisation.</summary>
     Workshop,
-    /// <summary>Base of air wings (<see cref="Rules.MilitaryRules.WingsPerAirfield"/>): they are formed, repaired and take off here.</summary>
+    /// <summary>Base of air units (<see cref="Rules.MilitaryRules.FlightsPerAirfield"/> escuadrillas): they are formed, repaired and take off here.</summary>
     Airfield,
 }
 
@@ -111,7 +111,7 @@ public static class Buildings
             NeedsCoast: true, RequiresBuilding: BuildingType.Port),
         [BuildingType.Workshop] = new("Taller", "Fabrica el equipo de las tropas (armas, caballos, catapultas, cañones...) y construye las máquinas de guerra. Con la industrialización pasa a ser una fábrica.",
             new ResourceCost((ResourceType.Wood, 80), (ResourceType.Gold, 40)), 40, null, false, false, Modifiers.None, BecomesWith: BuildingType.Factory),
-        [BuildingType.Airfield] = new("Aeródromo", "Base de hasta 4 alas de aviones: aquí se forman, se reparan y despegan hacia sus misiones.",
+        [BuildingType.Airfield] = new("Aeródromo", "Base de hasta 18 escuadrillas de aviones (un grupo): aquí se forman, se reparan y despegan hacia sus misiones.",
             new ResourceCost((ResourceType.Gold, 150), (ResourceType.Stone, 60), (ResourceType.Iron, 30)), 60, Tech.Aviation, false, false, Modifiers.None),
     };
 

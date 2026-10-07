@@ -33,6 +33,15 @@ public sealed record Modifiers
 
     public static readonly Modifiers None = new();
 
+    /// <summary>Every improvement times <paramref name="share"/>.</summary>
+    public Modifiers Times(double share) => share == 1 ? this : new()
+    {
+        Food = Food * share, Wood = Wood * share, Deposits = Deposits * share, Taxes = Taxes * share, Science = Science * share,
+        Capacity = Capacity * share, Fertility = Fertility * share, Mood = Mood * share, FamineSurvival = FamineSurvival * share,
+        Defense = Defense * share, BuildSpeed = BuildSpeed * share, DistanceMood = DistanceMood * share, Manpower = Manpower * share,
+        PlagueResistance = PlagueResistance * share,
+    };
+
     public static Modifiers operator +(Modifiers a, Modifiers b) => new()
     {
         Food = a.Food + b.Food,

@@ -83,8 +83,31 @@ public sealed class Province
     /// <summary>Knocks one building down; the effects of the rest are added up again.</summary>
     public void RemoveBuilding(BuildingType type)
     {
-        if (Buildings.Remove(type)) BuildingBonuses = Buildings.Aggregate(Modifiers.None, (sum, b) => sum + b.Info().Effects);
+        _damage.Remove(type);
+        if (Buildings.Remove(type)) AddUpBuildings();
     }
+
+    private readonly Dictionary<BuildingType, double> _damage = [];
+
+    /// <summary>How damaged its buildings are by bombing, from 0 to 1; only the damaged ones are listed.</summary>
+    public IReadOnlyDictionary<BuildingType, double> Damage => _damage;
+
+    public double DamageOf(BuildingType type) => _damage.GetValueOrDefault(type);
+
+    /// <summary>Sets a building's damage (0 repaired); a damaged building gives that share less of its effects.</summary>
+    public void SetDamage(BuildingType type, double damage)
+    {
+        if (!Buildings.Contains(type)) return;
+        if (damage <= 0) _damage.Remove(type);
+        else _damage[type] = Math.Min(1, damage);
+        AddUpBuildings();
+    }
+
+    /// <summary>The share of its work its workshop or factory loses to damage.</summary>
+    public double WorkshopDamage => Math.Max(DamageOf(BuildingType.Workshop), DamageOf(BuildingType.Factory));
+
+    private void AddUpBuildings() =>
+        BuildingBonuses = Buildings.Aggregate(Modifiers.None, (sum, b) => sum + b.Info().Effects.Times(1 - DamageOf(b)));
 
     /// <summary>Whether it has the building, or the one it turned into (a factory for a workshop).</summary>
     public bool Has(BuildingType type) => Buildings.Contains(type) || type.Info().BecomesWith is BuildingType next && Buildings.Contains(next);
@@ -93,6 +116,7 @@ public sealed class Province
     public void ClearBuildings()
     {
         Buildings.Clear();
+        _damage.Clear();
         Training.Clear();
         BuildingBonuses = Modifiers.None;
         Constructing = null;

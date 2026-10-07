@@ -110,6 +110,11 @@ public sealed record SaveGame
     public int NextShipOrderId { get; init; }
     /// <summary>Air wings; missing in saves from before 1.114.0.</summary>
     public List<WingSave>? Wings { get; init; }
+    /// <summary>Air units and air HQs; missing in saves from before 1.117.0 (which had wings instead).</summary>
+    public List<AirUnitSave>? AirUnits { get; init; }
+    public List<AirHeadquartersSave>? AirHeadquarters { get; init; }
+    public int NextAirUnitId { get; init; }
+    public int NextAirHeadquartersId { get; init; }
     public int NextWingId { get; init; }
 
     private static readonly JsonSerializerOptions Options = new()
@@ -205,7 +210,7 @@ public sealed record ProvinceSave(
     double[] Reserves, List<BuildingType> Buildings, BuildingType? Constructing, int ConstructionDaysLeft, string? PlannedCityName = null,
     List<Institution>? Institutions = null, string? Name = null, List<TrainingSave>? Training = null,
     int? CultureId = null, double Assimilation = 0, double RevoltProgress = 0, int? ReligionId = null, double Conversion = 0,
-    int PlagueDaysLeft = 0, long PlagueImmuneUntil = 0, string? Production = null);
+    int PlagueDaysLeft = 0, long PlagueImmuneUntil = 0, string? Production = null, Dictionary<BuildingType, double>? Damage = null);
 
 /// <param name="Training">What the city was training, in saves from before 1.44.1; since then it is the province's (<see cref="ProvinceSave.Training"/>).</param>
 public sealed record CitySave(int Id, string Name, int OwnerId, int ProvinceId, long FoundedHours, long FestivalUntilHours, List<TrainingSave>? Training = null);
@@ -270,4 +275,12 @@ public sealed record UnitNumberSave(int PlayerId, int Level, int Number);
 public sealed record AiSave(int PlayerId, Dictionary<int, int> Targets, List<int> Claimers, List<int> KnownRegiments, int? ArmyTemplateId);
 
 /// <summary>An air wing: its planes, its base (an airfield or a carrier's fleet) and its mission.</summary>
+/// <summary>An air wing as saves of 1.114.0 to 1.116.0 wrote it: one block of ten planes. Loaded as an escuadrón of two escuadrillas.</summary>
 public sealed record WingSave(int Id, int OwnerId, BattalionSave Planes, int Number, int? BaseProvinceId, int? CarrierId, AirMission Mission, int? TargetProvinceId);
+
+/// <summary>An air unit: its escuadrillas, base, mission and División aérea.</summary>
+public sealed record AirUnitSave(int Id, int OwnerId, List<BattalionSave> Flights, int Number, int? BaseProvinceId, int? CarrierId, AirMission Mission,
+    int? TargetProvinceId, int? CommanderId);
+
+/// <summary>An air HQ: a División aérea or the Mando aéreo.</summary>
+public sealed record AirHeadquartersSave(int Id, int OwnerId, int Level, int Number, int BaseProvinceId, OfficerSave? Officer);

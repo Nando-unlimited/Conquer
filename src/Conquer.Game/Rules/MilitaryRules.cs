@@ -15,10 +15,22 @@ public static class MilitaryRules
     public const int MaxDivisionMen = 10_000;
     /// <summary>Ships in one fleet at most.</summary>
     public const int MaxShipsPerFleet = 10;
-    /// <summary>Planes in an air wing, the pieces of equipment it needs.</summary>
-    public const int PlanesPerWing = 10;
-    /// <summary>Wings an airfield holds, and an aircraft carrier.</summary>
-    public const int WingsPerAirfield = 4, WingsPerCarrier = 2;
+    /// <summary>Planes in an escuadrilla, the basic air unit, and the pieces of equipment it needs.</summary>
+    public const int PlanesPerFlight = 6;
+    /// <summary>Escuadrillas an airfield holds (a grupo), and each aircraft carrier.</summary>
+    public const int FlightsPerAirfield = 18, FlightsPerCarrier = 6;
+    /// <summary>A División aérea commands air units based this close to it; the Mando aéreo, divisions this close.</summary>
+    public const double AirDivisionRangeKm = 1500, AirCommandRangeKm = 4000;
+    /// <summary>Air units its División aérea commands at most.</summary>
+    public const int MaxUnitsPerAirDivision = 6;
+    /// <summary>What an air unit gets from its División aérea in range, and from the Mando aéreo above it.</summary>
+    public const double AirCommandBonus = 0.1, HigherAirCommandBonus = 0.05;
+    /// <summary>Staff of an air HQ, from its province and the reserve.</summary>
+    public const int AirHeadquartersStaff = 30;
+    /// <summary>Damage a bombed building takes per point of harm; at 1 it falls.</summary>
+    public const double BuildingDamagePerHarm = 1.0 / 300;
+    /// <summary>Share of its damage a building not bombed that day has repaired.</summary>
+    public const double BuildingRepairPerDay = 0.02;
     /// <summary>An air mission covers the provinces this close to its target.</summary>
     public const double MissionRadiusKm = 300;
     /// <summary>Ground troops fight up to this much better with the sky theirs, and as much worse with it the enemy's.</summary>

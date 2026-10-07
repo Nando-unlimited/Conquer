@@ -7,11 +7,12 @@ using Conquer.Game.World;
 namespace Conquer.Game.Simulation;
 
 /// <summary>
-/// The war in the air: each wing flies its mission over the provinces near its target (<see cref="MilitaryRules.MissionRadiusKm"/>).
+/// The war in the air: each air unit flies its mission over the provinces near its target (<see cref="MilitaryRules.MissionRadiusKm"/>).
 /// Fighters fight for the sky; the side whose fighters rule it fights better on the ground, and the enemy's troops there
-/// march slower and get less supply. Attack aircraft add their fire to the battles, strategic bombers wreck the enemy's
-/// provinces and naval aircraft strike its fleets and convoys, all doing less under a sky the enemy rules. Once a day the
-/// wings that meet, and the anti-air beneath them, shoot each other's planes down. Transports drop paratroopers.
+/// march slower and get less supply. Dive and tactical bombers add their fire to the battles, tactical and strategic
+/// bombers damage the enemy's buildings, naval aircraft strike its fleets and convoys, all doing less under a sky the
+/// enemy rules. Once a day the units that meet, and the anti-air beneath them, shoot each other's planes down.
+/// Transports drop paratroopers.
 /// </summary>
 public sealed partial class GameSession
 {
@@ -20,6 +21,7 @@ public sealed partial class GameSession
     {
         BattalionType.Fighters => [AirMission.AirSuperiority],
         BattalionType.CloseSupport => [AirMission.CloseSupport],
+        BattalionType.TacticalBombers => [AirMission.CloseSupport, AirMission.StrategicBombing],
         BattalionType.Bombers => [AirMission.StrategicBombing],
         BattalionType.NavalBombers => [AirMission.NavalStrike],
         BattalionType.AirTransports => [AirMission.Paradrop],
@@ -30,7 +32,7 @@ public sealed partial class GameSession
     {
         AirMission.AirSuperiority => "Superioridad aérea",
         AirMission.CloseSupport => "Apoyo cercano",
-        AirMission.StrategicBombing => "Bombardeo estratégico",
+        AirMission.StrategicBombing => "Bombardeo",
         AirMission.NavalStrike => "Ataque naval",
         AirMission.Paradrop => "Lanzar paracaidistas",
         _ => "Sin misión",
@@ -40,69 +42,73 @@ public sealed partial class GameSession
     {
         AirMission.AirSuperiority => "Disputa el cielo de la zona a los aviones enemigos: quien lo domina lucha mejor en tierra, y el enemigo marcha más despacio y recibe menos suministro.",
         AirMission.CloseSupport => "Suma su fuego a tus batallas de la zona.",
-        AirMission.StrategicBombing => "Bombardea las provincias enemigas de la zona: quita moral, frena sus talleres y derriba edificios.",
+        AirMission.StrategicBombing => "Bombardea la provincia enemiga: quita moral y daña sus edificios, que producen menos y, muy dañados, se derrumban.",
         AirMission.NavalStrike => "Ataca las flotas enemigas y los convoyes que crucen los mares de la zona.",
         AirMission.Paradrop => "Lleva a los paracaidistas de su aeródromo adonde los lances (botón en su panel).",
         _ => "Se queda en su base.",
     };
 
-    /// <summary>Gives a wing a mission over a province within its range, or none.</summary>
-    public CommandResult SetAirMission(int playerId, int wingId, AirMission mission, int? targetProvinceId = null)
+    /// <summary>Gives an air unit a mission over a province within its range, or none.</summary>
+    public CommandResult SetAirMission(int playerId, int unitId, AirMission mission, int? targetProvinceId = null)
     {
-        if (WingById(wingId) is not { } wing || wing.OwnerId != playerId) return CommandResult.Fail("Ala no válida.");
+        if (AirUnitById(unitId) is not { } unit || unit.OwnerId != playerId) return CommandResult.Fail("Unidad aérea no válida.");
+        _flyingAt = -1;
         if (mission == AirMission.None)
         {
-            wing.Mission = AirMission.None;
-            _flyingAt = -1;
-            wing.TargetProvinceId = null;
-            return CommandResult.Success($"{wing.Name} se queda en su base.");
+            unit.Mission = AirMission.None;
+            unit.TargetProvinceId = null;
+            return CommandResult.Success($"{unit.Name} se queda en su base.");
         }
-        if (!MissionsFor(wing.Type).Contains(mission)) return CommandResult.Fail($"Un ala de {wing.Type.Line().Name.ToLowerInvariant()} no puede: {AirMissionName(mission).ToLowerInvariant()}.");
+        if (!MissionsFor(unit.Type).Contains(mission))
+            return CommandResult.Fail($"Los {unit.Type.Line().Name.ToLowerInvariant()} no pueden: {AirMissionName(mission).ToLowerInvariant()}.");
         if (targetProvinceId is not int target) return CommandResult.Fail("Elige la provincia de la misión.");
-        if (!InRange(wing, Map.Provinces[target])) return CommandResult.Fail($"Está fuera de su alcance ({wing.Info.RangeKm:N0} km).");
-        wing.Mission = mission;
-        _flyingAt = -1;
-        wing.TargetProvinceId = target;
-        return CommandResult.Success($"{wing.Name}: {AirMissionName(mission).ToLowerInvariant()} sobre {PlaceName(Map.Provinces[target])}.");
+        if (!InRange(unit, Map.Provinces[target])) return CommandResult.Fail($"Está fuera de su alcance ({unit.Flights.Min(f => f.Info.RangeKm):N0} km).");
+        unit.Mission = mission;
+        unit.TargetProvinceId = target;
+        return CommandResult.Success($"{unit.Name}: {AirMissionName(mission).ToLowerInvariant()} sobre {PlaceName(Map.Provinces[target])}.");
     }
 
-    /// <summary>Whether the wing flies its mission today: it has one in range and enough planes and organisation.</summary>
-    public bool IsFlying(AirWing wing) =>
-        wing.Mission != AirMission.None && wing.Mission != AirMission.Paradrop && wing.TargetProvinceId is int t && InRange(wing, Map.Provinces[t])
-        && wing.Planes.OrganisationShare >= MilitaryRules.MinFlyingOrganisation && wing.PlaneCount >= 1;
+    /// <summary>Whether the unit flies its mission: it has one in range and enough planes and organisation.</summary>
+    public bool IsFlying(AirUnit unit) =>
+        unit.Mission is not (AirMission.None or AirMission.Paradrop) && unit.TargetProvinceId is int t && InRange(unit, Map.Provinces[t])
+        && unit.OrganisationShare >= MilitaryRules.MinFlyingOrganisation && unit.PlaneCount >= 1;
 
     private long _flyingAt = -1;
-    private List<AirWing> _flying = [];
+    private List<AirUnit> _flying = [];
 
-    /// <summary>The wings flying their missions this hour (worked out once an hour, or again when a mission changes).</summary>
-    private List<AirWing> Flying()
+    /// <summary>The air units flying their missions this hour (worked out once an hour, or again when a mission changes).</summary>
+    private List<AirUnit> Flying()
     {
         if (_flyingAt != Date.Hours)
         {
             _flyingAt = Date.Hours;
-            _flying = [.. _wings.Where(IsFlying)];
+            _flying = [.. _airUnits.Where(IsFlying)];
         }
         return _flying;
     }
 
-    /// <summary>Whether the wing's mission reaches the province.</summary>
-    public bool Covers(AirWing wing, Province p) =>
-        wing.TargetProvinceId is int t && Map.DistanceKm(Map.Provinces[t], p) <= MilitaryRules.MissionRadiusKm;
+    /// <summary>Whether the unit's mission reaches the province.</summary>
+    public bool Covers(AirUnit unit, Province p) =>
+        unit.TargetProvinceId is int t && Map.DistanceKm(Map.Provinces[t], p) <= MilitaryRules.MissionRadiusKm;
 
-    /// <summary>How much a wing does: its planes, its organisation and its crews' experience.</summary>
-    public static double Effectiveness(AirWing wing) =>
-        wing.Planes.StrengthShare * (0.5 + 0.5 * wing.Planes.OrganisationShare) * (1 + MilitaryRules.ExperienceBonus * wing.Planes.Experience);
+    /// <summary>
+    /// An air unit's fire of one kind: its escuadrillas', each by its planes, organisation and crews' experience, and its
+    /// chain of command.
+    /// </summary>
+    public double AirFire(AirUnit unit, Func<BattalionInfo, double> stat) =>
+        unit.Flights.Sum(f => stat(f.Info) * f.StrengthShare * (0.5 + 0.5 * f.OrganisationShare) * (1 + MilitaryRules.ExperienceBonus * f.Experience))
+        * (1 + AirCommandBonus(unit));
 
     /// <summary>The fighters' strength of a nation, and of its enemies, over a province.</summary>
     public (double Mine, double Enemies) FighterCover(int playerId, Province p)
     {
         double mine = 0, enemies = 0;
-        foreach (var w in Flying())
+        foreach (var u in Flying())
         {
-            if (w.Mission != AirMission.AirSuperiority || !Covers(w, p)) continue;
-            double power = w.Info.AirAttack * Effectiveness(w);
-            if (w.OwnerId == playerId) mine += power;
-            else if (AtWar(w.OwnerId, playerId)) enemies += power;
+            if (u.Mission != AirMission.AirSuperiority || !Covers(u, p)) continue;
+            double power = AirFire(u, i => i.AirAttack);
+            if (u.OwnerId == playerId) mine += power;
+            else if (AtWar(u.OwnerId, playerId)) enemies += power;
         }
         return (mine, enemies);
     }
@@ -121,11 +127,10 @@ public sealed partial class GameSession
     public double AirSuperiorityMultiplier(int playerId, Province p) =>
         AirSuperiority(playerId, p) is double s ? 1 + MilitaryRules.AirSuperiorityBonus * (2 * s - 1) : 1;
 
-    /// <summary>The fire a nation's attack aircraft add to its battles in a province, each hour.</summary>
+    /// <summary>The fire a nation's bombers in close support add to its battles in a province, each hour.</summary>
     public double CloseAirSupport(int playerId, Province p)
     {
-        double fire = Flying().Where(w => w.OwnerId == playerId && w.Mission == AirMission.CloseSupport && Covers(w, p))
-            .Sum(w => w.Info.Attack * Effectiveness(w));
+        double fire = Flying().Where(u => u.OwnerId == playerId && u.Mission == AirMission.CloseSupport && Covers(u, p)).Sum(u => AirFire(u, i => i.Attack));
         return fire * (EnemyRulesTheAir(playerId, p) ? MilitaryRules.UnescortedBomberEffect : 1);
     }
 
@@ -140,98 +145,117 @@ public sealed partial class GameSession
     public double PlanesDownedLastDay(int playerId) => _airLosses.GetValueOrDefault(playerId).Downed;
     private readonly Dictionary<int, (double Lost, double Downed)> _airLosses = [];
 
-    /// <summary>Provinces bombed the day before and the share of their workshops' work lost to it.</summary>
-    private readonly Dictionary<int, double> _bombed = [];
-
-    /// <summary>The share of its work a province's workshop loses today to yesterday's bombing.</summary>
-    public double BombingDamage(Province p) => _bombed.GetValueOrDefault(p.Id);
-
     /// <summary>
-    /// Once a day: the flying wings of nations at war whose areas meet shoot at each other, and the anti-air under the
-    /// attack aircraft, bombers and naval aircraft shoots at them; each wing loses planes and organisation (see
-    /// <see cref="MilitaryRules.AirEvasion"/>). Then the bombers bomb and the naval aircraft strike.
+    /// Once a day: the flying units of nations at war whose areas meet shoot at each other, and the anti-air under the
+    /// bombers and naval aircraft shoots at them; each loses a share of its planes and organisation (see
+    /// <see cref="MilitaryRules.AirEvasion"/>). Then the bombers bomb and the naval aircraft strike, and the buildings
+    /// not bombed are repaired a little.
     /// </summary>
     internal void DailyAir()
     {
         _airLosses.Clear();
-        _bombed.Clear();
-        var flying = _wings.Where(IsFlying).ToList();
-        if (flying.Count == 0) return;
+        var bombed = new HashSet<int>();
+        var flying = _airUnits.Where(IsFlying).ToList();
 
-        var incoming = flying.ToDictionary(w => w, _ => 0.0);
-        var shooters = flying.ToDictionary(w => w, _ => new List<AirWing>());
+        var incoming = flying.ToDictionary(u => u, _ => 0.0);
+        var shooters = flying.ToDictionary(u => u, _ => new List<AirUnit>());
         foreach (var a in flying)
         {
             var targets = flying.Where(b => AtWar(a.OwnerId, b.OwnerId)
                 && Map.DistanceKm(Map.Provinces[a.TargetProvinceId!.Value], Map.Provinces[b.TargetProvinceId!.Value]) <= 2 * MilitaryRules.MissionRadiusKm).ToList();
             if (targets.Count == 0) continue;
             // Fighters fight for the sky; the others only defend themselves.
-            double fire = a.Info.AirAttack * Effectiveness(a) * (a.Mission == AirMission.AirSuperiority ? 1 : 0.5);
+            double fire = AirFire(a, i => i.AirAttack) * (a.Mission == AirMission.AirSuperiority ? 1 : 0.5);
             foreach (var b in targets)
             {
                 incoming[b] += fire / targets.Count;
                 shooters[b].Add(a);
             }
         }
-        foreach (var w in flying.Where(w => w.Mission is AirMission.CloseSupport or AirMission.StrategicBombing or AirMission.NavalStrike))
-            incoming[w] += AntiAirFire(w.OwnerId, Map.Provinces[w.TargetProvinceId!.Value]);
+        foreach (var u in flying.Where(u => u.Mission is AirMission.CloseSupport or AirMission.StrategicBombing or AirMission.NavalStrike))
+            incoming[u] += AntiAirFire(u.OwnerId, Map.Provinces[u.TargetProvinceId!.Value]);
 
-        foreach (var w in flying)
+        foreach (var u in flying)
         {
-            double fire = incoming[w];
-            double loss = fire <= 0 ? 0 : Math.Min(MilitaryRules.MaxDailyAirLoss,
-                fire / (fire + MilitaryRules.AirDefenseWeight * w.Info.Defense * w.Planes.StrengthShare + MilitaryRules.AirEvasion));
-            double planes = w.PlaneCount * loss;
-            w.Planes.Strength *= 1 - loss;
-            w.Planes.Organisation = Math.Max(0, w.Planes.Organisation - w.Info.MaxOrganisation * loss * 2);
-            w.Planes.Experience += MilitaryRules.ExperiencePerBattleHour * 4 * (1 - w.Planes.Experience);
+            double fire = incoming[u];
+            double defence = u.Flights.Sum(f => f.Info.Defense * f.StrengthShare);
+            double loss = fire <= 0 ? 0 : Math.Min(MilitaryRules.MaxDailyAirLoss, fire / (fire + MilitaryRules.AirDefenseWeight * defence + MilitaryRules.AirEvasion));
+            double planes = u.PlaneCount * loss;
+            foreach (var f in u.Flights)
+            {
+                f.Strength *= 1 - loss;
+                f.Organisation = Math.Max(0, f.Organisation - f.Info.MaxOrganisation * loss * 2);
+                f.Experience += MilitaryRules.ExperiencePerBattleHour * 4 * (1 - f.Experience);
+            }
             if (planes <= 0) continue;
-            var (lost, downed) = _airLosses.GetValueOrDefault(w.OwnerId);
-            _airLosses[w.OwnerId] = (lost + planes, downed);
-            foreach (var s in shooters[w].Select(s => s.OwnerId).Distinct())
+            var (lost, downed) = _airLosses.GetValueOrDefault(u.OwnerId);
+            _airLosses[u.OwnerId] = (lost + planes, downed);
+            var owners = shooters[u].Select(s => s.OwnerId).Distinct().ToList();
+            foreach (int s in owners)
             {
                 var (l, d) = _airLosses.GetValueOrDefault(s);
-                _airLosses[s] = (l, d + planes / shooters[w].Select(x => x.OwnerId).Distinct().Count());
+                _airLosses[s] = (l, d + planes / owners.Count);
             }
         }
 
-        foreach (var w in flying.Where(w => w.Mission == AirMission.StrategicBombing)) Bomb(w);
-        foreach (var w in flying.Where(w => w.Mission == AirMission.NavalStrike)) StrikeAtSea(w);
+        foreach (var u in flying.Where(u => u.Mission == AirMission.StrategicBombing)) Bomb(u, bombed);
+        foreach (var u in flying.Where(u => u.Mission == AirMission.NavalStrike)) StrikeAtSea(u);
+        RepairBuildings(bombed);
 
         if (PlanesLostLastDay(HumanPlayerId) >= 0.5)
             Notify(HumanPlayerId, $"Hemos perdido {PlanesLostLastDay(HumanPlayerId):0} aviones; derribado {PlanesDownedLastDay(HumanPlayerId):0} enemigos.");
     }
 
     /// <summary>
-    /// A bomber wing's day over its target, if the enemy holds it: the people lose heart, the workshops lose work the next
-    /// day and a building may come down; less under a sky the enemy rules.
+    /// A bomber unit's day over its target, if the enemy holds it: the people lose heart and its buildings take damage,
+    /// a random one at a time, so they produce less; one damaged right through falls. Less under a sky the enemy rules.
     /// </summary>
-    private void Bomb(AirWing wing)
+    private void Bomb(AirUnit unit, HashSet<int> bombed)
     {
-        var p = Map.Provinces[wing.TargetProvinceId!.Value];
-        if (!p.IsOwned || !AtWar(wing.OwnerId, p.OwnerId)) return;
-        double harm = wing.Info.Attack * Effectiveness(wing) * (EnemyRulesTheAir(wing.OwnerId, p) ? MilitaryRules.UnescortedBomberEffect : 1);
+        var p = Map.Provinces[unit.TargetProvinceId!.Value];
+        if (!p.IsOwned || !AtWar(unit.OwnerId, p.OwnerId)) return;
+        double harm = AirFire(unit, i => i.Attack) * (EnemyRulesTheAir(unit.OwnerId, p) ? MilitaryRules.UnescortedBomberEffect : 1);
         p.Mood = Math.Max(0, p.Mood - Math.Min(5, harm / 10));
-        _bombed[p.Id] = Math.Min(0.5, _bombed.GetValueOrDefault(p.Id) + harm / 200);
-        if (p.Buildings.Count > 0 && _random.NextDouble() < harm / 500)
+        bombed.Add(p.Id);
+        if (p.Buildings.Count == 0) return;
+        var building = p.Buildings.ElementAt(_random.Next(p.Buildings.Count));
+        double damage = p.DamageOf(building) + harm * MilitaryRules.BuildingDamagePerHarm;
+        if (damage < 1)
         {
-            var building = p.Buildings.ElementAt(_random.Next(p.Buildings.Count));
-            p.RemoveBuilding(building);
-            Notify(p.OwnerId, $"Los bombarderos de {wing.Owner.Name} han destruido {building.Info().WithArticle.Replace("un ", "el ").Replace("una ", "la ")} de {PlaceName(p)}.");
-            if (wing.OwnerId == HumanPlayerId) Notify(HumanPlayerId, $"{wing.Name} ha destruido {building.Info().WithArticle} en {PlaceName(p)}.");
+            p.SetDamage(building, damage);
+            return;
         }
+        p.RemoveBuilding(building);
+        Notify(p.OwnerId, $"Los bombarderos de {unit.Owner.Name} han derrumbado {building.Info().WithArticle} de {PlaceName(p)}.");
+        if (unit.OwnerId == HumanPlayerId) Notify(HumanPlayerId, $"{unit.Name} ha derrumbado {building.Info().WithArticle} en {PlaceName(p)}.");
     }
 
-    /// <summary>A naval wing's day: it strikes the enemy fleets in the seas of its area and the convoys crossing them.</summary>
-    private void StrikeAtSea(AirWing wing)
+    /// <summary>Damaged buildings not bombed today are repaired a little.</summary>
+    private void RepairBuildings(HashSet<int> bombed)
     {
-        double fire = wing.Info.Attack * Effectiveness(wing) * MilitaryRules.NavalStrikeHours;
-        if (EnemyRulesTheAir(wing.OwnerId, Map.Provinces[wing.TargetProvinceId!.Value])) fire *= MilitaryRules.UnescortedBomberEffect;
-        var fleets = Units.Where(u => u.IsFleet && AtWar(u.OwnerId, wing.OwnerId) && Covers(wing, Map.Provinces[u.ProvinceId])).ToList();
+        foreach (var p in _damagedProvinces.Select(id => Map.Provinces[id]).ToList())
+        {
+            if (bombed.Contains(p.Id)) continue;
+            foreach (var b in p.Buildings.Where(b => p.DamageOf(b) > 0).ToList())
+                p.SetDamage(b, Math.Max(0, p.DamageOf(b) - MilitaryRules.BuildingRepairPerDay));
+        }
+        _damagedProvinces.RemoveWhere(id => !Map.Provinces[id].Buildings.Any(b => Map.Provinces[id].DamageOf(b) > 0));
+        foreach (int id in bombed) _damagedProvinces.Add(id);
+    }
+
+    /// <summary>Provinces with damaged buildings, so the daily repairs need not look at every province.</summary>
+    private readonly HashSet<int> _damagedProvinces = [];
+
+    /// <summary>A naval unit's day: it strikes the enemy fleets in the seas of its area and the convoys crossing them.</summary>
+    private void StrikeAtSea(AirUnit unit)
+    {
+        double fire = AirFire(unit, i => i.Attack) * MilitaryRules.NavalStrikeHours;
+        if (EnemyRulesTheAir(unit.OwnerId, Map.Provinces[unit.TargetProvinceId!.Value])) fire *= MilitaryRules.UnescortedBomberEffect;
+        var fleets = Units.Where(u => u.IsFleet && AtWar(u.OwnerId, unit.OwnerId) && Covers(unit, Map.Provinces[u.ProvinceId])).ToList();
         if (fleets.Count > 0) Damage(fleets, fire);
         foreach (var fleet in fleets.Where(f => f.Citizens < 1).ToList()) Sink(fleet);
-        foreach (var s in _shipments.Where(s => s.Convoys > 0 && AtWar(s.OwnerId, wing.OwnerId) && s.SeaRoute.Any(id => Covers(wing, Map.Provinces[id]))).ToList())
-            SinkConvoys(s, Math.Min(MilitaryRules.MaxDailyConvoyLoss, fire / (fire + MilitaryRules.ConvoyEvasion)), [wing.OwnerId]);
+        foreach (var s in _shipments.Where(s => s.Convoys > 0 && AtWar(s.OwnerId, unit.OwnerId) && s.SeaRoute.Any(id => Covers(unit, Map.Provinces[id]))).ToList())
+            SinkConvoys(s, Math.Min(MilitaryRules.MaxDailyConvoyLoss, fire / (fire + MilitaryRules.ConvoyEvasion)), [unit.OwnerId]);
     }
 
     /// <summary>
@@ -243,20 +267,20 @@ public sealed partial class GameSession
         if (!unit.IsMilitary || unit.Battalions.Any(b => b.Type != BattalionType.Paratroopers)) return CommandResult.Fail("Solo se lanzan unidades de paracaidistas.");
         var transports = Transports(unit).ToList();
         if (transports.Count == 0) return CommandResult.Fail("Hacen falta aviones de transporte con organización en su aeródromo.");
-        double room = transports.Sum(w => w.Info.Capacity * w.Planes.StrengthShare);
+        double room = transports.Sum(u => u.Flights.Sum(f => f.Info.Capacity * f.StrengthShare));
         if (room < unit.Citizens) return CommandResult.Fail($"Los transportes solo llevan {room:N0} hombres.");
         if (target.IsWater) return CommandResult.Fail("Solo se lanzan sobre tierra.");
-        if (transports.Any(w => !InRange(w, target))) return CommandResult.Fail($"Está fuera del alcance de los transportes ({transports.Min(w => w.Info.RangeKm):N0} km).");
+        if (transports.Any(u => !InRange(u, target))) return CommandResult.Fail($"Está fuera del alcance de los transportes ({transports.Min(u => u.Info.RangeKm):N0} km).");
         if (EnemyRegimentsIn(target.Id, unit.OwnerId).Any()) return CommandResult.Fail("Hay tropas enemigas: no se puede saltar sobre ellas.");
         if (target.IsOwned && target.ControllerId != unit.OwnerId && !AtWar(unit.OwnerId, target.ControllerId))
             return CommandResult.Fail("Solo sobre tierra propia, libre o de una nación en guerra contigo.");
         return CommandResult.Success();
     }
 
-    /// <summary>The transport wings at the unit's airfield ready to fly.</summary>
-    private IEnumerable<AirWing> Transports(Unit unit) =>
-        _wings.Where(w => w.OwnerId == unit.OwnerId && w.Type == BattalionType.AirTransports && w.BaseProvinceId == unit.ProvinceId
-                          && w.Planes.OrganisationShare >= MilitaryRules.MinFlyingOrganisation && w.PlaneCount >= 1);
+    /// <summary>The transport units at the unit's airfield ready to fly.</summary>
+    private IEnumerable<AirUnit> Transports(Unit unit) =>
+        _airUnits.Where(u => u.OwnerId == unit.OwnerId && u.Type == BattalionType.AirTransports && u.BaseProvinceId == unit.ProvinceId
+                             && u.OrganisationShare >= MilitaryRules.MinFlyingOrganisation && u.PlaneCount >= 1);
 
     /// <summary>
     /// Flies the paratroopers to the target and drops them: they land with half their organisation (and lose men under a
@@ -268,7 +292,7 @@ public sealed partial class GameSession
         var target = Map.Provinces[targetProvinceId];
         var check = CanParadrop(unit, target);
         if (!check.Ok) return check;
-        foreach (var w in Transports(unit).ToList()) w.Planes.Organisation /= 2;
+        foreach (var f in Transports(unit).SelectMany(u => u.Flights).ToList()) f.Organisation /= 2;
         bool contested = EnemyRulesTheAir(playerId, target);
         foreach (var b in unit.Battalions)
         {
