@@ -64,7 +64,7 @@ public class NationScreenTests(WorldFixture world)
         page = (TemplatesPage)game.Nation.Page();
         Assert.Equal(game.Human.Templates[^1].Name, page.Name);
         int before = game.Human.Templates[^1].Battalions.Count;
-        page.Add.First(b => b.Enabled).Press();
+        page.Sections.SelectMany(s => s.Add).First(b => b.Enabled).Press();
         Assert.Equal(before + 1, game.Human.Templates[^1].Battalions.Count);
     }
 
@@ -119,6 +119,7 @@ public class NationScreenTests(WorldFixture world)
     public void DeclaringWarFromDiplomacyTurnsTheButtonIntoPeace()
     {
         var game = Game(NationTab.Diplomacy, players: 2);
+        game.Session.MeetEveryone();
         var row = Assert.Single(((TablePage)game.Nation.Page()).Table.Rows);
         FindButton(row, "Guerra").Press();
         row = Assert.Single(((TablePage)game.Nation.Page()).Table.Rows);
@@ -132,6 +133,7 @@ public class NationScreenTests(WorldFixture world)
     public void AfterPeaceTheTruceBlocksANewWar()
     {
         var game = Game(NationTab.Diplomacy, players: 2);
+        game.Session.MeetEveryone();
         game.Session.DeclareWar(0, 1);
         game.Session.MakePeace(0, 1);
         var row = Assert.Single(((TablePage)game.Nation.Page()).Table.Rows);

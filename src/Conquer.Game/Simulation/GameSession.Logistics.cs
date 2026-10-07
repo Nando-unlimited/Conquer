@@ -114,7 +114,7 @@ public sealed partial class GameSession
     /// and as far as the stockpile, the reserve of recruits and the capital's people go: recruits for a day's worth of
     /// reinforcements with their equipment, the pieces of the newest model for its battalions to modernise and the
     /// ammunition it has spent, less what is already on its way. Each shipment takes the way there along the supply
-    /// network (by land from the capital, or by sea from the nearest city), slower without an HQ.
+    /// network (by land from the capital, or by sea from the nearest city), slower without an HQ and faster to an emplaced unit.
     /// </summary>
     private void DailyShipments(Player player)
     {
@@ -134,7 +134,8 @@ public sealed partial class GameSession
         foreach (var (unit, rank, slowdown) in served)
             if (!double.IsPositiveInfinity(routeHours[unit.ProvinceId]))
                 queue.Add((unit, rank, routeHours[unit.ProvinceId] * slowdown
-                    * (EnemyRulesTheAir(player.Id, Map.Provinces[unit.ProvinceId]) ? MilitaryRules.UnderEnemyAirSlowdown : 1)));
+                    * (EnemyRulesTheAir(player.Id, Map.Provinces[unit.ProvinceId]) ? MilitaryRules.UnderEnemyAirSlowdown : 1)
+                    * (IsEmplaced(unit) ? MilitaryRules.EmplacedShipmentTime : 1)));
 
         player.CargoLeftForWantOfConvoys = 0;
         foreach (var (unit, _, hours) in queue.OrderBy(q => q.Rank).ThenBy(q => q.Hours))

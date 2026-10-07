@@ -2,6 +2,24 @@
 
 Todos los cambios del juego, del más reciente al más antiguo. Cada versión es un commit cuyo título es su número.
 
+## [1.121.0] - 2026-10-07
+
+Emplazar tropas, plantillas por filas, una ventana de nación más limpia y un mejor editor de texto.
+
+### Añadido
+- **Emplazar**: en el panel de una unidad de combate de tierra. Se atrinchera donde está durante 5 días y defiende hasta un 25 % mejor; mientras, recupera la organización un 50 % más deprisa y sus envíos de la capital tardan la mitad. Moverse o atacar lo levanta y pierde lo atrincherado. En el mapa se ven sacos terreros bajo su ficha.
+- **Contacto entre naciones**: Diplomacia, Comercio y Estadísticas solo muestran las naciones que conoces, porque has visto sus tierras o sus tropas (o ellas las tuyas), o por guerra, alianza, vasallaje o comercio. Una vez conocidas, no se olvidan.
+
+### Cambiado
+- **Plantillas como en HOI4**: los huecos se reparten en tres columnas, Frente (infantería, caballería, blindados), A distancia (arqueros y tiradores, artillería, antiaérea) y Apoyo (exploradores, ingenieros, médicos), cada una con sus batallones como tarjetas y los que puede añadir. El regimiento sigue llevando 5 batallones en total, de cualquier fila.
+- **Editor de texto**: al abrirse, el nombre queda seleccionado y basta escribir para cambiarlo. El cursor se mueve con las flechas, Inicio y Fin (por palabras con Ctrl), se selecciona con Mayús o el ratón (doble clic, todo), Supr borra hacia delante, Ctrl+Retroceso borra una palabra, y funcionan Ctrl+A, Ctrl+C, Ctrl+X y Ctrl+V. Las teclas mantenidas se repiten.
+- **Migración más rápida y en grupos de 50**: las ciudades envían cada día un 0,1 % de su gente (antes un 0,01 %), que sale en grupos de 50.
+- El **Resumen** de la nación ya no repite los recursos (están en Almacén, que gana la columna «En bolsas»), y la pestaña **Provincias** muestra solo el nombre de la provincia.
+- El mapa ya no dibuja los iconos de los edificios bajo las ciudades.
+
+### Corregido
+- Las olas de la costa iban hacia el mar: ahora llegan a la orilla.
+
 ## [1.120.0] - 2026-10-07
 
 Las pestañas de Marina y Fuerza aérea aparecen cuando se pueden usar, y dos arreglos de dibujo.

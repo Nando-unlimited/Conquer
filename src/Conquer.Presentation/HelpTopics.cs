@@ -63,7 +63,7 @@ public static class HelpTopics
             $"- Cada respuesta tiene su precio: comida u oro, gente o moral. Lo que está en juego crece con tu nación. La moral que cambia dura un año.",
             $"- Si no respondes en {GameRules.DecisionDays} días, se elige la primera respuesta. Los rivales también deciden las suyas.",
             "## Migración",
-            "Las ciudades envían gente a tus provincias poco pobladas. Puedes forzar una migración pagando oro, pero los migrantes llegan descontentos.",
+            $"Las ciudades envían gente a tus provincias poco pobladas, en grupos de {GameRules.MigrationGroup}. Puedes forzar una migración pagando oro, pero los migrantes llegan descontentos.",
         ]),
         ("Economía y recursos",
         [
@@ -154,6 +154,7 @@ public static class HelpTopics
             $"- Los batallones ganan experiencia combatiendo (Novato, Regular, Veterano, Élite): hasta +{MilitaryRules.ExperienceBonus:P0} de fuego. Los reclutas nuevos la diluyen.",
             "## Suministro y combate",
             "- Las tropas se abastecen desde tus ciudades y por tus carreteras y ferrocarriles, a través de tierra propia o libre; sin suministro pierden hombres y organización.",
+            $"- Emplazar (panel de la unidad): la unidad se atrinchera donde está, día a día durante {MilitaryRules.EmplacementDays:0} días, y defiende hasta un +{MilitaryRules.EmplacementDefense:P0} mejor; mientras, recupera la organización un {MilitaryRules.EmplacedRecovery - 1:P0} más deprisa y sus envíos tardan la mitad. Moverse o atacar levanta el emplazamiento y pierde lo atrincherado. En el mapa, sacos terreros bajo su ficha.",
             "## Logística",
             "- El almacén de la nación está en su capital. Cada día la capital envía a cada unidad de combate con suministro lo que le falta: reclutas para reforzarla con su equipo, el equipo del modelo nuevo para modernizarla y la munición que ha gastado.",
             "- Los envíos tardan lo que se tarda en llegar desde la capital por la red de suministro (más deprisa por carreteras y ferrocarriles), o por mar desde uno de tus puertos si hace falta cruzarlo: entonces van en convoyes (ver Flotas y mar). El panel de la unidad dice qué le llega y cuándo, y la pestaña Almacén, lo que va en camino. Si al llegar la unidad está aislada o ya no existe, vuelve al almacén.",

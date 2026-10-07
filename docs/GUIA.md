@@ -79,7 +79,7 @@ Todas las constantes de equilibrio (por día de juego salvo que se diga otra cos
 | `PeakElevation`, `MinPeakPixels` | La tierra por encima de 5.000 m es cumbres (en los mapas del generador 2); las manchas de menos de 30 píxeles conservan su bioma. |
 | `RiverFertility` | La tierra de un gran río da un 25 % más de comida y de capacidad. |
 | `OvercrowdedFoodShare` | Lo que rinden los trabajadores que superan la capacidad de la tierra. |
-| `DailyEmigrationShare`, `MinEmigrationCityPopulation` | Parte de una ciudad que emigra cada día, y población por debajo de la cual deja de enviar gente. |
+| `DailyEmigrationShare`, `MigrationGroup`, `MinEmigrationCityPopulation` | Parte de una ciudad que emigra cada día, en grupos de cuántas personas sale, y población por debajo de la cual deja de enviar gente. |
 | `SettledPopulation` | Habitantes con los que una provincia se considera asentada. |
 | `MigrationTargetShare` | Las provincias atraen migrantes hasta llenar esta parte de su capacidad. |
 | `MinCityPopulation` | Población mínima que debe quedar en una ciudad al reclutar o migrar. |
@@ -129,6 +129,7 @@ Cifras del ejército. El combate se mide por hora; el resto, por día.
 | `OutOfSupplyEfficiency`, `OutOfSupplyOrganisationLoss`, `OutOfSupplyAttrition` | Sin suministro se lucha al 75 % y se pierde cada día un 5 % de organización y un 1 % de hombres. |
 | `SiegeDaysPerDefense`, `SiegeAttackPerDay` | Días de asedio por punto de defensa de las fortificaciones (60: 30 con murallas, 60 con castillo) y ataque de artillería que suma un día de asedio al día (12: un batallón de catapultas). |
 | `OrganisationRecovery`, `ReinforcementRate` | Con suministro y fuera de combate se recupera un 20 % de organización al día; la capital envía cada día a cada batallón reclutas para un 5 % de sus hombres (ver `GameSession.Logistics`). |
+| `EmplacementDays`, `EmplacementDefense`, `EmplacedRecovery`, `EmplacedShipmentTime` | Emplazar: una unidad se atrinchera en 5 días y defiende hasta un 25 % mejor; mientras está emplazada recupera la organización un 50 % más deprisa y sus envíos tardan la mitad (ver `GameSession.Emplacement`). |
 | `UnattachedShipmentSlowdown` | Los envíos a unidades sin cuartel general a su alcance tardan el doble. |
 | `ConvoyCapacity`, `ConvoysPerOrder`, `ConvoysInOldSaves` | Un convoy lleva 100 hombres, piezas o suministros; los astilleros los hacen en lotes de 5; las partidas anteriores dan 10 a cada nación con puerto. |
 | `EscortWeight`, `ConvoyEvasion`, `MaxDailyConvoyLoss`, `SubmarineRaidBonus` | Cada día un envío en el mar pierde ataque / (ataque + 2 × escolta + 30) de sus convoyes y su carga (como mucho el 60 %); los submarinos atacan convoyes el doble. |

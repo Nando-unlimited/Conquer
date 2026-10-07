@@ -131,9 +131,17 @@ public sealed class ConquerApp
         {
             keyboard.KeyDown += (_, key, _) =>
             {
-                _input.KeysPressed.Add(key);
-                _input.KeysDown.Add(key);
+                // A key down while it is already held is the system repeating it.
+                if (_input.KeysDown.Add(key)) _input.KeysPressed.Add(key);
+                else
+                {
+                    _input.KeysRepeated.Add(key);
+                    _input.SystemRepeats = true;
+                }
             };
+            var clipboard = keyboard;
+            _input.ReadClipboard = () => clipboard.ClipboardText ?? "";
+            _input.WriteClipboard = text => clipboard.ClipboardText = text;
             keyboard.KeyUp += (_, key, _) => _input.KeysDown.Remove(key);
             keyboard.KeyChar += (_, c) => _input.Chars.Add(c);
         }

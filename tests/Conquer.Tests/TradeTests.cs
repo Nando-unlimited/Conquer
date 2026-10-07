@@ -76,6 +76,7 @@ public class TradeTests(WorldFixture world)
     {
         var game = new GameController(GameSession.Create(_map, 2, seed: 7));
         CopperForGold(game.Session);
+        game.Session.MeetEveryone();
         game.Nation.Visible = true;
         game.Nation.Tab = NationTab.Trade;
         var row = ((TablePage)game.Nation.Page()).Table.Rows.First(r => r.OfType<TextCell>().Any(c => c.Text == "Te vende")

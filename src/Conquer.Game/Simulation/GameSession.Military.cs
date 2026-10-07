@@ -186,6 +186,7 @@ public sealed partial class GameSession
         if (Pathfinder.FindPath(unit.ProvinceId, targetProvinceId, id => CanUnitEnter(unit, id)) is not { } route)
             return CommandResult.Fail("No hay camino hasta allí.");
         var (path, hours) = route;
+        Unemplace(unit);
         unit.Path.Clear();
         unit.Path.AddRange(path);
         unit.StepHours = unit.HoursToNext = UnitStepHours(unit, unit.ProvinceId, path[0]);
@@ -1037,6 +1038,7 @@ public sealed partial class GameSession
         DailyShipyards(player);
         DailyAirUnits(player);
         _supplied[player.Id] = ComputeSupply(player);
+        DailyEmplacements(player);
         ModerniseInPlace(player);
         DailyShipments(player);
         RefitFleets(player);
@@ -1084,7 +1086,7 @@ public sealed partial class GameSession
             // A dry dock repairs a fleet faster: organisation and crews both.
             double repair = unit.IsFleet && Map.Provinces[unit.ProvinceId].Buildings.Contains(BuildingType.DryDock) ? MilitaryRules.DryDockRepair : 1;
             double recovery = MilitaryRules.OrganisationRecovery * Math.Max(0, 1 + CommandBonus(unit) + (GeneralOf(unit)?.RecoveryBonus ?? 0) + (unit.Officer?.RecoveryBonus ?? 0))
-                              * (unit.IsMoving ? 0.5 : 1) * repair;
+                              * (unit.IsMoving ? 0.5 : 1) * (IsEmplaced(unit) ? MilitaryRules.EmplacedRecovery : 1) * repair;
             foreach (var b in unit.Battalions)
             {
                 b.Organisation = Math.Min(b.Info.MaxOrganisation, b.Organisation + b.Info.MaxOrganisation * recovery);
@@ -1106,6 +1108,7 @@ public sealed partial class GameSession
     /// <summary>The regiment stops at the border and attacks the enemy regiments in the province ahead.</summary>
     private void StartAttack(Unit unit, int provinceId)
     {
+        Unemplace(unit);
         unit.AttackingProvinceId = provinceId;
         unit.HoursToNext = 0;
         var battle = _battles.FirstOrDefault(b => b.ProvinceId == provinceId && b.AttackerId == unit.OwnerId);
@@ -1218,7 +1221,7 @@ public sealed partial class GameSession
     /// The battalions of one side that fight this hour: the strongest of the front-line troops, as many as
     /// the terrain's front holds, and up to half as many artillery, aircraft and engineers behind them. The rest wait
     /// in reserve. Each fires its attack or defence, scaled by its men, organisation and experience, the
-    /// chain of command, its officer and its HQ's general, supply and, for defenders, the terrain and walls
+    /// chain of command, its officer and its HQ's general, supply and, for defenders, the terrain, walls and entrenchment
     /// (the terrain counting less when <paramref name="enemyEngineers"/> come with the attack).
     /// </summary>
     public List<Engaged> Engage(List<Unit> units, Province province, bool attacking, bool enemyEngineers = false)
@@ -1228,7 +1231,7 @@ public sealed partial class GameSession
         {
             double multiplier = Math.Max(0, 1 + CommandBonus(unit) + (GeneralOf(unit)?.FireBonus(attacking) ?? 0) + (unit.Officer?.FireBonus(attacking) ?? 0))
                                 * (IsInSupply(unit) ? 1 : MilitaryRules.OutOfSupplyEfficiency) * AmmoEfficiency(unit) * AirSuperiorityMultiplier(unit.OwnerId, province)
-                                * (attacking ? 1 : DefenseMultiplier(province, enemyEngineers));
+                                * (attacking ? 1 : DefenseMultiplier(province, enemyEngineers) * (1 + EmplacementBonus(unit)));
             foreach (var b in unit.Battalions)
             {
                 double value = attacking ? b.Info.Attack : b.Info.Defense;

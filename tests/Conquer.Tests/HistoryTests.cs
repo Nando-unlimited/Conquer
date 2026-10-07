@@ -23,6 +23,7 @@ public class HistoryTests(WorldFixture world)
         game.OpenCityNaming(settlers.Id, settlers.ProvinceId);
         game.ConfirmCityName();
         game.Nation.Visible = true;
+        game.Session.MeetEveryone();
         game.Nation.Tab = NationTab.Statistics;
         return game;
     }

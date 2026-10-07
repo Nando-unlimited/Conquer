@@ -16,6 +16,8 @@ public sealed class Player
     public HashSet<int> Provinces { get; } = [];
     /// <summary>Provinces the nation has ever seen; the rest of the world is unknown to it (see <c>GameSession.VisibleProvinces</c>).</summary>
     public HashSet<int> Explored { get; } = [];
+    /// <summary>Nations it has met: one saw land or troops of the other (see <c>GameSession.HasContact</c>).</summary>
+    public HashSet<int> Contacts { get; } = [];
     public int? CapitalCityId { get; set; }
     /// <summary>Net change of each resource over the last day, for display.</summary>
     public double[] LastDayNet { get; } = new double[Resources.All.Length];
@@ -207,6 +209,10 @@ public sealed class Unit
     public bool OutOfFuel { get; set; }
     /// <summary>Ammunition the combat unit has spent in battle and not yet had back: it carries <c>GameSession.AmmoCapacity</c> less this.</summary>
     public double AmmoSpent { get; set; }
+    /// <summary>The province where the combat unit was ordered to dig in (see <c>GameSession.IsEmplaced</c>); null when it has not.</summary>
+    public int? EmplacedAt { get; set; }
+    /// <summary>0 (just begun) to 1 (fully dug in): how far its emplacement has come, day by day.</summary>
+    public double Entrenchment { get; set; }
     /// <summary>Scouts left to explore on their own, claiming land or not.</summary>
     public bool ExploresAlone => ScoutOrders != ScoutOrders.None;
 

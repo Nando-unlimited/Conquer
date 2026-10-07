@@ -138,7 +138,8 @@ public sealed class MapRenderer : IDisposable
             col = mix(col, vec3(0.9, 0.95, 1.0), 0.35 * glint * closeUp * (1.0 - shelf));
 
             // Waves rolling in to the shore, then surf breaking on it.
-            float wave = sin(coast * 2.2 - t * 1.6 + swell * 6.0);
+            // The phase grows with time, so each crest comes nearer the coast (smaller coast) as it moves.
+            float wave = sin(coast * 2.2 + t * 1.6 + swell * 6.0);
             float crest = smoothstep(0.75, 1.0, wave) * (1.0 - smoothstep(0.5, 5.0, coast));
             col = mix(col, vec3(0.9, 0.95, 1.0), 0.28 * crest * detail);
             float shore = uZoom >= uSmoothZoom ? 1.0 - smoothstep(1.0, 7.0, coastDistance) : 1.0 - smoothstep(0.15, 0.9, coast);

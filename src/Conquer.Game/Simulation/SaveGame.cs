@@ -202,7 +202,7 @@ public sealed record PlayerSave(
     int[]? ResearchPriorities = null, List<Tech>? CurrentResearch = null, List<Institution>? Institutions = null,
     List<OfficerSave>? OfficerReserve = null, bool Eliminated = false, double? Manpower = null, int? ReligionId = null,
     List<int>? Explored = null, Dictionary<string, double>? Equipment = null, double[][]? LastDayFlows = null, List<ShipOrderSave>? ShipOrders = null,
-    double? Convoys = null);
+    double? Convoys = null, List<int>? Contacts = null);
 
 /// <summary>A ship in the nation's construction queue.</summary>
 public sealed record ShipOrderSave(int Id, BattalionType Type, int Model, int? PreferredPortId, int? PortId, double DaysDone, bool WaitingForCrew, bool Convoys = false);
@@ -233,7 +233,7 @@ public sealed record UnitSave(
     int? CarrierId = null, GeneralSave? General = null, OfficerSave? Officer = null, string? CustomName = null, bool AutoClaim = false,
     Echelon Size = Echelon.Regiment, List<RegimentSave>? Regiments = null, List<BrigadeSave>? Brigades = null,
     bool AutoExplore = false, SupplyPriority SupplyPriority = SupplyPriority.Normal, double AmmoSpent = 0, FleetMission Mission = FleetMission.None,
-    int? FleetCommanderId = null, bool OutOfFuel = false);
+    int? FleetCommanderId = null, bool OutOfFuel = false, int? EmplacedAt = null, double Entrenchment = 0);
 
 /// <summary>A shipment on its way from the capital to a combat unit.</summary>
 public sealed record ShipmentSave(int OwnerId, int UnitId, double Men, Dictionary<string, double> Pieces, double Ammo, long ArriveHours,

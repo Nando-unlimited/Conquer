@@ -32,7 +32,8 @@ public sealed partial class GameSession
             [.. p.Templates.Select(t => new TemplateSave(t.Id, t.Number, [.. t.Battalions], t.CustomName))], [.. p.ResearchPriorities],
             [.. p.Researching.OfType<Tech>()], [.. p.Institutions.Order()], [.. p.OfficerReserve.Select(ToSave)], p.Eliminated, p.Manpower, p.ReligionId,
             [.. p.Explored.Order()], new(p.Equipment.Where(e => e.Value > 0)), [.. p.LastDayFlows.Select(f => f.ToArray())],
-            [.. p.ShipOrders.Select(o => new ShipOrderSave(o.Id, o.Type, o.Model, o.PreferredPortId, o.PortId, o.DaysDone, o.WaitingForCrew, o.Convoys))], p.Convoys)).ToList(),
+            [.. p.ShipOrders.Select(o => new ShipOrderSave(o.Id, o.Type, o.Model, o.PreferredPortId, o.PortId, o.DaysDone, o.WaitingForCrew, o.Convoys))], p.Convoys,
+            [.. p.Contacts.Order()])).ToList(),
         // Provinces nobody has touched keep their generated state, so only the rest are stored.
         Provinces = Map.Provinces.Where(Changed).Select(p => new ProvinceSave(
             p.Id, p.OwnerId, p.ControllerId, p.Population, p.CityId, p.Mood, p.Fertility, [.. p.Reserves],
@@ -47,7 +48,8 @@ public sealed partial class GameSession
             Officer: u.Officer is { } o ? ToSave(o) : null, CustomName: u.CustomName, AutoClaim: u.ScoutOrders == ScoutOrders.Claim,
             AutoExplore: u.ScoutOrders == ScoutOrders.Explore, Size: u.Size, Regiments: u.IsMilitary ? [.. u.Regiments.Select(ToSave)] : null,
             Brigades: u.Brigades.Count > 0 ? [.. u.Brigades.Select(b => new BrigadeSave(b.Number, b.CustomName, [.. b.Regiments.Select(ToSave)]))] : null,
-            SupplyPriority: u.SupplyPriority, AmmoSpent: u.AmmoSpent, Mission: u.Mission, FleetCommanderId: u.FleetCommanderId, OutOfFuel: u.OutOfFuel)).ToList(),
+            SupplyPriority: u.SupplyPriority, AmmoSpent: u.AmmoSpent, Mission: u.Mission, FleetCommanderId: u.FleetCommanderId, OutOfFuel: u.OutOfFuel,
+            EmplacedAt: u.EmplacedAt, Entrenchment: u.Entrenchment)).ToList(),
         Shipments = _shipments.Select(s => new ShipmentSave(s.OwnerId, s.UnitId, s.Men, new(s.Pieces), s.Ammo, s.ArriveHours, [.. s.SeaRoute], s.Convoys)).ToList(),
         Migrations = Migrations.Select(m => new MigrationSave(m.Id, m.OwnerId, m.FromProvinceId, m.ToProvinceId, m.People,
             m.DepartHours, m.ArriveHours, m.Forced, m.Mood)).ToList(),
@@ -233,6 +235,8 @@ public sealed partial class GameSession
             player.Manpower = s.Manpower ?? session.ManpowerCapacity(player);
             // Before 1.92.0 nothing was explored: the nation starts knowing what it sees.
             player.Explored.UnionWith(s.Explored ?? []);
+            // Before 1.121.0 nobody kept track of whom they had met: it is worked out again from what each has explored.
+            player.Contacts.UnionWith(s.Contacts ?? []);
             // Before 1.106.0 each infantry model had its own weapons, and before 1.105.0 scouts, engineers and medics
             // their own supplies: they go into the shared ones.
             foreach (var (key, pieces) in s.Equipment ?? [])
@@ -296,6 +300,8 @@ public sealed partial class GameSession
             unit.Mission = u.Mission;
             unit.FleetCommanderId = u.FleetCommanderId;
             unit.OutOfFuel = u.OutOfFuel;
+            unit.EmplacedAt = u.EmplacedAt;
+            unit.Entrenchment = u.Entrenchment;
             unit.CustomName = u.CustomName;
             unit.ScoutOrders = u.AutoClaim ? ScoutOrders.Claim : u.AutoExplore ? ScoutOrders.Explore : ScoutOrders.None;
             // Generals from before officers become officers of their HQ's rank, and HQs from before generals get one now.
@@ -409,6 +415,7 @@ public sealed partial class GameSession
             player.Convoys = session.Shipyards(player).Any() ? MilitaryRules.ConvoysInOldSaves : 0;
         if (!save.RealisticPopulation)
             foreach (var p in map.Provinces.Where(p => p.Population > 0)) p.Population = Math.Min(p.Population, session.CapacityOf(p));
+        session.UpdateContacts();
         return session;
     }
 

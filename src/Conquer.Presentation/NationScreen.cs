@@ -165,23 +165,6 @@ public sealed partial class NationScreen
             Player.FoodReserveDays >= GameRules.FoodReserveFullDays ? Tone.Good : Player.FoodReserveDays < 7 ? Tone.Bad : Tone.Normal,
             $"Días que dura la comida al consumo actual. Con {GameRules.FoodReserveFullDays:0} días o más la población gana +{GameRules.FoodReserveMood:0} de moral."));
         right.Add(new Space(10));
-
-        right.Add(Title2("Recursos"));
-        float[] at = [310, 200, 90];
-        right.Add(new Columns("", [new("Almacén", Tone.Dim), new("Por día", Tone.Dim),
-            new("En bolsas", Tone.Dim, "Lo que queda en los yacimientos de tus provincias. Cada bolsa se agota al explotarla.")], at, TextSize.Small, 22));
-        foreach (var res in Resources.All.Where(res => res != ResourceType.Food && Player.Knows(res)))
-        {
-            double net = Player.LastDayNet[(int)res];
-            bool mined = Resources.Deposits.Contains(res) && !res.IsRenewable();
-            right.Add(new Columns(res.Name(),
-            [
-                new($"{Player.Stockpile[res]:N0}"),
-                new(Math.Abs(net) < 0.005 ? "-" : $"{net:+#,0.##;-#,0.##}", net > 0 ? Tone.Good : net < 0 ? Tone.Bad : Tone.Dim),
-                new(mined ? TextFormat.Compact(stats.Reserves[(int)res]) : "-", mined && stats.Reserves[(int)res] > 0 ? Tone.Normal : Tone.Dim),
-            ], at));
-        }
-        right.Add(new Space(10));
         right.Add(Title2("Victoria"));
         foreach (var e in VictoryProgress()) right.Add(e);
         return new SummaryPage(left, right);
@@ -272,9 +255,9 @@ public sealed partial class NationScreen
             .GroupBy(m => m.ToProvinceId).ToDictionary(g => g.Key, g => g.Sum(m => m.People));
         var provinces = Player.Provinces.Select(id => Map.Provinces[id]);
         var rows = new List<IReadOnlyList<Cell>>();
-        foreach (var p in Sort(NationTab.Provinces, provinces, p => p, ProvinceName))
+        foreach (var p in Sort(NationTab.Provinces, provinces, p => p, p => p.DisplayName))
         {
-            var cells = new List<Cell> { new TextCell(ProvinceName(p), p.CityId.HasValue ? Tone.Accent : Tone.Normal) };
+            var cells = new List<Cell> { new TextCell(p.DisplayName, p.CityId.HasValue ? Tone.Accent : Tone.Normal) };
             cells.AddRange(ProvinceCells(p));
             cells.Add(new TextCell(p.Info.Name, Tone.Dim));
             int people = incoming.GetValueOrDefault(p.Id);
@@ -306,9 +289,6 @@ public sealed partial class NationScreen
             Tooltip: string.Join("\n", jobs.Select(j => $"{j.Kind}: {j.Name}, quedan {j.DaysLeft} de {j.TotalDays} días.")),
             Bar: new CellBar(1 - first.DaysLeft / (double)first.TotalDays, Tone.Accent, 26, 3, 14));
     }
-
-    /// <summary>A city's name, or the province's terrain and number for the countryside.</summary>
-    private string ProvinceName(Province p) => Session.CityIn(p) is { } city ? $"{city.Name} ({p.DisplayName})" : p.DisplayName;
 
     /// <summary>Population, mood and fertility cells, shared by both tables.</summary>
     private IEnumerable<Cell> ProvinceCells(Province p)

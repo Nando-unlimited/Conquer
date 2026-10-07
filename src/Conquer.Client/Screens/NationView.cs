@@ -460,37 +460,80 @@ public sealed class NationView(NationScreen screen)
                 DocumentView.Press(ui, rename, new Rect(kx + ui.Font.Measure(page.Kind, FontSize.Small) + 16, y + 4, 130, 26));
         }
         y += 40;
-        foreach (var slot in page.Slots)
-        {
-            var area = new Rect(x, y, w * 0.6f, 32);
-            ui.Batch.Rect(area.X, area.Y, area.W, area.H, Theme.Button.WithAlpha(0.35f));
-            if (slot.Battalion is BattalionType type)
-            {
-                MapIcons.Battalion(ui.Batch, area.X + 8, area.Y + 9, type);
-                ui.Text(area.X + 36, area.Y + 6, slot.Name, Theme.Text);
-                ui.Text(area.Right - 90 - ui.Font.Measure(slot.Stats, FontSize.Small), area.Y + 9, slot.Stats, Theme.TextDim, FontSize.Small);
-                if (slot.Remove != null) DocumentView.Press(ui, slot.Remove, new Rect(area.Right - 80, area.Y + 4, 74, 24));
-            }
-            else ui.Text(area.X + 10, area.Y + 8, slot.Name, Theme.TextDisabled, FontSize.Small);
-            y += 36;
-        }
-
-        y += 10;
-        ui.Text(x, y, "Añadir", Theme.Text, bold: true);
+        ui.Text(x, y, page.Free, Theme.TextDim, FontSize.Small);
         y += 26;
-        float bw = (w * 0.6f - 12) / 3;
-        for (int i = 0; i < page.Add.Count; i++)
+
+        // HOI4 style: the front takes half the designer, two cards a row; ranged and support a quarter each.
+        float designW = w * 0.7f, gap = 16;
+        float[] widths = [(designW - 2 * gap) * 0.5f, (designW - 2 * gap) * 0.25f, (designW - 2 * gap) * 0.25f];
+        float cx = x;
+        for (int s = 0; s < page.Sections.Count; s++)
         {
-            // The battalion's icon goes at the left, so the label moves over.
-            var button = page.Add[i];
-            DocumentView.Press(ui, button with { Text = "     " + button.Text }, new Rect(x + i % 3 * (bw + 6), y + i / 3 * 34, bw, 30));
+            TemplateColumn(ui, page.Sections[s], new Rect(cx, y, widths[s], r.Bottom - y), s == 0 ? 2 : 1);
+            cx += widths[s] + gap;
         }
 
         // The figures scroll when they do not fit.
-        float sx = x + w * 0.6f + 30;
+        float sx = x + designW + 30;
         var view = new Rect(sx, r.Y + 40, r.Right - sx, r.H - 40);
         float top = ui.BeginScroll(view, scroll), sy = top;
         DocumentView.Draw(ui, page.Details, sx, ref sy, view.W - (scroll.Overflows(view.H) ? Ui.ScrollBarWidth + 6 : 0));
         ui.EndScroll(view, scroll, sy - top);
+    }
+
+    /// <summary>One row of the designer as a column: its name, its battalions as cards, the empty place and the battalions to add.</summary>
+    private static void TemplateColumn(Ui ui, TemplateSection section, Rect r, int perRow)
+    {
+        const float CardH = 58, Gap = 6;
+        float y = r.Y;
+        ui.Text(r.X, y, section.Name, Theme.Accent, bold: true);
+        if (ui.Hover(new Rect(r.X, y, r.W, 24))) ui.Tooltip(section.Tooltip);
+        y += 28;
+        ui.Batch.Rect(r.X, y - 4, r.W, 1, Theme.TextDim.WithAlpha(0.4f));
+
+        float cardW = (r.W - (perRow - 1) * Gap) / perRow;
+        for (int i = 0; i < section.Slots.Count; i++)
+        {
+            var slot = section.Slots[i];
+            var card = new Rect(r.X + i % perRow * (cardW + Gap), y + i / perRow * (CardH + Gap), cardW, CardH);
+            if (slot.Battalion is BattalionType type)
+            {
+                ui.Batch.Rect(card.X, card.Y, card.W, card.H, Theme.Button.WithAlpha(0.45f));
+                MapIcons.Battalion(ui.Batch, card.X + 8, card.Y + 8, type);
+                float textW = card.W - 36 - 28;
+                ui.Text(card.X + 36, card.Y + 4, Clip(ui, slot.Name, textW, FontSize.Normal, true), Theme.Text, bold: true);
+                ui.Text(card.X + 36, card.Y + 22, Clip(ui, slot.Line, textW, FontSize.Small), Theme.TextDim, FontSize.Small);
+                ui.Text(card.X + 8, card.Y + 38, Clip(ui, slot.Stats, card.W - 16, FontSize.Small), Theme.TextDim, FontSize.Small);
+                if (slot.Remove != null) DocumentView.Press(ui, slot.Remove, new Rect(card.Right - 26, card.Y + 4, 22, 22));
+            }
+            else
+            {
+                // An empty place: an outline only.
+                var line = Theme.TextDisabled.WithAlpha(0.6f);
+                ui.Batch.Rect(card.X, card.Y, card.W, 1, line);
+                ui.Batch.Rect(card.X, card.Bottom - 1, card.W, 1, line);
+                ui.Batch.Rect(card.X, card.Y, 1, card.H, line);
+                ui.Batch.Rect(card.Right - 1, card.Y, 1, card.H, line);
+                string text = Clip(ui, slot.Name, card.W - 16, FontSize.Small);
+                ui.Text(card.X + (card.W - ui.Font.Measure(text, FontSize.Small)) / 2, card.Y + CardH / 2 - 9, text, Theme.TextDisabled, FontSize.Small);
+            }
+        }
+        y += (section.Slots.Count + perRow - 1) / perRow * (CardH + Gap) + 10;
+
+        if (section.None is { } none)
+            foreach (string line in ui.Font.Wrap(none, r.W, FontSize.Small))
+            {
+                ui.Text(r.X, y, line, Theme.TextDim, FontSize.Small);
+                y += ui.Font.LineHeight(FontSize.Small);
+            }
+        float bw = (r.W - (perRow - 1) * Gap) / perRow;
+        for (int i = 0; i < section.Add.Count; i++)
+        {
+            // The battalion's icon goes at the left, so the label moves over.
+            var button = section.Add[i];
+            var area = new Rect(r.X + i % perRow * (bw + Gap), y + i / perRow * 34, bw, 30);
+            if (area.Bottom > r.Bottom) break;
+            DocumentView.Press(ui, button with { Text = Clip(ui, "     " + button.Text, bw - 12, FontSize.Small) }, area);
+        }
     }
 }

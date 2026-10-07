@@ -46,6 +46,38 @@ public sealed partial class GameSession
         }
     }
 
+    /// <summary>Whether two nations have met (a nation always knows itself).</summary>
+    public bool HasContact(int playerId, int otherId) => playerId == otherId || Players[playerId].Contacts.Contains(otherId);
+
+    /// <summary>
+    /// Nations meet when one has explored land the other holds or sees its troops, or when they are bound by war, an
+    /// alliance, vassalage or trade. Once met, they stay known to each other.
+    /// </summary>
+    public void UpdateContacts()
+    {
+        foreach (var player in Players.Where(p => !p.Eliminated))
+        {
+            var seen = VisibleProvinces(player.Id);
+            foreach (int id in player.Explored)
+            {
+                var p = Map.Provinces[id];
+                if (p.IsOwned) Meet(player.Id, p.OwnerId);
+                if (p.ControllerId >= 0) Meet(player.Id, p.ControllerId);
+            }
+            foreach (var unit in Units.Where(u => !u.IsAboard && seen.Contains(u.ProvinceId))) Meet(player.Id, unit.OwnerId);
+            foreach (var other in Players.Where(o => AtWar(player.Id, o.Id) || AreAllied(player.Id, o.Id) || InVassalage(player.Id, o.Id)))
+                Meet(player.Id, other.Id);
+            foreach (var deal in TradesOf(player.Id)) Meet(deal.SellerId, deal.BuyerId);
+        }
+
+        void Meet(int a, int b)
+        {
+            if (a == b || a < 0 || b < 0) return;
+            Players[a].Contacts.Add(b);
+            Players[b].Contacts.Add(a);
+        }
+    }
+
     /// <summary>Whether a nation has ever seen a province.</summary>
     public bool HasExplored(int playerId, int provinceId) => Players[playerId].Explored.Contains(provinceId);
 

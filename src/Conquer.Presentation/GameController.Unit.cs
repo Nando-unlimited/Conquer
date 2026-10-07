@@ -77,6 +77,7 @@ public sealed partial class GameController
                         "Darle una orden de movimiento la detiene.", stopTip),
                 ]));
             }
+            if (!unit.Flies) EmplaceButton(doc, unit);
             EngineerButtons(doc, unit, here);
         }
         bool canSettle = here.OwnerId == Human.Id && !here.IsOccupied;
@@ -99,6 +100,23 @@ public sealed partial class GameController
             : unit.IsMilitary
             ? "Clic derecho para mover. Mover a una provincia enemiga con tropas la ataca; sin tropas, la ocupa. Solo se entra en tierras de naciones con las que estás en guerra. Para cruzar el mar, clic derecho sobre una flota tuya con transportes."
             : "Clic derecho para mover. No puede entrar en tierras de otras naciones. Para cruzar el mar, clic derecho sobre una flota tuya con transportes.", Tone.Dim));
+    }
+
+    /// <summary>Digs the unit in where it stands, or lifts its emplacement.</summary>
+    private void EmplaceButton(Document doc, Unit unit)
+    {
+        string effects = $"Se atrinchera día a día ({MilitaryRules.EmplacementDays:0} días en total) y defiende hasta un +{MilitaryRules.EmplacementDefense:P0} mejor; " +
+                         $"mientras, recupera la organización un {MilitaryRules.EmplacedRecovery - 1:P0} más deprisa y sus envíos de la capital tardan la mitad. " +
+                         "Moverse o atacar levanta el emplazamiento y se pierde lo atrincherado.";
+        if (GameSession.IsEmplaced(unit))
+        {
+            doc.Add(new Button("Levantar emplazamiento", () => Show(Session.LiftEmplacement(Human.Id, unit.Id)), Active: true,
+                Tooltip: "Deja la posición y se prepara para marchar; pierde lo atrincherado.\n" + effects, Size: TextSize.Small));
+            return;
+        }
+        var can = Session.CanEmplace(unit);
+        doc.Add(new Button("Emplazar", () => Show(Session.Emplace(Human.Id, unit.Id)), can.Ok,
+            Tooltip: can.Ok ? effects : can.Message, Size: TextSize.Small));
     }
 
     /// <summary>Gives scouts the orders to explore on their own; on the orders they already have, it stops them instead.</summary>
@@ -171,10 +189,16 @@ public sealed partial class GameController
             tone = Tone.Battle;
             return $"Atacando {Session.PlaceName(Map.Provinces[target])}";
         }
+        string dug = $"atrincherada al {unit.Entrenchment:P0}";
         if (Session.InBattle(unit))
         {
             tone = Tone.Battle;
-            return "Defendiendo";
+            return GameSession.IsEmplaced(unit) ? $"Defendiendo ({dug})" : "Defendiendo";
+        }
+        if (GameSession.IsEmplaced(unit))
+        {
+            tone = Tone.Good;
+            return $"Emplazada ({dug})";
         }
         if (unit.IsMoving && unit.Destination is int dest)
         {

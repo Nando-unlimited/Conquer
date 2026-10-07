@@ -52,12 +52,20 @@ public sealed class InputState
     public readonly HashSet<Silk.NET.Input.Key> KeysDown = [];
     /// <summary>Characters typed this frame, for text fields.</summary>
     public readonly List<char> Chars = [];
+    /// <summary>Keys the system repeated this frame while held down (they are not in <see cref="KeysPressed"/>).</summary>
+    public readonly List<Silk.NET.Input.Key> KeysRepeated = [];
+    /// <summary>Whether the system repeats held keys; until it is seen to, text fields repeat them themselves.</summary>
+    public bool SystemRepeats;
+    /// <summary>The system clipboard, for text fields.</summary>
+    public Func<string>? ReadClipboard;
+    public Action<string>? WriteClipboard;
 
     public void EndFrame()
     {
         LeftPressed = LeftReleased = RightPressed = false;
         Scroll = 0;
         KeysPressed.Clear();
+        KeysRepeated.Clear();
         Chars.Clear();
     }
 }
@@ -124,7 +132,7 @@ public static class Theme
 /// A small immediate-mode UI: widgets are declared every frame and report clicks directly.
 /// Every panel drawn registers its area so the map knows the mouse is over the interface.
 /// </summary>
-public sealed class Ui
+public sealed partial class Ui
 {
     private readonly List<Rect> _blockers = [];
     private string? _tooltip;
@@ -142,6 +150,7 @@ public sealed class Ui
 
     public void BeginFrame()
     {
+        _frame++;
         _blockers.Clear();
         _clips.Clear();
         _tooltip = null;
@@ -293,21 +302,6 @@ public sealed class Ui
     /// A one-line text box that takes this frame's typing (Backspace deletes) and returns the new text.
     /// Only characters the font can draw are accepted. There is one field on screen at a time, so it always has the focus.
     /// </summary>
-    public string TextField(Rect r, string text, int maxLength)
-    {
-        foreach (char c in Input.Chars)
-            if (c >= ' ' && c <= (char)255 && !char.IsControl(c) && text.Length < maxLength) text += c;
-        if (Input.KeysPressed.Contains(Silk.NET.Input.Key.Backspace) && text.Length > 0) text = text[..^1];
-
-        _blockers.Add(r);
-        Batch.RoundedRect(r.X, r.Y, r.W, r.H, Theme.ButtonRadius, new Rgba(0xFF0A0E13), new Rgba(0xFF121821));
-        Batch.RoundedOutline(r.X, r.Y, r.W, r.H, Theme.ButtonRadius, Theme.Accent);
-        float h = Font.LineHeight(FontSize.Normal);
-        float end = Text(r.X + 10, r.Y + (r.H - h) / 2, text);
-        Batch.Rect(r.X + 11 + end, r.Y + 7, 2, r.H - 14, Theme.Accent);
-        return text;
-    }
-
     public void Tooltip(string text) => _tooltip = text;
 
     /// <summary>Draws the pending tooltip next to the mouse; call last.</summary>

@@ -174,6 +174,15 @@ public static class MilitaryRules
     public const double OutOfSupplyEfficiency = 0.75;
     /// <summary>Share of their full organisation regiments regain each day in supply and out of combat.</summary>
     public const double OrganisationRecovery = 0.2;
+    // Emplacement: a combat unit digs in where it stands
+    /// <summary>Days an emplaced unit takes to dig in fully.</summary>
+    public const double EmplacementDays = 5;
+    /// <summary>Extra defence of a fully dug-in unit (in proportion until then).</summary>
+    public const double EmplacementDefense = 0.25;
+    /// <summary>An emplaced unit regains organisation this many times as fast...</summary>
+    public const double EmplacedRecovery = 1.5;
+    /// <summary>...and its shipments take this share of the time to reach it (it waits for them at a known place).</summary>
+    public const double EmplacedShipmentTime = 0.5;
     /// <summary>Share of full organisation lost each day without supply.</summary>
     public const double OutOfSupplyOrganisationLoss = 0.05;
     /// <summary>Share of full strength lost each day without supply (hunger, desertion).</summary>

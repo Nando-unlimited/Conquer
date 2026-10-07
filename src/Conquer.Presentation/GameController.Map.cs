@@ -10,10 +10,10 @@ namespace Conquer.Presentation;
 
 /// <summary>
 /// A city on screen: its icon (<see cref="Models.CityIcon"/>), or else houses with roofs of its nation's colour (more of
-/// them the more it holds) and a tower if it is the capital; its name when there is room, and its buildings close in.
+/// them the more it holds) and a tower if it is the capital; and its name when there is room.
 /// </summary>
 public sealed record CityMarker(Vector2 Screen, float Scale, uint Color, int Population, bool Capital, string? Name, int Id = 0, bool Industry = false,
-    IReadOnlyList<BuildingType>? Buildings = null, string Icon = "cabana");
+    string Icon = "cabana");
 
 /// <summary>A nation's name over the middle of its land, as large as the land looks and fading when zoomed in close.</summary>
 public sealed record NationLabel(Vector2 Screen, string Name, TextSize Size, float Alpha, uint Color);
@@ -32,11 +32,12 @@ public enum CounterKind
 /// <summary>
 /// A unit's counter on screen with what goes with it: its route (screen points, fuller when selected), the line to
 /// its HQ (green in range, red out of it) and the arrow of an attack. <see cref="Scale"/> shrinks counters when zoomed out.
+/// <see cref="Entrenchment"/> is how far an emplaced unit has dug in (null when it is not emplaced).
 /// </summary>
 public sealed record UnitCounter(int UnitId, Vector2 Screen, float Scale, uint Color, bool Selected, CounterKind Kind, UnitFunction Function,
     string Symbol, int Aboard, string Echelon, double Strength, double Organisation,
     IReadOnlyList<Vector2>? Path, (Vector2 To, bool InRange)? Command, (Vector2 From, Vector2 To)? Attack,
-    bool Moving = false, bool Fighting = false, Vector2 Heading = default, string? Model = null);
+    bool Moving = false, bool Fighting = false, Vector2 Heading = default, string? Model = null, double? Entrenchment = null);
 
 /// <summary>Crossed swords over a battle; <see cref="Battle"/> is null at sea. The tooltip is worked out only when hovered.</summary>
 public sealed record BattleMarker(int ProvinceId, Battle? Battle, Vector2 Screen, Func<string> Tooltip);
@@ -130,7 +131,6 @@ public sealed partial class GameController
             var p = Map.Provinces[city.ProvinceId];
             cities.Add(new CityMarker(s, scale, owner.Color, (int)p.Population, capital, named ? city.Name : null,
                 city.Id, p.Buildings.Any(b => b is BuildingType.Workshop or BuildingType.Factory),
-                Camera.Zoom >= 5 ? [.. Buildings.All.Where(p.Buildings.Contains)] : null,
                 Models.CityIcon(p.Population, capital, owner.Era >= Conquer.Game.Science.Era.Modern)));
         }
         return cities;
@@ -222,7 +222,8 @@ public sealed partial class GameController
             var kind = unit.IsMilitary ? CounterKind.Military : unit.IsFleet ? CounterKind.Fleet : unit.IsHeadquarters ? CounterKind.Headquarters : CounterKind.Settlers;
             counters.Add(new UnitCounter(unit.Id, s, scale, Session.Players[unit.OwnerId].Color, selected,
                 kind, unit.Function, unit.Symbol, unit.IsFleet ? Session.CargoOf(unit).Count() : 0, unit.Echelon, unit.StrengthShare, unit.OrganisationShare,
-                path, command, attack, unit.IsMoving, Fighting(unit), Heading(unit), Models.Of(unit)));
+                path, command, attack, unit.IsMoving, Fighting(unit), Heading(unit), Models.Of(unit),
+                GameSession.IsEmplaced(unit) ? unit.Entrenchment : null));
         }
         return counters;
     }

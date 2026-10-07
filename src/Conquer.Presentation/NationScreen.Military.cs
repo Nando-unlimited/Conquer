@@ -80,6 +80,7 @@ public sealed partial class NationScreen
         if (unit.CarrierId is int carrier && Session.UnitById(carrier) is { } fleet) return $"A bordo de {fleet.Name}";
         if (unit.AttackingProvinceId is int target) return $"Atacando {Session.PlaceName(Map.Provinces[target])}";
         if (Session.InBattle(unit)) return "Defendiendo";
+        if (GameSession.IsEmplaced(unit)) return $"Emplazada ({unit.Entrenchment:P0})";
         if (unit.IsMoving && unit.Destination is int dest) return $"Hacia {Session.PlaceName(Map.Provinces[dest])}";
         return "En reserva";
     }
@@ -115,35 +116,40 @@ public sealed partial class NationScreen
             new("Borrar", () => Show(Session.DeleteTemplate(Player.Id, template.Id)), Player.Templates.Count > 1, Tooltip: "Hace falta al menos una plantilla.", Size: TextSize.Small),
         ];
 
-        var slots = new List<TemplateSlot>();
-        for (int i = 0; i < MilitaryRules.MaxBattalionsPerRegiment; i++)
+        // Ships and planes are never in templates.
+        var known = Player.Techs;
+        var addable = Battalions.All.Where(t => !t.First().Naval && !t.First().Flies && t.BestModel(known) >= 0 && !t.Redundant(known)).ToList();
+        int free = MilitaryRules.MaxBattalionsPerRegiment - template.Battalions.Count;
+        var sections = Enum.GetValues<TemplateRow>().Select(row =>
         {
-            if (i >= template.Battalions.Count)
+            var slots = new List<TemplateSlot>();
+            for (int i = 0; i < template.Battalions.Count; i++)
             {
-                slots.Add(new TemplateSlot(null, "hueco libre", "", null));
-                continue;
+                var type = template.Battalions[i];
+                if (RowOf(type) != row) continue;
+                var info = GameSession.ModelFor(Player, type);
+                int index = i;
+                slots.Add(new TemplateSlot(type, info.Name, type.Line().Name, $"A {info.Attack:0.#} · D {info.Defense:0.#} · {info.Men} h",
+                    new Button("×", () => Show(Session.RemoveFromTemplate(Player.Id, template.Id, index)), template.Battalions.Count > 1,
+                        Tooltip: template.Battalions.Count > 1 ? "Quitar" : "Una plantilla necesita al menos un batallón.", Size: TextSize.Small)));
             }
-            var info = GameSession.ModelFor(Player, template.Battalions[i]);
-            int index = i;
-            slots.Add(new TemplateSlot(template.Battalions[i], Formations.BattalionName(info), $"A {info.Attack:0.#} · D {info.Defense:0.#} · {info.Men} h",
-                new Button("Quitar", () => Show(Session.RemoveFromTemplate(Player.Id, template.Id, index)), template.Battalions.Count > 1, Size: TextSize.Small)));
-        }
-
-        // Ships are built one by one in ports, never from templates.
-        var add = Battalions.All.Where(t => !t.First().Naval && t.BestModel(Player.Techs) >= 0 && !t.Redundant(Player.Techs)).Select(type =>
-        {
-            var can = Session.CanAddToTemplate(Player, template, type);
-            var model = GameSession.ModelFor(Player, type);
-            string tip = $"{Formations.BattalionName(model)} ({type.Line().Name.ToLowerInvariant()}, {type.Line().Group.Name().ToLowerInvariant()})"
-                         + (GameController.LineNote(type) is { } note ? "\n" + note : "");
-            return new Button("+ " + model.Name, () => Show(Session.AddToTemplate(Player.Id, template.Id, type)), can.Ok,
-                Tooltip: can.Ok ? tip : can.Message, Size: TextSize.Small, Icon: new BattalionIcon(type));
+            if (free > 0) slots.Add(new TemplateSlot(null, "Hueco libre", "", "", null));
+            var add = addable.Where(t => RowOf(t) == row).Select(type =>
+            {
+                var can = Session.CanAddToTemplate(Player, template, type);
+                var model = GameSession.ModelFor(Player, type);
+                string tip = $"{Formations.BattalionName(model)} ({type.Line().Name.ToLowerInvariant()}, {type.Line().Group.Name().ToLowerInvariant()})"
+                             + (GameController.LineNote(type) is { } note ? "\n" + note : "");
+                return new Button("+ " + model.Name, () => Show(Session.AddToTemplate(Player.Id, template.Id, type)), can.Ok,
+                    Tooltip: can.Ok ? tip : can.Message, Size: TextSize.Small, Icon: new BattalionIcon(type));
+            }).ToList();
+            return new TemplateSection(RowNames[(int)row], RowTips[(int)row], slots, add,
+                add.Count == 0 ? "Aún no sabes formar ninguno: llegan con la ciencia." : null);
         }).ToList();
 
         // What a unit of this design is like.
         var details = new Document();
         details.Add(new Heading(Formations.CombatName(Echelon.Regiment), Tone.Accent, Height: 28));
-        var known = Player.Techs;
         details.Add(new Pair("Hombres", $"{template.Men(known):N0}"));
         details.Add(new Pair("Instrucción", $"{GameSession.TrainingDays(Player, template)} días"));
         details.Add(new Pair("Ataque", $"{template.Attack(known):0.#}"));
@@ -180,12 +186,32 @@ public sealed partial class NationScreen
             new("Cancelar", () => TemplateNameDraft = null, Size: TextSize.Small),
         ];
         return new TemplatesPage(list, actions, template.Name,
-            $"{Formations.CombatName(Echelon.Regiment)} de {Formations.BattalionCount(template.Battalions.Count)}", slots, add, details, rename, renaming);
+            $"{Formations.CombatName(Echelon.Regiment)} de {Formations.BattalionCount(template.Battalions.Count)}",
+            free > 0 ? $"{TextFormat.Plural(free, "hueco libre", "huecos libres")} de {MilitaryRules.MaxBattalionsPerRegiment}" : "Sin huecos libres",
+            sections, details, rename, renaming);
     }
+
+    private static readonly string[] RowNames = ["Frente", "A distancia", "Apoyo"];
+
+    private static readonly string[] RowTips =
+    [
+        "Los batallones que sostienen la línea y cargan: infantería, caballería y blindados.",
+        "Los que disparan desde atrás: arqueros y tiradores, artillería y antiaérea.",
+        "Los que ayudan sin ocupar la línea: exploradores, ingenieros y médicos.",
+    ];
+
+    /// <summary>Where a battalion goes in the designer; the regiment's places are shared by all three rows.</summary>
+    private static TemplateRow RowOf(BattalionType type) => type switch
+    {
+        BattalionType.RangedInfantry => TemplateRow.Ranged,
+        _ when type.Line().Group == BattalionGroup.Artillery => TemplateRow.Ranged,
+        _ when type.Line().Group == BattalionGroup.Support => TemplateRow.Support,
+        _ => TemplateRow.Front,
+    };
 
     // ------------------------------------------------------------------ diplomacy
     /// <summary>
-    /// Every other nation: at peace, allied, in a truce or at war; what it thinks of us; its army against ours; what each
+    /// Every other nation it has met: at peace, allied, in a truce or at war; what it thinks of us; its army against ours; what each
     /// holds of the other and the war score; and war, alliance and gifts, or the three kinds of peace.
     /// </summary>
     private TablePage Diplomacy()
@@ -194,7 +220,7 @@ public sealed partial class NationScreen
         Column[] columns = [new("Nación", 150), new("Relación", 120), new("Opinión", 70), new("Poder militar", 120), new("Provincias", 75),
             new("Ocupación", 125), new("Puntuación", 75), new("", 465)];
         var rows = new List<IReadOnlyList<Cell>>();
-        foreach (var other in Session.Players.Where(p => p.Id != Player.Id && !p.Eliminated))
+        foreach (var other in Session.Players.Where(p => p.Id != Player.Id && !p.Eliminated && Session.HasContact(Player.Id, p.Id)))
         {
             bool war = Session.AtWar(Player.Id, other.Id);
             double theirs = Session.MilitaryPower(other.Id);
@@ -213,7 +239,7 @@ public sealed partial class NationScreen
                 new ButtonsCell(war ? PeaceButtons(other, taken, lost) : PeaceTimeButtons(other)),
             ]);
         }
-        return new TablePage(new Table(columns, rows));
+        return new TablePage(new Table(columns, rows, Empty: "Aún no conoces a ninguna nación: explora el mundo para encontrarlas."));
     }
 
     /// <summary>At war (and for how long), allied, in a truce or at peace; its allies in the tooltip.</summary>

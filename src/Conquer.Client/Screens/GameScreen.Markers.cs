@@ -1,7 +1,6 @@
 using System.Numerics;
 using Conquer.Client.Graphics;
 using Conquer.Client.UI;
-using Conquer.Game.Buildings;
 using Conquer.Presentation;
 
 namespace Conquer.Client.Screens;
@@ -55,13 +54,12 @@ public sealed partial class GameScreen
 
     /// <summary>
     /// The city as a dot of its owner's colour, bigger the more people it has (<see cref="CityDotRadius"/>), ringed in gold
-    /// for the capital, with its name under it and, close in, its buildings in a row under the name.
+    /// for the capital, with its name under it.
     /// </summary>
     private void DrawCity(CityMarker city)
     {
         var s = city.Screen;
         float sc = city.Scale;
-        bool models = DisplaySettings.Current.UnitModels;
         float r = CityDotRadius(city.Population) * sc;
         Batch.Circle(s + new Vector2(1, 1.5f), r + 1.5f * sc, Rgba.Black.WithAlpha(0.45f));
         if (city.Capital) Batch.Circle(s, r + 2.5f * sc, new Rgba(0xFFE0B656));
@@ -69,27 +67,10 @@ public sealed partial class GameScreen
         Batch.Circle(s, r, Batch2D.Mix(new Rgba(city.Color), Rgba.White, 0.15f));
         if (Motion.Enabled && (city.Industry || city.Population >= 2000)) Smoke(s + new Vector2(r * 0.5f, -r), city.Id, sc, city.Industry);
         float below = r + (city.Capital ? 2.5f : 1) * sc;
-        float ty = s.Y + 2 * sc + below;
         if (city.Name != null)
         {
             float w = Ui.Font.Measure(city.Name, FontSize.Small, true);
-            OutlinedText(s.X - w / 2, ty, city.Name, Rgba.White, 1, bold: true);
-            ty += 20;
-        }
-        if (city.Buildings is not { Count: > 0 } all) return;
-        // The buildings in a row: their icons, or with the 3D figures their models (one of each, for those without an icon).
-        var shown = new List<(BuildingType Type, string? Model)>();
-        foreach (var type in all)
-        {
-            if (BuildingIcons.Has(type)) shown.Add((type, null));
-            else if (models && Models.Of(type) is { } m && _sprites.Has(m) && !shown.Any(b => b.Model == m)) shown.Add((type, m));
-        }
-        float each = 22 * sc, x = s.X - (shown.Count - 1) * each / 2;
-        foreach (var (type, buildingModel) in shown)
-        {
-            if (buildingModel == null) BuildingIcons.Draw(Batch, type, x - each / 2, ty, each);
-            else _sprites.Draw(Batch, buildingModel, new Vector2(x, ty + each), new Vector2(each, each), new Rgba(city.Color));
-            x += each;
+            OutlinedText(s.X - w / 2, s.Y + 2 * sc + below, city.Name, Rgba.White, 1, bold: true);
         }
     }
 
@@ -170,6 +151,7 @@ public sealed partial class GameScreen
             Bar(new Rect(r.X - 2, r.Bottom + depth + 3, r.W + 4, 3), c.Strength, Theme.Strength);
             Bar(new Rect(r.X - 2, r.Bottom + depth + 7, r.W + 4, 3), c.Organisation, Theme.Organisation);
         }
+        if (c.Entrenchment is double dug) Earthworks(r.X, r.W, r.Bottom + depth + 12, dug, c.Scale);
         if (c.Echelon.Length > 0) DrawEchelon(r, c.Echelon, c.Scale);
         _unitHitBoxes.Add((c.UnitId, r));
     }
@@ -201,6 +183,7 @@ public sealed partial class GameScreen
             Bar(new Rect(foot.X - rx, foot.Y + ry + 3, 2 * rx, 3), c.Strength, Theme.Strength);
             Bar(new Rect(foot.X - rx, foot.Y + ry + 7, 2 * rx, 3), c.Organisation, Theme.Organisation);
         }
+        if (c.Entrenchment is double dug) Earthworks(foot.X - rx, 2 * rx, foot.Y + ry + 12, dug, sc);
         if (ship) for (int i = 0; i < c.Aboard; i++) Batch.Rect(foot.X + rx + 3, foot.Y - ry - i * 5, 3, 3, Rgba.White);
         if (c.Echelon.Length > 0) DrawEchelon(r, c.Echelon, sc);
         _unitHitBoxes.Add((c.UnitId, r));
@@ -294,6 +277,25 @@ public sealed partial class GameScreen
             var at = centre + new Vector2(MathF.Cos(angle), MathF.Sin(angle)) * 18;
             Batch.Circle(at, 2 + t * 7, BurstFire.WithAlpha((1 - t) * 0.8f), segments: 12);
             Batch.Circle(at, 1 + t * 4, BurstFlash.WithAlpha((1 - t) * (1 - t)), segments: 10);
+        }
+    }
+
+    /// <summary>
+    /// The earthworks of an emplaced unit: a row of sandbags <paramref name="width"/> wide centred under its bars, more of
+    /// them the further the unit has dug in (a first bag as soon as it starts).
+    /// </summary>
+    private void Earthworks(float left, float width, float y, double entrenchment, float scale)
+    {
+        var sand = new Rgba(0xFFC8A96E);
+        float bag = 5 * scale, step = bag * 1.1f;
+        int count = Math.Max(1, (int)((width + 8) / step));
+        int shown = Math.Max(1, (int)Math.Ceiling(count * Math.Clamp(entrenchment, 0, 1)));
+        float x = left - 4 + (width + 8 - count * step) / 2 + step / 2;
+        for (int i = 0; i < shown; i++, x += step)
+        {
+            var at = new Vector2(x, y + bag / 3);
+            Batch.Ellipse(at + new Vector2(0.5f, 1), bag / 2 + 0.5f, bag / 3 + 0.5f, Rgba.Black.WithAlpha(0.6f));
+            Batch.Ellipse(at, bag / 2, bag / 3, sand);
         }
     }
 

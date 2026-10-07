@@ -30,7 +30,7 @@ public sealed partial class NationScreen
                     Tooltip: $"Termina el acuerdo ya. {other.Name} lo recordará ({GameRules.CancelledTradeOpinion:0} de opinión).", Size: TextSize.Small)]),
             ]);
         }
-        foreach (var other in Session.Players.Where(p => p.Id != Player.Id && !p.Eliminated && !Session.AtWar(Player.Id, p.Id)))
+        foreach (var other in Session.Players.Where(p => p.Id != Player.Id && !p.Eliminated && Session.HasContact(Player.Id, p.Id) && !Session.AtWar(Player.Id, p.Id)))
             foreach (var (goods, payment, buying) in Offers(other))
                 if (OfferRow(other, goods, payment, buying) is { } row) rows.Add(row);
 

@@ -12,7 +12,7 @@ public enum StatisticsMetric
     Science,
 }
 
-/// <summary>The Estadísticas tab of the nation screen: how each nation's people, army, gold, land and science have changed.</summary>
+/// <summary>The Estadísticas tab of the nation screen: how the people, army, gold, land and science of each nation the player has met have changed.</summary>
 public sealed partial class NationScreen
 {
     private static readonly string[] MetricNames = ["Población", "Ejército", "Oro al día", "Provincias", "Ciencia al día"];
@@ -32,8 +32,9 @@ public sealed partial class NationScreen
     {
         var metrics = MetricNames.Select((name, i) => new Button(name, () => Metric = (StatisticsMetric)i, Active: (int)Metric == i, Size: TextSize.Small)).ToList();
         string title = $"{MetricNames[(int)Metric]} de cada nación";
-        // The ledger, and every standing nation's figures today so the lines reach the present.
-        var samples = Session.History.Concat(Session.Players.Where(p => !p.Eliminated).Select(Session.Sample)).ToList();
+        // The ledger, and every standing nation's figures today so the lines reach the present: only for nations it has met.
+        var samples = Session.History.Concat(Session.Players.Where(p => !p.Eliminated).Select(Session.Sample))
+            .Where(h => Session.HasContact(Player.Id, h.PlayerId)).ToList();
         long start = samples.Min(h => h.Hours), end = samples.Max(h => h.Hours);
         if (end - start < 24 * 2)
             return new StatisticsPage(metrics, title, "Aún no hay datos: la primera anotación se hace al cabo de un mes.", [], [], []);

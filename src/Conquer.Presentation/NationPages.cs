@@ -59,15 +59,27 @@ public sealed record BranchColumn(string Name, string Priority, Button Less, But
 public sealed record SciencePage(string Points, Ink PointsInk, string PointsTooltip, IReadOnlyList<InstitutionBadge> Institutions,
     IReadOnlyList<Button> Eras, IReadOnlyList<BranchColumn> Branches) : NationPage;
 
-/// <summary>A place in a template: a battalion with its figures and the button to remove it, or an empty slot.</summary>
-public sealed record TemplateSlot(BattalionType? Battalion, string Name, string Stats, Button? Remove);
+/// <summary>A place in a template: a battalion (its model and line) with its figures and the button to remove it, or an empty place.</summary>
+public sealed record TemplateSlot(BattalionType? Battalion, string Name, string Line, string Stats, Button? Remove);
+
+/// <summary>The designer's rows, HOI4 style; only a way of showing the regiment, whose places they all share.</summary>
+public enum TemplateRow
+{
+    Front,
+    Ranged,
+    Support,
+}
+
+/// <summary>One row of the designer: its battalions, an empty place while the regiment has room, and the battalions it can take.</summary>
+/// <see cref="None"/> says why there is nothing to add, when nothing is known for the row yet.
+public sealed record TemplateSection(string Name, string Tooltip, IReadOnlyList<TemplateSlot> Slots, IReadOnlyList<Button> Add, string? None = null);
 
 /// <summary>
 /// The template designer. While its name is being changed, <see cref="Renaming"/> holds the buttons to accept and cancel, and
 /// the client edits <see cref="NationScreen.TemplateNameDraft"/> in place of the name.
 /// </summary>
-public sealed record TemplatesPage(IReadOnlyList<Button> Templates, IReadOnlyList<Button> Actions, string Name, string Kind,
-    IReadOnlyList<TemplateSlot> Slots, IReadOnlyList<Button> Add, Document Details, Button? Rename = null, IReadOnlyList<Button>? Renaming = null) : NationPage;
+public sealed record TemplatesPage(IReadOnlyList<Button> Templates, IReadOnlyList<Button> Actions, string Name, string Kind, string Free,
+    IReadOnlyList<TemplateSection> Sections, Document Details, Button? Rename = null, IReadOnlyList<Button>? Renaming = null) : NationPage;
 
 /// <summary>One nation's line on a graph: its points from 0 to 1 on both axes, its latest figure, and whether it is the player's.</summary>
 public sealed record ChartSeries(string Name, uint Color, IReadOnlyList<(float X, float Y)> Points, string Last, bool Player);

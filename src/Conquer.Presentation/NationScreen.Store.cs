@@ -19,7 +19,9 @@ public sealed partial class NationScreen
     private TablePage Stock()
     {
         Column[] columns = [new("Recurso", 150), new("En almacén", 130), new("Producción", 130), new("Comercio", 120), new("Consumo", 120),
-            new("Ejército", 120), new("Talleres", 120), new("Balance al día", 140), new("Se agota en", 120)];
+            new("Ejército", 120), new("Talleres", 120), new("Balance al día", 140), new("Se agota en", 120),
+            new("En bolsas", 110)];
+        var reserves = Session.Stats(Player).Reserves;
         var rows = new List<IReadOnlyList<Cell>>();
         foreach (var r in Resources.All.Where(Player.Knows))
         {
@@ -47,6 +49,10 @@ public sealed partial class NationScreen
                 Flow(ResourceFlow.Workshops, "Lo que gastan tus talleres y fábricas en fabricar equipo."),
                 new TextCell(Math.Abs(net) < 0.005 ? "-" : $"{net:+#,0.##;-#,0.##}", net > 0 ? Tone.Good : net < 0 ? Tone.Bad : Tone.Dim, Bold: true),
                 new TextCell(net < -0.005 ? stock / -net < 1 ? "Hoy" : $"{stock / -net:N0} días" : "-", net < -0.005 && stock / -net < 30 ? Tone.Bad : Tone.Dim),
+                Resources.Deposits.Contains(r) && !r.IsRenewable()
+                    ? new TextCell(TextFormat.Compact(reserves[(int)r]), reserves[(int)r] > 0 ? Tone.Normal : Tone.Dim,
+                        Tooltip: "Lo que queda en los yacimientos de tus provincias. Cada bolsa se agota al explotarla.")
+                    : new TextCell("-", Tone.Dim),
             ]);
         }
         return new TablePage(new Table(columns, rows), "Recursos: lo que hay y lo que entró y salió en el último día.", Tone.Dim);

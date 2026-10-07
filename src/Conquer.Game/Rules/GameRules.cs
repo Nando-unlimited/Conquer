@@ -125,7 +125,9 @@ public static class GameRules
 
     // Migration
     /// <summary>Share of a city's population that may leave for new territories each day.</summary>
-    public const double DailyEmigrationShare = 0.0001;
+    public const double DailyEmigrationShare = 0.001;
+    /// <summary>Migrants leave a city in groups of this many people.</summary>
+    public const int MigrationGroup = 50;
     /// <summary>Cities stop sending migrants below this population.</summary>
     public const int MinEmigrationCityPopulation = 200;
     /// <summary>A province counts as settled once this many citizens live there; until then it draws migrants first.</summary>

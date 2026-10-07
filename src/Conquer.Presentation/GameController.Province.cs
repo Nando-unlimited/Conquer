@@ -189,7 +189,7 @@ public sealed partial class GameController
                 AddCultureAndRevolt(doc, p);
             }
             string migrants = "Gente en camino hacia esta provincia y desde ella.\n" +
-                              $"Las ciudades de más de {GameRules.MinEmigrationCityPopulation} habitantes envían cada día un {GameRules.DailyEmigrationShare:P2} de su gente " +
+                              $"Las ciudades de más de {GameRules.MinEmigrationCityPopulation} habitantes envían cada día un {GameRules.DailyEmigrationShare:P1} de su gente, en grupos de {GameRules.MigrationGroup}, " +
                               $"a tus provincias sin ciudad que no llegan al {GameRules.MigrationTargetShare:P0} de su capacidad.";
             doc.Add(new Info("Inmigrantes", $"{incoming:N0}", incoming > 0 ? Tone.Normal : Tone.Dim, migrants));
             doc.Add(new Info("Emigrantes", $"{outgoing:N0}", outgoing > 0 ? Tone.Normal : Tone.Dim, migrants));

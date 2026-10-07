@@ -243,6 +243,7 @@ public sealed partial class GameSession
         CheckObjectives();
         if (Date.Hour == 0)
         {
+            UpdateContacts();
             foreach (var player in Players) DailyEconomy(player);
             foreach (var player in Players) DailyUnrest(player);
             foreach (var player in Players) DailyFaith(player);
@@ -750,7 +751,7 @@ public sealed partial class GameSession
 
     /// <summary>
     /// Each day, cities send part of their people to the player's provinces that are still thinly
-    /// populated. Migrants walk at citizen speed and arrive after the real travel time.
+    /// populated, in groups of <see cref="GameRules.MigrationGroup"/>. Migrants walk at citizen speed and arrive after the real travel time.
     /// </summary>
     private void DailyMigration(Player player)
     {
@@ -786,22 +787,23 @@ public sealed partial class GameSession
         foreach (var (sourceId, targets) in targetsBySource)
         {
             var source = Map.Provinces[sourceId];
-            // Fractions of a person carry over to the next day, so small cities still send someone now and then.
+            // Emigrants leave in groups (MigrationGroup); what falls short of one carries over to the next day.
             double quota = _emigrationCarry.GetValueOrDefault(sourceId) + source.Population * GameRules.DailyEmigrationShare;
-            int budget = (int)Math.Min(quota, source.Population - GameRules.MinEmigrationCityPopulation);
-            _emigrationCarry[sourceId] = quota - Math.Max(budget, 0);
-            if (budget < 1) continue;
-            double totalPull = targets.Sum(t => t.Pull);
-            // Share the day's emigrants by pull; small budgets go whole to the strongest pulls.
-            foreach (var (target, pull, deficit) in targets.OrderByDescending(t => t.Pull))
+            int groups = (int)(Math.Min(quota, source.Population - GameRules.MinEmigrationCityPopulation) / GameRules.MigrationGroup);
+            _emigrationCarry[sourceId] = Math.Min(quota - Math.Max(groups, 0) * GameRules.MigrationGroup, GameRules.MigrationGroup);
+            // Each group goes to the strongest pull, which weakens as its gap fills.
+            var open = targets.ToList();
+            for (int g = 0; g < groups && open.Count > 0; g++)
             {
-                if (budget < 1) break;
-                int people = Math.Max(1, (int)Math.Round(budget * pull / totalPull));
-                people = (int)Math.Min(people, Math.Min(budget, Math.Ceiling(deficit)));
-                budget -= people;
+                int best = 0;
+                for (int i = 1; i < open.Count; i++) if (open[i].Pull > open[best].Pull) best = i;
+                var (target, pull, deficit) = open[best];
+                int people = GameRules.MigrationGroup;
                 source.Population -= people;
                 long arrive = Date.Hours + Math.Max(1, (long)Math.Ceiling(hours[target]));
                 Migrations.Add(new Migration(_nextMigrationId++, player.Id, sourceId, target, people, Date.Hours, arrive, forced: false, source.Mood));
+                if (deficit <= people) open.RemoveAt(best);
+                else open[best] = (target, pull * (deficit - people) / deficit, deficit - people);
             }
         }
     }
