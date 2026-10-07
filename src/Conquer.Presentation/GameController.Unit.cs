@@ -1,3 +1,4 @@
+using Conquer.Game.Economy;
 using Conquer.Game.Entities;
 using Conquer.Game.Military;
 using Conquer.Game.Rules;
@@ -194,6 +195,7 @@ public sealed partial class GameController
             doc.Add(new Info("Reparaciones", port ? "En puerto" : "Solo en puerto", port ? Tone.Good : Tone.Dim));
             RefitLine(doc, unit);
             MissionLines(doc, unit);
+            FleetCommandLines(doc, unit);
             var carried = Session.AirUnitsOn(unit).ToList();
             int aboard = carried.Sum(a => a.Flights.Count);
             if (Session.CarrierRoom(unit) + aboard > 0)
@@ -298,6 +300,30 @@ public sealed partial class GameController
                                                          (c.Check.Ok ? $"{GameSession.RefitCost(c.Model)}" : c.Check.Message)));
         doc.Add(new Info("Modernización", ready > 0 ? $"{ready} de {due.Count} barcos, mañana" : $"{due.Count} barcos esperan",
             ready > 0 ? Tone.Good : Tone.Accent, tip + $"\nEn uno de tus puertos, cada barco pasa al modelo más nuevo de su línea por el {MilitaryRules.RefitCostShare:P0} de su coste."));
+    }
+
+    /// <summary>
+    /// A fleet's Flota and the bonus it gives, its fuel (what it burns a day at sea, or that it ran out) and, to its owner,
+    /// a button to move it to the next Flota.
+    /// </summary>
+    private void FleetCommandLines(Document doc, Unit fleet)
+    {
+        var flota = Session.FlotaOf(fleet);
+        bool inRange = Session.InFleetCommand(fleet);
+        doc.Add(new Info("Flota", flota == null ? "Sin flota" : inRange ? $"{flota.Name} (+{Session.FleetCommandBonus(fleet):P0})" : $"{flota.Name} (lejos)",
+            flota == null ? Tone.Dim : inRange ? Tone.Good : Tone.Bad,
+            $"Una Flota manda hasta {MilitaryRules.MaxFleetsPerFlota} agrupaciones a menos de {MilitaryRules.FleetCommandRangeKm:N0} km de su puerto. Fórmalas en la pestaña Marina."));
+        var burns = fleet.Ships.Where(s => s.Info.Fuel != null).GroupBy(s => s.Info.Fuel!.Value)
+            .Select(g => $"{g.Sum(s => s.Info.FuelPerDay * s.StrengthShare):0.#} de {g.Key.Name().ToLowerInvariant()}").ToList();
+        if (burns.Count > 0 || fleet.OutOfFuel)
+            doc.Add(new Info("Combustible", fleet.OutOfFuel ? "Sin combustible" : $"{string.Join(" y ", burns)} al día", fleet.OutOfFuel ? Tone.Bad : Tone.Dim,
+                $"Lo que gastan sus barcos de vapor (carbón) y modernos (petróleo) cada día en el mar; en puerto no gastan. Sin él, navega {MilitaryRules.OutOfFuelSlowdown:0} veces más despacio y lucha a la mitad."));
+        if (fleet.OwnerId != Human.Id) return;
+        var flotas = Session.NavalHeadquarters.Where(h => h.OwnerId == Human.Id && !h.IsNavy).ToList();
+        if (flotas.Count == 0) return;
+        int? next = flota == null ? flotas[0].Id : flotas.IndexOf(flota) + 1 < flotas.Count ? flotas[flotas.IndexOf(flota) + 1].Id : null;
+        doc.Add(new Button("Cambiar de flota", () => Show(Session.AttachFleet(Human.Id, fleet.Id, next)),
+            Tooltip: "Pasa a la siguiente flota (o a ninguna).", Size: TextSize.Small, Height: 26, Gap: 4));
     }
 
     /// <summary>A fleet's mission, with a button for each to the owner, and the ports it blockades.</summary>

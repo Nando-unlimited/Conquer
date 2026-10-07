@@ -156,4 +156,37 @@ internal sealed partial class AiPlayer
             if (fleet.Mission != mission) _session.SetFleetMission(_player.Id, fleet.Id, mission);
         }
     }
+
+    /// <summary>
+    /// Joins its warship fleets in each port into one, up to a fuerza; forms a Flota for every three warship fleets (in
+    /// its biggest port) and the Armada once it has two flotas; and puts each fleet under the nearest Flota with room.
+    /// </summary>
+    private void OrganiseNavy()
+    {
+        var warships = _session.Units.Where(u => u.OwnerId == _player.Id && u.IsFleet && u.Capacity == 0 && _session.IsPort(Map.Provinces[u.ProvinceId], _player.Id)).ToList();
+        foreach (var group in warships.GroupBy(u => u.ProvinceId).ToList())
+        {
+            var fleets = group.OrderByDescending(u => u.Ships.Count).ToList();
+            foreach (var other in fleets.Skip(1))
+                if (_session.CanMerge(fleets[0], other).Ok) _session.Merge(_player.Id, fleets[0].Id, other.Id);
+        }
+
+        var mine = _session.Units.Where(u => u.OwnerId == _player.Id && u.IsFleet && u.Capacity == 0).ToList();
+        var flotas = _session.NavalHeadquarters.Where(h => h.OwnerId == _player.Id && !h.IsNavy).ToList();
+        var port = _session.Cities.Where(c => c.OwnerId == _player.Id && _session.IsPort(Map.Provinces[c.ProvinceId], _player.Id))
+            .Select(c => Map.Provinces[c.ProvinceId]).MaxBy(p => p.Population);
+        if (port == null) return;
+        if (mine.Count >= 3 * (flotas.Count + 1) && _session.CanRaiseNavalHeadquarters(port, 1).Ok && Spare(GameSession.NavalHeadquartersCost(1)))
+            _session.RaiseNavalHeadquarters(_player.Id, port.Id, 1);
+        if (flotas.Count >= 2 && _session.NavyOf(_player) == null && _session.CanRaiseNavalHeadquarters(port, 2).Ok && Spare(GameSession.NavalHeadquartersCost(2)))
+            _session.RaiseNavalHeadquarters(_player.Id, port.Id, 2);
+        foreach (var fleet in mine.Where(f => !_session.InFleetCommand(f)))
+        {
+            var flota = _session.NavalHeadquarters
+                .Where(h => h.OwnerId == _player.Id && !h.IsNavy && _session.FleetsOf(h).Count() < MilitaryRules.MaxFleetsPerFlota
+                            && Map.DistanceKm(Map.Provinces[h.BaseProvinceId], Map.Provinces[fleet.ProvinceId]) <= MilitaryRules.FleetCommandRangeKm)
+                .MinBy(h => Map.DistanceKm(Map.Provinces[h.BaseProvinceId], Map.Provinces[fleet.ProvinceId]));
+            if (flota != null) _session.AttachFleet(_player.Id, fleet.Id, flota.Id);
+        }
+    }
 }

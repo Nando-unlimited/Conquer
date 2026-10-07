@@ -115,6 +115,14 @@ public sealed record SaveGame
     public List<AirHeadquartersSave>? AirHeadquarters { get; init; }
     public int NextAirUnitId { get; init; }
     public int NextAirHeadquartersId { get; init; }
+    /// <summary>Flotas and the Armada; missing in saves from before 1.118.0.</summary>
+    public List<NavalHeadquartersSave>? NavalHeadquarters { get; init; }
+    public int NextNavalHeadquartersId { get; init; }
+    /// <summary>
+    /// Written since the escorts include the corbeta (1.118.0). In older saves the fragata, crucero and destructor are one
+    /// place lower in their line, so loading one moves them up.
+    /// </summary>
+    public bool Corvettes { get; init; }
     public int NextWingId { get; init; }
 
     private static readonly JsonSerializerOptions Options = new()
@@ -224,7 +232,8 @@ public sealed record UnitSave(
     List<BattalionSave> Battalions, int? CommanderId, int? AttackingProvinceId, List<int> Path, double HoursToNext, double StepHours,
     int? CarrierId = null, GeneralSave? General = null, OfficerSave? Officer = null, string? CustomName = null, bool AutoClaim = false,
     Echelon Size = Echelon.Regiment, List<RegimentSave>? Regiments = null, List<BrigadeSave>? Brigades = null,
-    bool AutoExplore = false, SupplyPriority SupplyPriority = SupplyPriority.Normal, double AmmoSpent = 0, FleetMission Mission = FleetMission.None);
+    bool AutoExplore = false, SupplyPriority SupplyPriority = SupplyPriority.Normal, double AmmoSpent = 0, FleetMission Mission = FleetMission.None,
+    int? FleetCommanderId = null, bool OutOfFuel = false);
 
 /// <summary>A shipment on its way from the capital to a combat unit.</summary>
 public sealed record ShipmentSave(int OwnerId, int UnitId, double Men, Dictionary<string, double> Pieces, double Ammo, long ArriveHours,
@@ -284,3 +293,6 @@ public sealed record AirUnitSave(int Id, int OwnerId, List<BattalionSave> Flight
 
 /// <summary>An air HQ: a División aérea or the Mando aéreo.</summary>
 public sealed record AirHeadquartersSave(int Id, int OwnerId, int Level, int Number, int BaseProvinceId, OfficerSave? Officer);
+
+/// <summary>A naval HQ: a Flota or the Armada.</summary>
+public sealed record NavalHeadquartersSave(int Id, int OwnerId, int Level, int Number, int BaseProvinceId, OfficerSave? Officer);

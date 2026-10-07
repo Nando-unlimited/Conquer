@@ -330,7 +330,8 @@ public sealed partial class GameSession
 
         double eaters = population
                         + Units.Where(u => u.OwnerId == player.Id).Sum(u => u.Citizens)
-                        + Migrations.Where(m => m.OwnerId == player.Id).Sum(m => m.People);
+                        + Migrations.Where(m => m.OwnerId == player.Id).Sum(m => m.People)
+                        + _airUnits.Where(u => u.OwnerId == player.Id).Sum(u => u.Crews);
         // Part of what is stored rots, so a surplus does not pile up for ever.
         double eaten = GameRules.FoodPerCitizen * eaters + Math.Max(0, player.Stockpile[ResourceType.Food]) * GameRules.FoodSpoilage;
         net[(int)ResourceType.Food] -= eaten;

@@ -14,7 +14,19 @@ public static class MilitaryRules
     /// <summary>...and its men at full strength.</summary>
     public const int MaxDivisionMen = 10_000;
     /// <summary>Ships in one fleet at most.</summary>
-    public const int MaxShipsPerFleet = 10;
+    public const int MaxShipsPerFleet = Military.NavalEchelons.ShipsPerForce;
+    /// <summary>A Flota commands fleets this close to its port, and the Armada flotas this close to its own.</summary>
+    public const double FleetCommandRangeKm = 2000, NavyCommandRangeKm = 6000;
+    /// <summary>Fleets a Flota commands at most.</summary>
+    public const int MaxFleetsPerFlota = 5;
+    /// <summary>What a fleet gets from its Flota in range, and from the Armada above it.</summary>
+    public const double FleetCommandBonus = 0.1, HigherFleetCommandBonus = 0.05;
+    /// <summary>Staff of a naval HQ.</summary>
+    public const int NavalHeadquartersStaff = 50;
+    /// <summary>How much slower a fleet without fuel sails, and the share of its fire it keeps.</summary>
+    public const double OutOfFuelSlowdown = 4, OutOfFuelEfficiency = 0.5;
+    /// <summary>Oil an escuadrilla burns each day it flies its mission.</summary>
+    public const double OilPerFlightDay = 1;
     /// <summary>Planes in an escuadrilla, the basic air unit, and the pieces of equipment it needs.</summary>
     public const int PlanesPerFlight = 6;
     /// <summary>Escuadrillas an airfield holds (a grupo), and each aircraft carrier.</summary>

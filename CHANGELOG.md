@@ -2,6 +2,25 @@
 
 Todos los cambios del juego, del más reciente al más antiguo. Cada versión es un commit cuyo título es su número.
 
+## [1.118.0] - 2026-10-07
+
+La marina, como se acordó: su jerarquía, la corbeta, las tripulaciones y el combustible.
+
+### Cambiado
+- **Jerarquía de la marina**: los barcos se agrupan en una sola ficha que crece con ellos: flotilla (hasta 3 buques), escuadra (hasta 3 flotillas, 9 buques) y fuerza (hasta 3 escuadras, 27 buques). Se unen y separan en «Editar unidad», y cada tamaño tiene su numeración («1.ª Flotilla», «2.ª Escuadra») y el rango de su oficial.
+- **Tripulaciones** como en los barcos reales: trirreme 200, carabela 25, galeón 250, fragata 250, navío de línea 700, acorazado 1.000, crucero 700, destructor 300, submarino 60 y portaaviones 2.000. Los barcos ya construidos completan su tripulación en puerto.
+- La pestaña Marina lista las agrupaciones con su tamaño, su Flota y su combustible.
+
+### Añadido
+- **Corbeta**: una escolta de los Descubrimientos (Cartografía y Pólvora), entre la carabela y la fragata, con 120 hombres.
+- **Flota y Armada**: cuarteles generales con un almirante, en un puerto. La Flota manda hasta 5 agrupaciones a menos de 2.000 km de su puerto (+10 % de fuego y la habilidad de su almirante); la Armada, una por nación, manda las flotas (+5 % más). Se forman en la pestaña Marina, y cada agrupación cambia de flota desde su panel.
+- **Combustible**: los barcos de vela no gastan; los de vapor queman carbón y los modernos petróleo cada día en el mar (en puerto, nada). Sin él, la agrupación navega 4 veces más despacio y lucha a la mitad hasta repostar. Los aviones queman petróleo los días que vuelan su misión y, sin él, se quedan en tierra.
+- Las tripulaciones de los aviones comen como el resto de la nación.
+- La IA une sus barcos de guerra en agrupaciones mayores y forma flotas y su Armada.
+
+### Corregido
+- Las partidas guardadas suben un puesto a fragatas, cruceros y destructores para hacer sitio a la corbeta.
+
 ## [1.117.0] - 2026-10-07
 
 La aviación, como se acordó: escuadrillas y su jerarquía.

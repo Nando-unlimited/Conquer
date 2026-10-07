@@ -201,6 +201,10 @@ public sealed class Unit
     public SupplyPriority SupplyPriority { get; set; } = SupplyPriority.Normal;
     /// <summary>For a fleet, what it does where it is (see <c>GameSession.SetFleetMission</c>).</summary>
     public FleetMission Mission { get; set; }
+    /// <summary>For a fleet, the Flota (naval HQ) it reports to; null while unattached.</summary>
+    public int? FleetCommanderId { get; set; }
+    /// <summary>A fleet whose coal or oil ran out the last day: it crawls and fights at half strength until it gets more.</summary>
+    public bool OutOfFuel { get; set; }
     /// <summary>Ammunition the combat unit has spent in battle and not yet had back: it carries <c>GameSession.AmmoCapacity</c> less this.</summary>
     public double AmmoSpent { get; set; }
     /// <summary>Scouts left to explore on their own, claiming land or not.</summary>
@@ -233,7 +237,7 @@ public sealed class Unit
     public string AutomaticName => Type switch
     {
         UnitType.Settlers => "Colonos",
-        UnitType.Fleet => Formations.FleetName(Number),
+        UnitType.Fleet => $"{Number}.ª {NavalEchelons.Of(Ships.Count).Name()}",
         UnitType.Headquarters => Formations.HeadquartersName(HeadquartersLevel, Number),
         _ => Formations.CombatUnitName(Number, Size),
     };
@@ -259,7 +263,7 @@ public sealed class Unit
     public OfficerRank RequiredRank => Type switch
     {
         UnitType.Headquarters => OfficerRank.MajorGeneral + HeadquartersLevel,
-        UnitType.Fleet => Ships.Count <= 3 ? OfficerRank.Colonel : Ships.Count <= 6 ? OfficerRank.Brigadier : OfficerRank.MajorGeneral,
+        UnitType.Fleet => OfficerRank.Colonel + (int)NavalEchelons.Of(Ships.Count),
         _ => OfficerRank.Colonel + (int)Size,
     };
     /// <summary>0 for regiments, 1-5 for HQs, -1 for units outside the chain of command.</summary>

@@ -177,7 +177,7 @@ public class SaveGameTests(WorldFixture world)
             gzip.CopyTo(plain);
         string json = System.Text.Encoding.UTF8.GetString(plain.ToArray())
             .Replace("\"Type\":\"LineShip\"", "\"Type\":\"Ironclad\"").Replace("\"Type\":\"Escort\"", "\"Type\":\"Destroyer\"")
-            .Replace("\"Type\":\"Transport\"", "\"Type\":\"SteamTransport\"");
+            .Replace("\"Type\":\"Transport\"", "\"Type\":\"SteamTransport\"").Replace("\"Corvettes\":true", "\"Corvettes\":false");
         using var old = new MemoryStream();
         using (var gzip = new System.IO.Compression.GZipStream(old, System.IO.Compression.CompressionLevel.Fastest, leaveOpen: true))
             gzip.Write(System.Text.Encoding.UTF8.GetBytes(json));

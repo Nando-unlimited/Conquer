@@ -44,7 +44,7 @@ internal sealed partial class AiPlayer
     }
 
     /// <summary>
-    /// Joins its air units of each kind at each base into one, up to an ala; forms a División aérea for every 12 escuadrillas
+    /// Joins its air units of each kind at each base into one, up to an ala; forms a División aérea for every 6 escuadrillas
     /// and the Mando aéreo once it has two divisions; and puts each unattached unit under a division in range with room.
     /// </summary>
     private void OrganiseAirForce()
@@ -59,7 +59,7 @@ internal sealed partial class AiPlayer
         var mine = _session.AirUnits.Where(u => u.OwnerId == _player.Id).ToList();
         var divisions = _session.AirHeadquarters.Where(h => h.OwnerId == _player.Id && !h.IsCommand).ToList();
         var airfield = _player.Provinces.Select(id => Map.Provinces[id]).Where(p => p.Has(BuildingType.Airfield)).MaxBy(p => p.Population);
-        if (airfield != null && mine.Sum(u => u.Flights.Count) >= 12 * (divisions.Count + 1) && _session.CanRaiseAirHeadquarters(airfield, 1).Ok
+        if (airfield != null && mine.Sum(u => u.Flights.Count) >= 6 * (divisions.Count + 1) && _session.CanRaiseAirHeadquarters(airfield, 1).Ok
             && Spare(GameSession.AirHeadquartersCost(1)))
             _session.RaiseAirHeadquarters(_player.Id, airfield.Id, 1);
         if (airfield != null && divisions.Count >= 2 && _session.AirCommandOf(_player) == null && _session.CanRaiseAirHeadquarters(airfield, 2).Ok

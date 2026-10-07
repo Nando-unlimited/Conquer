@@ -154,10 +154,12 @@ public class ShipyardTests(WorldFixture world)
         game.Nation.Visible = true;
         game.Nation.Tab = NationTab.Navy;
         var page = Assert.IsType<TablesPage>(game.Nation.Page());
-        Assert.Equal(["Flotas", "Astilleros"], page.Tables.Take(2).Select(t => t.Title));
-        var order = page.Tables[3].Table.Rows.SelectMany(r => r).OfType<ButtonsCell>().SelectMany(c => c.Buttons).First(b => b.Text == "Encargar" && b.Enabled);
+        Assert.StartsWith("Agrupaciones", page.Tables[0].Title);
+        Assert.StartsWith("Mando naval", page.Tables[1].Title);
+        Assert.Equal("Astilleros", page.Tables[2].Title);
+        var order = page.Tables[4].Table.Rows.SelectMany(r => r).OfType<ButtonsCell>().SelectMany(c => c.Buttons).First(b => b.Text == "Encargar" && b.Enabled);
         order.Press();
-        var queue = Assert.IsType<TablesPage>(game.Nation.Page()).Tables[2].Table;
+        var queue = Assert.IsType<TablesPage>(game.Nation.Page()).Tables[3].Table;
         Assert.Single(queue.Rows);
     }
 }

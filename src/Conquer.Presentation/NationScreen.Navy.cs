@@ -1,3 +1,4 @@
+using Conquer.Game.Economy;
 using Conquer.Game.Military;
 using Conquer.Game.Rules;
 using Conquer.Game.Simulation;
@@ -7,35 +8,85 @@ namespace Conquer.Presentation;
 /// <summary>The Marina tab of the nation screen: its fleets, its shipyards, the ships under construction and what it can order.</summary>
 public sealed partial class NationScreen
 {
-    private TablesPage Navy() => new([Fleets(), Slips(), ShipQueue(), ShipOrders()]);
+    private TablesPage Navy() => new([Fleets(), NavalCommand(), Slips(), ShipQueue(), ShipOrders()]);
 
-    /// <summary>Each fleet: where it is, its ships, crews and organisation, whether in port and what it does.</summary>
+    /// <summary>Each fleet: its size and where it is, its ships, crews and organisation, its Flota, mission and state, fuel included.</summary>
     private TablePage Fleets()
     {
-        Column[] columns = [new("Flota", 180), new("Ubicación", 170), new("Barcos", 300), new("Tripulación", 130), new("Organiz.", 100), new("Misión", 160), new("Estado", 200), new("", 60)];
+        Column[] columns = [new("Agrupación", 180), new("Ubicación", 160), new("Barcos", 280), new("Tripulación", 120), new("Organiz.", 90), new("Flota", 120),
+            new("Misión", 140), new("Estado", 200), new("", 60)];
         var rows = new List<IReadOnlyList<Cell>>();
-        foreach (var fleet in Session.Units.Where(u => u.OwnerId == Player.Id && u.IsFleet).OrderBy(u => u.Name))
+        foreach (var fleet in Session.Units.Where(u => u.OwnerId == Player.Id && u.IsFleet).OrderByDescending(u => u.Ships.Count).ThenBy(u => u.Name))
         {
             var p = Map.Provinces[fleet.ProvinceId];
             var ships = fleet.Ships.GroupBy(s => s.Info.Name).Select(g => g.Count() > 1 ? $"{g.Count()} × {g.Key}" : g.Key);
             int cargo = Session.CargoMen(fleet);
+            var flota = Session.FlotaOf(fleet);
+            bool fighting = Session.EnemyFleetsIn(p.Id, Player.Id).Any();
             rows.Add(
             [
                 new TextCell(fleet.Name, Bold: true),
                 new TextCell(Session.PlaceName(p), Tone.Dim),
                 new TextCell(string.Join(", ", ships), Tone.Normal, TextSize.Small, Top: 8, Tooltip: string.Join("\n", fleet.Ships.Select(s =>
-                    $"{s.Info.Name} ({s.Type.Line().Name.ToLowerInvariant()}): fuego {s.Info.Attack:0}, tripulación {s.Strength:0}/{s.Info.Men}"))),
+                    $"{s.Info.Name} ({s.Type.Line().Name.ToLowerInvariant()}): fuego {s.Info.Attack:0}, tripulación {s.Strength:0}/{s.Info.Men}" +
+                    (s.Info.Fuel is { } fuel ? $", {s.Info.FuelPerDay:0.#} de {fuel.Name().ToLowerInvariant()} al día en el mar" : "")))),
                 new TextCell($"{fleet.Citizens:N0}", fleet.StrengthShare < 0.5 ? Tone.Bad : Tone.Normal, Bar: new CellBar(fleet.StrengthShare, Tone.Strength, 26, 3, 20)),
                 new TextCell("", Bar: new CellBar(fleet.OrganisationShare, Tone.Organisation, 13, 8, 20)),
-                new TextCell(GameSession.MissionName(fleet.Mission), fleet.Mission == Conquer.Game.Rules.FleetMission.None ? Tone.Dim : Tone.Good, TextSize.Small, Top: 8,
+                new TextCell(flota?.Name ?? "-", flota == null ? Tone.Dim : Session.InFleetCommand(fleet) ? Tone.Good : Tone.Bad, TextSize.Small, Top: 8),
+                new TextCell(GameSession.MissionName(fleet.Mission), fleet.Mission == FleetMission.None ? Tone.Dim : Tone.Good, TextSize.Small, Top: 8,
                     Tooltip: GameSession.MissionDescription(fleet.Mission)),
-                new TextCell((Session.IsPort(p, Player.Id) ? "En puerto" : Session.EnemyFleetsIn(p.Id, Player.Id).Any() ? "Combatiendo" : "En el mar")
+                new TextCell((Session.IsPort(p, Player.Id) ? "En puerto" : fighting ? "Combatiendo" : "En el mar") + (fleet.OutOfFuel ? " · sin combustible" : "")
                              + (fleet.Capacity > 0 ? $" · lleva {cargo:N0}/{fleet.Capacity:N0}" : ""),
-                    Session.EnemyFleetsIn(p.Id, Player.Id).Any() ? Tone.Bad : Tone.Dim, TextSize.Small),
+                    fighting || fleet.OutOfFuel ? Tone.Bad : Tone.Dim, TextSize.Small),
                 new ButtonsCell([new Button("Ver", () => ViewUnit(fleet.Id), Tooltip: "Seleccionar en el mapa", Size: TextSize.Small)]),
             ]);
         }
-        return new TablePage(new Table(columns, rows, Empty: "No tienes flotas. Encarga barcos abajo cuando tengas un puerto."), "Flotas", Tone.Accent);
+        return new TablePage(new Table(columns, rows, Empty: "No tienes barcos. Encarga barcos abajo cuando tengas un puerto."),
+            "Agrupaciones · flotilla de hasta 3 buques, escuadra de 3 flotillas (9), fuerza de 3 escuadras (27)", Tone.Accent);
+    }
+
+    /// <summary>
+    /// The Armada and each Flota: port, admiral and fleets, with a button to disband each, and buttons to form a Flota or the
+    /// Armada in the nation's biggest port.
+    /// </summary>
+    private TablePage NavalCommand()
+    {
+        Column[] columns = [new("Cuartel general", 200), new("Puerto", 190), new("Almirante", 280), new("Manda", 300), new("", 110)];
+        var rows = new List<IReadOnlyList<Cell>>();
+        foreach (var hq in Session.NavalHeadquarters.Where(h => h.OwnerId == Player.Id).OrderByDescending(h => h.Level).ThenBy(h => h.Number))
+        {
+            string commands = hq.IsNavy
+                ? $"{Session.NavalHeadquarters.Count(h => h.OwnerId == Player.Id && !h.IsNavy)} flotas"
+                : $"{Session.FleetsOf(hq).Count()}/{MilitaryRules.MaxFleetsPerFlota} agrupaciones";
+            rows.Add(
+            [
+                new TextCell(hq.Name, hq.IsNavy ? Tone.Accent : Tone.Normal, Bold: true),
+                new TextCell(Session.PlaceName(Map.Provinces[hq.BaseProvinceId]), Tone.Dim),
+                new TextCell(hq.Officer?.Title ?? "Ninguno", hq.Officer == null ? Tone.Dim : Tone.Normal, TextSize.Small, Top: 8,
+                    Tooltip: hq.Officer is { } g ? $"{g.Summary}: suma su habilidad al fuego de los barcos de su flota." : null),
+                new TextCell(commands, Tone.Dim, TextSize.Small, Top: 8,
+                    Tooltip: hq.IsNavy
+                        ? $"Las flotas a menos de {MilitaryRules.NavyCommandRangeKm:N0} km dan +{MilitaryRules.HigherFleetCommandBonus:P0} más a sus barcos."
+                        : $"Manda las agrupaciones a menos de {MilitaryRules.FleetCommandRangeKm:N0} km de su puerto: +{MilitaryRules.FleetCommandBonus:P0} de fuego y la habilidad de su almirante."),
+                new ButtonsCell([new Button("Disolver", () => Show(Session.DisbandNavalHeadquarters(Player.Id, hq.Id)),
+                    Tooltip: "Sus agrupaciones quedan sin flota; su plana mayor vuelve a la reserva y su almirante a los oficiales sin destino.", Size: TextSize.Small)]),
+            ]);
+        }
+        var port = Player.Provinces.Select(id => Map.Provinces[id]).Where(p => Session.IsPort(p, Player.Id)).MaxBy(p => p.Population);
+        foreach (int level in new[] { 1, 2 })
+        {
+            var can = port == null ? CommandResult.Fail("Se forma en uno de tus puertos.") : Session.CanRaiseNavalHeadquarters(port, level);
+            rows.Add(
+            [
+                new TextCell(level == 2 ? "Armada" : "Flota", Tone.Dim),
+                new TextCell(port == null ? "-" : Session.PlaceName(port), Tone.Dim),
+                new TextCell($"Coste: {GameSession.NavalHeadquartersCost(level)}, {MilitaryRules.NavalHeadquartersStaff} hombres", Tone.Dim, TextSize.Small, Top: 8),
+                new TextCell(level == 2 ? "Una por nación: manda las flotas" : "Manda agrupaciones cercanas a su puerto", Tone.Dim, TextSize.Small, Top: 8),
+                new ButtonsCell([new Button("Formar", () => Show(Session.RaiseNavalHeadquarters(Player.Id, port!.Id, level)), can.Ok,
+                    Tooltip: can.Ok ? $"Se forma en {Session.PlaceName(port!)} con un almirante." : can.Message, Size: TextSize.Small)]),
+            ]);
+        }
+        return new TablePage(new Table(columns, rows), "Mando naval · asigna cada agrupación a su flota desde su panel", Tone.Accent);
     }
 
     /// <summary>Each port: its slips and what each is building.</summary>

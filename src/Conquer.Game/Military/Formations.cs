@@ -126,8 +126,6 @@ public static class Formations
         return level == 1 ? $"{Roman(number)} {names.Singular}" : $"{number}{Ordinal(number, names.Feminine)} {names.Singular}";
     }
 
-    /// <summary>A fleet: "2.ª Flota".</summary>
-    public static string FleetName(int number) => $"{number}.ª Flota";
 
     /// <summary>"1 barco", "3 barcos".</summary>
     public static string ShipCount(int n) => n == 1 ? "1 barco" : $"{n} barcos";

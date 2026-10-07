@@ -272,7 +272,7 @@ public class NavalTests(WorldFixture world)
     {
         Assert.Equal(["Barco de transporte", "Carraca", "Vapor de transporte", "Buque de transporte"], BattalionType.Transport.Models().Select(m => m.Name));
         Assert.Equal(["Trirreme", "Galeón", "Navío de línea", "Acorazado", "Acorazado moderno"], BattalionType.LineShip.Models().Select(m => m.Name));
-        Assert.Equal(["Liburna", "Carabela", "Fragata", "Crucero", "Destructor"], BattalionType.Escort.Models().Select(m => m.Name));
+        Assert.Equal(["Liburna", "Carabela", "Corbeta", "Fragata", "Crucero", "Destructor"], BattalionType.Escort.Models().Select(m => m.Name));
         Assert.Equal("Submarino", BattalionType.Submarine.First().Name);
         Assert.All(Battalions.All.Where(t => t.Line().Group == BattalionGroup.Navy).SelectMany(t => t.Models()), m => Assert.True(m.Naval && !m.NeedsEquipment));
         // Each line's transports carry more as the ages go by.

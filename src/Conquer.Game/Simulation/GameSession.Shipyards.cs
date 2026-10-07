@@ -155,7 +155,7 @@ public sealed partial class GameSession
             if (player.IsHuman) Notify(player.Id, $"{MilitaryRules.ConvoysPerOrder} convoyes nuevos en {PlaceName(port)}: tienes {player.Convoys:0}.");
             return;
         }
-        var fleet = AddUnit(player.Id, UnitType.Fleet, port.Id, 0, NextUnitNumber(player.Id, FleetNumbering));
+        var fleet = AddUnit(player.Id, UnitType.Fleet, port.Id, 0, NextUnitNumber(player.Id, FleetNumbering(NavalEchelon.Flotilla)));
         fleet.Ships.Add(new Battalion(order.Type, order.Model));
         if (player.IsHuman) Notify(player.Id, $"Nueva unidad en {PlaceName(port)}: {fleet.Name} ({info.Name.ToLowerInvariant()}).");
     }

@@ -47,7 +47,7 @@ public sealed partial class GameSession
             Officer: u.Officer is { } o ? ToSave(o) : null, CustomName: u.CustomName, AutoClaim: u.ScoutOrders == ScoutOrders.Claim,
             AutoExplore: u.ScoutOrders == ScoutOrders.Explore, Size: u.Size, Regiments: u.IsMilitary ? [.. u.Regiments.Select(ToSave)] : null,
             Brigades: u.Brigades.Count > 0 ? [.. u.Brigades.Select(b => new BrigadeSave(b.Number, b.CustomName, [.. b.Regiments.Select(ToSave)]))] : null,
-            SupplyPriority: u.SupplyPriority, AmmoSpent: u.AmmoSpent, Mission: u.Mission)).ToList(),
+            SupplyPriority: u.SupplyPriority, AmmoSpent: u.AmmoSpent, Mission: u.Mission, FleetCommanderId: u.FleetCommanderId, OutOfFuel: u.OutOfFuel)).ToList(),
         Shipments = _shipments.Select(s => new ShipmentSave(s.OwnerId, s.UnitId, s.Men, new(s.Pieces), s.Ammo, s.ArriveHours, [.. s.SeaRoute], s.Convoys)).ToList(),
         Migrations = Migrations.Select(m => new MigrationSave(m.Id, m.OwnerId, m.FromProvinceId, m.ToProvinceId, m.People,
             m.DepartHours, m.ArriveHours, m.Forced, m.Mood)).ToList(),
@@ -90,6 +90,10 @@ public sealed partial class GameSession
             h.Officer is { } o ? ToSave(o) : null)).ToList(),
         NextAirUnitId = _nextAirUnitId,
         NextAirHeadquartersId = _nextAirHeadquartersId,
+        NavalHeadquarters = _navalHeadquarters.Select(h => new NavalHeadquartersSave(h.Id, h.OwnerId, h.Level, h.Number, h.BaseProvinceId,
+            h.Officer is { } o ? ToSave(o) : null)).ToList(),
+        NextNavalHeadquartersId = _nextNavalHeadquartersId,
+        Corvettes = true,
     };
 
     /// <summary>
@@ -290,6 +294,8 @@ public sealed partial class GameSession
             unit.SupplyPriority = u.SupplyPriority;
             unit.AmmoSpent = u.AmmoSpent;
             unit.Mission = u.Mission;
+            unit.FleetCommanderId = u.FleetCommanderId;
+            unit.OutOfFuel = u.OutOfFuel;
             unit.CustomName = u.CustomName;
             unit.ScoutOrders = u.AutoClaim ? ScoutOrders.Claim : u.AutoExplore ? ScoutOrders.Explore : ScoutOrders.None;
             // Generals from before officers become officers of their HQ's rank, and HQs from before generals get one now.
@@ -304,6 +310,10 @@ public sealed partial class GameSession
         session._nextShipOrderId = save.NextShipOrderId;
         session._nextAirUnitId = save.NextAirUnitId;
         session._nextAirHeadquartersId = save.NextAirHeadquartersId;
+        session._nextNavalHeadquartersId = save.NextNavalHeadquartersId;
+        foreach (var h in save.NavalHeadquarters ?? [])
+            session._navalHeadquarters.Add(new NavalHeadquarters(h.Id, session.Players[h.OwnerId], h.Level, h.Number, h.BaseProvinceId)
+                { Officer = h.Officer is { } o ? FromSave(o) : null });
         foreach (var u in save.AirUnits ?? [])
             session._airUnits.Add(new AirUnit(u.Id, session.Players[u.OwnerId], u.Flights.Select(FromSave), u.Number)
                 { BaseProvinceId = u.BaseProvinceId, CarrierId = u.CarrierId, Mission = u.Mission, TargetProvinceId = u.TargetProvinceId, CommanderId = u.CommanderId });
@@ -383,6 +393,17 @@ public sealed partial class GameSession
         // Saves from before provinces were named on claiming: those with an owner get their name now.
         foreach (var p in map.Provinces.Where(p => p.IsOwned && p.Name.Length == 0)) session.NameProvince(p, p.OwnerId);
         session.TurnFlyingBattalionsIntoAirUnits();
+        // Saves from before the corbeta: the escorts from the fragata on move one place up their line.
+        if (!save.Corvettes)
+        {
+            foreach (var ship in session.Units.Where(u => u.IsFleet).SelectMany(u => u.Ships).Where(b => b.Type == BattalionType.Escort && b.Model >= 2))
+                ship.Modernise(ship.Model + 1);
+            foreach (var player in session.Players)
+                for (int i = 0; i < player.ShipOrders.Count; i++)
+                    if (player.ShipOrders[i] is { Type: BattalionType.Escort, Model: >= 2, Convoys: false } o)
+                        player.ShipOrders[i] = new ShipOrder { Id = o.Id, Type = o.Type, Model = o.Model + 1, PreferredPortId = o.PreferredPortId, PortId = o.PortId,
+                            DaysDone = o.DaysDone, WaitingForCrew = o.WaitingForCrew };
+        }
         // Saves from before convoys: nations with a port get some to carry what they send over the sea.
         foreach (var player in session.Players.Where(p => p.Convoys < 0))
             player.Convoys = session.Shipyards(player).Any() ? MilitaryRules.ConvoysInOldSaves : 0;

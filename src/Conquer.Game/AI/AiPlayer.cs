@@ -106,6 +106,7 @@ internal sealed partial class AiPlayer
             BuildArmy();
             BuildNavy();
             ConvoysAndMissions(atWar);
+            OrganiseNavy();
             BuildAirForce();
             AirMissions(atWar);
             OrganiseArmy();

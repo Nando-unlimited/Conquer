@@ -78,6 +78,9 @@ public sealed record BattalionInfo(
     public double RangeKm { get; init; }
     /// <summary>For aircraft: their fire against other aircraft; <see cref="Attack"/> is their fire on troops, ships and buildings.</summary>
     public double AirAttack { get; init; }
+    /// <summary>For ships: what they burn each day at sea (coal for steam, oil for the modern ones; nothing under sail) and how much.</summary>
+    public ResourceType? Fuel { get; init; }
+    public double FuelPerDay { get; init; }
     public bool NeedsEquipment => Pieces > 0;
 
     /// <summary>
@@ -279,44 +282,46 @@ public static class Battalions
 
         // Ships (lower-case symbols) sail at their speed times the sailing speed; their attack is their fire at sea. Each
         // line has a model per age, like the army's, and its ships are refitted to the newest in port.
+        // Crews as on the real ships; steam ships burn coal and the modern ones oil each day at sea (FuelPerDay).
         [BattalionType.Transport] = Fleet("Transportes",
         [
             new("transport", "Barco de transporte", "t", 50, Cost((W, 70), (G, 20)), 30, [Tech.Navigation], 1, 2, 20, 0.9, Naval: true, Capacity: 600),
             new("carrack", "Carraca", "k", 70, Cost((W, 110), (G, 40)), 40, [Tech.Cartography], 3, 5, 30, 1.1, Naval: true, Capacity: 900),
             new("steam-transport", "Vapor de transporte", "v", 80, Cost((W, 60), (G, 80), (Fe, 60), (C, 30)), 45, [Tech.SteamEngine], 2, 4, 30, 1.8,
-                Naval: true, Capacity: 1500),
+                Naval: true, Capacity: 1500) { Fuel = C, FuelPerDay = 2 },
             new("motor-transport", "Buque de transporte", "m", 90, Cost((G, 100), (Fe, 80), (Oil, 30)), 45, [Tech.Combustion], 3, 6, 35, 2.5,
-                Naval: true, Capacity: 2500),
+                Naval: true, Capacity: 2500) { Fuel = Oil, FuelPerDay = 2 },
         ]),
         // The heavy guns of the fleet: they decide the battles at sea.
         [BattalionType.LineShip] = Fleet("Buques de línea",
         [
-            new("trireme", "Trirreme", "r", 150, Cost((W, 90), (G, 30)), 40, [Tech.Navigation], 8, 6, 30, 1, Naval: true),
+            new("trireme", "Trirreme", "r", 200, Cost((W, 90), (G, 30)), 40, [Tech.Navigation], 8, 6, 30, 1, Naval: true),
             new("galleon", "Galeón", "g", 250, Cost((W, 160), (G, 80), (Fe, 20)), 60, [Tech.Cartography], 20, 15, 45, 1.2, Naval: true, Capacity: 200),
-            new("ship-of-the-line", "Navío de línea", "n", 400, Cost((W, 200), (G, 100), (Fe, 40)), 70, [Tech.Metallurgy], 35, 25, 50, 1.2, Naval: true),
-            new("ironclad", "Acorazado", "a", 400, Cost((G, 200), (Fe, 150), (C, 60)), 90, [Tech.Steel], 50, 40, 60, 2, Naval: true),
-            new("battleship", "Acorazado moderno", "b", 900, Cost((G, 400), (Fe, 300), (Oil, 100)), 150, [Tech.NavalEngineering], 100, 70, 70, 2.5,
-                Naval: true, Shipyard: BuildingType.DryDock),
+            new("ship-of-the-line", "Navío de línea", "n", 700, Cost((W, 200), (G, 100), (Fe, 40)), 70, [Tech.Metallurgy], 35, 25, 50, 1.2, Naval: true),
+            new("ironclad", "Acorazado", "a", 1000, Cost((G, 200), (Fe, 150), (C, 60)), 90, [Tech.Steel], 50, 40, 60, 2, Naval: true) { Fuel = C, FuelPerDay = 6 },
+            new("battleship", "Acorazado moderno", "b", 1500, Cost((G, 400), (Fe, 300), (Oil, 100)), 150, [Tech.NavalEngineering], 100, 70, 70, 2.5,
+                Naval: true, Shipyard: BuildingType.DryDock) { Fuel = Oil, FuelPerDay = 8 },
         ]),
         // Light and fast: they screen the fleet and, with the convoys, hunt submarines.
         [BattalionType.Escort] = Fleet("Escoltas",
         [
             new("liburna", "Liburna", "l", 80, Cost((W, 50), (G, 20)), 25, [Tech.Navigation], 5, 5, 30, 1.5, Naval: true),
-            new("caravel", "Carabela", "c", 60, Cost((W, 80), (G, 30)), 30, [Tech.Cartography], 9, 8, 35, 1.6, Naval: true),
-            new("frigate", "Fragata", "f", 200, Cost((W, 120), (G, 60), (Fe, 20)), 45, [Tech.Metallurgy], 22, 15, 45, 1.7, Naval: true),
-            new("cruiser", "Crucero", "u", 300, Cost((G, 180), (Fe, 100), (C, 40)), 60, [Tech.Steel], 40, 30, 55, 2.3, Naval: true),
+            new("caravel", "Carabela", "c", 25, Cost((W, 80), (G, 30)), 30, [Tech.Cartography], 9, 8, 35, 1.6, Naval: true),
+            new("corvette", "Corbeta", "o", 120, Cost((W, 100), (G, 45), (Fe, 10)), 40, [Tech.Cartography, Tech.Gunpowder], 15, 11, 40, 1.7, Naval: true),
+            new("frigate", "Fragata", "f", 250, Cost((W, 120), (G, 60), (Fe, 20)), 45, [Tech.Metallurgy], 22, 15, 45, 1.7, Naval: true),
+            new("cruiser", "Crucero", "u", 700, Cost((G, 180), (Fe, 100), (C, 40)), 60, [Tech.Steel], 40, 30, 55, 2.3, Naval: true) { Fuel = C, FuelPerDay = 4 },
             new("destroyer", "Destructor", "d", 300, Cost((G, 250), (Fe, 150), (Oil, 60)), 90, [Tech.NavalEngineering], 70, 45, 65, 3,
-                Naval: true, Shipyard: BuildingType.DryDock),
+                Naval: true, Shipyard: BuildingType.DryDock) { Fuel = Oil, FuelPerDay = 4 },
         ]),
         // They strike unseen and hunt merchant ships; weak if caught.
         [BattalionType.Submarine] = Fleet("Submarinos",
         [
-            new("submarine", "Submarino", "s", 60, Cost((G, 150), (Fe, 80), (Oil, 40)), 60, [Tech.Combustion], 45, 10, 50, 1.8, Naval: true),
+            new("submarine", "Submarino", "s", 60, Cost((G, 150), (Fe, 80), (Oil, 40)), 60, [Tech.Combustion], 45, 10, 50, 1.8, Naval: true) { Fuel = Oil, FuelPerDay = 1 },
         ]),
         [BattalionType.AircraftCarrier] = Fleet("Portaaviones",
         [
-            new("aircraft-carrier", "Portaaviones", "p", 800, Cost((G, 500), (Fe, 300), (Oil, 120), (Al, 80)), 150,
-                [Tech.NavalEngineering, Tech.Aviation], 120, 50, 70, 2.5, Naval: true, Shipyard: BuildingType.DryDock),
+            new("aircraft-carrier", "Portaaviones", "p", 2000, Cost((G, 500), (Fe, 300), (Oil, 120), (Al, 80)), 150,
+                [Tech.NavalEngineering, Tech.Aviation], 120, 50, 70, 2.5, Naval: true, Shipyard: BuildingType.DryDock) { Fuel = Oil, FuelPerDay = 10 },
         ]),
     };
 

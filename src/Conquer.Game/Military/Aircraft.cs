@@ -80,6 +80,8 @@ public sealed class AirUnit
     public int? TargetProvinceId { get; set; }
     /// <summary>The División aérea it reports to; null while unattached.</summary>
     public int? CommanderId { get; set; }
+    /// <summary>It had no oil for today's mission and stays on the ground until the next day.</summary>
+    public bool Grounded { get; set; }
 
     public AirUnit(int id, Player owner, IEnumerable<Battalion> flights, int number)
     {

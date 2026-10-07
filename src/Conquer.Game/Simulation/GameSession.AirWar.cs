@@ -70,7 +70,7 @@ public sealed partial class GameSession
 
     /// <summary>Whether the unit flies its mission: it has one in range and enough planes and organisation.</summary>
     public bool IsFlying(AirUnit unit) =>
-        unit.Mission is not (AirMission.None or AirMission.Paradrop) && unit.TargetProvinceId is int t && InRange(unit, Map.Provinces[t])
+        !unit.Grounded && unit.Mission is not (AirMission.None or AirMission.Paradrop) && unit.TargetProvinceId is int t && InRange(unit, Map.Provinces[t])
         && unit.OrganisationShare >= MilitaryRules.MinFlyingOrganisation && unit.PlaneCount >= 1;
 
     private long _flyingAt = -1;
@@ -154,6 +154,7 @@ public sealed partial class GameSession
     internal void DailyAir()
     {
         _airLosses.Clear();
+        FuelAircraft();
         var bombed = new HashSet<int>();
         var flying = _airUnits.Where(IsFlying).ToList();
 

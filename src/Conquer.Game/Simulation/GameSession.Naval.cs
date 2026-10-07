@@ -12,13 +12,13 @@ namespace Conquer.Game.Simulation;
 /// </summary>
 public sealed partial class GameSession
 {
-    /// <summary>The numbering key for fleets, apart from the levels of the chain of command.</summary>
-    private const int FleetNumbering = -2;
+
+
 
     /// <summary>Puts a new fleet of the given ships on the map, fully crewed (tests and training).</summary>
     internal Unit AddFleet(int ownerId, int provinceId, params BattalionType[] ships)
     {
-        var fleet = AddUnit(ownerId, UnitType.Fleet, provinceId, 0, NextUnitNumber(ownerId, FleetNumbering));
+        var fleet = AddUnit(ownerId, UnitType.Fleet, provinceId, 0, NextUnitNumber(ownerId, FleetNumbering(NavalEchelons.Of(ships.Length))));
         foreach (var type in ships) fleet.Ships.Add(NewBattalion(Players[ownerId], type));
         return fleet;
     }
@@ -128,7 +128,8 @@ public sealed partial class GameSession
     }
 
     /// <summary>A fleet's fire in an hour: its ships' guns, scaled by their crews and organisation, and a little luck.</summary>
-    private double NavalFire(Unit fleet) => ExpectedNavalFire(fleet) * (1 + (_random.NextDouble() * 2 - 1) * MilitaryRules.CombatRandomness);
+    private double NavalFire(Unit fleet) => ExpectedNavalFire(fleet) * (1 + (_random.NextDouble() * 2 - 1) * MilitaryRules.CombatRandomness)
+        * (1 + FleetCommandBonus(fleet)) * (fleet.OutOfFuel ? MilitaryRules.OutOfFuelEfficiency : 1);
 
     /// <summary>A fleet's fire in an hour before luck: its ships' guns, scaled by their crews and organisation, and by its officer's skill and traits.</summary>
     public static double ExpectedNavalFire(Unit fleet) =>

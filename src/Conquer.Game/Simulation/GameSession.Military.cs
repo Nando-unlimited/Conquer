@@ -154,7 +154,8 @@ public sealed partial class GameSession
     /// <summary>Hours a unit needs for one step: the way there at its speed, slowed on land by snow and mud.</summary>
     private double UnitStepHours(Unit unit, int from, int to) =>
         Pathfinder.StepHours(from, to) / unit.Speed * (unit.IsFleet ? 1 : SeasonSlowdown(Map.Provinces[to]))
-        * (!unit.IsFleet && EnemyRulesTheAir(unit.OwnerId, Map.Provinces[to]) ? MilitaryRules.UnderEnemyAirSlowdown : 1);
+        * (!unit.IsFleet && EnemyRulesTheAir(unit.OwnerId, Map.Provinces[to]) ? MilitaryRules.UnderEnemyAirSlowdown : 1)
+        * (unit.IsFleet && unit.OutOfFuel ? MilitaryRules.OutOfFuelSlowdown : 1);
 
     public CommandResult MoveUnit(int playerId, int unitId, int targetProvinceId)
     {
@@ -563,7 +564,7 @@ public sealed partial class GameSession
         if (!check.Ok) return check;
         if (unit.IsFleet)
             return unit.Ships.Count + other.Ships.Count > MilitaryRules.MaxShipsPerFleet
-                ? CommandResult.Fail($"Como mucho {Formations.ShipCount(MilitaryRules.MaxShipsPerFleet)} por flota.") : CommandResult.Success();
+                ? CommandResult.Fail($"Una fuerza tiene como mucho {Formations.ShipCount(MilitaryRules.MaxShipsPerFleet)}.") : CommandResult.Success();
         if (unit.Size != Echelon.Regiment || other.Size != Echelon.Regiment)
             return CommandResult.Fail("Solo se juntan los batallones de dos regimientos: una brigada o una división se incorpora entera.");
         if (unit.Battalions.Count + other.Battalions.Count > MilitaryRules.MaxBattalionsPerRegiment)
@@ -579,9 +580,13 @@ public sealed partial class GameSession
         if (!check.Ok) return check;
         if (unit.IsFleet)
         {
+            var before = NavalEchelons.Of(unit.Ships.Count);
             unit.Ships.AddRange(other.Ships);
             other.Ships.Clear();
             foreach (var cargo in CargoOf(other).ToList()) cargo.CarrierId = unit.Id;
+            foreach (var air in _airUnits.Where(a => a.CarrierId == other.Id)) air.CarrierId = unit.Id;
+            unit.FleetCommanderId ??= other.FleetCommanderId;
+            RenumberFleet(unit, before);
         }
         else
         {
@@ -777,9 +782,11 @@ public sealed partial class GameSession
         Unit split;
         if (unit.IsFleet)
         {
+            var before = NavalEchelons.Of(unit.Ships.Count);
             foreach (var ship in leaving) unit.Ships.Remove(ship);
-            split = AddUnit(playerId, UnitType.Fleet, unit.ProvinceId, 0, NextUnitNumber(playerId, FleetNumbering));
+            split = AddUnit(playerId, UnitType.Fleet, unit.ProvinceId, 0, NextUnitNumber(playerId, FleetNumbering(NavalEchelons.Of(leaving.Count))));
             split.Ships.AddRange(leaving);
+            RenumberFleet(unit, before);
         }
         else
         {
@@ -1020,6 +1027,7 @@ public sealed partial class GameSession
         ModerniseInPlace(player);
         DailyShipments(player);
         RefitFleets(player);
+        DailyFleets(player);
         var capital = CapitalProvince(player);
 
         foreach (var unit in Units.Where(u => u.OwnerId == player.Id && (u.IsMilitary || u.IsFleet)).ToList())
