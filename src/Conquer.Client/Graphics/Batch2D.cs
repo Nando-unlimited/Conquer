@@ -145,6 +145,23 @@ public sealed unsafe class Batch2D : IDisposable
         _vertices[_count++] = new Vertex { Position = new(p0.X, p1.Y), Uv = new(uv0.X, uv1.Y), Color = c };
     }
 
+    /// <summary>
+    /// A textured quad with any four corners, top-left, top-right, bottom-right and bottom-left of the picture in that
+    /// order, so it can be turned (letters written upwards).
+    /// </summary>
+    public void Quad(Texture texture, Vector2 topLeft, Vector2 topRight, Vector2 bottomRight, Vector2 bottomLeft, Vector2 uv0, Vector2 uv1, Rgba color)
+    {
+        if (_texture != texture || _count + 6 > _vertices.Length) Flush();
+        _texture = texture;
+        uint c = color.Packed;
+        _vertices[_count++] = new Vertex { Position = topLeft, Uv = uv0, Color = c };
+        _vertices[_count++] = new Vertex { Position = topRight, Uv = new(uv1.X, uv0.Y), Color = c };
+        _vertices[_count++] = new Vertex { Position = bottomRight, Uv = uv1, Color = c };
+        _vertices[_count++] = new Vertex { Position = topLeft, Uv = uv0, Color = c };
+        _vertices[_count++] = new Vertex { Position = bottomRight, Uv = uv1, Color = c };
+        _vertices[_count++] = new Vertex { Position = bottomLeft, Uv = new(uv0.X, uv1.Y), Color = c };
+    }
+
     public void Rect(float x, float y, float w, float h, Rgba color) =>
         Quad(WhiteTexture, new(x, y), new(x + w, y + h), Vector2.Zero, Vector2.One, color);
 
