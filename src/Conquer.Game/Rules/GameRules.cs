@@ -79,6 +79,9 @@ public static class GameRules
     /// <summary>A river's floodplain grows this many times the food, and feeds this many times the people.</summary>
     public const double RiverFertility = 1.25;
 
+    /// <summary>A province holds at most this many deposits; when it would have more, the rarest stay (maps since 1.119.0).</summary>
+    public const int MaxDepositsPerProvince = 4;
+
     /// <summary>Land above this height (in metres) is peaks: one province per range, crossable but never claimed (maps since 1.33.0).</summary>
     public const short PeakElevation = 5000;
     /// <summary>Patches of peaks smaller than this many pixels keep the biome they would have had.</summary>

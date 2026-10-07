@@ -10,6 +10,10 @@ namespace Conquer.Presentation;
 public sealed partial class NationScreen
 {
     private int _selectedTemplateId = -1;
+    private int _renamingTemplateId = -1;
+
+    /// <summary>The new name of the template being renamed, which the client edits; null when it is not being renamed.</summary>
+    public string? TemplateNameDraft { get; set; }
 
     // ------------------------------------------------------------------ army
 
@@ -157,8 +161,26 @@ public sealed partial class NationScreen
         details.Add(new Paragraph("Se entrena entero en la pestaña Ejército de tus ciudades; sus batallones se instruyen a la vez.", Tone.Dim));
         if (template.AnyMounted(known)) details.Add(new Paragraph("Los montados atacan a la mitad en bosques, pantanos y montañas.", Tone.Dim));
 
+        int id = template.Id;
+        // Renaming: the name becomes a field (TemplateNameDraft) with buttons to accept or cancel; another template drops it.
+        if (_renamingTemplateId != id) TemplateNameDraft = null;
+        var rename = new Button("Cambiar nombre", () =>
+        {
+            _renamingTemplateId = id;
+            TemplateNameDraft = template.Name;
+        }, TemplateNameDraft == null, Tooltip: "Escribe un nombre para la plantilla; vacío, vuelve a su número.", Size: TextSize.Small);
+        Button[]? renaming = TemplateNameDraft == null ? null :
+        [
+            new("Aceptar", () =>
+            {
+                var result = Session.RenameTemplate(Player.Id, id, TemplateNameDraft ?? "");
+                Show(result);
+                if (result.Ok) TemplateNameDraft = null;
+            }, Size: TextSize.Small),
+            new("Cancelar", () => TemplateNameDraft = null, Size: TextSize.Small),
+        ];
         return new TemplatesPage(list, actions, template.Name,
-            $"{Formations.CombatName(Echelon.Regiment)} de {Formations.BattalionCount(template.Battalions.Count)}", slots, add, details);
+            $"{Formations.CombatName(Echelon.Regiment)} de {Formations.BattalionCount(template.Battalions.Count)}", slots, add, details, rename, renaming);
     }
 
     // ------------------------------------------------------------------ diplomacy

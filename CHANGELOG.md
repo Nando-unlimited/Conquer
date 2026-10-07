@@ -2,6 +2,20 @@
 
 Todos los cambios del juego, del más reciente al más antiguo. Cada versión es un commit cuyo título es su número.
 
+## [1.119.0] - 2026-10-07
+
+Un mapa más limpio, letras más finas y plantillas con nombre.
+
+### Cambiado
+- **Ciudades y pueblos como puntos** del color de su nación, más grandes cuanto más gente tienen (de un pueblo a una gran ciudad); la capital lleva un aro dorado. Los nombres llevan un contorno oscuro para leerse sobre cualquier terreno.
+- **Etiquetas por defecto**: el mapa muestra las fichas OTAN y los iconos de los edificios; las maquetas siguen en Opciones («Figuras 3D»). Si ya habías elegido las maquetas, se mantienen.
+- **Letras mucho más finas**: la interfaz usa Lato Light (y Lato Regular para la negrita) en lugar de Lilita One, y los títulos, Cinzel normal en lugar de negrita.
+- **Como mucho 4 yacimientos por provincia** en los mapas nuevos: si le tocan más, se queda con los más raros en su terreno. Las partidas guardadas conservan su mapa.
+
+### Añadido
+- **Nombres de las provincias** al acercarse al mapa.
+- **Cambiar el nombre de las plantillas**: «Cambiar nombre», junto al nombre de la plantilla en la pestaña Plantillas (Intro acepta, Esc cancela; vacío, vuelve a su número). Se guarda con la partida.
+
 ## [1.118.0] - 2026-10-07
 
 La marina, como se acordó: su jerarquía, la corbeta, las tripulaciones y el combustible.

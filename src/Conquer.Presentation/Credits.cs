@@ -24,7 +24,7 @@ public static class Credits
         "- Unidades, barcos y aviones: modelados para este juego al estilo de los kits de Kenney.",
         "## Tipografías",
         "- Cinzel: The Cinzel Project Authors (Natanael Gama), SIL Open Font License 1.1.",
-        "- Lilita One: Juan Montoreano, SIL Open Font License 1.1.",
+        "- Lato: Lukasz Dziedzic, SIL Open Font License 1.1.",
         "## Mapa de la Tierra",
         "- Relieve y batimetría: NASA Visible Earth, GEBCO, dominio público.",
         "- Costas, lagos y glaciares: Natural Earth, dominio público.",

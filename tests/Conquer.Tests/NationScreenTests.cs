@@ -69,6 +69,30 @@ public class NationScreenTests(WorldFixture world)
     }
 
     [Fact]
+    public void ATemplateIsRenamedFromTheDesigner()
+    {
+        var game = Game(NationTab.Templates);
+        var page = Assert.IsType<TemplatesPage>(game.Nation.Page());
+        Assert.Null(page.Renaming);
+        page.Rename!.Press();
+        page = (TemplatesPage)game.Nation.Page();
+        Assert.Equal(game.Human.Templates[0].Name, game.Nation.TemplateNameDraft);
+        Assert.False(page.Rename!.Enabled);
+
+        game.Nation.TemplateNameDraft = "  Guardia  ";
+        page.Renaming!.First(b => b.Text == "Aceptar").Press();
+        Assert.Equal("Guardia", game.Human.Templates[0].Name);
+        Assert.Null(game.Nation.TemplateNameDraft);
+        Assert.Equal("Guardia", ((TemplatesPage)game.Nation.Page()).Name);
+
+        // A name already taken is refused and the field stays; an empty one gives the number back.
+        Assert.True(game.Session.CreateTemplate(game.Human.Id).Ok);
+        Assert.False(game.Session.RenameTemplate(game.Human.Id, game.Human.Templates[^1].Id, "guardia").Ok);
+        Assert.True(game.Session.RenameTemplate(game.Human.Id, game.Human.Templates[0].Id, "").Ok);
+        Assert.Equal("Plantilla I", game.Human.Templates[0].Name);
+    }
+
+    [Fact]
     public void DeclaringWarFromDiplomacyTurnsTheButtonIntoPeace()
     {
         var game = Game(NationTab.Diplomacy, players: 2);

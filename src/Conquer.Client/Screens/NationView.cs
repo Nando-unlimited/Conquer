@@ -44,7 +44,7 @@ public sealed class NationView(NationScreen screen)
             case TablePage table: TablePage(ui, content, table); break;
             case TablesPage tables: TablesPage(ui, content, tables); break;
             case SciencePage science: Science(ui, content, science, Scroll); break;
-            case TemplatesPage templates: Templates(ui, content, templates, Scroll); break;
+            case TemplatesPage templates: Templates(ui, content, templates, Scroll, screen); break;
             case StatisticsPage statistics: Statistics(ui, content, statistics); break;
         }
     }
@@ -375,7 +375,7 @@ public sealed class NationView(NationScreen screen)
     // ------------------------------------------------------------------ templates
 
     /// <summary>The templates on the left with their actions; the chosen one's slots and the battalions to add in the middle; its figures on the right.</summary>
-    private static void Templates(Ui ui, Rect r, TemplatesPage page, ScrollState scroll)
+    private static void Templates(Ui ui, Rect r, TemplatesPage page, ScrollState scroll, NationScreen screen)
     {
         const float ListW = 240;
         float y = r.Y;
@@ -396,8 +396,28 @@ public sealed class NationView(NationScreen screen)
 
         float x = r.X + ListW + 30, w = r.Right - x;
         y = r.Y;
-        ui.Text(x, y, page.Name, Theme.Accent, FontSize.Large, bold: true);
-        ui.Text(x + ui.Font.Measure(page.Name, FontSize.Large, true) + 16, y + 8, page.Kind, Theme.TextDim, FontSize.Small);
+        if (page.Renaming is { } renaming && screen.TemplateNameDraft is { } draft)
+        {
+            // The name becomes a text field with its buttons beside it; Enter accepts and Escape cancels.
+            screen.TemplateNameDraft = ui.TextField(new Rect(x, y, 300, 32), draft, Conquer.Game.Rules.MilitaryRules.MaxUnitNameLength);
+            float bx = x + 310;
+            foreach (var button in renaming)
+            {
+                DocumentView.Press(ui, button, new Rect(bx, y + 2, 90, 28));
+                bx += 96;
+            }
+            var keys = ui.Input.KeysPressed;
+            if (keys.Contains(Silk.NET.Input.Key.Enter) || keys.Contains(Silk.NET.Input.Key.KeypadEnter)) renaming[0].OnClick?.Invoke();
+            else if (keys.Contains(Silk.NET.Input.Key.Escape)) renaming[^1].OnClick?.Invoke();
+        }
+        else
+        {
+            ui.Text(x, y, page.Name, Theme.Accent, FontSize.Large, bold: true);
+            float kx = x + ui.Font.Measure(page.Name, FontSize.Large, true) + 16;
+            ui.Text(kx, y + 8, page.Kind, Theme.TextDim, FontSize.Small);
+            if (page.Rename is { } rename)
+                DocumentView.Press(ui, rename, new Rect(kx + ui.Font.Measure(page.Kind, FontSize.Small) + 16, y + 4, 130, 26));
+        }
         y += 40;
         foreach (var slot in page.Slots)
         {

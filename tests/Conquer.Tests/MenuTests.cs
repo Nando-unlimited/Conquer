@@ -43,6 +43,9 @@ public class MenuTests(WorldFixture world)
     }
 
     [Fact]
+    public void TheMapShowsLabelsUnlessModelsAreChosen() => Assert.False(new DisplaySettings().UnitModels);
+
+    [Fact]
     public void TheOptionsChangeTheVolumesAndTheMap()
     {
         var settings = new SettingsMenu();

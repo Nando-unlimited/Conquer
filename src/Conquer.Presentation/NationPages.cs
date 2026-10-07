@@ -62,8 +62,12 @@ public sealed record SciencePage(string Points, Ink PointsInk, string PointsTool
 /// <summary>A place in a template: a battalion with its figures and the button to remove it, or an empty slot.</summary>
 public sealed record TemplateSlot(BattalionType? Battalion, string Name, string Stats, Button? Remove);
 
+/// <summary>
+/// The template designer. While its name is being changed, <see cref="Renaming"/> holds the buttons to accept and cancel, and
+/// the client edits <see cref="NationScreen.TemplateNameDraft"/> in place of the name.
+/// </summary>
 public sealed record TemplatesPage(IReadOnlyList<Button> Templates, IReadOnlyList<Button> Actions, string Name, string Kind,
-    IReadOnlyList<TemplateSlot> Slots, IReadOnlyList<Button> Add, Document Details) : NationPage;
+    IReadOnlyList<TemplateSlot> Slots, IReadOnlyList<Button> Add, Document Details, Button? Rename = null, IReadOnlyList<Button>? Renaming = null) : NationPage;
 
 /// <summary>One nation's line on a graph: its points from 0 to 1 on both axes, its latest figure, and whether it is the player's.</summary>
 public sealed record ChartSeries(string Name, uint Color, IReadOnlyList<(float X, float Y)> Points, string Last, bool Player);

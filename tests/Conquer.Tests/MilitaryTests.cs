@@ -703,6 +703,18 @@ public class MilitaryTests(WorldFixture world)
     }
 
     [Fact]
+    public void ATemplateKeepsItsNameThroughASave()
+    {
+        var (s, _, _) = TwoNations();
+        var template = s.Human.Templates[0];
+        Assert.False(s.RenameTemplate(0, template.Id, new string('x', MilitaryRules.MaxUnitNameLength + 1)).Ok);
+        Assert.True(s.RenameTemplate(0, template.Id, "Guardia real").Ok);
+        var loaded = GameSession.Load(_map, s.ToSave("test"));
+        Assert.Equal("Guardia real", loaded.Human.Templates[0].Name);
+        Assert.Equal(template.Number, loaded.Human.Templates[0].Number);
+    }
+
+    [Fact]
     public void ATemplateTrainsAWholeRegimentAtOnce()
     {
         var (s, a, _) = TwoNations();

@@ -57,8 +57,11 @@ public static class WorldGenerator
     public const int Width = EarthData.Width;
     public const int Height = EarthData.Height;
 
-    /// <summary>The generator new games use. 2 (1.33.0): land above <see cref="GameRules.PeakElevation"/> becomes peaks, one province per range.</summary>
-    public const int LatestGenerator = 2;
+    /// <summary>
+    /// The generator new games use. 2 (1.33.0): land above <see cref="GameRules.PeakElevation"/> becomes peaks, one province per range.
+    /// 3 (1.119.0): a province holds at most <see cref="GameRules.MaxDepositsPerProvince"/> deposits.
+    /// </summary>
+    public const int LatestGenerator = 3;
 
     /// <param name="progress">Receives a short description of each stage as it starts.</param>
     public static WorldMap Generate(WorldSettings settings, Action<string>? progress = null)
@@ -75,7 +78,7 @@ public static class WorldGenerator
         var (ids, provinces) = ProvinceGenerator.Generate(terrain.Elevation, biomes, Width, Height, settings.Seed, settings.ProvinceCount);
 
         progress?.Invoke("Repartiendo recursos...");
-        ResourceGenerator.Place(provinces, settings.Seed, settings.Difficulty.Info());
+        ResourceGenerator.Place(provinces, settings.Seed, settings.Difficulty.Info(), settings.Generator >= 3 ? GameRules.MaxDepositsPerProvince : int.MaxValue);
 
         progress?.Invoke("Trazando ríos...");
         var (rivers, flowSegments) = RiverGenerator.Trace(terrain.Elevation, biomes, Width, Height, settings.Seed);

@@ -17,6 +17,7 @@ public sealed partial class GameScreen
     {
         Motion.Time = (float)(_game.Now % 3600);
         var markers = _game.Markers();
+        foreach (var province in markers.Provinces) DrawProvinceName(province);
         foreach (var city in markers.Cities) DrawCity(city);
         foreach (var deposit in markers.Deposits) DrawDeposits(deposit);
         foreach (var label in markers.Nations) DrawNationName(label);
@@ -24,6 +25,22 @@ public sealed partial class GameScreen
         foreach (var counter in markers.Units) DrawCounter(counter);
         _battleHitBoxes.Clear();
         foreach (var battle in markers.Battles) DrawBattleMark(battle);
+    }
+
+    /// <summary>A province's name in small letters, light over a dark shadow so it reads over any ground.</summary>
+    private void DrawProvinceName(ProvinceLabel label)
+    {
+        float w = Ui.Font.Measure(label.Name, FontSize.Small);
+        var at = label.Screen - new Vector2(w / 2, 8);
+        OutlinedText(at.X, at.Y, label.Name, new Rgba(0xFFF0E8D8), label.Alpha);
+    }
+
+    /// <summary>Small text on the map with a dark outline all round, so the thin letters read over light ground too.</summary>
+    private void OutlinedText(float x, float y, string text, Rgba color, float alpha, bool bold = false)
+    {
+        var shadow = Rgba.Black.WithAlpha(0.75f * alpha);
+        foreach (var (dx, dy) in new[] { (-1, 0), (1, 0), (0, -1), (0, 1), (1, 1) }) Ui.Text(x + dx, y + dy, text, shadow, FontSize.Small, bold);
+        Ui.Text(x, y, text, color.WithAlpha(alpha), FontSize.Small, bold);
     }
 
     /// <summary>A province's deposits: their icons side by side on a dark strip, so they read over any ground.</summary>
@@ -37,49 +54,26 @@ public sealed partial class GameScreen
     }
 
     /// <summary>
-    /// The city and its name under it: a little castle or village standing on a patch of its owner's colour, with the
-    /// models of its buildings in a row under the name when close in; or, with counters, houses.
+    /// The city as a dot of its owner's colour, bigger the more people it has (<see cref="CityDotRadius"/>), ringed in gold
+    /// for the capital, with its name under it and, close in, its buildings in a row under the name.
     /// </summary>
     private void DrawCity(CityMarker city)
     {
         var s = city.Screen;
-        float sc = city.Scale, below;
-        string model = Models.City(city.Capital);
-        bool models = DisplaySettings.Current.UnitModels && _sprites.Has(model);
-        if (BuildingIcons.Has(city.Icon))
-        {
-            // Its icon standing on a disc of its nation's colour, ringed in gold for the capital.
-            float size = 44 * sc;
-            var foot = s + new Vector2(0, 10 * sc);
-            Batch.Ellipse(foot + new Vector2(0, 2), 21 * sc, 8 * sc, Rgba.Black.WithAlpha(0.35f));
-            if (city.Capital) Batch.Ellipse(foot, 22 * sc, 9 * sc, new Rgba(0xFFE0B656));
-            Batch.Ellipse(foot, 20 * sc, 7.5f * sc, new Rgba(city.Color).WithAlpha(0.9f));
-            BuildingIcons.Draw(Batch, city.Icon, s.X - size / 2, foot.Y - size + 6 * sc, size);
-            if (Motion.Enabled && (city.Industry || city.Population >= 2000))
-                Smoke(foot + new Vector2(10 * sc, -size + 8 * sc), city.Id, sc, city.Industry);
-            below = 12 * sc;
-        }
-        else if (models)
-        {
-            var foot = s + new Vector2(0, 8 * sc);
-            Batch.Ellipse(foot + new Vector2(0, 2), 21 * sc, 8 * sc, Rgba.Black.WithAlpha(0.35f));
-            Batch.Ellipse(foot, 20 * sc, 7.5f * sc, new Rgba(city.Color).WithAlpha(0.9f));
-            var size = _sprites.Draw(Batch, model, foot + new Vector2(0, 5 * sc), new Vector2(42, 42) * sc, new Rgba(city.Color));
-            if (Motion.Enabled && (city.Industry || city.Population >= 2000))
-                Smoke(foot + new Vector2(8 * sc, -size.Y + 4 * sc), city.Id, sc, city.Industry);
-            below = 10 * sc;
-        }
-        else
-        {
-            if (Motion.Enabled && (city.Industry || city.Population >= 2000)) Smoke(s + new Vector2(6 * sc, -10 * sc), city.Id, sc, city.Industry);
-            below = MapIcons.City(Batch, s + new Vector2(0, 5 * sc), new Rgba(city.Color), MapIcons.Houses(city.Population), city.Capital, sc);
-        }
-        float ty = s.Y + 5 * sc + below;
+        float sc = city.Scale;
+        bool models = DisplaySettings.Current.UnitModels;
+        float r = CityDotRadius(city.Population) * sc;
+        Batch.Circle(s + new Vector2(1, 1.5f), r + 1.5f * sc, Rgba.Black.WithAlpha(0.45f));
+        if (city.Capital) Batch.Circle(s, r + 2.5f * sc, new Rgba(0xFFE0B656));
+        Batch.Circle(s, r + 1 * sc, Rgba.Black.WithAlpha(0.85f));
+        Batch.Circle(s, r, Batch2D.Mix(new Rgba(city.Color), Rgba.White, 0.15f));
+        if (Motion.Enabled && (city.Industry || city.Population >= 2000)) Smoke(s + new Vector2(r * 0.5f, -r), city.Id, sc, city.Industry);
+        float below = r + (city.Capital ? 2.5f : 1) * sc;
+        float ty = s.Y + 2 * sc + below;
         if (city.Name != null)
         {
             float w = Ui.Font.Measure(city.Name, FontSize.Small, true);
-            Ui.Text(s.X - w / 2 + 1, ty + 1, city.Name, Rgba.Black, FontSize.Small, bold: true);
-            Ui.Text(s.X - w / 2, ty, city.Name, Rgba.White, FontSize.Small, bold: true);
+            OutlinedText(s.X - w / 2, ty, city.Name, Rgba.White, 1, bold: true);
             ty += 20;
         }
         if (city.Buildings is not { Count: > 0 } all) return;
@@ -98,6 +92,12 @@ public sealed partial class GameScreen
             x += each;
         }
     }
+
+    /// <summary>
+    /// A city's dot radius, before the map's scale: 4 for a village, growing with the square root of its people up to
+    /// 14 (about 6 for a town of 3.000, 10 for a city of 20.000).
+    /// </summary>
+    public static float CityDotRadius(int population) => Math.Clamp(4 + MathF.Sqrt(Math.Max(0, population)) / 24, 4, 14);
 
     private void DrawNationName(NationLabel label)
     {

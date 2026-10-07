@@ -25,9 +25,9 @@ public sealed class SettingsMenu
         new("Mapa", true,
         [
             new Button("Figuras 3D", () => Display.SetUnitModels(true), Active: Display.UnitModels,
-                Tooltip: "Unidades, barcos, ciudades y edificios como maquetas."),
-            new Button("Fichas", () => Display.SetUnitModels(false), Active: !Display.UnitModels,
-                Tooltip: "Las fichas OTAN en relieve y las casitas de las ciudades."),
+                Tooltip: "Unidades, barcos y edificios como maquetas."),
+            new Button("Etiquetas", () => Display.SetUnitModels(false), Active: !Display.UnitModels,
+                Tooltip: "Las fichas OTAN de las unidades y los iconos de los edificios (lo normal)."),
         ]),
     ];
 

@@ -459,6 +459,19 @@ public sealed partial class GameSession
         return CommandResult.Success($"{copy.Name} copiada de {source.Name}.");
     }
 
+    /// <summary>Gives a template a name of the player's choosing, not shared with another of theirs; an empty one brings back "Plantilla II".</summary>
+    public CommandResult RenameTemplate(int playerId, int templateId, string name)
+    {
+        var player = Players[playerId];
+        if (TemplateById(player, templateId) is not { } template) return CommandResult.Fail("Plantilla no válida.");
+        name = name.Trim();
+        if (name.Length > MilitaryRules.MaxUnitNameLength) return CommandResult.Fail($"El nombre es demasiado largo (máximo {MilitaryRules.MaxUnitNameLength} letras).");
+        if (name.Length > 0 && player.Templates.Any(t => t != template && t.Name.Equals(name, StringComparison.OrdinalIgnoreCase)))
+            return CommandResult.Fail($"Ya tienes una plantilla llamada {name}.");
+        template.CustomName = name.Length == 0 ? null : name;
+        return CommandResult.Success($"La plantilla se llama ahora {template.Name}.");
+    }
+
     public CommandResult DeleteTemplate(int playerId, int templateId)
     {
         var player = Players[playerId];

@@ -7,13 +7,13 @@ namespace Conquer.Game.World.Generation;
 /// Scatters deposits over habitable provinces. Each resource favours certain terrain and is
 /// clustered by regional noise, so some regions are rich in it and others lack it entirely.
 /// Every deposit is a finite pocket: it has a daily output and a total size. A province can hold several.
-/// The difficulty sets how many deposits get a second roll and how big the pockets are.
+/// The difficulty sets how many deposits get a second roll and how big the pockets are; newer maps cap a province at a few.
 /// </summary>
 internal static class ResourceGenerator
 {
     private const double MinDepositYears = 10, MaxDepositYears = 50;
 
-    public static void Place(IReadOnlyList<Province> provinces, int seed, DifficultyInfo difficulty)
+    public static void Place(IReadOnlyList<Province> provinces, int seed, DifficultyInfo difficulty, int maxDeposits)
     {
         var random = new Random(seed + 30);
         // Pocket sizes draw from their own generator so a seed places the same deposits as before they had a size.
@@ -48,6 +48,21 @@ internal static class ResourceGenerator
                 // A resource that misses its first roll may get a second one, as likely as the difficulty says.
                 else if (second.NextDouble() < chance * cluster * difficulty.ExtraDepositChance) AddDeposit(p, resource, second, secondSizes, difficulty.DepositSize);
             }
+            // Every roll is still made, so capping one province leaves the others' deposits where they were.
+            Cap(p, maxDeposits);
+        }
+    }
+
+    /// <summary>Keeps at most <paramref name="max"/> deposits in a province: the rarest ones on its terrain, the commonest go.</summary>
+    private static void Cap(Province p, int max)
+    {
+        var held = Resources.Deposits.Where(r => p.Deposits[(int)r] > 0).ToList();
+        if (held.Count <= max) return;
+        double absLat = Math.Abs(p.Latitude);
+        foreach (var resource in held.OrderBy(r => Chance(r, p.Biome, absLat)).ThenBy(r => (int)r).Skip(max))
+        {
+            p.Deposits[(int)resource] = 0;
+            p.DepositSizes[(int)resource] = 0;
         }
     }
 

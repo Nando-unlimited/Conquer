@@ -23,7 +23,10 @@ public sealed class RegimentTemplate
         Battalions.AddRange(battalions);
     }
 
-    public string Name => $"Plantilla {Formations.Roman(Number)}";
+    /// <summary>A name the player gave it; null keeps "Plantilla II".</summary>
+    public string? CustomName { get; set; }
+
+    public string Name => CustomName ?? $"Plantilla {Formations.Roman(Number)}";
 
     /// <summary>The model of each of its battalions for a nation knowing these advances.</summary>
     public IEnumerable<BattalionInfo> Models(IReadOnlySet<Tech> known) => Battalions.Select(b => b.ModelFor(known));

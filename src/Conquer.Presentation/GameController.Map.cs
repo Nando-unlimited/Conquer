@@ -18,6 +18,9 @@ public sealed record CityMarker(Vector2 Screen, float Scale, uint Color, int Pop
 /// <summary>A nation's name over the middle of its land, as large as the land looks and fading when zoomed in close.</summary>
 public sealed record NationLabel(Vector2 Screen, string Name, TextSize Size, float Alpha, uint Color);
 
+/// <summary>A province's name over its middle (above its city, if it has one), shown close in and fading in as the map zooms.</summary>
+public sealed record ProvinceLabel(Vector2 Screen, string Name, float Alpha);
+
 public enum CounterKind
 {
     Military,
@@ -40,7 +43,7 @@ public sealed record BattleMarker(int ProvinceId, Battle? Battle, Vector2 Screen
 
 /// <summary>Everything drawn on the map over the provinces, in screen positions, already left out when off screen.</summary>
 public sealed record MapMarkers(IReadOnlyList<CityMarker> Cities, IReadOnlyList<NationLabel> Nations, IReadOnlyList<UnitCounter> Units, IReadOnlyList<BattleMarker> Battles,
-    IReadOnlyList<DepositMarker> Deposits);
+    IReadOnlyList<DepositMarker> Deposits, IReadOnlyList<ProvinceLabel> Provinces);
 
 /// <summary>
 /// In the resources mode, close enough in: the icons of a province's deposits in a row, <see cref="Size"/> pixels each,
@@ -63,7 +66,7 @@ public sealed partial class GameController
     public MapMarkers Markers()
     {
         _ = ExploredProvinces; // brings what the player has explored up to date before hiding the rest
-        return new(Cities(), NationLabels(), Counters(), Battles(), Deposits());
+        return new(Cities(), NationLabels(), Counters(), Battles(), Deposits(), ProvinceLabels());
     }
 
     /// <summary>
@@ -88,6 +91,26 @@ public sealed partial class GameController
             marks.Add(new DepositMarker(p.Id, s, size, found));
         }
         return marks;
+    }
+
+    /// <summary>From this zoom on, the provinces show their names, fading in until <see cref="ProvinceNamesFullZoom"/>.</summary>
+    public const float ProvinceNamesZoom = 3.5f, ProvinceNamesFullZoom = 4.5f;
+
+    /// <summary>The names of the named provinces the player has explored on screen, close in; above the city where there is one.</summary>
+    private List<ProvinceLabel> ProvinceLabels()
+    {
+        var labels = new List<ProvinceLabel>();
+        if (Camera.Zoom < ProvinceNamesZoom) return labels;
+        float alpha = Math.Clamp((Camera.Zoom - ProvinceNamesZoom) / (ProvinceNamesFullZoom - ProvinceNamesZoom), 0.25f, 1);
+        foreach (var p in Map.Provinces)
+        {
+            if (p.Name.Length == 0 || !IsExplored(p.Id)) continue;
+            var s = Camera.MapToScreen(Center(p.Id));
+            if (!OnScreen(s)) continue;
+            if (p.CityId.HasValue) s.Y -= 30;
+            labels.Add(new ProvinceLabel(s, p.Name, alpha));
+        }
+        return labels;
     }
 
     private List<CityMarker> Cities()

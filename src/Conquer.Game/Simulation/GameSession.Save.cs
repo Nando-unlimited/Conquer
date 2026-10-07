@@ -29,7 +29,7 @@ public sealed partial class GameSession
             p.Id, p.Name, p.Color, p.IsHuman, [.. Resources.All.Select(r => p.Stockpile[r])], p.CapitalCityId,
             [.. p.LastDayNet], p.IsStarving, p.FoodReserveDays, [.. p.Techs.Order()],
             [.. p.ResearchProgress], p.SpareScience, p.LastDayScience,
-            [.. p.Templates.Select(t => new TemplateSave(t.Id, t.Number, [.. t.Battalions]))], [.. p.ResearchPriorities],
+            [.. p.Templates.Select(t => new TemplateSave(t.Id, t.Number, [.. t.Battalions], t.CustomName))], [.. p.ResearchPriorities],
             [.. p.Researching.OfType<Tech>()], [.. p.Institutions.Order()], [.. p.OfficerReserve.Select(ToSave)], p.Eliminated, p.Manpower, p.ReligionId,
             [.. p.Explored.Order()], new(p.Equipment.Where(e => e.Value > 0)), [.. p.LastDayFlows.Select(f => f.ToArray())],
             [.. p.ShipOrders.Select(o => new ShipOrderSave(o.Id, o.Type, o.Model, o.PreferredPortId, o.PortId, o.DaysDone, o.WaitingForCrew, o.Convoys))], p.Convoys)).ToList(),
@@ -226,7 +226,7 @@ public sealed partial class GameSession
             s.ResearchProgress.CopyTo(player.ResearchProgress, 0);
             player.SpareScience = s.SpareScience;
             player.LastDayScience = s.LastDayScience;
-            foreach (var t in s.Templates) player.Templates.Add(new RegimentTemplate(t.Id, t.Number, t.Battalions));
+            foreach (var t in s.Templates) player.Templates.Add(new RegimentTemplate(t.Id, t.Number, t.Battalions) { CustomName = t.CustomName });
             foreach (var o in s.OfficerReserve ?? []) player.OfficerReserve.Add(FromSave(o));
             player.Provinces.UnionWith(save.Provinces.Where(p => p.OwnerId == s.Id).Select(p => p.Id));
             // Before 1.75.0 there was no reserve of recruits: it starts full.

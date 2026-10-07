@@ -210,7 +210,7 @@ public sealed record ShipOrderSave(int Id, BattalionType Type, int Model, int? P
 /// <summary>Where and when an institution was born.</summary>
 public sealed record InstitutionBirthSave(Institution Institution, int ProvinceId, long Hours);
 
-public sealed record TemplateSave(int Id, int Number, List<BattalionType> Battalions);
+public sealed record TemplateSave(int Id, int Number, List<BattalionType> Battalions, string? CustomName = null);
 
 /// <summary>Only what changes during a game; the rest of each province comes from the generated map.</summary>
 public sealed record ProvinceSave(

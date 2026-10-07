@@ -14,10 +14,9 @@ public enum FontSize
 }
 
 /// <summary>
-/// The game's lettering baked at a few pixel sizes into one texture atlas: Lilita One, round and sturdy, for the
-/// interface (one weight, so bold is the same); Cinzel Bold, Roman capitals, for window titles and headings (the large
-/// size in bold) and the title size (the game's name, nations on the map). Covers Latin-1 (U+0020..U+00FF), enough for
-/// Spanish text.
+/// The game's lettering baked at a few pixel sizes into one texture atlas: Lato, thin and clean, for the interface
+/// (Light, and Regular for bold); Cinzel, Roman capitals, for window titles and headings (the large size in bold) and
+/// the title size (the game's name, nations on the map). Covers Latin-1 (U+0020..U+00FF), enough for Spanish text.
 /// </summary>
 public sealed unsafe class Font : IDisposable
 {
@@ -32,17 +31,18 @@ public sealed unsafe class Font : IDisposable
 
     public Font(GL gl)
     {
-        var face = LoadAsset("LilitaOne-Regular.ttf");
-        var title = LoadAsset("Cinzel-Bold.ttf");
+        var face = LoadAsset("Lato-Light.ttf");
+        var bold = LoadAsset("Lato-Regular.ttf");
+        var title = LoadAsset("Cinzel-Regular.ttf");
         var pixels = new byte[AtlasSize * AtlasSize];
 
         fixed (byte* atlas = pixels)
         {
             var pack = new stbtt_pack_context();
             stbtt_PackBegin(pack, atlas, AtlasSize, AtlasSize, AtlasSize, 1, null);
-            // Lilita One is the interface, regular and bold alike; Cinzel is the bold of the large size (window titles and
+            // Lato Light is the interface and Lato Regular its bold; Cinzel is the bold of the large size (window titles and
             // headings) and the title size, which Face looks for under (Title, bold).
-            foreach (var (data, isBold, isTitle) in new[] { (face, false, false), (face, true, false), (title, true, true) })
+            foreach (var (data, isBold, isTitle) in new[] { (face, false, false), (bold, true, false), (title, true, true) })
             {
                 fixed (byte* font = data)
                 {

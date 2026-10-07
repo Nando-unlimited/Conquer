@@ -10,7 +10,7 @@
     <!-- No ICU dependency, so it runs on minimal Linux systems; Program.cs sets the Spanish number format. -->
     <InvariantGlobalization>true</InvariantGlobalization>
     <RootNamespace>Conquer.Client</RootNamespace>
-    <Version>1.118.0</Version>
+    <Version>1.119.0</Version>
   </PropertyGroup>
 
   <ItemGroup>
@@ -31,8 +31,9 @@
   </ItemGroup>
 
   <ItemGroup>
-    <EmbeddedResource Include="Assets\LilitaOne-Regular.ttf" LogicalName="Conquer.Client.Assets.LilitaOne-Regular.ttf" />
-    <EmbeddedResource Include="Assets\Cinzel-Bold.ttf" LogicalName="Conquer.Client.Assets.Cinzel-Bold.ttf" />
+    <EmbeddedResource Include="Assets\Lato-Light.ttf" LogicalName="Conquer.Client.Assets.Lato-Light.ttf" />
+    <EmbeddedResource Include="Assets\Lato-Regular.ttf" LogicalName="Conquer.Client.Assets.Lato-Regular.ttf" />
+    <EmbeddedResource Include="Assets\Cinzel-Regular.ttf" LogicalName="Conquer.Client.Assets.Cinzel-Regular.ttf" />
     <EmbeddedResource Include="Assets\Audio\Music\*.ogg" LogicalName="Audio/Music/%(Filename)%(Extension)" />
     <EmbeddedResource Include="Assets\Audio\Sfx\*.ogg" LogicalName="Audio/Sfx/%(Filename)%(Extension)" />
     <EmbeddedResource Include="Assets\Sprites\*.png" LogicalName="Sprites/%(Filename)%(Extension)" />

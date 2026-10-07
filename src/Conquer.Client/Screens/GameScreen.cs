@@ -190,6 +190,8 @@ public sealed partial class GameScreen : IScreen, IAudibleScreen
             else if (input.KeysPressed.Contains(Key.Enter) || input.KeysPressed.Contains(Key.KeypadEnter)) _game.RenameEditedUnit();
             return;
         }
+        // A template's name is being typed on the nation screen, which handles Enter and Escape itself.
+        if (_game.Nation.Visible && _game.Nation.TemplateNameDraft != null) return;
         foreach (var key in input.KeysPressed)
         {
             switch (key)
