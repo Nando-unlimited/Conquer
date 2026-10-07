@@ -265,25 +265,46 @@ public class ControllerTests(WorldFixture world)
     }
 
     [Fact]
-    public void UnitsPileUpOnTheCityFarOutAndDeployCloseIn()
+    public void UnitsInAProvinceMakeOneStackThatClicksGoThrough()
     {
         var game = GameWithCapital();
         game.Camera.Screen = new System.Numerics.Vector2(1600, 900);
         int home = game.SelectedProvince;
         var ids = Enumerable.Range(0, 3).Select(_ => game.Session.AddRegiment(0, home, BattalionType.LightInfantry).Id).ToList();
-        game.SelectUnit(ids[0]);
-        List<UnitCounter> Here() => [.. game.Markers().Units.Where(c => ids.Contains(c.UnitId))];
+        game.SelectUnit(ids[1]);
+        UnitCounter Stack() => Assert.Single(game.Markers().Units, c => c.Stack!.Contains(ids[0]));
 
         game.Camera.LookAt(game.Center(home), 2);
-        var far = Here();
-        Assert.Equal(3, far.Count);
-        Assert.All(far, c => Assert.Equal(game.Camera.MapToScreen(game.Center(home)), c.Screen));
-        Assert.Equal(ids[0], far[^1].UnitId); // the selected one on top
+        var stack = Stack();
+        Assert.Equal(ids[1], stack.UnitId); // the selected one on top
+        Assert.True(stack.Selected);
+        Assert.Equal(ids, stack.Stack!.Where(ids.Contains));
+        Assert.Equal(stack.Stack!.Count, stack.Count);
+        Assert.Equal(game.Camera.MapToScreen(game.Center(home)), stack.Screen);
+        Assert.NotNull(stack.Flag);
 
+        // Clicking it again selects the next unit in it, and after the last, the first.
+        var order = stack.Stack!.ToList();
+        for (int i = 1; i <= order.Count; i++)
+        {
+            game.SelectInStack(Stack().Stack!);
+            Assert.Equal(order[(order.IndexOf(ids[1]) + i) % order.Count], game.SelectedUnitId);
+        }
+
+        // Close in, the stack stands above the city, clear of it and its name.
         game.Camera.LookAt(game.Center(home), 8);
-        var near = Here();
-        Assert.Equal(3, near.Select(c => c.Screen).Distinct().Count());
-        Assert.All(near, c => Assert.True(System.Numerics.Vector2.Distance(c.Screen, game.Camera.MapToScreen(game.Center(home))) > 30));
+        Assert.True(Stack().Screen.Y < game.Camera.MapToScreen(game.Center(home)).Y - 30);
+    }
+
+    [Fact]
+    public void UnitNamesAreCutShortForTheirCounters()
+    {
+        Assert.Equal("3.er Rgto.", UnitLabels.Short("3.er Regimiento"));
+        Assert.Equal("II Cpo.", UnitLabels.Short("II Cuerpo"));
+        Assert.Equal("1.er G. Ej.", UnitLabels.Short("1.er Grupo de ejércitos"));
+        Assert.Equal("Los Tercios.", UnitLabels.Short("Los Tercios de Flandes"));
+        Assert.True(Flags.IsKnown("España"));
+        Assert.NotEmpty(Flags.Of("Atlántida", 0xFF336699).Shapes);
     }
 
     [Fact]

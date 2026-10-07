@@ -38,6 +38,7 @@ Se guardan en la carpeta `Partidas`, junto al ejecutable del juego. Si esa carpe
 | Acción | Control |
 | --- | --- |
 | Seleccionar provincia o unidad | Clic izquierdo |
+| Pasar a la siguiente unidad de una pila | Clic otra vez en la pila |
 | Ver una batalla en detalle | Clic en sus espadas rojas |
 | Mover el mapa | Arrastrar, WASD o flechas |
 | Zoom | Rueda del ratón, + / - |
