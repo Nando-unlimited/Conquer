@@ -218,7 +218,7 @@ public sealed partial class GameController
             {
                 var here = inProvince[top.ProvinceId];
                 int index = here.IndexOf(stack);
-                s.X += (index - (here.Count - 1) / 2f) * 170 * scale;
+                s.X += (index - (here.Count - 1) / 2f) * 82 * scale;
                 if (Camera.Zoom >= UnitSpreadZoom && Map.Provinces[top.ProvinceId].CityId.HasValue) s.Y -= 34 * Math.Clamp(Camera.Zoom / 6, 1, 1.6f);
             }
             if (!OnScreen(s)) continue;

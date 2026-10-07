@@ -118,6 +118,30 @@ public sealed unsafe class Font : IDisposable
         return penX - startX;
     }
 
+    /// <summary>
+    /// Draws text turned a quarter left, reading upwards from <paramref name="start"/>: the top of its letters faces
+    /// left, so the line takes <see cref="LineHeight"/> pixels to the right of <paramref name="start"/>.
+    /// </summary>
+    public void DrawUpwards(Batch2D batch, string text, Vector2 start, Rgba color, FontSize size = FontSize.Normal, bool bold = false)
+    {
+        var (chars, ascent, _) = Face(size, bold);
+        var origin = new Vector2(MathF.Round(start.X), MathF.Round(start.Y));
+        // Along the line (x) goes up the screen; down the letters (y) goes right.
+        Vector2 Turn(float x, float y) => origin + new Vector2(y, -x);
+        float penX = 0, penY = ascent;
+        fixed (stbtt_packedchar* c = chars)
+        {
+            foreach (char ch in text)
+            {
+                stbtt_aligned_quad q;
+                stbtt_GetPackedQuad(c, AtlasSize, AtlasSize, Index(ch), &penX, &penY, &q, 0);
+                if (ch != ' ')
+                    batch.Quad(Atlas, Turn(q.x0, q.y0), Turn(q.x1, q.y0), Turn(q.x1, q.y1), Turn(q.x0, q.y1),
+                        new Vector2(q.s0, q.t0), new Vector2(q.s1, q.t1), color);
+            }
+        }
+    }
+
     /// <summary>Splits text into lines no wider than <paramref name="width"/>.</summary>
     public List<string> Wrap(string text, float width, FontSize size, bool bold = false)
     {

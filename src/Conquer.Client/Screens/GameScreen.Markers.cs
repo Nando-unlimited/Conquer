@@ -106,11 +106,12 @@ public sealed partial class GameScreen
     }
 
     /// <summary>
-    /// A counter as in Hearts of Iron III: a plate of the nation's colour holding, from left to right, upright bars of
-    /// strength (green) and organisation (amber) filling from the foot (combat units and fleets), the nation's flag, a
-    /// pale box with the NATO symbol of the unit's arm ("HQ" for an HQ, a triangle for settlers, a hull for a fleet) and
-    /// its size marks above it, the number of units in the stack and the top unit's name cut short. The counters under
-    /// it peek out behind, up to two. Before it, its route, the line to its HQ and the arrow of its attack.
+    /// A square counter as in Hearts of Iron III, on a plate of the nation's colour: down its left side, upright bars of
+    /// strength (green) and organisation (amber) filling from the foot (combat units and fleets); at the top, the unit's
+    /// size marks; in the middle, a pale box with the NATO symbol of its arm ("HQ" for an HQ, a triangle for settlers, a
+    /// hull for a fleet); at the foot, the number of units in the stack and a little flag of its nation; and up its right
+    /// side, its name cut short, written upwards. The counters under it peek out behind, up to two. Before it, its route,
+    /// the line to its HQ and the arrow of its attack.
     /// </summary>
     private void DrawCounter(UnitCounter c)
     {
@@ -126,14 +127,9 @@ public sealed partial class GameScreen
             return;
         }
 
-        float sc = c.Scale, pad = 3 * sc;
+        float sc = c.Scale, pad = 3 * sc, side = CounterSide * sc;
         bool bars = c.Kind is CounterKind.Military or CounterKind.Fleet, words = sc > 0.7f;
-        float barW = 4 * sc, flagW = 30 * sc, flagH = 20 * sc, boxW = 32 * sc, boxH = 22 * sc;
-        string number = c.Count.ToString();
-        float numberW = words ? Math.Max(18 * sc, Ui.Font.Measure(number, FontSize.Small, true) + 2 * pad) : 0;
-        float nameW = words && c.ShortName.Length > 0 ? Ui.Font.Measure(c.ShortName, FontSize.Small) + 3 * pad : 0;
-        float W = pad + (bars ? 2 * barW + pad / 2 + pad : 0) + flagW + pad + boxW + pad + numberW + nameW, H = boxH + 2 * pad;
-        var r = new Rect(s.X - W / 2, s.Y - H / 2, W, H);
+        var r = new Rect(s.X - side / 2, s.Y - side / 2, side, side);
         var color = new Rgba(c.Color);
 
         // The units under the top one, peeking out up and to the right.
@@ -154,17 +150,35 @@ public sealed partial class GameScreen
         Batch.Gradient(r.X, r.Y, r.W, r.H, color.Scale(1.1f).WithAlpha(1), color.Scale(0.7f).WithAlpha(1));
         Batch.Rect(r.X, r.Y, r.W, 1, Rgba.White.WithAlpha(0.4f));
 
-        float x = r.X + pad;
+        // Left: the bars, the height of the plate.
+        float left = r.X + pad;
         if (bars)
         {
-            UprightBar(new Rect(x, r.Y + pad, barW, boxH), c.Strength, Theme.Strength);
-            UprightBar(new Rect(x + barW + pad / 2, r.Y + pad, barW, boxH), c.Organisation, Theme.Organisation);
-            x += 2 * barW + pad / 2 + pad;
+            float barW = 3 * sc;
+            UprightBar(new Rect(left, r.Y + pad, barW, r.H - 2 * pad), c.Strength, Theme.Strength);
+            UprightBar(new Rect(left + barW + sc, r.Y + pad, barW, r.H - 2 * pad), c.Organisation, Theme.Organisation);
+            left += 2 * barW + sc + pad;
         }
-        if (c.Flag != null) FlagPainter.Draw(Batch, c.Flag, x, r.Y + (r.H - flagH) / 2, flagW, flagH);
-        x += flagW + pad;
+        // Right: the name, written upwards on a darker strip.
+        float nameW = 15 * sc, right = r.Right - pad - nameW;
+        var strip = new Rect(right, r.Y + pad, nameW, r.H - 2 * pad);
+        Batch.Rect(strip.X, strip.Y, strip.W, strip.H, Rgba.Black.WithAlpha(0.3f));
+        if (words && c.ShortName.Length > 0)
+        {
+            string name = Fit(c.ShortName, strip.H - 2 * sc, FontSize.Small);
+            float length = Ui.Font.Measure(name, FontSize.Small), across = Ui.Font.LineHeight(FontSize.Small);
+            var start = new Vector2(strip.X + (strip.W - across) / 2, strip.Bottom - (strip.H - length) / 2);
+            Ui.Font.DrawUpwards(Batch, name, start + new Vector2(1, 1), Rgba.Black.WithAlpha(0.8f), FontSize.Small);
+            Ui.Font.DrawUpwards(Batch, name, start, Rgba.White, FontSize.Small);
+        }
+        right -= pad;
 
-        var box = new Rect(x, r.Y + pad, boxW, boxH);
+        // Middle column, from top to foot: the size marks, the NATO box, the number and the flag.
+        float width = right - left, marksH = 9 * sc, footH = 11 * sc;
+        if (c.Echelon.Length > 0) DrawEchelon(new Rect(left, r.Y + pad + marksH + 4, width, 0), c.Echelon, sc);
+        // The box keeps the NATO frame's proportions, centred in the room between the marks and the foot.
+        float room = r.H - 2 * pad - marksH - footH - 3 * sc, boxH = Math.Min(room, width * 0.72f);
+        var box = new Rect(left, r.Y + pad + marksH + sc + (room - boxH) / 2, width, boxH);
         Batch.Rect(box.X - 1, box.Y - 1, box.W + 2, box.H + 2, Rgba.Black.WithAlpha(0.8f));
         Batch.Rect(box.X, box.Y, box.W, box.H, CounterField);
         switch (c.Kind)
@@ -187,24 +201,30 @@ public sealed partial class GameScreen
                 MapIcons.Settlers(Batch, box.X, box.Y, box.W, box.H);
                 break;
         }
-        x = box.Right + pad;
+        // Foot: the number of units in the stack on the left, the flag on the right.
+        var foot = new Rect(left, r.Bottom - pad - footH, width, footH);
+        float flagW = footH * 1.5f;
+        if (c.Flag != null) FlagPainter.Draw(Batch, c.Flag, foot.Right - flagW, foot.Y, flagW, footH);
         if (words)
         {
-            // The number of units in the stack, white on a dark square; then the name, on a lighter strip.
-            var count = new Rect(x, r.Y + pad, numberW, boxH);
-            Batch.Rect(count.X, count.Y, count.W, count.H, Rgba.Black.WithAlpha(0.55f));
-            Ui.TextCentered(count, number, Rgba.White, FontSize.Small, bold: true);
-            if (nameW > 0)
-            {
-                var name = new Rect(count.Right + pad, r.Y + pad, nameW - 2 * pad, boxH);
-                Batch.Rect(name.X, name.Y, name.W, name.H, Rgba.Black.WithAlpha(0.3f));
-                Ui.TextCentered(name with { X = name.X + 1, Y = name.Y + 1 }, c.ShortName, Rgba.Black.WithAlpha(0.8f), FontSize.Small);
-                Ui.TextCentered(name, c.ShortName, Rgba.White, FontSize.Small);
-            }
+            var count = foot with { W = foot.W - flagW - sc };
+            Ui.TextCentered(count with { X = count.X + 1, Y = count.Y + 1 }, c.Count.ToString(), Rgba.Black.WithAlpha(0.8f), FontSize.Small, bold: true);
+            Ui.TextCentered(count, c.Count.ToString(), Rgba.White, FontSize.Small, bold: true);
         }
+
         if (c.Entrenchment is double dug) Earthworks(r.X, r.W, r.Bottom + 4, dug, sc);
-        if (c.Echelon.Length > 0) DrawEchelon(box with { Y = r.Y - (c.Count > 1 ? 4 * Math.Min(c.Count - 1, 2) : 0) }, c.Echelon, sc);
         _unitHitBoxes.Add((c.UnitId, c.Stack ?? new[] { c.UnitId }, r));
+    }
+
+    /// <summary>The side of a counter at full size, in pixels.</summary>
+    private const float CounterSide = 68;
+
+    /// <summary>The text as it is, or cut short and ending in a point, so it is no longer than <paramref name="room"/> pixels.</summary>
+    private string Fit(string text, float room, FontSize size)
+    {
+        if (Ui.Font.Measure(text, size) <= room) return text;
+        while (text.Length > 1 && Ui.Font.Measure(text + ".", size) > room) text = text[..^1].TrimEnd();
+        return text + ".";
     }
 
     /// <summary>The pale field inside a counter's box, where its NATO symbol goes.</summary>
@@ -265,7 +285,7 @@ public sealed partial class GameScreen
         _unitHitBoxes.Add((c.UnitId, c.Stack ?? new[] { c.UnitId }, r));
     }
 
-    /// <summary>NATO size marks centred over the frame: a bar for each "I", a small cross for each "X".</summary>
+    /// <summary>NATO size marks centred over the frame, their foot 4 pixels above its top: a bar for each "I", a small cross for each "X".</summary>
     private void DrawEchelon(Rect r, string marks, float scale)
     {
         float h = 7 * scale, w = 5 * scale, gap = 3 * scale;

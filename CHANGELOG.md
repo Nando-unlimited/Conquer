@@ -2,6 +2,13 @@
 
 Todos los cambios del juego, del más reciente al más antiguo. Cada versión es un commit cuyo título es su número.
 
+## [1.125.0] - 2026-10-07
+
+Fichas cuadradas, como en Hearts of Iron III.
+
+### Cambiado
+- **Fichas cuadradas**: arriba, las marcas de tamaño de la unidad; en el centro, el símbolo OTAN; abajo, el número de unidades de la pila y una bandera pequeña de su nación; a la derecha, su nombre abreviado escrito hacia arriba (cortado si no cabe). Las barras de hombres y organización siguen a la izquierda, a toda la altura de la ficha.
+
 ## [1.124.0] - 2026-10-07
 
 Banderas de los países y fichas apiladas, como en Hearts of Iron III.
