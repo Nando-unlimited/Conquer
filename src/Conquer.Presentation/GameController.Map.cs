@@ -32,12 +32,13 @@ public enum CounterKind
 /// <summary>
 /// A unit's counter on screen with what goes with it: its route (screen points, fuller when selected), the line to
 /// its HQ (green in range, red out of it) and the arrow of an attack. <see cref="Scale"/> shrinks counters when zoomed out.
-/// <see cref="Entrenchment"/> is how far an emplaced unit has dug in (null when it is not emplaced).
+/// <see cref="Entrenchment"/> is how far an emplaced unit has dug in (null when it is not emplaced); <see cref="Battalions"/>,
+/// how many battalions (ships for a fleet) a combat unit has, the number on its counter.
 /// </summary>
 public sealed record UnitCounter(int UnitId, Vector2 Screen, float Scale, uint Color, bool Selected, CounterKind Kind, UnitFunction Function,
     string Symbol, int Aboard, string Echelon, double Strength, double Organisation,
     IReadOnlyList<Vector2>? Path, (Vector2 To, bool InRange)? Command, (Vector2 From, Vector2 To)? Attack,
-    bool Moving = false, bool Fighting = false, Vector2 Heading = default, string? Model = null, double? Entrenchment = null);
+    bool Moving = false, bool Fighting = false, Vector2 Heading = default, string? Model = null, double? Entrenchment = null, int Battalions = 0);
 
 /// <summary>Crossed swords over a battle; <see cref="Battle"/> is null at sea. The tooltip is worked out only when hovered.</summary>
 public sealed record BattleMarker(int ProvinceId, Battle? Battle, Vector2 Screen, Func<string> Tooltip);
@@ -223,7 +224,8 @@ public sealed partial class GameController
             counters.Add(new UnitCounter(unit.Id, s, scale, Session.Players[unit.OwnerId].Color, selected,
                 kind, unit.Function, unit.Symbol, unit.IsFleet ? Session.CargoOf(unit).Count() : 0, unit.Echelon, unit.StrengthShare, unit.OrganisationShare,
                 path, command, attack, unit.IsMoving, Fighting(unit), Heading(unit), Models.Of(unit),
-                GameSession.IsEmplaced(unit) ? unit.Entrenchment : null));
+                GameSession.IsEmplaced(unit) ? unit.Entrenchment : null,
+                unit.IsMilitary || unit.IsFleet ? unit.Battalions.Count : 0));
         }
         return counters;
     }

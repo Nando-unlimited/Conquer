@@ -106,9 +106,11 @@ public sealed partial class GameScreen
     }
 
     /// <summary>
-    /// A NATO-style counter: the symbol of the unit's arm inside the frame, its size marks above it, "HQ" inside an
-    /// HQ's frame and a triangle for settlers; combat units and fleets carry a strength bar (green) and an organisation
-    /// bar (amber). Before it, its route, the line to its HQ and the arrow of its attack.
+    /// A counter in the style of Hearts of Iron III: a plate of the nation's colour holding a pale box with the NATO symbol
+    /// of the unit's arm ("HQ" for an HQ, a triangle for settlers, a hull for a fleet), its size marks above the box.
+    /// Combat units and fleets carry upright bars on the left, strength (green) and organisation (amber), filling from
+    /// the foot, and on the right how many battalions (ships) they have. Before it, its route, the line to its HQ and
+    /// the arrow of its attack.
     /// </summary>
     private void DrawCounter(UnitCounter c)
     {
@@ -124,54 +126,70 @@ public sealed partial class GameScreen
             return;
         }
 
-        float W = 28 * c.Scale, H = 19 * c.Scale;
+        float sc = c.Scale, pad = 2 * sc;
+        bool bars = c.Kind is CounterKind.Military or CounterKind.Fleet;
+        string? number = bars && c.Battalions > 0 && sc > 0.7f ? c.Battalions.ToString() : null;
+        float barW = 3 * sc, boxW = 24 * sc, boxH = 16 * sc;
+        float barsW = bars ? 2 * barW + pad : 0;
+        float numberW = number != null ? Ui.Font.Measure(number, FontSize.Small, true) + 2 * pad : 0;
+        float W = pad + barsW + (bars ? pad : 0) + boxW + (number != null ? numberW : pad), H = boxH + 2 * pad;
         var r = new Rect(s.X - W / 2, s.Y - H / 2, W, H);
         var color = new Rgba(c.Color);
-        // A raised block, like the pieces of a board wargame, lit from the upper left: a shadow cast down and to the
-        // right, its thickness below, a bevel on the face and the face shaded from light to dark.
-        float depth = 4 * c.Scale;
-        Batch.Shadow(r.X, r.Y + depth, r.W + 6, r.H + 4, 3, spread: 6, strength: 0.55f);
+
+        Batch.Shadow(r.X, r.Y + 2, r.W + 3, r.H + 2, 2, spread: 5, strength: 0.5f);
         if (c.Selected)
         {
             float pulse = 0.5f + 0.5f * MathF.Sin((float)_game.Now * 5);
-            Batch.Rect(r.X - 4, r.Y - 4, r.W + 8, r.H + 8 + depth, Theme.Accent.WithAlpha(0.25f + 0.35f * pulse));
+            Batch.Rect(r.X - 4, r.Y - 4, r.W + 8, r.H + 8, Theme.Accent.WithAlpha(0.25f + 0.35f * pulse));
         }
-        Batch.Rect(r.X - 2, r.Y - 2, r.W + 4, r.H + 4 + depth, c.Selected ? Theme.Accent : Rgba.Black);
-        Batch.Gradient(r.X, r.Y + r.H, r.W, depth, color.Scale(0.5f).WithAlpha(1), color.Scale(0.3f).WithAlpha(1));
-        Batch.Gradient(r.X, r.Y, r.W, r.H, color.Scale(1.15f).WithAlpha(1), color.Scale(0.8f).WithAlpha(1));
-        Batch.Rect(r.X, r.Y, r.W, 1.5f, Rgba.White.WithAlpha(0.5f));
-        Batch.Rect(r.X, r.Y, 1.5f, r.H, Rgba.White.WithAlpha(0.35f));
-        Batch.Rect(r.Right - 1.5f, r.Y, 1.5f, r.H, Rgba.Black.WithAlpha(0.3f));
-        Batch.Rect(r.X, r.Bottom - 1.5f, r.W, 1.5f, Rgba.Black.WithAlpha(0.35f));
+        // The plate: its nation's colour, shaded from top to foot, in a dark frame (gold when selected).
+        Batch.Rect(r.X - 1.5f, r.Y - 1.5f, r.W + 3, r.H + 3, c.Selected ? Theme.Accent : Rgba.Black);
+        Batch.Gradient(r.X, r.Y, r.W, r.H, color.Scale(1.1f).WithAlpha(1), color.Scale(0.7f).WithAlpha(1));
+        Batch.Rect(r.X, r.Y, r.W, 1, Rgba.White.WithAlpha(0.4f));
+
+        float x = r.X + pad;
+        if (bars)
+        {
+            UprightBar(new Rect(x, r.Y + pad, barW, boxH), c.Strength, Theme.Strength);
+            UprightBar(new Rect(x + barW + pad / 2, r.Y + pad, barW, boxH), c.Organisation, Theme.Organisation);
+            x += barsW + pad;
+        }
+        var box = new Rect(x, r.Y + pad, boxW, boxH);
+        Batch.Rect(box.X - 1, box.Y - 1, box.W + 2, box.H + 2, Rgba.Black.WithAlpha(0.8f));
+        Batch.Rect(box.X, box.Y, box.W, box.H, CounterField);
         switch (c.Kind)
         {
             case CounterKind.Military:
-                MapIcons.NatoSymbol(Batch, r.X + 2, r.Y + 2, r.W - 4, r.H - 4, c.Function);
+                MapIcons.NatoSymbol(Batch, box.X, box.Y, box.W, box.H, c.Function);
                 break;
             case CounterKind.Fleet:
                 // A hull under the ship letter; a dot for every unit aboard.
-                Batch.Line(new(r.X + 3, r.Bottom - 4), new(r.Right - 3, r.Bottom - 4), Rgba.Black, 2);
-                Batch.Line(new(r.X + 3, r.Bottom - 4), new(r.X + 7, r.Bottom - 1), Rgba.Black, 1.5f);
-                Batch.Line(new(r.Right - 3, r.Bottom - 4), new(r.Right - 7, r.Bottom - 1), Rgba.Black, 1.5f);
-                if (c.Scale > 0.7f) Ui.TextCentered(new Rect(r.X, r.Y - 2, r.W, r.H - 4), c.Symbol, Rgba.Black, FontSize.Small, bold: true);
+                Batch.Line(new(box.X + 3, box.Bottom - 4), new(box.Right - 3, box.Bottom - 4), Rgba.Black, 2);
+                Batch.Line(new(box.X + 3, box.Bottom - 4), new(box.X + 7, box.Bottom - 1), Rgba.Black, 1.5f);
+                Batch.Line(new(box.Right - 3, box.Bottom - 4), new(box.Right - 7, box.Bottom - 1), Rgba.Black, 1.5f);
+                if (sc > 0.7f) Ui.TextCentered(new Rect(box.X, box.Y - 2, box.W, box.H - 4), c.Symbol, Rgba.Black, FontSize.Small, bold: true);
                 for (int i = 0; i < c.Aboard; i++) Batch.Rect(r.Right + 3, r.Y + i * 5, 3, 3, Rgba.White);
                 break;
             case CounterKind.Headquarters:
-                if (c.Scale > 0.7f) Ui.TextCentered(r, "HQ", Rgba.Black, FontSize.Small, bold: true);
+                if (sc > 0.7f) Ui.TextCentered(box, "HQ", Rgba.Black, FontSize.Small, bold: true);
                 break;
             default:
-                MapIcons.Settlers(Batch, r.X + 2, r.Y + 2, r.W - 4, r.H - 4);
+                MapIcons.Settlers(Batch, box.X, box.Y, box.W, box.H);
                 break;
         }
-        if (c.Kind is CounterKind.Military or CounterKind.Fleet)
+        if (number != null)
         {
-            Bar(new Rect(r.X - 2, r.Bottom + depth + 3, r.W + 4, 3), c.Strength, Theme.Strength);
-            Bar(new Rect(r.X - 2, r.Bottom + depth + 7, r.W + 4, 3), c.Organisation, Theme.Organisation);
+            var at = new Rect(box.Right, r.Y, r.Right - box.Right, r.H);
+            Ui.TextCentered(at with { X = at.X + 1, Y = at.Y + 1 }, number, Rgba.Black.WithAlpha(0.8f), FontSize.Small, bold: true);
+            Ui.TextCentered(at, number, Rgba.White, FontSize.Small, bold: true);
         }
-        if (c.Entrenchment is double dug) Earthworks(r.X, r.W, r.Bottom + depth + 12, dug, c.Scale);
-        if (c.Echelon.Length > 0) DrawEchelon(r, c.Echelon, c.Scale);
+        if (c.Entrenchment is double dug) Earthworks(r.X, r.W, r.Bottom + 4, dug, sc);
+        if (c.Echelon.Length > 0) DrawEchelon(box with { Y = r.Y }, c.Echelon, sc);
         _unitHitBoxes.Add((c.UnitId, r));
     }
+
+    /// <summary>The pale field inside a counter's box, where its NATO symbol goes.</summary>
+    private static readonly Rgba CounterField = new(0xFFEDE3CC);
 
     /// <summary>
     /// A unit as a little 3D model on a patch of its nation's colour, facing the way it goes, with its size marks
@@ -315,6 +333,14 @@ public sealed partial class GameScreen
             Batch.Ellipse(at + new Vector2(0.5f, 1), bag / 2 + 0.5f, bag / 3 + 0.5f, Rgba.Black.WithAlpha(0.6f));
             Batch.Ellipse(at, bag / 2, bag / 3, sand);
         }
+    }
+
+    /// <summary>An upright bar filled from its foot, as the counters carry their strength and organisation.</summary>
+    private void UprightBar(Rect r, double share, Rgba color)
+    {
+        float filled = r.H * (float)Math.Clamp(share, 0, 1);
+        Batch.Rect(r.X - 0.5f, r.Y - 0.5f, r.W + 1, r.H + 1, Rgba.Black.WithAlpha(0.8f));
+        Batch.Rect(r.X, r.Bottom - filled, r.W, filled, color);
     }
 
     private void Bar(Rect r, double share, Rgba color)

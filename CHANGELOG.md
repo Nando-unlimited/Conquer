@@ -2,6 +2,13 @@
 
 Todos los cambios del juego, del más reciente al más antiguo. Cada versión es un commit cuyo título es su número.
 
+## [1.123.0] - 2026-10-07
+
+Fichas de las unidades como las de Hearts of Iron III.
+
+### Cambiado
+- **Fichas al estilo de HOI3** (con «Etiquetas»): una placa del color de la nación con el símbolo OTAN en un recuadro claro y las marcas de tamaño encima; las unidades de combate y las flotas llevan a la izquierda dos barras verticales, hombres (verde) y organización (ámbar), y a la derecha su número de batallones (o barcos). Los cuarteles muestran «HQ» y los colonos su triángulo.
+
 ## [1.122.0] - 2026-10-07
 
 Iconos nuevos, y los edificios de la provincia como iconos.

@@ -27,7 +27,7 @@ public sealed class SettingsMenu
             new Button("Figuras 3D", () => Display.SetUnitModels(true), Active: Display.UnitModels,
                 Tooltip: "Unidades y barcos como maquetas, y las ciudades con su icono."),
             new Button("Etiquetas", () => Display.SetUnitModels(false), Active: !Display.UnitModels,
-                Tooltip: "Fichas OTAN para las unidades y puntos para las ciudades, sin iconos (lo normal)."),
+                Tooltip: "Fichas OTAN como las de Hearts of Iron III para las unidades y puntos para las ciudades, sin iconos (lo normal)."),
         ]),
     ];
 
