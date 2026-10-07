@@ -7,7 +7,7 @@ public sealed class DisplaySettings
 {
     public bool Animations { get; set; } = true;
 
-    /// <summary>Units and buildings drawn as little 3D models; otherwise (the default) as labels: NATO counters and icons.</summary>
+    /// <summary>Units as little 3D models and cities as their icons; otherwise (the default) as labels: NATO counters and dots for cities.</summary>
     public bool UnitModels { get; set; }
 
     private static string FilePath => Path.Combine(SaveFiles.Folder, "pantalla.json");

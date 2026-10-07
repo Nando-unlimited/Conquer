@@ -113,6 +113,9 @@ public static class DocumentView
                 case Space space:
                     y += space.Height;
                     break;
+                case IconGrid grid:
+                    Grid(ui, grid, x, ref y, w);
+                    break;
                 case Portraits portraits:
                     float px = x;
                     foreach (var (portrait, caption, tooltip) in portraits.Officers)
@@ -127,6 +130,44 @@ public static class DocumentView
                     break;
             }
         }
+    }
+
+    /// <summary>
+    /// Icons in rows: each on a tile, outlined under the mouse with its tooltip; a damaged one is outlined in red with a
+    /// bar of its damage. A tile without a picture shows its name.
+    /// </summary>
+    private static void Grid(Ui ui, IconGrid grid, float x, ref float y, float w)
+    {
+        const float Gap = 6;
+        float size = grid.Size;
+        int perRow = Math.Max(1, (int)((w + Gap) / (size + Gap)));
+        for (int i = 0; i < grid.Tiles.Count; i++)
+        {
+            var tile = grid.Tiles[i];
+            var r = new Rect(x + i % perRow * (size + Gap), y + i / perRow * (size + Gap), size, size);
+            bool hover = ui.Hover(r);
+            ui.Batch.RoundedRect(r.X, r.Y, r.W, r.H, Theme.ButtonRadius, Theme.Button.WithAlpha(hover ? 0.9f : 0.55f), Theme.Button.WithAlpha(hover ? 0.7f : 0.35f));
+            if (tile.Icon is BuildingIcon icon && BuildingIcons.Has(icon.Building))
+                BuildingIcons.Draw(ui.Batch, icon.Building, r.X + 3, r.Y + 3, size - 6);
+            else
+            {
+                var lines = ui.Font.Wrap(tile.Name, size - 6, FontSize.Small);
+                float lh = ui.Font.LineHeight(FontSize.Small), ty = r.Y + (size - lines.Count * lh) / 2;
+                foreach (string line in lines)
+                {
+                    ui.TextCentered(new Rect(r.X, ty, r.W, lh), line, Theme.Text, FontSize.Small);
+                    ty += lh;
+                }
+            }
+            if (tile.Damage > 0)
+            {
+                ui.Batch.Rect(r.X + 3, r.Bottom - 6, (r.W - 6) * (float)Math.Clamp(tile.Damage, 0, 1), 3, Theme.Battle);
+                ui.Batch.RoundedOutline(r.X, r.Y, r.W, r.H, Theme.ButtonRadius, Theme.Battle);
+            }
+            else if (hover) ui.Batch.RoundedOutline(r.X, r.Y, r.W, r.H, Theme.ButtonRadius, Theme.Accent);
+            if (hover) ui.Tooltip(tile.Tooltip);
+        }
+        y += (grid.Tiles.Count + perRow - 1) / perRow * (size + Gap) + 4;
     }
 
     /// <summary>A unit's name and note, a line about it, and its strength and organisation bars side by side; lit under the mouse when it has a tooltip.</summary>

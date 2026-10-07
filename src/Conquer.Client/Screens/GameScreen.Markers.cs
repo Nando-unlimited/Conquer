@@ -53,20 +53,37 @@ public sealed partial class GameScreen
     }
 
     /// <summary>
-    /// The city as a dot of its owner's colour, bigger the more people it has (<see cref="CityDotRadius"/>), ringed in gold
-    /// for the capital, with its name under it.
+    /// The city. With the labels, a dot of its owner's colour, bigger the more people it has (<see cref="CityDotRadius"/>),
+    /// ringed in gold for the capital. With the 3D figures, its icon (<see cref="Models.CityIcon"/>) on a disc of its
+    /// owner's colour. Its name goes under it.
     /// </summary>
     private void DrawCity(CityMarker city)
     {
         var s = city.Screen;
-        float sc = city.Scale;
-        float r = CityDotRadius(city.Population) * sc;
-        Batch.Circle(s + new Vector2(1, 1.5f), r + 1.5f * sc, Rgba.Black.WithAlpha(0.45f));
-        if (city.Capital) Batch.Circle(s, r + 2.5f * sc, new Rgba(0xFFE0B656));
-        Batch.Circle(s, r + 1 * sc, Rgba.Black.WithAlpha(0.85f));
-        Batch.Circle(s, r, Batch2D.Mix(new Rgba(city.Color), Rgba.White, 0.15f));
-        if (Motion.Enabled && (city.Industry || city.Population >= 2000)) Smoke(s + new Vector2(r * 0.5f, -r), city.Id, sc, city.Industry);
-        float below = r + (city.Capital ? 2.5f : 1) * sc;
+        float sc = city.Scale, below;
+        bool icons = DisplaySettings.Current.UnitModels;
+        if (icons && BuildingIcons.Has(city.Icon))
+        {
+            float size = 44 * sc;
+            var foot = s + new Vector2(0, 10 * sc);
+            Batch.Ellipse(foot + new Vector2(0, 2), 21 * sc, 8 * sc, Rgba.Black.WithAlpha(0.35f));
+            if (city.Capital) Batch.Ellipse(foot, 22 * sc, 9 * sc, new Rgba(0xFFE0B656));
+            Batch.Ellipse(foot, 20 * sc, 7.5f * sc, new Rgba(city.Color).WithAlpha(0.9f));
+            BuildingIcons.Draw(Batch, city.Icon, s.X - size / 2, foot.Y - size + 6 * sc, size);
+            if (Motion.Enabled && (city.Industry || city.Population >= 2000))
+                Smoke(foot + new Vector2(10 * sc, -size + 8 * sc), city.Id, sc, city.Industry);
+            below = 12 * sc;
+        }
+        else
+        {
+            float r = CityDotRadius(city.Population) * sc;
+            Batch.Circle(s + new Vector2(1, 1.5f), r + 1.5f * sc, Rgba.Black.WithAlpha(0.45f));
+            if (city.Capital) Batch.Circle(s, r + 2.5f * sc, new Rgba(0xFFE0B656));
+            Batch.Circle(s, r + 1 * sc, Rgba.Black.WithAlpha(0.85f));
+            Batch.Circle(s, r, Batch2D.Mix(new Rgba(city.Color), Rgba.White, 0.15f));
+            if (Motion.Enabled && (city.Industry || city.Population >= 2000)) Smoke(s + new Vector2(r * 0.5f, -r), city.Id, sc, city.Industry);
+            below = r + (city.Capital ? 2.5f : 1) * sc;
+        }
         if (city.Name != null)
         {
             float w = Ui.Font.Measure(city.Name, FontSize.Small, true);
@@ -175,7 +192,8 @@ public sealed partial class GameScreen
             float pulse = 0.5f + 0.5f * MathF.Sin((float)_game.Now * 5);
             Batch.Ellipse(foot, rx + 5, ry + 4, Theme.Accent.WithAlpha(0.5f + 0.4f * pulse), thickness: 2.5f);
         }
-        var box = ship ? new Vector2(48, 32) * sc : new Vector2(30, 38) * sc;
+        // Ships and the settlers' wagon are wider than they are tall.
+        var box = ship ? new Vector2(48, 32) * sc : c.Kind == CounterKind.Settlers ? new Vector2(44, 38) * sc : new Vector2(30, 38) * sc;
         var size = _sprites.Draw(Batch, model, foot + new Vector2(0, ry * 0.5f), box, color, mirrored: c.Heading.X < -0.1f);
         var r = new Rect(s.X - Math.Max(size.X, 2 * rx) / 2, foot.Y + ry * 0.5f - size.Y, Math.Max(size.X, 2 * rx), size.Y + ry);
         if (c.Kind is CounterKind.Military or CounterKind.Fleet)

@@ -164,6 +164,22 @@ public class ControllerTests(WorldFixture world)
     }
 
     [Fact]
+    public void BuiltBuildingsShowAsIconsWithWhatTheyDoInTheTooltip()
+    {
+        var game = GameWithCapital();
+        var capital = game.Map.Provinces[game.SelectedProvince];
+        capital.AddBuilding(BuildingType.Barracks);
+        capital.AddBuilding(BuildingType.Farm);
+        game.ProvinceTab = ProvinceTab.Buildings;
+        var grid = game.SidePanel()!.Elements.OfType<IconGrid>().Single();
+        Assert.Equal(capital.Buildings.Count, grid.Tiles.Count);
+        var farm = grid.Tiles.Single(t => t.Icon == new BuildingIcon(BuildingType.Farm));
+        Assert.StartsWith("Granja", farm.Tooltip);
+        Assert.Contains(BuildingType.Farm.Info().Description, farm.Tooltip);
+        Assert.Equal(0, farm.Damage);
+    }
+
+    [Fact]
     public void AWorkshopsChoicesAreTitledByWhatItMakes()
     {
         var game = GameWithCapital();

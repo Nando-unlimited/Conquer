@@ -2,6 +2,15 @@
 
 Todos los cambios del juego, del más reciente al más antiguo. Cada versión es un commit cuyo título es su número.
 
+## [1.122.0] - 2026-10-07
+
+Iconos nuevos, y los edificios de la provincia como iconos.
+
+### Cambiado
+- **Iconos nuevos** de los edificios, las ciudades y los recursos, y un dibujo nuevo para los colonos. Piedra, azufre y salitre estrenan icono.
+- **Opciones › Mapa**: «Etiquetas» deja el mapa como hasta ahora (fichas OTAN y ciudades como puntos); «Figuras 3D» muestra las maquetas de las unidades, los colonos como un carro y cada ciudad con su icono según crece. Los edificios no se dibujan en el mapa en ningún caso.
+- **Pestaña Edificios de la provincia**: los construidos se ven como iconos en cuadrícula; al pasar el ratón, su nombre, qué hace, su daño y las tropas que instruye más deprisa. Los dañados van con un borde rojo y una barra de su daño.
+
 ## [1.121.0] - 2026-10-07
 
 Emplazar tropas, plantillas por filas, una ventana de nación más limpia y un mejor editor de texto.

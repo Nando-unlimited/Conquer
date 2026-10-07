@@ -17,3 +17,6 @@ building-airfield.png    grass + boxes (see tools/IsoSprites)
 The unit, ship and aircraft sprites in Units/ are made for this game: modeled in code in
 tools/IsoSprites/Units.cs, in the style of Kenney's kits, and rendered with the same tool
 ("units" mode). Each name-team.png holds, in grey, the parts the game paints in the country's color.
+
+unit-settlers.png (the settlers' wagon) is a painted picture made for this game (2026-10-07), reduced to 128 px; its
+full-size original is in Units/originales/ (not in git). unit-settlers-team.png is the driver's shirt, taken from it.

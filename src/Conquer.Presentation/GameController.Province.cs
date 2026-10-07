@@ -316,13 +316,12 @@ public sealed partial class GameController
     };
 
     /// <summary>The battalions the owner's military advances have a training building (barracks or workshop) train faster, and how much.</summary>
-    private static void TrainingImprovements(Document doc, BuildingType building, Player owner)
+    private static string? TrainingImprovements(BuildingType building, Player owner)
     {
         var faster = Battalions.All.Where(t => t.BestModel(owner.Techs) >= 0 && GameSession.ModelFor(owner, t).TrainingBuilding(t) == building
                                               && GameSession.TrainingSpeed(owner, t) > 0)
             .Select(t => $"{GameSession.ModelFor(owner, t).Name} -{1 - 1 / (1 + GameSession.TrainingSpeed(owner, t)):P0}").ToList();
-        if (faster.Count == 0) return;
-        doc.Add(new Paragraph("Instrucción más corta: " + string.Join(", ", faster) + ".", Tone.Good, After: 6, Indent: 10));
+        return faster.Count == 0 ? null : "Instrucción más corta: " + string.Join(", ", faster) + ".";
     }
 
     /// <summary>
@@ -344,16 +343,21 @@ public sealed partial class GameController
 
         doc.Add(Section("Construidos"));
         if (p.Buildings.Count == 0) doc.Add(new Label("Ninguno todavía.", Tone.Dim));
-        foreach (var built in Buildings.All.Where(p.Buildings.Contains))
+        else
         {
-            double damage = p.DamageOf(built);
-            doc.Add(new Label(built.Info().Name + (damage > 0 ? $" · dañado {damage:P0}" : ""), damage > 0 ? Tone.Bad : Tone.Good, TextSize.Normal,
-                Icon: new BuildingIcon(built),
-                Tooltip: damage > 0 ? $"Los bombardeos lo han dañado: da un {damage:P0} menos de lo que da. Se repara un {MilitaryRules.BuildingRepairPerDay:P0} al día si no lo bombardean; dañado del todo, se derrumba." : null));
-            doc.Add(new Label(built.Info().Description, Tone.Dim, Height: 24, Indent: 10));
-            // Barracks, and the workshop or the factory it became, list the troops they train faster.
-            var trains = built == BuildingType.Factory ? BuildingType.Workshop : built;
-            if (trains is BuildingType.Barracks or BuildingType.Workshop && p.OwnerId >= 0) TrainingImprovements(doc, trains, Session.Players[p.OwnerId]);
+            // Their icons side by side; the name, what each does and its damage come in the tooltip.
+            doc.Add(new IconGrid([.. Buildings.All.Where(p.Buildings.Contains).Select(built =>
+            {
+                double damage = p.DamageOf(built);
+                string tip = built.Info().Name + (damage > 0 ? $" · dañado {damage:P0}" : "") + "\n" + built.Info().Description;
+                if (damage > 0)
+                    tip += $"\nLos bombardeos lo han dañado: da un {damage:P0} menos de lo que da. Se repara un {MilitaryRules.BuildingRepairPerDay:P0} al día si no lo bombardean; dañado del todo, se derrumba.";
+                // Barracks, and the workshop or the factory it became, list the troops they train faster.
+                var trains = built == BuildingType.Factory ? BuildingType.Workshop : built;
+                if (trains is BuildingType.Barracks or BuildingType.Workshop && p.OwnerId >= 0 && TrainingImprovements(trains, Session.Players[p.OwnerId]) is { } faster)
+                    tip += "\n" + faster;
+                return new IconTile(new BuildingIcon(built), built.Info().Name, tip, damage);
+            })]));
         }
 
         if (p.OwnerId != Human.Id) return;

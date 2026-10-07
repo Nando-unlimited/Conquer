@@ -48,12 +48,12 @@ public static class Models
 
     /// <summary>
     /// The model of a unit: a fleet its strongest ship; a regiment its most numerous line of battalion, in the model the
-    /// first of them fights with. Settlers and headquarters have none and keep their counter (the settlers' triangle, the
-    /// HQ's letters).
+    /// first of them fights with; settlers their wagon. Headquarters have none and keep their counter (the HQ's letters).
     /// </summary>
     public static string? Of(Unit unit) => unit.Type switch
     {
-        UnitType.Settlers or UnitType.Headquarters => null,
+        UnitType.Settlers => "unit-settlers",
+        UnitType.Headquarters => null,
         _ when unit.Battalions.Count == 0 => null,
         _ when unit.IsFleet => Of(unit.Battalions.MaxBy(b => b.Info.Defense)!.Info),
         _ => Of(unit.Battalions.GroupBy(b => b.Type).OrderByDescending(g => g.Count()).First().First().Info),

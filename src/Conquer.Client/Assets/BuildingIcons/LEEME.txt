@@ -2,7 +2,8 @@ Iconos de los edificios y de las ciudades.
 
 Deja aquí una imagen por edificio (PNG con fondo transparente, cuadrada), llamada como el edificio en minúsculas,
 sin tildes y con guiones en lugar de espacios. El juego la muestra junto a su nombre en la pestaña Edificios de la
-provincia (construidos y para construir) y, de cerca, en la fila de edificios bajo cada ciudad del mapa.
+provincia: los construidos, como iconos con su descripción al pasar el ratón, y en los botones para construir. En el
+mapa no se dibujan. El Aeródromo aún no tiene imagen.
 
 granja.png             cuartel.png            mercado.png            muralla.png            fabrica.png
 granero.png            templo.png             acueducto.png          universidad.png        hospital.png
@@ -10,13 +11,15 @@ aserradero.png         biblioteca.png         herbolario.png         banco.png  
 mina.png               taller.png             anfiteatro.png         castillo.png           puerto.png
 dique-seco.png
 
-Ciudades en el mapa, según crecen:
+Ciudades en el mapa con «Figuras 3D» (con «Etiquetas» son puntos), según crecen:
 cabana.png             menos de 2.000 habitantes
 pueblo.png             menos de 10.000
 capital.png            10.000 o más, y siempre la capital (con un aro dorado en la base)
 ciudad-moderna.png     en la época moderna, la capital y las de 10.000 o más
 
-Van reducidos a 128 px. Los originales a tamaño completo están en originales/ (no se compilan ni se suben a git).
+Van reducidos a 128 px. Los originales a tamaño completo están en originales/ (no se compilan ni se suben a git), y los
+de la primera tanda, en originales/anteriores/.
 
 Origen y licencia de las imágenes:
 - Edificios y ciudades (25 iconos, 2026-10-05): herramienta y plan pendientes de anotar.
+- Edificios y ciudades, nuevo estilo (25 iconos, 2026-10-07): sustituyen a los anteriores; fabrica.png llegó como factoria.png.
