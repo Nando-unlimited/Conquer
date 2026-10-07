@@ -69,6 +69,29 @@ public class NationScreenTests(WorldFixture world)
     }
 
     [Fact]
+    public void TheNavyAndAirTabsAppearWithTheAdvancesThatBuildThem()
+    {
+        var game = Game(NationTab.Navy);
+        Assert.DoesNotContain(NationTab.Navy, game.Nation.Tabs);
+        Assert.DoesNotContain(NationTab.AirForce, game.Nation.Tabs);
+        Assert.Equal(NationTab.Summary, game.Nation.Tab); // a hidden tab reads as the summary
+
+        // Navigation finishes: the tab appears and the player is told.
+        var human = game.Human;
+        human.Researching[(int)Conquer.Game.Science.TechBranch.Economy] = Conquer.Game.Science.Tech.Navigation;
+        human.ResearchProgress[(int)Conquer.Game.Science.Tech.Navigation] = 1e9;
+        for (int i = 0; i < 24 && !human.Techs.Contains(Conquer.Game.Science.Tech.Navigation); i++) game.Session.Step();
+        Assert.Contains(NationTab.Navy, game.Nation.Tabs);
+        Assert.Equal(NationTab.Navy, game.Nation.Tab);
+        Assert.Contains(game.Session.Notifications, n => n.Text.Contains("puertos y barcos") && n.Text.Contains("pestaña Marina"));
+        Assert.DoesNotContain(NationTab.AirForce, game.Nation.Tabs);
+
+        human.Learn(Conquer.Game.Science.Tech.Aviation);
+        Assert.Contains(NationTab.AirForce, game.Nation.Tabs);
+        Assert.Equal(NationScreen.TabNames.Length, game.Nation.Tabs.Count);
+    }
+
+    [Fact]
     public void ATemplateIsRenamedFromTheDesigner()
     {
         var game = Game(NationTab.Templates);

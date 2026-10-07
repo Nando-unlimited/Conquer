@@ -173,7 +173,7 @@ public static class HelpTopics
         ]),
         ("Aviación",
         [
-            "Los aviones no son fichas en el mapa: forman unidades aéreas que despegan de aeródromos y portaaviones.",
+            "Los aviones no son fichas en el mapa: forman unidades aéreas que despegan de aeródromos y portaaviones. La pestaña Fuerza aérea de la nación aparece al descubrir Aviación.",
             "## Tipos y épocas",
             "- Cazas (dominan el aire; 1 hombre por avión), bombarderos en picado (apoyo en batalla; 2), bombarderos tácticos (apoyo en batalla y bombardeo; 4), bombarderos estratégicos (bombardeo; 10), aviación naval (flotas y convoyes; 2) y transportes (paracaidistas; 4).",
             "- Cada tipo tiene tres modelos: biplanos con Aviación, monoplanos con Radar y reactores con Motor a reacción. Cada época vuela más lejos y pega más fuerte.",
@@ -196,7 +196,7 @@ public static class HelpTopics
         [
             "Las tropas no cruzan el mar solas: necesitan barcos. Solo los aviones vuelan sobre él.",
             "## Puertos y barcos",
-            "- Construye un Puerto (Navegación a vela) en una ciudad con costa. Allí se construyen los barcos, y cada uno sale como una flotilla.",
+            "- Construye un Puerto (Navegación a vela) en una ciudad con costa. Allí se construyen los barcos, y cada uno sale como una flotilla. La pestaña Marina de la nación aparece al descubrir Navegación a vela.",
             $"- Los barcos se agrupan en una sola ficha: flotilla (hasta {NavalEchelons.ShipsPerFlotilla} buques), escuadra (hasta 3 flotillas, {NavalEchelons.ShipsPerSquadron}) y fuerza (hasta 3 escuadras, {NavalEchelons.ShipsPerForce}). Se unen y separan como las unidades de tierra, en «Editar unidad».",
             $"- Por encima, cuarteles generales con un almirante, en un puerto: la Flota manda hasta {MilitaryRules.MaxFleetsPerFlota} agrupaciones a menos de {MilitaryRules.FleetCommandRangeKm:N0} km (+{MilitaryRules.FleetCommandBonus:P0} de fuego y la habilidad de su almirante), y la Armada, una por nación, manda las flotas (+{MilitaryRules.HigherFleetCommandBonus:P0} más). Se forman en la pestaña Marina.",
             $"- Combustible: los barcos de vela no gastan; los de vapor gastan carbón y los modernos petróleo cada día en el mar (en puerto, nada). Sin él, una agrupación navega {MilitaryRules.OutOfFuelSlowdown:0} veces más despacio y lucha a la mitad. Los aviones gastan petróleo los días que vuelan su misión; sin él se quedan en tierra.",

@@ -39,7 +39,28 @@ public sealed partial class NationScreen
     private readonly bool[] _sortAscending = new bool[TabNames.Length];
 
     public bool Visible { get; set; }
-    public NationTab Tab { get; set; }
+
+    private NationTab _tab;
+
+    /// <summary>The open tab; a hidden one (see <see cref="Tabs"/>) reads as the summary.</summary>
+    public NationTab Tab
+    {
+        get => IsShown(_tab) ? _tab : NationTab.Summary;
+        set => _tab = value;
+    }
+
+    /// <summary>
+    /// The tabs to show, in order: all of them but Marina until the nation can build ships and Fuerza aérea until it
+    /// can build planes (an advance announces each when it opens it).
+    /// </summary>
+    public IReadOnlyList<NationTab> Tabs => [.. Enum.GetValues<NationTab>().Where(IsShown)];
+
+    private bool IsShown(NationTab tab) => tab switch
+    {
+        NationTab.Navy => Session.HasNavy(Player),
+        NationTab.AirForce => Session.HasAirForce(Player),
+        _ => true,
+    };
 
     public NationScreen(GameController game)
     {

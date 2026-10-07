@@ -23,16 +23,18 @@ public sealed class NationView(NationScreen screen)
         ui.Text(area.X + 20, area.Y + 14, screen.Title, Theme.Accent, FontSize.Large, bold: true);
         float tx = area.X + 40 + ui.Font.Measure(screen.Title, FontSize.Large, true);
         // The tabs share the room up to the close button, 108 pixels each at most.
-        float step = Math.Min(108, (area.Right - 130 - tx) / NationScreen.TabNames.Length);
-        for (int i = 0; i < NationScreen.TabNames.Length; i++)
+        var tabs = screen.Tabs;
+        float step = Math.Min(108, (area.Right - 130 - tx) / tabs.Count);
+        for (int n = 0; n < tabs.Count; n++)
         {
+            int i = (int)tabs[n];
             // The science tab carries its picture, if there is one, and its name moves over to make room.
-            var tab = new Rect(tx + i * step, area.Y + 12, step - 6, 32);
-            bool picture = (NationTab)i == NationTab.Science && Icons.HasPicture(ScienceIcon.Name);
+            var tab = new Rect(tx + n * step, area.Y + 12, step - 6, 32);
+            bool picture = tabs[n] == NationTab.Science && Icons.HasPicture(ScienceIcon.Name);
             string label = picture ? "     " + NationScreen.TabNames[i] : NationScreen.TabNames[i];
             // A name too long for its tab drops to the small letters.
             var size = ui.Font.Measure(label, FontSize.Normal) > tab.W - 10 ? FontSize.Small : FontSize.Normal;
-            if (ui.Button(tab, label, active: (int)screen.Tab == i, size: size)) screen.Tab = (NationTab)i;
+            if (ui.Button(tab, label, active: screen.Tab == tabs[n], size: size)) screen.Tab = tabs[n];
             if (picture) Icons.Picture(ui.Batch, ScienceIcon.Name, new Vector2(tab.X + 18, tab.Y + tab.H / 2), 22);
         }
         if (ui.Button(new Rect(area.Right - 120, area.Y + 12, 100, 32), "Cerrar", tooltip: "Cerrar (N o Esc)")) screen.Visible = false;
@@ -126,8 +128,9 @@ public sealed class NationView(NationScreen screen)
             ui.Text(r.X, r.Y, table.Empty, Theme.TextDim);
             return;
         }
-        float top = Header(ui, r, table);
-        foreach (var (cells, rowY) in Rows(ui, r, top, table.Rows)) Row(ui, table, cells, r.X, rowY);
+        var widths = Fit(table, r.W - Ui.ScrollBarWidth - 6);
+        float top = Header(ui, r, table, widths);
+        foreach (var (cells, rowY) in Rows(ui, r, top, table.Rows)) Row(ui, table, cells, r.X, rowY, widths);
     }
 
     /// <summary>Several tables one under the other, each under its title, scrolling all together.</summary>
@@ -150,13 +153,14 @@ public sealed class NationView(NationScreen screen)
                 y += 40;
                 continue;
             }
-            y = Header(ui, new Rect(r.X, y, width, RowHeight), table);
+            var widths = Fit(table, width);
+            y = Header(ui, new Rect(r.X, y, width, RowHeight), table, widths);
             for (int i = 0; i < table.Rows.Count; i++, y += RowHeight)
             {
                 // Rows out of view are skipped; the clipping cuts the ones half in view.
                 if (y + RowHeight < r.Y || y > r.Bottom) continue;
                 RowBackground(ui, new Rect(r.X, y, width, RowHeight), i);
-                Row(ui, table, table.Rows[i], r.X, y);
+                Row(ui, table, table.Rows[i], r.X, y, widths);
             }
             y += 24;
         }
@@ -164,12 +168,12 @@ public sealed class NationView(NationScreen screen)
     }
 
     /// <summary>A row's cells across its columns.</summary>
-    private static void Row(Ui ui, Table table, IReadOnlyList<Cell> cells, float left, float rowY)
+    private static void Row(Ui ui, Table table, IReadOnlyList<Cell> cells, float left, float rowY, float[] widths)
     {
         float x = left + 8;
         for (int i = 0; i < cells.Count; i++)
         {
-            float width = table.Columns[i].Width;
+            float width = widths[i];
             switch (cells[i])
             {
                 case TextCell text: TextCell(ui, text, x, rowY, width); break;
@@ -181,6 +185,28 @@ public sealed class NationView(NationScreen screen)
             }
             x += width;
         }
+    }
+
+    /// <summary>
+    /// The columns' widths, narrowed all in proportion when together they are wider than <paramref name="available"/>,
+    /// so the last ones never run past the table's edge.
+    /// </summary>
+    private static float[] Fit(Table table, float available)
+    {
+        var widths = table.Columns.Select(c => c.Width).ToArray();
+        float total = widths.Sum() + 8;
+        if (total > available && available > 0)
+            for (int i = 0; i < widths.Length; i++) widths[i] *= available / total;
+        return widths;
+    }
+
+    /// <summary>The text cut short with "..." to fit in <paramref name="width"/>, or whole if it fits.</summary>
+    private static string Clip(Ui ui, string text, float width, FontSize size, bool bold = false)
+    {
+        if (ui.Font.Measure(text, size, bold) <= width) return text;
+        int n = text.Length;
+        while (n > 0 && ui.Font.Measure(text[..n].TrimEnd() + "...", size, bold) > width) n--;
+        return text[..n].TrimEnd() + "...";
     }
 
     /// <summary>Every other row shaded, and the one under the mouse outlined.</summary>
@@ -203,6 +229,7 @@ public sealed class NationView(NationScreen screen)
         string text = c.Text;
         // The suffix always shows; the text gives way to it.
         if (c.Suffix != null && text.Length > 0) text = ui.Font.Wrap(text, width - 14 - (tx - x) - ui.Font.Measure(c.Suffix, FontSize.Small), size).First();
+        else if (text.Length > 0) text = Clip(ui, text, width - 10 - (tx - x), size, c.Bold);
         if (text.Length > 0) ui.Text(tx, rowY + c.Top, text, Theme.Of(c.Ink), size, c.Bold);
         if (c.Suffix != null) ui.Text(tx + ui.Font.Measure(text, size, c.Bold), rowY + c.Top + 2, c.Suffix, Theme.TextDim, FontSize.Small);
         if (c.Bar is { } bar)
@@ -211,23 +238,26 @@ public sealed class NationView(NationScreen screen)
             ui.Batch.Rect(x, rowY + bar.Top, w, bar.Thickness, Theme.ButtonDisabled);
             ui.Batch.Rect(x, rowY + bar.Top, w * (float)Math.Clamp(bar.Fraction, 0, 1), bar.Thickness, Theme.Of(bar.Fill));
         }
-        if (c.Tooltip != null && ui.Hover(new Rect(x, rowY, width, RowHeight))) ui.Tooltip(c.Tooltip);
+        // A cut text shows whole in the tooltip when the cell has none of its own.
+        string? tooltip = c.Tooltip ?? (text != c.Text && c.Suffix == null ? c.Text : null);
+        if (tooltip != null && ui.Hover(new Rect(x, rowY, width, RowHeight))) ui.Tooltip(tooltip);
     }
 
     /// <summary>Draws the column titles; the sortable ones are buttons that sort the table. Returns where rows start.</summary>
-    private static float Header(Ui ui, Rect r, Table table)
+    private static float Header(Ui ui, Rect r, Table table, float[] widths)
     {
         float x = r.X;
         for (int i = 0; i < table.Columns.Count; i++)
         {
-            var (title, width) = table.Columns[i];
+            string title = table.Columns[i].Title;
+            float width = widths[i];
             if (i < table.Sortable)
             {
                 string arrow = table.SortColumn == i ? (table.SortAscending ? " ^" : " v") : "";
                 if (ui.Button(new Rect(x, r.Y, width - 6, 28), title + arrow, active: table.SortColumn == i, tooltip: "Ordenar", size: FontSize.Small))
                     table.SortBy?.Invoke(i);
             }
-            else ui.Text(x + 8, r.Y + 5, title, Theme.TextDim, FontSize.Small);
+            else ui.Text(x + 8, r.Y + 5, Clip(ui, title, width - 12, FontSize.Small), Theme.TextDim, FontSize.Small);
             x += width;
         }
         return r.Y + (table.Sortable > 0 ? 36 : 30);
@@ -322,18 +352,27 @@ public sealed class NationView(NationScreen screen)
         }
         else y += 30;
 
-        const float CardH = 88, CardGap = 6;
+        const float CardGap = 6;
         foreach (var level in branch.Levels)
         {
             ui.Text(x, y, level.Title, Theme.Of(level.Ink), FontSize.Small);
             y += 16;
             foreach (var card in level.Cards)
             {
-                TechCard(ui, new Rect(x, y, r.W, CardH), card);
-                y += CardH + CardGap;
+                float h = TechCardHeight(ui, r.W, card);
+                TechCard(ui, new Rect(x, y, r.W, h), card);
+                y += h + CardGap;
             }
         }
         return y;
+    }
+
+    /// <summary>A card's height: its name, then its description and its notes, each wrapped to as many lines as they need.</summary>
+    private static float TechCardHeight(Ui ui, float w, TechCard card)
+    {
+        int lines = ui.Font.Wrap(card.Description, w - 20, FontSize.Small).Count + card.Notes.Sum(n => ui.Font.Wrap(n.Text, w - 20, FontSize.Small).Count);
+        // The old fixed height left a free line between the description and the notes; keep it as the minimum.
+        return Math.Max(88, 30 + 8 + lines * ui.Font.LineHeight(FontSize.Small) + 12);
     }
 
     private static void TechCard(Ui ui, Rect c, TechCard card)
@@ -352,15 +391,17 @@ public sealed class NationView(NationScreen screen)
         }
         ui.Text(right - ui.Font.Measure(card.State, FontSize.Small), y + 3, card.State, Theme.TextDim, FontSize.Small);
         y += 24;
-        foreach (var line in ui.Font.Wrap(card.Description, c.W - 20, FontSize.Small).Take(2))
+        foreach (var line in ui.Font.Wrap(card.Description, c.W - 20, FontSize.Small))
         {
             ui.Text(x, y, line, Theme.Of(card.DescriptionInk), FontSize.Small);
             y += ui.Font.LineHeight(FontSize.Small);
         }
-        float ny = c.Bottom - 8 - card.Notes.Count * ui.Font.LineHeight(FontSize.Small);
-        foreach (var (text, ink) in card.Notes)
+        // The notes sit at the bottom, below the description however many lines it took.
+        var notes = card.Notes.SelectMany(n => ui.Font.Wrap(n.Text, c.W - 20, FontSize.Small).Select(line => (line, n.Ink))).ToList();
+        float ny = Math.Max(y + 4, c.Bottom - 8 - notes.Count * ui.Font.LineHeight(FontSize.Small));
+        foreach (var (line, ink) in notes)
         {
-            ui.Text(x, ny, ui.Font.Wrap(text, c.W - 20, FontSize.Small).First(), Theme.Of(ink), FontSize.Small);
+            ui.Text(x, ny, line, Theme.Of(ink), FontSize.Small);
             ny += ui.Font.LineHeight(FontSize.Small);
         }
         if (card.Progress is double progress) ProgressBar(ui, new Rect(c.X + 1, c.Bottom - 4, c.W - 2, 3), progress, Theme.Of(card.ProgressInk));

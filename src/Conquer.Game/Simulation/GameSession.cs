@@ -443,13 +443,30 @@ public sealed partial class GameSession
         foreach (var branch in Techs.Branches)
         {
             if (player.Researching[(int)branch] is not Tech tech || player.ResearchProgress[(int)tech] < ResearchCost(player, tech, neighbours)) continue;
+            bool navy = HasNavy(player), air = HasAirForce(player);
             player.Learn(tech);
             Raise(GameEventKind.AdvanceDiscovered, player.Id);
             player.Researching[(int)branch] = null;
-            if (player.IsHuman)
-                Notify(player.Id, $"Descubrimiento: {tech.Info().Name}. {tech.Info().Description} Elige el siguiente avance de {branch.Name()} (N).");
+            if (!player.IsHuman) continue;
+            Notify(player.Id, $"Descubrimiento: {tech.Info().Name}. {tech.Info().Description} Elige el siguiente avance de {branch.Name()} (N).");
+            // The advance that opens the navy or the air force says so, and that the nation screen has a new tab for it.
+            if (!navy && HasNavy(player))
+                Notify(player.Id, $"Has descubierto {tech.Info().Name}, que te permite construir puertos y barcos. Ha aparecido la pestaña Marina en tu nación (N) para gestionar tu flota.");
+            if (!air && HasAirForce(player))
+                Notify(player.Id, $"Has descubierto {tech.Info().Name}, que te permite construir aeródromos y aviones. Ha aparecido la pestaña Fuerza aérea en tu nación (N) para gestionar tu aviación.");
         }
     }
+
+    /// <summary>
+    /// Whether the player has a navy to manage: it knows the advance that builds ports (and so ships), or has ships
+    /// anyway (from an old save, say).
+    /// </summary>
+    public bool HasNavy(Player player) =>
+        BuildingType.Port.Info().RequiresTech is not Tech tech || player.Techs.Contains(tech) || Units.Any(u => u.OwnerId == player.Id && u.IsFleet);
+
+    /// <summary>Whether the player has an air force to manage: it knows the advance that builds airfields, or has air units anyway.</summary>
+    public bool HasAirForce(Player player) =>
+        BuildingType.Airfield.Info().RequiresTech is not Tech tech || player.Techs.Contains(tech) || AirUnits.Any(u => u.OwnerId == player.Id);
 
     /// <summary>Whether a level of a branch is open: the first always, the rest once enough of the level below is known.</summary>
     public static bool IsLevelOpen(Player player, TechBranch branch, int level) =>

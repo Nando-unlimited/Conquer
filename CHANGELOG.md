@@ -2,6 +2,17 @@
 
 Todos los cambios del juego, del más reciente al más antiguo. Cada versión es un commit cuyo título es su número.
 
+## [1.120.0] - 2026-10-07
+
+Las pestañas de Marina y Fuerza aérea aparecen cuando se pueden usar, y dos arreglos de dibujo.
+
+### Cambiado
+- **Marina y Fuerza aérea** ya no se ven en la pantalla de la nación hasta que puedes construir barcos (Navegación a vela) o aviones (Aviación). Al descubrir el avance, un aviso te dice que puedes construir puertos y barcos (o aeródromos y aviones) y que ha aparecido su pestaña.
+
+### Corregido
+- Las tarjetas de Ciencia crecen cuando su descripción ocupa dos líneas o más, y ya no la tapan los requisitos (Armerías, por ejemplo).
+- Las tablas de la nación caben en la ventana: si sus columnas no caben, se estrechan todas, y el texto que no cabe en su celda se corta con «...» y se ve entero al pasar el ratón (los costes de la pestaña Unidades se salían por la derecha).
+
 ## [1.119.0] - 2026-10-07
 
 Un mapa más limpio, letras más finas y plantillas con nombre.
