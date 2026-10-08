@@ -121,6 +121,11 @@ public sealed partial class GameScreen
         if (c.Attack is var (from, to)) PathArrow.Draw(Batch, [from, to], Theme.Battle, _game.Now, 5);
         s += CounterMotion(c);
         if (c.Kind == CounterKind.Fleet && c.Moving) Wake(s, c.Heading, c.Scale, c.UnitId);
+        if (c.Compact)
+        {
+            DrawCompactCounter(c, s);
+            return;
+        }
         if (DisplaySettings.Current.UnitModels && c.Model is { } model && _sprites.Has(model))
         {
             DrawFigure(c, s, model);
@@ -218,6 +223,53 @@ public sealed partial class GameScreen
 
     /// <summary>The side of a counter at full size, in pixels.</summary>
     private const float CounterSide = 68;
+
+    /// <summary>
+    /// A counter zoomed out: its NATO box alone in a frame of its nation's colour (gold when selected), with the units
+    /// under it in a stack peeking out up and to the right.
+    /// </summary>
+    private void DrawCompactCounter(UnitCounter c, Vector2 s)
+    {
+        const float w = 24, h = 17, frame = 2;
+        var r = new Rect(s.X - w / 2, s.Y - h / 2, w, h);
+        var color = new Rgba(c.Color);
+        for (int k = Math.Min(c.Count - 1, 2); k >= 1; k--)
+        {
+            var under = new Rect(r.X + 3 * k, r.Y - 3 * k, r.W, r.H);
+            Batch.Rect(under.X - frame - 1, under.Y - frame - 1, under.W + 2 * frame + 2, under.H + 2 * frame + 2, Rgba.Black);
+            Batch.Rect(under.X - frame, under.Y - frame, under.W + 2 * frame, under.H + 2 * frame, color.Scale(0.6f - 0.1f * k).WithAlpha(1));
+        }
+        if (c.Selected)
+        {
+            float pulse = 0.5f + 0.5f * MathF.Sin((float)_game.Now * 5);
+            Batch.Rect(r.X - frame - 4, r.Y - frame - 4, r.W + 2 * frame + 8, r.H + 2 * frame + 8, Theme.Accent.WithAlpha(0.25f + 0.35f * pulse));
+        }
+        Batch.Rect(r.X - frame - 1, r.Y - frame - 1, r.W + 2 * frame + 2, r.H + 2 * frame + 2, Rgba.Black);
+        Batch.Rect(r.X - frame, r.Y - frame, r.W + 2 * frame, r.H + 2 * frame, c.Selected ? Theme.Accent : color.WithAlpha(1));
+        Batch.Rect(r.X, r.Y, r.W, r.H, CounterField);
+        switch (c.Kind)
+        {
+            case CounterKind.Military:
+                MapIcons.NatoSymbol(Batch, r.X, r.Y, r.W, r.H, c.Function);
+                break;
+            case CounterKind.Fleet:
+                Batch.Line(new(r.X + 3, r.Bottom - 5), new(r.Right - 3, r.Bottom - 5), Rgba.Black, 2);
+                Batch.Line(new(r.X + 3, r.Bottom - 5), new(r.X + 7, r.Bottom - 2), Rgba.Black, 1.5f);
+                Batch.Line(new(r.Right - 3, r.Bottom - 5), new(r.Right - 7, r.Bottom - 2), Rgba.Black, 1.5f);
+                break;
+            case CounterKind.Headquarters:
+                // The staff's flag on its pole.
+                Batch.Line(new(r.X + w * 0.35f, r.Bottom - 3), new(r.X + w * 0.35f, r.Y + 3), Rgba.Black, 1.5f);
+                Batch.Rect(r.X + w * 0.35f, r.Y + 3, w * 0.35f, h * 0.35f, Rgba.Black);
+                break;
+            default:
+                MapIcons.Settlers(Batch, r.X, r.Y, r.W, r.H);
+                break;
+        }
+        // The whole stack, frames and all, takes the clicks.
+        float extra = 3 * Math.Min(c.Count - 1, 2);
+        _unitHitBoxes.Add((c.UnitId, c.Stack ?? new[] { c.UnitId }, new Rect(r.X - frame, r.Y - frame - extra, r.W + 2 * frame + extra, r.H + 2 * frame + extra)));
+    }
 
     /// <summary>The text as it is, or cut short and ending in a point, so it is no longer than <paramref name="room"/> pixels.</summary>
     private string Fit(string text, float room, FontSize size)

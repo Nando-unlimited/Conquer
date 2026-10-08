@@ -36,12 +36,14 @@ public enum CounterKind
 /// standing together in a province make one stack, as in Hearts of Iron III: the counter is its top unit's, and
 /// <see cref="Stack"/> holds them all, the top one first (or in their order when the selected one is among them).
 /// <see cref="ShortName"/> is the unit's name abbreviated (<see cref="UnitLabels.Short"/>), <see cref="Flag"/> its nation's.
+/// Zoomed out below <see cref="GameController.CompactCountersZoom"/> it is <see cref="Compact"/>: only its NATO box, small
+/// enough not to hide the province.
 /// </summary>
 public sealed record UnitCounter(int UnitId, Vector2 Screen, float Scale, uint Color, bool Selected, CounterKind Kind, UnitFunction Function,
     string Symbol, int Aboard, string Echelon, double Strength, double Organisation,
     IReadOnlyList<Vector2>? Path, (Vector2 To, bool InRange)? Command, (Vector2 From, Vector2 To)? Attack,
     bool Moving = false, bool Fighting = false, Vector2 Heading = default, string? Model = null, double? Entrenchment = null,
-    NationFlag? Flag = null, string ShortName = "", IReadOnlyList<int>? Stack = null)
+    NationFlag? Flag = null, string ShortName = "", IReadOnlyList<int>? Stack = null, bool Compact = false)
 {
     /// <summary>How many units the counter stands for: the number on it.</summary>
     public int Count => Stack?.Count ?? 1;
@@ -185,6 +187,12 @@ public sealed partial class GameController
     /// <summary>From this zoom on, the stacks in a province with a city stand above it, clear of the city and its name.</summary>
     public const float UnitSpreadZoom = 6f;
 
+    /// <summary>Below this zoom the counters shrink to their NATO box alone (see <see cref="UnitCounter.Compact"/>).</summary>
+    public const float CompactCountersZoom = 2.5f;
+
+    /// <summary>Screen pixels between the centres of compact stacks side by side in a province.</summary>
+    private const float CompactCounterSpacing = 30;
+
     /// <summary>
     /// The units on the map, stacked as in Hearts of Iron III: those of one nation standing in a province (attacking the
     /// same province, or not attacking) make one counter with their number on it, the selected one on top, or else the
@@ -206,6 +214,7 @@ public sealed partial class GameController
         // Each province's stacks side by side, in the order of their nations.
         var inProvince = stacks.GroupBy(st => st[0].ProvinceId)
             .ToDictionary(g => g.Key, g => g.OrderBy(st => st[0].OwnerId).ThenBy(st => st[0].AttackingProvinceId ?? -1).ToList());
+        bool compact = Camera.Zoom < CompactCountersZoom;
         // The selected unit's stack goes last, so it is drawn (and clicked) on top.
         foreach (var stack in stacks.Concat(marching).OrderBy(st => st.Any(u => u.Id == SelectedUnitId)))
         {
@@ -218,7 +227,7 @@ public sealed partial class GameController
             {
                 var here = inProvince[top.ProvinceId];
                 int index = here.IndexOf(stack);
-                s.X += (index - (here.Count - 1) / 2f) * 82 * scale;
+                s.X += (index - (here.Count - 1) / 2f) * (compact ? CompactCounterSpacing : 82 * scale);
                 if (Camera.Zoom >= UnitSpreadZoom && Map.Provinces[top.ProvinceId].CityId.HasValue) s.Y -= 34 * Math.Clamp(Camera.Zoom / 6, 1, 1.6f);
             }
             if (!OnScreen(s)) continue;
@@ -238,7 +247,7 @@ public sealed partial class GameController
                 kind, top.Function, top.Symbol, top.IsFleet ? Session.CargoOf(top).Count() : 0, top.Echelon, top.StrengthShare, top.OrganisationShare,
                 path, command, attack, top.IsMoving, Fighting(top), Heading(top), Models.Of(top),
                 GameSession.IsEmplaced(top) ? top.Entrenchment : null,
-                Flags.Of(owner.Name, owner.Color), UnitLabels.Short(top.Name), ids));
+                Flags.Of(owner.Name, owner.Color), UnitLabels.Short(top.Name), ids, compact));
         }
         return counters;
     }

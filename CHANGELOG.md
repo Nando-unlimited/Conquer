@@ -2,6 +2,11 @@
 
 Todos los cambios del juego, del más reciente al más antiguo. Cada versión es un commit cuyo título es su número.
 
+## [1.127.0] - 2026-10-08
+
+### Cambiado
+- **Fichas pequeñas al alejar el mapa**: por debajo de cierto zoom las fichas se reducen a su símbolo OTAN en un marco del color de su nación (dorado si está seleccionada), con las unidades de la pila asomando detrás, para no tapar la provincia. Con «Figuras 3D» pasa lo mismo.
+
 ## [1.126.1] - 2026-10-08
 
 ### Cambiado

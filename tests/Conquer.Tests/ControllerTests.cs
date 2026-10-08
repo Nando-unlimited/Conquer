@@ -297,6 +297,21 @@ public class ControllerTests(WorldFixture world)
     }
 
     [Fact]
+    public void ZoomedOutCountersShrinkToTheirNatoBox()
+    {
+        var game = GameWithCapital();
+        game.Camera.Screen = new System.Numerics.Vector2(1600, 900);
+        int home = game.SelectedProvince;
+        int id = game.Session.AddRegiment(0, home, BattalionType.LightInfantry).Id;
+        UnitCounter Counter() => Assert.Single(game.Markers().Units, c => c.Stack!.Contains(id));
+
+        game.Camera.LookAt(game.Center(home), GameController.CompactCountersZoom);
+        Assert.False(Counter().Compact);
+        game.Camera.LookAt(game.Center(home), GameController.CompactCountersZoom * 0.8f);
+        Assert.True(Counter().Compact);
+    }
+
+    [Fact]
     public void UnitNamesAreCutShortForTheirCounters()
     {
         Assert.Equal("3.er Rgto.", UnitLabels.Short("3.er Regimiento"));
