@@ -294,11 +294,11 @@ public sealed partial class GameScreen
         Batch.Rect(x - 2, top - 2, total + 4, h + 4, Rgba.Black.WithAlpha(0.45f));
         foreach (char c in marks)
         {
-            if (c == 'I') Batch.Line(new(x, top), new(x, bottom), Rgba.White, 1.5f);
+            if (c == 'I') Batch.Line(new(x, top), new(x, bottom), Rgba.White, 1);
             else
             {
-                Batch.Line(new(x, top), new(x + w, bottom), Rgba.White, 1.5f);
-                Batch.Line(new(x, bottom), new(x + w, top), Rgba.White, 1.5f);
+                Batch.Line(new(x, top), new(x + w, bottom), Rgba.White, 1);
+                Batch.Line(new(x, bottom), new(x + w, top), Rgba.White, 1);
                 x += w;
             }
             x += gap;

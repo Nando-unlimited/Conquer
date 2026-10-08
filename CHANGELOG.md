@@ -2,6 +2,11 @@
 
 Todos los cambios del juego, del más reciente al más antiguo. Cada versión es un commit cuyo título es su número.
 
+## [1.125.1] - 2026-10-08
+
+### Cambiado
+- **Marcas de tamaño más finas**: las rayas y aspas que indican el tamaño de la unidad encima de las fichas y de las maquetas se dibujan con un trazo más fino.
+
 ## [1.125.0] - 2026-10-07
 
 Fichas cuadradas, como en Hearts of Iron III.
