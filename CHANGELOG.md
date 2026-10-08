@@ -2,6 +2,11 @@
 
 Todos los cambios del juego, del más reciente al más antiguo. Cada versión es un commit cuyo título es su número.
 
+## [1.125.2] - 2026-10-08
+
+### Arreglado
+- **El mapa va mucho más fluido de cerca**: con zoom (a partir de ×2), dibujar el mapa costaba unas seis veces más que de lejos y el juego bajaba a unos 8 fotogramas por segundo al moverlo. El suavizado de fronteras y costas ahora solo se calcula junto a ellas, y el mapa se ve igual que antes.
+
 ## [1.125.1] - 2026-10-08
 
 ### Cambiado

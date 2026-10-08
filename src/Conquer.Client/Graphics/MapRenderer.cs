@@ -195,6 +195,21 @@ public sealed class MapRenderer : IDisposable
             distancePx = margin / slope * uZoom;
         }
 
+        // The terrain colour blended from the 3x3 surrounding map pixels with the weights wx, wy, as four
+        // filtered reads: along each axis the middle pixel's weight is shared out between two linear taps.
+        vec3 terrainSpline(vec2 c, vec3 wx, vec3 wy) {
+            vec2 a = vec2(wx.x, wy.x) + 0.5 * vec2(wx.y, wy.y), b = vec2(wx.z, wy.z) + 0.5 * vec2(wx.y, wy.y);
+            vec2 lo = (c - 0.5 + 0.5 * vec2(wx.y, wy.y) / a) / uMapSize, hi = (c + 0.5 + vec2(wx.z, wy.z) / b) / uMapSize;
+            return a.x * a.y * textureLod(uTerrain, lo, 0.0).rgb + b.x * a.y * textureLod(uTerrain, vec2(hi.x, lo.y), 0.0).rgb
+                 + a.x * b.y * textureLod(uTerrain, vec2(lo.x, hi.y), 0.0).rgb + b.x * b.y * textureLod(uTerrain, hi, 0.0).rgb;
+        }
+
+        // Whether all nine keys are the same, so there is no border near and strongest() can be skipped.
+        bool allSame(int keys[9]) {
+            for (int k = 1; k < 9; k++) if (keys[k] != keys[0]) return false;
+            return true;
+        }
+
         // Also gives the terrain colour blended only from pixels on the same side of the coast as the
         // point, so land and sea meet along the smooth coastline, and the distance to that coast.
         void smoothRegions(vec2 m, out int id, out float provinceDistance, out float ownerDistance,
@@ -207,37 +222,58 @@ public sealed class MapRenderer : IDisposable
             vec3 gx = vec3(d.x - 0.5, -2.0 * d.x, 0.5 + d.x);
             vec3 gy = vec3(d.y - 0.5, -2.0 * d.y, 0.5 + d.y);
 
-            int ids[9], owners[9], wet[9];
+            int ids[9];
+            for (int j = 0; j < 3; j++)
+                for (int i = 0; i < 3; i++)
+                    ids[j * 3 + i] = idAt(c + vec2(float(i - 1), float(j - 1)) + 0.5);
+
+            // Inside a province, away from any border (most of the map): one region and no lines, so the costly
+            // work below is skipped.
+            if (allSame(ids)) {
+                id = ids[0];
+                sea = isWater(id);
+                provinceDistance = ownerDistance = coastDistance = 1e6;
+                terrain = terrainSpline(c, wx, wy);
+                return;
+            }
+
             float w[9];
             vec2 dw[9];
-            vec3 colours[9];
+            for (int j = 0; j < 3; j++) {
+                for (int i = 0; i < 3; i++) {
+                    w[j * 3 + i] = wx[i] * wy[j];
+                    dw[j * 3 + i] = vec2(gx[i] * wy[j], wx[i] * gy[j]);
+                }
+            }
+            int owners[9], wet[9];
+            for (int k = 0; k < 9; k++) {
+                vec4 o = texelFetch(uProvOwner, slot(ids[k]), 0);
+                owners[k] = int(o.r * 255.0 + 0.5);
+                wet[k] = o.g > 0.5 ? 1 : 0;
+            }
+            int top, topOwner = 4, topWet = 4;
+            strongest(ids, w, dw, top, provinceDistance);
+            if (allSame(owners)) ownerDistance = 1e6;
+            else strongest(owners, w, dw, topOwner, ownerDistance);
+            bool coast = !allSame(wet);
+            if (!coast) coastDistance = 1e6;
+            else strongest(wet, w, dw, topWet, coastDistance);
+            id = ids[top];
+            sea = wet[topWet] == 1;
+            if (!coast) { terrain = terrainSpline(c, wx, wy); return; }
+
+            // Along the coast, only the pixels on this side of it.
+            vec3 sum = vec3(0.0);
+            float total = 0.0;
             for (int j = 0; j < 3; j++) {
                 for (int i = 0; i < 3; i++) {
                     int k = j * 3 + i;
+                    if (wet[k] != wet[topWet]) continue;
                     vec2 t = c + vec2(float(i - 1), float(j - 1)) + 0.5;
-                    ids[k] = idAt(t);
-                    owners[k] = ownerOf(ids[k]);
-                    wet[k] = isWater(ids[k]) ? 1 : 0;
-                    w[k] = wx[i] * wy[j];
-                    dw[k] = vec2(gx[i] * wy[j], wx[i] * gy[j]);
                     ivec2 texel = ivec2(int(mod(floor(t.x), uMapSize.x)), clamp(int(floor(t.y)), 0, int(uMapSize.y) - 1));
-                    colours[k] = texelFetch(uTerrain, texel, 0).rgb;
+                    sum += texelFetch(uTerrain, texel, 0).rgb * w[k];
+                    total += w[k];
                 }
-            }
-
-            int top, topOwner, topWet;
-            strongest(ids, w, dw, top, provinceDistance);
-            strongest(owners, w, dw, topOwner, ownerDistance);
-            strongest(wet, w, dw, topWet, coastDistance);
-            id = ids[top];
-            sea = wet[topWet] == 1;
-
-            vec3 sum = vec3(0.0);
-            float total = 0.0;
-            for (int k = 0; k < 9; k++) {
-                if (wet[k] != wet[topWet]) continue;
-                sum += colours[k] * w[k];
-                total += w[k];
             }
             terrain = sum / max(total, 1e-4);
         }
