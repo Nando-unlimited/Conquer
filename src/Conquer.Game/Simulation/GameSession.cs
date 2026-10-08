@@ -311,17 +311,7 @@ public sealed partial class GameSession
             // An occupied province neither works nor eats for its owner.
             if (pop <= 0 || p.IsOccupied) continue;
             population += pop;
-            double capacity = CapacityOf(p);
-            double worked = Math.Min(pop, capacity);
-            double crowded = Math.Max(0, pop - capacity);
-            double output = GameRules.MoodProductivity(p.Mood);
-            var bonus = BonusesOf(p);
-            net[(int)ResourceType.Food] += GameRules.FoodPerWorker * p.FoodYield * (worked + crowded * GameRules.OvercrowdedFoodShare) * output * (1 + bonus.Food);
-            net[(int)ResourceType.Wood] += p.Info.WoodYield / 1000 * worked * output * (1 + bonus.Wood);
-            if (p.Mood >= GameRules.UnrestMood) net[(int)ResourceType.Gold] += GameRules.TaxGoldPerCitizen * pop * output * (1 + bonus.Taxes);
-            double workforce = Math.Min(1, pop / GameRules.DepositFullWorkers);
-            foreach (var r in Resources.Deposits)
-                if (p.HasDeposit(r) && player.Knows(r)) net[(int)r] += Extract(p, r, p.Deposits[(int)r] * workforce * output * (1 + bonus.Deposits));
+            AddYields(p, player, net, (r, amount) => Extract(p, r, amount));
         }
         // Applied after extracting, so a rival's extra output does not empty its deposits faster.
         double multiplier = OutputMultiplier(player);
@@ -377,6 +367,42 @@ public sealed partial class GameSession
                 p.Population += DailyBirths(p, starving: false);
             }
         }
+    }
+
+    /// <summary>
+    /// Adds what a province's people work out of it in a day to <paramref name="into"/>, by resource: harvests, wood,
+    /// taxes and, through <paramref name="dig"/> (which takes it from the pocket and says how much there was), its
+    /// deposits. Before the difficulty's multiplier.
+    /// </summary>
+    private void AddYields(Province p, Player player, double[] into, Func<ResourceType, double, double> dig)
+    {
+        double pop = p.Population;
+        double capacity = CapacityOf(p);
+        double worked = Math.Min(pop, capacity);
+        double crowded = Math.Max(0, pop - capacity);
+        double output = GameRules.MoodProductivity(p.Mood);
+        var bonus = BonusesOf(p);
+        into[(int)ResourceType.Food] += GameRules.FoodPerWorker * p.FoodYield * (worked + crowded * GameRules.OvercrowdedFoodShare) * output * (1 + bonus.Food);
+        into[(int)ResourceType.Wood] += p.Info.WoodYield / 1000 * worked * output * (1 + bonus.Wood);
+        if (p.Mood >= GameRules.UnrestMood) into[(int)ResourceType.Gold] += GameRules.TaxGoldPerCitizen * pop * output * (1 + bonus.Taxes);
+        double workforce = Math.Min(1, pop / GameRules.DepositFullWorkers);
+        foreach (var r in Resources.Deposits)
+            if (p.HasDeposit(r) && player.Knows(r)) into[(int)r] += dig(r, p.Deposits[(int)r] * workforce * output * (1 + bonus.Deposits));
+    }
+
+    /// <summary>
+    /// What the province gives its owner each day, by resource, as the next day's work would yield it (its pockets'
+    /// limits included); nothing while it is empty or occupied.
+    /// </summary>
+    public double[] ProvinceOutput(Province p)
+    {
+        var yields = new double[Resources.All.Length];
+        if (p.OwnerId < 0 || p.Population <= 0 || p.IsOccupied) return yields;
+        var player = Players[p.OwnerId];
+        AddYields(p, player, yields, (r, amount) => r.IsRenewable() ? amount : Math.Min(amount, p.Reserves[(int)r]));
+        double multiplier = OutputMultiplier(player);
+        for (int i = 0; i < yields.Length; i++) yields[i] *= multiplier;
+        return yields;
     }
 
     /// <summary>

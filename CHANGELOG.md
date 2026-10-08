@@ -2,6 +2,11 @@
 
 Todos los cambios del juego, del más reciente al más antiguo. Cada versión es un commit cuyo título es su número.
 
+## [1.126.0] - 2026-10-08
+
+### Añadido
+- **Más información en la pestaña Provincias de la pantalla Nación**: una columna «Aporta al día» con lo que cada provincia da a tus almacenes (sus tres recursos principales; todos en la ayuda emergente) y otra «Taller» con lo que fabrica su taller o fábrica y cuántas piezas al día, en ámbar si está parado y en rojo si no puede fabricar su modelo. El terreno pasa a la ayuda del nombre y se quita la columna «En camino».
+
 ## [1.125.2] - 2026-10-08
 
 ### Arreglado

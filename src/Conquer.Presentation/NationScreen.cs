@@ -250,23 +250,54 @@ public sealed partial class NationScreen
 
     private TablePage Provinces()
     {
-        Column[] columns = [new("Provincia", 190), new("Población", 150), new("Moral", 130), new("Fertilidad", 90), new("Terreno", 130), new("En camino", 90), new("En curso", 190), new("", 60)];
-        var incoming = Session.Migrations.Where(m => m.OwnerId == Player.Id)
-            .GroupBy(m => m.ToProvinceId).ToDictionary(g => g.Key, g => g.Sum(m => m.People));
+        Column[] columns = [new("Provincia", 180), new("Población", 140), new("Moral", 120), new("Fertilidad", 80), new("Aporta al día", 220), new("Taller", 180), new("En curso", 170), new("", 60)];
         var provinces = Player.Provinces.Select(id => Map.Provinces[id]);
         var rows = new List<IReadOnlyList<Cell>>();
         foreach (var p in Sort(NationTab.Provinces, provinces, p => p, p => p.DisplayName))
         {
-            var cells = new List<Cell> { new TextCell(p.DisplayName, p.CityId.HasValue ? Tone.Accent : Tone.Normal) };
+            var cells = new List<Cell> { new TextCell(p.DisplayName, p.CityId.HasValue ? Tone.Accent : Tone.Normal, Tooltip: $"Terreno: {p.Info.Name}.") };
             cells.AddRange(ProvinceCells(p));
-            cells.Add(new TextCell(p.Info.Name, Tone.Dim));
-            int people = incoming.GetValueOrDefault(p.Id);
-            cells.Add(new TextCell(people > 0 ? $"{people:N0}" : "-", people > 0 ? Tone.Normal : Tone.Dim));
+            cells.Add(Output(p));
+            cells.Add(Workshop(p));
             cells.Add(Work(p));
             cells.Add(ViewButton(p.Id));
             rows.Add(cells);
         }
         return new TablePage(SortableTable(NationTab.Provinces, columns, rows));
+    }
+
+    /// <summary>
+    /// What the province gives the nation each day: its three largest resources, with all of them in the tooltip;
+    /// a dash when it gives nothing (empty, or occupied).
+    /// </summary>
+    private TextCell Output(Province p)
+    {
+        var output = Session.ProvinceOutput(p);
+        var given = Resources.All.Where(r => output[(int)r] >= 0.05).OrderByDescending(r => output[(int)r]).ToList();
+        if (given.Count == 0)
+            return new TextCell("-", Tone.Dim, Tooltip: p.IsOccupied ? "Ocupada por el enemigo: no produce para ti." : "Sin gente que la trabaje.");
+        string Amount(ResourceType r) => $"{output[(int)r]:#,0.#} {r.Name().ToLowerInvariant()}";
+        return new TextCell(string.Join(" · ", given.Take(3).Select(Amount)), Tone.Normal,
+            Suffix: given.Count > 3 ? $" (+{given.Count - 3})" : null,
+            Tooltip: "Lo que la provincia aporta cada día a tus almacenes:\n" + string.Join("\n", given.Select(r => "+" + Amount(r))));
+    }
+
+    /// <summary>
+    /// What the province's workshop or factory makes, with the pieces a day; a dash without one, and a warning when it
+    /// stands idle or cannot make its model.
+    /// </summary>
+    private TextCell Workshop(Province p)
+    {
+        if (!GameSession.HasWorkshop(p)) return new TextCell("-", Tone.Dim);
+        string building = p.Has(BuildingType.Factory) ? "Fábrica" : "Taller";
+        if (GameSession.ProductionOf(p) is not { } model)
+            return new TextCell("Parado", Tone.Uneasy, Tooltip: $"{building} sin trabajo. Elige qué fabricar en la ficha de la provincia (pestaña Ejército).");
+        var can = Session.CanProduce(p, model);
+        double rate = GameSession.ProductionRate(p, model) * (1 - p.WorkshopDamage);
+        string tip = $"{building}: fabrica {model.SupplyName.ToLowerInvariant()}, {rate:0.#} al día. En almacén: {Player.EquipmentOf(model):N0}." +
+                     (p.WorkshopDamage > 0 ? $"\nDañado por los bombardeos: trabaja al {1 - p.WorkshopDamage:P0}." : "") +
+                     (can.Ok ? "" : "\n" + can.Message);
+        return new TextCell(model.SupplyName, can.Ok ? Tone.Normal : Tone.Bad, Suffix: $" · {rate:0.#}/día", Tooltip: tip);
     }
 
     /// <summary>

@@ -54,6 +54,23 @@ public class NationScreenTests(WorldFixture world)
     }
 
     [Fact]
+    public void TheProvincesTableShowsWhatEachProvinceGivesAndWhatItsWorkshopMakes()
+    {
+        var game = Game(NationTab.Provinces);
+        var capital = game.Session.Map.Provinces[game.Session.Cities.Single().ProvinceId];
+        var output = game.Session.ProvinceOutput(capital);
+        Assert.True(output[(int)ResourceType.Gold] > 0);
+        Assert.True(output[(int)ResourceType.Food] > 0);
+
+        var table = ((TablePage)game.Nation.Page()).Table;
+        int given = table.Columns.ToList().FindIndex(c => c.Title == "Aporta al día");
+        int workshop = table.Columns.ToList().FindIndex(c => c.Title == "Taller");
+        var row = table.Rows.Single(r => ((TextCell)r[0]).Text == capital.DisplayName);
+        Assert.Contains("oro", ((TextCell)row[given]).Tooltip);
+        Assert.Equal("-", ((TextCell)row[workshop]).Text); // no workshop yet
+    }
+
+    [Fact]
     public void TheDesignerAddsABattalionToANewTemplate()
     {
         var game = Game(NationTab.Templates);
