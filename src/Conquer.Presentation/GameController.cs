@@ -206,12 +206,14 @@ public sealed partial class GameController
     public void SelectProvince(int provinceId)
     {
         SelectedUnitId = null;
+        _stackList = null;
         SelectedProvince = provinceId >= 0 && ExploredProvinces.Contains(provinceId) ? provinceId : -1;
     }
 
     public void ClearSelection()
     {
         SelectedUnitId = null;
+        _stackList = null;
         SelectedProvince = -1;
     }
 

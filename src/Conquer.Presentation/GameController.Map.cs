@@ -252,17 +252,6 @@ public sealed partial class GameController
         return counters;
     }
 
-    /// <summary>
-    /// Clicking a stack: selects its top unit, or, when one of its units is already selected, the next one in it (after
-    /// the last, the first again), as clicking a stack over and over goes through its units.
-    /// </summary>
-    public void SelectInStack(IReadOnlyList<int> stack)
-    {
-        if (stack.Count == 0) return;
-        int at = SelectedUnitId is int id ? stack.ToList().IndexOf(id) : -1;
-        SelectUnit(stack[at < 0 ? 0 : (at + 1) % stack.Count]);
-    }
-
     /// <summary>Whether the unit is attacking, or defending a province under attack, so its counter shakes.</summary>
     private bool Fighting(Unit unit) =>
         unit.AttackingProvinceId.HasValue

@@ -171,7 +171,7 @@ public static class DocumentView
     }
 
     /// <summary>A unit's name and note, a line about it, and its strength and organisation bars side by side; lit under the mouse when it has a tooltip.</summary>
-    private static void Entry(Ui ui, UnitEntry e, float x, ref float y, float w)
+    public static void Entry(Ui ui, UnitEntry e, float x, ref float y, float w)
     {
         var row = new Rect(x, y, w, 40);
         bool hover = e.Tooltip != null && ui.Hover(row);

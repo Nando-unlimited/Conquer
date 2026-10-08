@@ -265,7 +265,7 @@ public class ControllerTests(WorldFixture world)
     }
 
     [Fact]
-    public void UnitsInAProvinceMakeOneStackThatClicksGoThrough()
+    public void UnitsInAProvinceMakeOneStackWhoseClickListsThem()
     {
         var game = GameWithCapital();
         game.Camera.Screen = new System.Numerics.Vector2(1600, 900);
@@ -283,13 +283,24 @@ public class ControllerTests(WorldFixture world)
         Assert.Equal(game.Camera.MapToScreen(game.Center(home)), stack.Screen);
         Assert.NotNull(stack.Flag);
 
-        // Clicking it again selects the next unit in it, and after the last, the first.
-        var order = stack.Stack!.ToList();
-        for (int i = 1; i <= order.Count; i++)
-        {
-            game.SelectInStack(Stack().Stack!);
-            Assert.Equal(order[(order.IndexOf(ids[1]) + i) % order.Count], game.SelectedUnitId);
-        }
+        // Clicking it keeps the selected unit and lists them all; picking one in the list selects it.
+        game.ClickStack(Stack().Stack!);
+        Assert.Equal(ids[1], game.SelectedUnitId);
+        var list = game.StackList()!;
+        Assert.Equal(stack.Count, list.Units.Count);
+        Assert.Single(list.Units, r => r.Selected);
+        Assert.All(list.Units.Where(r => ids.Any(i => game.Session.UnitById(i)!.Name == r.Entry.Name)), r => Assert.NotNull(r.Edit));
+        list.Units.Single(r => r.Entry.Name == game.Session.UnitById(ids[2])!.Name).Select.Press();
+        Assert.Equal(ids[2], game.SelectedUnitId);
+        Assert.True(game.StackListOpen);
+
+        // Escape closes it, keeping the unit picked.
+        game.Escape();
+        Assert.False(game.StackListOpen);
+        Assert.Equal(ids[2], game.SelectedUnitId);
+        game.ClickStack([ids[0]]);
+        Assert.False(game.StackListOpen); // a lone unit is just selected
+        Assert.Equal(ids[0], game.SelectedUnitId);
 
         // Close in, the stack stands above the city, clear of it and its name.
         game.Camera.LookAt(game.Center(home), 8);

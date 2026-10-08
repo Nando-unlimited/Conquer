@@ -81,7 +81,9 @@ public sealed partial class GameScreen : IScreen, IAudibleScreen
         if (Enum.TryParse<MapMode>(options.Mode, ignoreCase: true, out var mode)) _game.Mode = mode;
         if (Enum.TryParse<NationTab>(options.Nation, ignoreCase: true, out var tab)) { _game.Nation.Tab = tab; _game.Nation.Visible = true; }
         _game.ProvinceTab = options.Panel switch { "buildings" => ProvinceTab.Buildings, "army" => ProvinceTab.Army, _ => ProvinceTab.General };
-        if (options.Panel is "regiment" or "march" or "edit" && Human.CapitalCityId is int capital) ShowSampleArmy(capital, march: options.Panel == "march");
+        if (options.Panel is "regiment" or "march" or "edit" or "stack" && Human.CapitalCityId is int capital) ShowSampleArmy(capital, march: options.Panel == "march");
+        if (options.Panel == "stack" && _game.SelectedUnitId is int top && _session.UnitById(top) is { } unit)
+            _game.ClickStack([top, .. _session.Units.Where(u => u.Id != top && u.OwnerId == unit.OwnerId && u.ProvinceId == unit.ProvinceId && !u.IsAboard).Select(u => u.Id)]);
         if (options.Panel == "edit" && _game.SelectedUnitId is int sample && _session.UnitById(sample) is { HasOfficer: true }) ShowSampleOfficers(sample);
         if (options.Panel == "found" && _session.UnitById(settlers.Id) != null) _game.OpenCityNaming(settlers.Id, settlers.ProvinceId);
         if (options.Panel == "battle") _game.OpenFirstBattle();
@@ -155,6 +157,7 @@ public sealed partial class GameScreen : IScreen, IAudibleScreen
         DrawBottomBar();
         _nation.Frame(Ui, NationRect);
         DrawMessages();
+        if (!_game.Nation.Visible) DrawStackList();
         if (_game.Naming.HasValue) DrawCityNaming();
         if (_game.EditingUnitId.HasValue) DrawUnitEditor();
         if (_game.BattleWindowOpen) DrawBattleWindow();
@@ -259,7 +262,7 @@ public sealed partial class GameScreen : IScreen, IAudibleScreen
             var hit = _unitHitBoxes.LastOrDefault(h => h.Bounds.Contains(Ui.Input.Mouse));
             if (hit.Bounds.W > 0)
             {
-                _game.SelectInStack(hit.Stack);
+                _game.ClickStack(hit.Stack);
                 return;
             }
         }

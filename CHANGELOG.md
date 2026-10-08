@@ -2,6 +2,11 @@
 
 Todos los cambios del juego, del más reciente al más antiguo. Cada versión es un commit cuyo título es su número.
 
+## [1.128.0] - 2026-10-08
+
+### Añadido
+- **Lista de las unidades de una pila**: al hacer clic en una pila se selecciona la de arriba y se abre junto a ella una ventana con todas sus unidades, sus barras de hombres y organización y su oficial (en la ayuda emergente). «Seleccionar» elige cuál mover o mandar desde su panel y «Editar» abre su editor. Se cierra con la «x», con Esc o al hacer clic en otro sitio del mapa. Sustituye a ir pasando de unidad en unidad con clics repetidos.
+
 ## [1.127.0] - 2026-10-08
 
 ### Cambiado
