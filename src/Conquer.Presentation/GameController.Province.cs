@@ -176,7 +176,6 @@ public sealed partial class GameController
             doc.Add(new Info("Dueño", owner.Name, Ink.Nation(owner.Color)));
             SkyLine(doc, p);
             int incoming = IncomingMigrants(p.Id);
-            int outgoing = Session.Migrations.Where(m => m.FromProvinceId == p.Id).Sum(m => m.People);
             doc.Add(new Info("Población", $"{p.Population:N0} / {Session.CapacityOf(p):N0}" + (incoming > 0 ? $" (+{incoming:N0} en camino)" : ""), Tone.Normal,
                 incoming > 0 ? $"Llegarán {incoming:N0} migrantes más; cuentan en la población cuando se instalan." : null));
             if (p.Population >= 1)
@@ -188,11 +187,6 @@ public sealed partial class GameController
                 doc.Add(new Info("Nacimientos", $"+{Session.DailyBirths(p, owner.IsStarving):0.##} al día", owner.IsStarving ? Tone.Bad : Tone.Normal));
                 AddCultureAndRevolt(doc, p);
             }
-            string migrants = "Gente en camino hacia esta provincia y desde ella.\n" +
-                              $"Las ciudades de más de {GameRules.MinEmigrationCityPopulation} habitantes envían cada día un {GameRules.DailyEmigrationShare:P1} de su gente, en grupos de {GameRules.MigrationGroup}, " +
-                              $"a tus provincias sin ciudad que no llegan al {GameRules.MigrationTargetShare:P0} de su capacidad.";
-            doc.Add(new Info("Inmigrantes", $"{incoming:N0}", incoming > 0 ? Tone.Normal : Tone.Dim, migrants));
-            doc.Add(new Info("Emigrantes", $"{outgoing:N0}", outgoing > 0 ? Tone.Normal : Tone.Dim, migrants));
         }
         else
         {

@@ -2,6 +2,11 @@
 
 Todos los cambios del juego, del más reciente al más antiguo. Cada versión es un commit cuyo título es su número.
 
+## [1.126.1] - 2026-10-08
+
+### Cambiado
+- **Ficha de la provincia sin Inmigrantes ni Emigrantes**: casi siempre marcaban 0. La gente en camino hacia la provincia sigue apareciendo junto a su población.
+
 ## [1.126.0] - 2026-10-08
 
 ### Añadido
