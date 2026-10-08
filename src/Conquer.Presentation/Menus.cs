@@ -10,7 +10,8 @@ public interface IMenuNavigator
     void ShowMainMenu();
     void ShowNewGame();
     void ShowLoadGame();
-    void StartNewGame(WorldSettings settings, int players);
+    /// <summary>Makes the world and starts a game; the player plays <paramref name="country"/>, or one drawn at random when it is null.</summary>
+    void StartNewGame(WorldSettings settings, int players, string? country);
     void LoadSavedGame(SaveFile save);
     void Quit();
 }
@@ -55,7 +56,7 @@ public sealed class MainMenu(IMenuNavigator navigator)
 /// <summary>A labelled line of the new-game screen: buttons, or a value between buttons that change it.</summary>
 public sealed record OptionRow(string Label, bool Enabled, IReadOnlyList<Button> Buttons, string? Value = null, IReadOnlyList<Button>? After = null);
 
-/// <summary>The new-game options: map, its size (random maps only), seed, number of players and difficulty.</summary>
+/// <summary>The new-game options: map, its size (random maps only), seed, number of players, the player's country and difficulty.</summary>
 public sealed class NewGameMenu(IMenuNavigator navigator)
 {
     private MapKind _kind = MapKind.Random;
@@ -94,6 +95,23 @@ public sealed class NewGameMenu(IMenuNavigator navigator)
     public OptionRow PlayersRow() => new("Jugadores", true, [new Button("-", () => _players = Players - 1, Players > 1)], Players.ToString(),
         [new Button("+", () => _players = Players + 1, Players < MaxPlayers, Tooltip: $"Hasta {MaxPlayers} naciones en este mapa.")]);
 
+    /// <summary>The countries in alphabetical order; the player's is one of them, or none for one drawn at random.</summary>
+    private static readonly IReadOnlyList<string> CountryList = [.. GameSession.CountryNames.OrderBy(TextFormat.SpanishSortKey, StringComparer.Ordinal)];
+
+    /// <summary>Where the player's country is in <see cref="CountryList"/>; -1 draws it at random.</summary>
+    private int _country = -1;
+
+    /// <summary>The country chosen, or null for one drawn at random.</summary>
+    public string? Country => _country >= 0 ? CountryList[_country] : null;
+
+    /// <summary>The player's country, one step back or forward through the list (with «Al azar» before the first), or drawn at random.</summary>
+    public OptionRow CountryRow() => new("País", true,
+        [new Button("-", () => _country = _country < 0 ? CountryList.Count - 1 : _country - 1)], Country ?? "Al azar",
+        [
+            new Button("+", () => _country = _country == CountryList.Count - 1 ? -1 : _country + 1),
+            new Button("Azar", () => _country = -1, _country >= 0, Tooltip: "Te toca un país al azar, como a tus rivales."),
+        ]);
+
     public OptionRow DifficultyRow() => new("Dificultad", true, [new Button("-", () => _difficulty--, _difficulty > Difficulty.VeryEasy)],
         _difficulty.Info().Name, [new Button("+", () => _difficulty++, _difficulty < Difficulty.VeryHard)]);
 
@@ -110,7 +128,7 @@ public sealed class NewGameMenu(IMenuNavigator navigator)
     }
 
     /// <summary>The Earth map is fixed, but the seed still drives start positions, resources and rivals.</summary>
-    public Button Start => new("Comenzar", () => navigator.StartNewGame(WorldSettings.New(_kind, _seed, _difficulty, _size), Players), Size: TextSize.Large);
+    public Button Start => new("Comenzar", () => navigator.StartNewGame(WorldSettings.New(_kind, _seed, _difficulty, _size), Players, Country), Size: TextSize.Large);
 
     public Button Back => new("Volver", navigator.ShowMainMenu);
 }
@@ -170,7 +188,7 @@ public sealed class LoadingJob<TPicture>
     private readonly bool _loadingSave;
     private string _status = "Preparando...";
 
-    public LoadingJob(WorldSettings settings, int players, Func<WorldMap, TPicture> prepare)
+    public LoadingJob(WorldSettings settings, int players, string? country, Func<WorldMap, TPicture> prepare)
     {
         _task = Task.Run(() =>
         {
@@ -178,7 +196,7 @@ public sealed class LoadingJob<TPicture>
             _status = "Pintando el mapa...";
             var picture = prepare(map);
             _status = "Repartiendo a los pueblos...";
-            return (GameSession.Create(map, players, settings.Seed), picture);
+            return (GameSession.Create(map, players, settings.Seed, country: country), picture);
         });
     }
 

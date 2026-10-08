@@ -20,7 +20,8 @@ public class MenuTests(WorldFixture world)
         public void ShowMainMenu() => Last = "main";
         public void ShowNewGame() => Last = "new";
         public void ShowLoadGame() => Last = "load";
-        public void StartNewGame(WorldSettings settings, int players) => (Last, Settings, Players) = ("start", settings, players);
+        public string? Country;
+        public void StartNewGame(WorldSettings settings, int players, string? country) => (Last, Settings, Players, Country) = ("start", settings, players, country);
         public void LoadSavedGame(SaveFile save) => (Last, Loaded) = ("loaded", save);
         public void Quit() => Last = "quit";
     }
@@ -94,8 +95,41 @@ public class MenuTests(WorldFixture world)
         Assert.Equal(1, nav.Players);
         Assert.Equal(MapKind.Earth, nav.Settings!.Kind);
         Assert.Equal(Difficulty.Hard, nav.Settings.Difficulty);
+        Assert.Null(nav.Country); // drawn at random unless chosen
         menu.Back.Press();
         Assert.Equal("main", nav.Last);
+    }
+
+    [Fact]
+    public void TheNewGameMenuPicksThePlayersCountry()
+    {
+        var nav = new FakeNavigator();
+        var menu = new NewGameMenu(nav);
+        Assert.Equal("Al azar", menu.CountryRow().Value);
+        menu.CountryRow().After![0].Press();
+        string first = menu.CountryRow().Value!;
+        Assert.Contains(first, GameSession.CountryNames);
+        menu.CountryRow().After![0].Press();
+        Assert.True(string.CompareOrdinal(TextFormat.SpanishSortKey(first), TextFormat.SpanishSortKey(menu.CountryRow().Value!)) < 0); // A to Z
+        menu.CountryRow().Buttons[0].Press();
+        menu.Start.Press();
+        Assert.Equal(first, nav.Country);
+        menu.CountryRow().After![1].Press();
+        Assert.Equal("Al azar", menu.CountryRow().Value);
+        menu.CountryRow().Buttons[0].Press(); // before the first, the last
+        Assert.Equal(GameSession.CountryNames.OrderBy(TextFormat.SpanishSortKey, StringComparer.Ordinal).Last(), menu.CountryRow().Value);
+    }
+
+    [Fact]
+    public void TheChosenCountryGoesToThePlayerAndTheRestOfTheGameStaysTheSame()
+    {
+        var drawn = GameSession.Create(world.Map, 4, seed: 11);
+        string rival = drawn.Players[2].Name;
+        var chosen = GameSession.Create(world.Map, 4, seed: 11, country: rival);
+        Assert.Equal(rival, chosen.Human.Name);
+        Assert.Equal(drawn.Human.Name, chosen.Players[2].Name); // the rival takes the player's draw
+        Assert.Equal(drawn.Players[1].Name, chosen.Players[1].Name);
+        Assert.Equal(drawn.Units.Select(u => u.ProvinceId), chosen.Units.Select(u => u.ProvinceId));
     }
 
     [Fact]

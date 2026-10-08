@@ -148,7 +148,7 @@ public sealed class ConquerApp
 
         _screen = Options switch
         {
-            { QuickStart: { } settings } => new LoadingScreen(this, settings.World, settings.Players),
+            { QuickStart: { } settings } => new LoadingScreen(this, settings.World, settings.Players, settings.Country),
             { Load: { } path } => new LoadingScreen(this, new SaveFile(Path.GetFullPath(path), Path.GetFileNameWithoutExtension(path), File.GetLastWriteTime(path))),
             { Menu: "new" } => new NewGameScreen(this),
             { Menu: "load" } => new LoadGameScreen(this),

@@ -256,6 +256,7 @@ public static class HelpTopics
             "- El menú (Esc o botón Menú) pausa el juego, guarda la partida y muestra el historial de versiones.",
             "- Opciones (en la pantalla inicial y en el menú de pausa): volumen de la música y del sonido de cuarto en cuarto (con - y +), animaciones sí o no, y el mapa con etiquetas (fichas como las de Hearts of Iron III, con sus barras de hombres y organización, la bandera de su nación, su símbolo OTAN, cuántas unidades hay en la pila y su nombre abreviado, y ciudades como puntos; lo normal) o con figuras 3D (maquetas y ciudades con su icono). Se recuerdan entre partidas. La música cambia con la era y cuando estás en guerra.",
             "- La dificultad se elige al empezar: cambia cuántos yacimientos hay y su tamaño, los recursos iniciales y lo que producen los rivales.",
+            "- También se elige el país, o se deja al azar: da a tu nación su nombre, su bandera y los nombres de sus ciudades y provincias. Dónde empiezas lo sigue decidiendo la semilla.",
             "- Los rivales del ordenador se expanden, investigan, construyen y hacen la guerra por su cuenta.",
             $"- Estadísticas (pestaña de la nación): cada {GameRules.HistoryDays} días se anotan la población, el ejército, el oro y la ciencia al día y las provincias de cada nación; la gráfica muestra cómo han cambiado desde el principio de la partida.",
             "## Victoria y derrota",

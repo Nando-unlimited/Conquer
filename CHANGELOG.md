@@ -2,6 +2,11 @@
 
 Todos los cambios del juego, del más reciente al más antiguo. Cada versión es un commit cuyo título es su número.
 
+## [1.129.0] - 2026-10-08
+
+### Añadido
+- **Elegir país al crear una partida**: la pantalla de partida nueva tiene una fila «País» para recorrer los países por orden alfabético con - y +, o dejarlo «Al azar» como hasta ahora. El país da a tu nación su nombre, su bandera y los nombres de sus ciudades y provincias; el lugar de salida lo sigue decidiendo la semilla. Si a un rival le había tocado ese país, se queda con el que te habría tocado a ti.
+
 ## [1.128.0] - 2026-10-08
 
 ### Añadido

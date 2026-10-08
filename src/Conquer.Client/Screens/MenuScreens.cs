@@ -11,7 +11,7 @@ public sealed class MenuNavigator(ConquerApp app) : IMenuNavigator
     public void ShowMainMenu() => app.Show(new MainMenuScreen(app));
     public void ShowNewGame() => app.Show(new NewGameScreen(app));
     public void ShowLoadGame() => app.Show(new LoadGameScreen(app));
-    public void StartNewGame(WorldSettings settings, int players) => app.Show(new LoadingScreen(app, settings, players));
+    public void StartNewGame(WorldSettings settings, int players, string? country) => app.Show(new LoadingScreen(app, settings, players, country));
     public void LoadSavedGame(SaveFile save) => app.Show(new LoadingScreen(app, save));
     public void Quit() => app.Quit();
 }
@@ -75,7 +75,7 @@ public sealed class NewGameScreen(ConquerApp app) : IScreen
 
         ui.TextCentered(new Rect(0, s.Y * 0.1f, s.X, 80), "CONQUER", Theme.Accent, FontSize.Title, bold: true);
 
-        var panel = new Rect(cx - 230, s.Y * 0.1f + 110, 460, 446);
+        var panel = new Rect(cx - 230, s.Y * 0.1f + 110, 460, 492);
         ui.Panel(panel);
         float x = panel.X + 24, y = panel.Y + 20, w = panel.W - 48;
         ui.Text(x, y, "Nueva partida", Theme.Text, FontSize.Large, bold: true);
@@ -94,7 +94,7 @@ public sealed class NewGameScreen(ConquerApp app) : IScreen
         for (int i = 0; i < size.Buttons.Count; i++) DocumentView.Press(ui, size.Buttons[i], new Rect(x + 120 + i * (sizeWidth + 6), y, sizeWidth, 32));
         y += 46;
 
-        foreach (var row in new[] { _menu.SeedRow(), _menu.PlayersRow(), _menu.DifficultyRow() })
+        foreach (var row in new[] { _menu.SeedRow(), _menu.PlayersRow(), _menu.CountryRow(), _menu.DifficultyRow() })
         {
             // A value between - and +, and for the seed a button for a random one.
             Label(ui, row, x, y);
@@ -179,10 +179,10 @@ public sealed class LoadingScreen : IScreen, IAudibleScreen
     private readonly LoadingJob<MapRenderer.Prepared> _job;
     private double _elapsed;
 
-    public LoadingScreen(ConquerApp app, WorldSettings settings, int players)
+    public LoadingScreen(ConquerApp app, WorldSettings settings, int players, string? country)
     {
         _app = app;
-        _job = new LoadingJob<MapRenderer.Prepared>(settings, players, MapRenderer.Prepare);
+        _job = new LoadingJob<MapRenderer.Prepared>(settings, players, country, MapRenderer.Prepare);
     }
 
     public LoadingScreen(ConquerApp app, SaveFile file)

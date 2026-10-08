@@ -22,11 +22,11 @@ return 0;
 
 namespace Conquer.Client
 {
-    public sealed record QuickStart(WorldSettings World, int Players);
+    public sealed record QuickStart(WorldSettings World, int Players, string? Country = null);
 
     /// <summary>
     /// Command line, mainly for testing:
-    /// <c>--new random|earth [--seed N] [--players N] [--difficulty veryeasy|easy|normal|hard|veryhard] [--size tiny|small|medium|large]</c> skips the menus and starts a game;
+    /// <c>--new random|earth [--seed N] [--players N] [--difficulty veryeasy|easy|normal|hard|veryhard] [--size tiny|small|medium|large] [--country Nombre]</c> skips the menus and starts a game (as that country);
     /// <c>--days N</c> founds the player's capital and fast-forwards N days;
     /// <c>--zoom Z</c>, <c>--at longitude,latitude</c> and <c>--mode terrain|political|population|mood|fertility</c> set the view;
     /// <c>--nation summary|cities|provinces|science</c> opens the nation screen on that tab;
@@ -38,7 +38,7 @@ namespace Conquer.Client
     {
         public static StartOptions Parse(string[] args)
         {
-            string? kind = null, mode = null, screenshot = null, nation = null, panel = null, load = null, menu = null;
+            string? kind = null, mode = null, screenshot = null, nation = null, panel = null, load = null, menu = null, country = null;
             int seed = Environment.TickCount & 0xFFFF, players = 4, days = 0;
             var difficulty = Difficulty.Normal;
             var size = MapSize.Large;
@@ -52,6 +52,7 @@ namespace Conquer.Client
                     case "--new": kind = value; break;
                     case "--seed": seed = int.Parse(value); break;
                     case "--players": players = int.Parse(value); break;
+                    case "--country": country = value; break;
                     case "--difficulty": difficulty = Enum.Parse<Difficulty>(value, ignoreCase: true); break;
                     case "--size": size = Enum.Parse<MapSize>(value, ignoreCase: true); break;
                     case "--days": days = int.Parse(value); break;
@@ -72,7 +73,7 @@ namespace Conquer.Client
             if (kind != null)
             {
                 var map = kind.Equals("earth", StringComparison.OrdinalIgnoreCase) ? MapKind.Earth : MapKind.Random;
-                quick = new QuickStart(WorldSettings.New(map, seed, difficulty, size), players);
+                quick = new QuickStart(WorldSettings.New(map, seed, difficulty, size), players, country);
             }
             return new StartOptions(quick, days, zoom, mode, screenshot, nation, panel, load, menu, at);
         }

@@ -76,14 +76,23 @@ public sealed partial class GameSession
     /// <summary>
     /// Sets up a new game: nobody owns any land; each player gets one band of settlers on a
     /// habitable province, spread as far apart as possible, plus the starting stockpile. Tests can turn
-    /// the computer rivals off so nobody else moves their units.
+    /// the computer rivals off so nobody else moves their units. The human plays <paramref name="country"/> (one of
+    /// <see cref="CountryNames"/>), or one drawn at random like the rivals' when it is null.
     /// </summary>
-    public static GameSession Create(WorldMap map, int playerCount, int seed, bool computerRivals = true)
+    public static GameSession Create(WorldMap map, int playerCount, int seed, bool computerRivals = true, string? country = null)
     {
         ResetProvinces(map);
         var session = new GameSession(map, seed) { _computerRivals = computerRivals };
         if (playerCount > Countries.MaxNations) throw new ArgumentOutOfRangeException(nameof(playerCount), $"Como mucho {Countries.MaxNations} naciones.");
         var countries = Countries.Pick(playerCount, session._random);
+        if (country != null)
+        {
+            // The chosen country goes to the human; if a rival had drawn it, that rival takes the human's draw instead.
+            var chosen = Countries.All.FirstOrDefault(c => c.Name == country) ?? throw new ArgumentException($"No existe el país {country}.", nameof(country));
+            int drawn = countries.IndexOf(chosen);
+            if (drawn > 0) countries[drawn] = countries[HumanPlayerId];
+            countries[HumanPlayerId] = chosen;
+        }
         // Faiths come from a generator of their own, so the rest of the game stays as it was.
         var faiths = new Random(seed ^ 0x7E11);
         var starts = session.PickStartProvinces(playerCount);
@@ -112,6 +121,9 @@ public sealed partial class GameSession
         session.Notify(HumanPlayerId, "Tus ciudades investigarán en tres ramas: Economía, Sociedad y Militar. Elige qué investigar en cada una en la pantalla de la nación (N).");
         return session;
     }
+
+    /// <summary>The countries a nation can be, for the player to choose theirs.</summary>
+    public static IReadOnlyList<string> CountryNames => [.. Countries.All.Select(c => c.Name)];
 
     /// <summary>Leaves every province unowned, empty and with full deposits, as at the start of a game.</summary>
     private static void ResetProvinces(WorldMap map)
