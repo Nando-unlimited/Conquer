@@ -2,6 +2,11 @@
 
 Todos los cambios del juego, del más reciente al más antiguo. Cada versión es un commit cuyo título es su número.
 
+## [1.131.0] - 2026-10-13
+
+### Añadido
+- **Rangos romanos**: hasta la época clásica los oficiales del ejército llevan rangos romanos: centurión (manípulo), tribuno (cohorte), legado (legión), pretor (cuerpo), cónsul (ejército) y dictador (grupo de ejércitos). Al llegar a la Edad Media pasan a coronel, brigadier, general de división, teniente general, general y mariscal. Los retratos pintados de la época clásica siguen el rango de cada uno. La marina no cambia.
+
 ## [1.130.0] - 2026-10-13
 
 ### Añadido

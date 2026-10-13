@@ -64,7 +64,7 @@ public sealed partial class NationScreen
             [
                 new TextCell(hq.Name, hq.IsCommand ? Tone.Accent : Tone.Normal, Bold: true),
                 new TextCell(Session.PlaceName(Map.Provinces[hq.BaseProvinceId]), Tone.Dim),
-                new TextCell(hq.Officer is { } o ? $"{o.Title}" : "Ninguno", hq.Officer == null ? Tone.Dim : Tone.Normal, TextSize.Small, Top: 8,
+                new TextCell(hq.Officer is { } o ? o.Title(Player.Era) : "Ninguno", hq.Officer == null ? Tone.Dim : Tone.Normal, TextSize.Small, Top: 8,
                     Tooltip: hq.Officer is { } g ? $"{g.Summary}: suma su habilidad al fuego de las unidades de su división." : null),
                 new TextCell(commands, Tone.Dim, TextSize.Small, Top: 8,
                     Tooltip: hq.IsCommand

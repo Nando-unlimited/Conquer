@@ -27,14 +27,29 @@ public class OfficerBranchTests(WorldFixture world)
     [Fact]
     public void EachArmHasItsNamesForTheSameRanks()
     {
-        Assert.Equal("Coronel", Officer.RankName(OfficerRank.Colonel));
-        Assert.Equal("Capitán de navío", Officer.RankName(OfficerRank.Colonel, OfficerBranch.Navy));
-        Assert.Equal("Contraalmirante", Officer.RankName(OfficerRank.MajorGeneral, OfficerBranch.Navy));
-        Assert.Equal("Gran almirante", Officer.RankName(OfficerRank.Marshal, OfficerBranch.Navy));
-        Assert.Equal("Coronel de aviación", Officer.RankName(OfficerRank.Colonel, OfficerBranch.Air));
-        Assert.Equal("Mariscal del aire", Officer.RankName(OfficerRank.Marshal, OfficerBranch.Air));
+        Assert.Equal("Coronel", Officer.RankName(OfficerRank.Colonel, Era.Medieval));
+        Assert.Equal("Capitán de navío", Officer.RankName(OfficerRank.Colonel, Era.Ancient, OfficerBranch.Navy));
+        Assert.Equal("Contraalmirante", Officer.RankName(OfficerRank.MajorGeneral, Era.Ancient, OfficerBranch.Navy));
+        Assert.Equal("Gran almirante", Officer.RankName(OfficerRank.Marshal, Era.Ancient, OfficerBranch.Navy));
+        Assert.Equal("Coronel de aviación", Officer.RankName(OfficerRank.Colonel, Era.Ancient, OfficerBranch.Air));
+        Assert.Equal("Mariscal del aire", Officer.RankName(OfficerRank.Marshal, Era.Ancient, OfficerBranch.Air));
         var officer = new Officer(1, "Leonor Bazán", [OfficerTrait.Offensive], 1, rank: OfficerRank.Brigadier, branch: OfficerBranch.Navy);
-        Assert.Equal("Comodoro Leonor Bazán", officer.Title);
+        Assert.Equal("Comodoro Leonor Bazán", officer.Title(Era.Classical));
+    }
+
+    [Fact]
+    public void UpToTheClassicalEraTheArmyHasRomanRanks()
+    {
+        Assert.Equal("Centurión", Officer.RankName(OfficerRank.Colonel, Era.Ancient));
+        Assert.Equal("Tribuno", Officer.RankName(OfficerRank.Brigadier, Era.Classical));
+        Assert.Equal("Legado", Officer.RankName(OfficerRank.MajorGeneral, Era.Classical));
+        Assert.Equal("Pretor", Officer.RankName(OfficerRank.LieutenantGeneral, Era.Ancient));
+        Assert.Equal("Cónsul", Officer.RankName(OfficerRank.General, Era.Ancient));
+        Assert.Equal("Dictador", Officer.RankName(OfficerRank.Marshal, Era.Classical));
+        Assert.Equal("General de división", Officer.RankName(OfficerRank.MajorGeneral, Era.Medieval));
+        var officer = new Officer(1, "Sancho Haro", [OfficerTrait.Offensive], 1, rank: OfficerRank.Brigadier);
+        Assert.Equal("Tribuno Sancho Haro", officer.Title(Era.Classical));
+        Assert.Equal("Brigadier Sancho Haro", officer.Title(Era.Renaissance));
     }
 
     [Fact]

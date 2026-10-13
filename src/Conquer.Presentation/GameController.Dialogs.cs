@@ -119,7 +119,7 @@ public sealed partial class GameController
                                                           && u.OwnerId == Human.Id && u.ProvinceId == unit.ProvinceId && u.Id != unit.Id))
             {
                 string size = other.IsFleet ? Formations.ShipCount(other.Battalions.Count) : Formations.BattalionCount(other.Battalions.Count, other.Owner.Era);
-                string officer = other.Officer is { } o ? $" Su oficial, {o.Title}, " + (unit.Officer == null ? "toma el mando." : "vuelve a la reserva.") : "";
+                string officer = other.Officer is { } o ? $" Su oficial, {o.Title(other.Owner.Era)}, " + (unit.Officer == null ? "toma el mando." : "vuelve a la reserva.") : "";
                 var canMerge = Session.CanMerge(unit, other);
                 if (unit.IsFleet || canMerge.Ok)
                     merges.Add(new Button($"Unir {other.Name} ({size})", () => Show(Session.Merge(Human.Id, unit.Id, other.Id)), canMerge.Ok,
@@ -164,9 +164,9 @@ public sealed partial class GameController
     {
         var branch = unit.OfficerBranch;
         string role = unit.IsHeadquarters ? "General" : "Oficial";
-        string rank = Officer.RankName(unit.RequiredRank, branch).ToLowerInvariant();
-        var reserve = Human.OfficerReserve.Where(o => o.Branch == branch).Select(officer => new ReserveOfficer(officer.Title, officer.Summary,
-            officer.Traits.Any(Officer.IsFlaw) ? Tone.Dim : Tone.Good, OfficerTooltip(officer),
+        string rank = Officer.RankName(unit.RequiredRank, unit.Owner.Era, branch).ToLowerInvariant();
+        var reserve = Human.OfficerReserve.Where(o => o.Branch == branch).Select(officer => new ReserveOfficer(officer.Title(Human.Era), officer.Summary,
+            officer.Traits.Any(Officer.IsFlaw) ? Tone.Dim : Tone.Good, OfficerTooltip(officer, Human.Era),
             new Button("Asignar", () => Show(Session.AssignOfficer(Human.Id, unit.Id, officer.Id)),
                 Tooltip: officer.Rank < unit.RequiredRank ? $"Ascenderá a {rank}." : null, Size: TextSize.Small),
             new Button("Retirar", () => Show(Session.RetireOfficer(Human.Id, officer.Id)), Tooltip: "Deja el servicio para siempre.", Size: TextSize.Small),
@@ -193,7 +193,7 @@ public sealed partial class GameController
     }
 
     private OfficerCard OfficerCard(Officer officer, bool cavalry) =>
-        new(officer.Title, new string('*', officer.Skill), OfficerTooltip(officer),
+        new(officer.Title(Human.Era), new string('*', officer.Skill), OfficerTooltip(officer, Human.Era),
             officer.Traits.Select(t => ($"{Officer.TraitName(t)}: {Officer.TraitDescription(t)}", (Ink)(Officer.IsFlaw(t) ? Tone.Bad : Tone.Good))).ToList(),
             PortraitOf(officer, cavalry));
 

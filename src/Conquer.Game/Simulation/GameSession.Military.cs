@@ -850,7 +850,7 @@ public sealed partial class GameSession
         player.Stockpile[Economy.ResourceType.Gold] -= MilitaryRules.OfficerCost;
         var officer = NewOfficer(player, OfficerRank.Colonel, branch);
         player.OfficerReserve.Add(officer);
-        return CommandResult.Success($"{officer.Title} se une a la reserva: {officer.Summary}.");
+        return CommandResult.Success($"{officer.Title(player.Era)} se une a la reserva: {officer.Summary}.");
     }
 
     /// <summary>Whether the officer may lead the unit: only one of its arm (the navy for fleets, the air force for aircraft).</summary>
@@ -872,7 +872,7 @@ public sealed partial class GameSession
         if (unit.Officer is { } previous) reserve.Add(previous);
         unit.Officer = officer;
         Promote(unit);
-        return CommandResult.Success($"{officer.Title} toma el mando de {unit.Name}.");
+        return CommandResult.Success($"{officer.Title(unit.Owner.Era)} toma el mando de {unit.Name}.");
     }
 
     /// <summary>The unit's officer steps down and goes back to the reserve.</summary>
@@ -882,7 +882,7 @@ public sealed partial class GameSession
         if (unit.Officer is not { } officer) return CommandResult.Fail("No tiene oficial.");
         unit.Officer = null;
         Players[playerId].OfficerReserve.Add(officer);
-        return CommandResult.Success($"{officer.Title} vuelve a la reserva.");
+        return CommandResult.Success($"{officer.Title(Players[playerId].Era)} vuelve a la reserva.");
     }
 
     /// <summary>An officer in the reserve leaves the army for good.</summary>
@@ -891,7 +891,7 @@ public sealed partial class GameSession
         var reserve = Players[playerId].OfficerReserve;
         if (reserve.FirstOrDefault(o => o.Id == officerId) is not { } officer) return CommandResult.Fail("Ese oficial no está en la reserva.");
         reserve.Remove(officer);
-        return CommandResult.Success($"{officer.Title} se retira.");
+        return CommandResult.Success($"{officer.Title(Players[playerId].Era)} se retira.");
     }
 
     /// <summary>A newly recruited officer whose name no other officer of the nation already has (if a few tries find one).</summary>
@@ -908,7 +908,7 @@ public sealed partial class GameSession
     {
         if (unit.Officer is not { } officer || officer.Rank >= unit.RequiredRank) return;
         officer.Rank = unit.RequiredRank;
-        if (unit.OwnerId == HumanPlayerId) Notify(HumanPlayerId, $"{officer.Name} asciende a {Officer.RankName(officer.Rank, officer.Branch).ToLowerInvariant()} al frente de {unit.Name}.");
+        if (unit.OwnerId == HumanPlayerId) Notify(HumanPlayerId, $"{officer.Name} asciende a {Officer.RankName(officer.Rank, unit.Owner.Era, officer.Branch).ToLowerInvariant()} al frente de {unit.Name}.");
     }
 
     public CommandResult CanAttach(Unit unit, Unit hq)
@@ -1354,6 +1354,6 @@ public sealed partial class GameSession
         var officer = unit.Officer;
         RemoveUnit(unit, officerSurvives);
         if (unit.OwnerId != HumanPlayerId) return;
-        Notify(HumanPlayerId, $"{unit.Name}: {how}." + (officer != null && !officerSurvives ? $" Ha caído el {char.ToLowerInvariant(officer.Title[0])}{officer.Title[1..]}." : ""));
+        Notify(HumanPlayerId, $"{unit.Name}: {how}." + (officer != null && !officerSurvives ? $" Ha caído el {char.ToLowerInvariant(officer.Title(unit.Owner.Era)[0])}{officer.Title(unit.Owner.Era)[1..]}." : ""));
     }
 }

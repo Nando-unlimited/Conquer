@@ -1,9 +1,12 @@
+using Conquer.Game.Science;
+
 namespace Conquer.Game.Military;
 
 /// <summary>
 /// An officer's rank, set by the size of what they lead: a colonel a regiment, a brigadier a brigade, a major general
 /// a division, then a lieutenant general a corps, a general an army and a marshal an army group. The navy and the air
-/// force call them otherwise (<see cref="Officer.RankName(OfficerRank, OfficerBranch)"/>).
+/// force call them otherwise, and the army of the Ancient and Classical eras by their Roman names
+/// (<see cref="Officer.RankName(OfficerRank, Era, OfficerBranch)"/>).
 /// </summary>
 public enum OfficerRank
 {
@@ -162,16 +165,21 @@ public sealed class Officer
     };
 
     private static readonly string[] ArmyRanks = ["Coronel", "Brigadier", "General de división", "Teniente general", "General", "Mariscal"];
+    /// <summary>The army's ranks up to the Classical era, as Rome named them (see <see cref="Formations.RomanNames"/>).</summary>
+    private static readonly string[] RomanRanks = ["Centurión", "Tribuno", "Legado", "Pretor", "Cónsul", "Dictador"];
     private static readonly string[] NavyRanks = ["Capitán de navío", "Comodoro", "Contraalmirante", "Vicealmirante", "Almirante", "Gran almirante"];
     private static readonly string[] AirRanks =
         ["Coronel de aviación", "General de brigada aérea", "General de división aérea", "Teniente general del aire", "General del aire", "Mariscal del aire"];
 
-    /// <summary>A rank's name in an arm: the navy's and the air force's are the equals of the army's, rank for rank.</summary>
-    public static string RankName(OfficerRank rank, OfficerBranch branch = OfficerBranch.Army) => branch switch
+    /// <summary>
+    /// A rank's name in an arm and in its nation's era: the navy's and the air force's are the equals of the army's,
+    /// rank for rank, and up to the Classical era the army's are Roman (centurión to dictador).
+    /// </summary>
+    public static string RankName(OfficerRank rank, Era era, OfficerBranch branch = OfficerBranch.Army) => branch switch
     {
         OfficerBranch.Navy => NavyRanks[(int)rank],
         OfficerBranch.Air => AirRanks[(int)rank],
-        _ => ArmyRanks[(int)rank],
+        _ => Formations.RomanNames(era) ? RomanRanks[(int)rank] : ArmyRanks[(int)rank],
     };
 
     /// <summary>"un oficial de marina": who serves in an arm, for messages.</summary>
@@ -190,8 +198,8 @@ public sealed class Officer
         _ => "Ejército",
     };
 
-    /// <summary>"Coronel Hernán Ulloa", "Capitán de navío Leonor Bazán".</summary>
-    public string Title => $"{RankName(Rank, Branch)} {Name}";
+    /// <summary>"Coronel Hernán Ulloa", "Capitán de navío Leonor Bazán", "Tribuno Sancho Haro" in Roman times.</summary>
+    public string Title(Era era) => $"{RankName(Rank, era, Branch)} {Name}";
 
     /// <summary>"Ofensivo, Lento **": the traits and the stars, in characters the font can draw.</summary>
     public string Summary => $"{string.Join(", ", Traits.Select(TraitName))} {new string('*', Skill)}";

@@ -65,7 +65,7 @@ public sealed partial class GameController
             bool bars = unit.IsMilitary || unit.IsFleet;
             var entry = new UnitEntry(unit.Name, selected ? Tone.Accent : Tone.Normal, "", Tone.Dim,
                 StackLine(unit), Tone.Dim, bars ? unit.StrengthShare : 1, bars ? unit.OrganisationShare : 1,
-                (unit.Officer?.Title ?? "Sin oficial") + (bars ? $"\nHombres {unit.StrengthShare:P0} · organización {unit.OrganisationShare:P0}" : ""));
+                (unit.Officer?.Title(unit.Owner.Era) ?? "Sin oficial") + (bars ? $"\nHombres {unit.StrengthShare:P0} · organización {unit.OrganisationShare:P0}" : ""));
             var select = new Button(selected ? "Seleccionada" : "Seleccionar", () => SelectUnit(id), Active: selected,
                 Tooltip: mine ? "Selecciónala para moverla (clic derecho en el mapa) o darle órdenes en su panel." : "Selecciónala para ver su panel.",
                 Size: TextSize.Small);

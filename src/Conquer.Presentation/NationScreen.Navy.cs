@@ -62,7 +62,7 @@ public sealed partial class NationScreen
             [
                 new TextCell(hq.Name, hq.IsNavy ? Tone.Accent : Tone.Normal, Bold: true),
                 new TextCell(Session.PlaceName(Map.Provinces[hq.BaseProvinceId]), Tone.Dim),
-                new TextCell(hq.Officer?.Title ?? "Ninguno", hq.Officer == null ? Tone.Dim : Tone.Normal, TextSize.Small, Top: 8,
+                new TextCell(hq.Officer?.Title(Player.Era) ?? "Ninguno", hq.Officer == null ? Tone.Dim : Tone.Normal, TextSize.Small, Top: 8,
                     Tooltip: hq.Officer is { } g ? $"{g.Summary}: suma su habilidad al fuego de los barcos de su flota." : null),
                 new TextCell(commands, Tone.Dim, TextSize.Small, Top: 8,
                     Tooltip: hq.IsNavy

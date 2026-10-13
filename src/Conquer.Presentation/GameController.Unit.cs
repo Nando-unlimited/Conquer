@@ -11,8 +11,8 @@ namespace Conquer.Presentation;
 /// <summary>The unit panel: what the selected unit is and does, its battalions or ships, its command and its orders.</summary>
 public sealed partial class GameController
 {
-    public static string OfficerTooltip(Officer officer) =>
-        $"{officer.Title}\n{officer.TraitsDescription}\n" +
+    public static string OfficerTooltip(Officer officer, Era era) =>
+        $"{officer.Title(era)}\n{officer.TraitsDescription}\n" +
         $"{officer.Skill} de {Officer.MaxSkill} estrellas, {officer.Victories} victorias (una estrella más cada {Officer.VictoriesPerStar}); las virtudes mejoran con cada estrella.";
 
     /// <summary>What to call a city or HQ at the end of a road: the player's city there, else their HQs there.</summary>
@@ -228,7 +228,7 @@ public sealed partial class GameController
                 doc.Add(new Label($"Aviones embarcados ({aboard}/{Session.CarrierRoom(unit) + aboard} escuadrillas)", Tone.Accent, Bold: true, Height: 22));
                 foreach (var air in carried) AirUnitRows(doc, air);
             }
-            doc.Add(OfficerLine("Oficial", unit.Officer, "Manda esta flota: sus rasgos y su habilidad afectan al fuego de sus barcos."));
+            doc.Add(OfficerLine("Oficial", unit.Officer, unit.Owner.Era, "Manda esta flota: sus rasgos y su habilidad afectan al fuego de sus barcos."));
             doc.Add(PortraitsOf(unit, ("Oficial", unit.Officer)));
             if (unit.Capacity > 0)
             {
@@ -247,8 +247,8 @@ public sealed partial class GameController
             if (unit.IsMilitary) LogisticsLines(doc, unit);
             doc.Add(new Info("Velocidad", $"{unit.Speed * GameRules.CitizenSpeedKmh:0.#} km/h"));
             doc.Add(CommandLine(unit));
-            doc.Add(OfficerLine("Oficial", unit.Officer, "Manda esta unidad."));
-            doc.Add(OfficerLine("General", Session.GeneralOf(unit), "Manda las unidades de su cuartel general que estén a su alcance."));
+            doc.Add(OfficerLine("Oficial", unit.Officer, unit.Owner.Era, "Manda esta unidad."));
+            doc.Add(OfficerLine("General", Session.GeneralOf(unit), unit.Owner.Era, "Manda las unidades de su cuartel general que estén a su alcance."));
             doc.Add(PortraitsOf(unit, ("Oficial", unit.Officer), ("General", Session.GeneralOf(unit))));
             if (unit.Battalions.Count > 0)
             {
@@ -419,7 +419,7 @@ public sealed partial class GameController
         var info = CommandLevels.Info(hq.HeadquartersLevel);
         doc.Add(new Info("Alcance", $"{info.RangeKm:N0} km"));
         doc.Add(CommandLine(hq));
-        doc.Add(OfficerLine("General", hq.Officer, "Manda las unidades de su cuartel general que estén a su alcance."));
+        doc.Add(OfficerLine("General", hq.Officer, hq.Owner.Era, "Manda las unidades de su cuartel general que estén a su alcance."));
         doc.Add(PortraitsOf(hq, ("General", hq.Officer)));
         string priorityTip = "Quién recibe antes los refuerzos, el equipo y la munición que salen de la capital cuando no hay para todos: " +
                              "las unidades de los cuarteles de prioridad alta, luego normal, luego baja y, al final, las que no tienen cuartel a su alcance." +
@@ -451,15 +451,15 @@ public sealed partial class GameController
     {
         var owner = Session.Players[unit.OwnerId];
         var shown = officers.Where(o => o.Officer != null)
-            .Select(o => (Portrait.Of(o.Officer!, owner.Era, owner.Color, o.Officer == unit.Officer && LeadsCavalry(unit)), o.Role, OfficerTooltip(o.Officer!))).ToList();
+            .Select(o => (Portrait.Of(o.Officer!, owner.Era, owner.Color, o.Officer == unit.Officer && LeadsCavalry(unit)), o.Role, OfficerTooltip(o.Officer!, owner.Era))).ToList();
         return shown.Count == 0 ? new Space(0) : new Portraits(shown);
     }
-    private static Info OfficerLine(string label, Officer? officer, string role) =>
+    private static Info OfficerLine(string label, Officer? officer, Era era, string role) =>
         officer == null
             ? new Info(label, "Ninguno", Tone.Dim)
             // Just the name and stars fit; the traits are in the tooltip, and a flawed officer is not shown in green.
             : new Info(label, $"{officer.Name} {new string('*', officer.Skill)}", officer.Traits.Any(Officer.IsFlaw) ? Tone.Normal : Tone.Good,
-                $"{OfficerTooltip(officer)}\n{role}");
+                $"{OfficerTooltip(officer, era)}\n{role}");
 
     /// <summary>Who the unit reports to, whether that HQ is in range, and the bonus it gives.</summary>
     private Info CommandLine(Unit unit)
