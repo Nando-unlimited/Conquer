@@ -1,3 +1,5 @@
+using Conquer.Game.Science;
+
 namespace Conquer.Game.Military;
 
 /// <summary>
@@ -23,7 +25,8 @@ public sealed class Regiment(int number, string? customName = null)
     public string? CustomName { get; set; } = customName;
     public List<Battalion> Battalions { get; } = [];
 
-    public string Name => CustomName ?? Formations.CombatUnitName(Number, Echelon.Regiment);
+    /// <summary>Its own name, or its number and size in its nation's era ("3.er Regimiento", "3.er Manípulo").</summary>
+    public string Name(Era era) => CustomName ?? Formations.CombatUnitName(Number, Echelon.Regiment, era);
     /// <summary>Its full complement: the men of all its battalions at full strength.</summary>
     public int Men => Battalions.Sum(b => b.Info.Men);
 }
@@ -35,7 +38,8 @@ public sealed class Brigade(int number, string? customName = null)
     public string? CustomName { get; set; } = customName;
     public List<Regiment> Regiments { get; } = [];
 
-    public string Name => CustomName ?? Formations.CombatUnitName(Number, Echelon.Brigade);
+    /// <summary>Its own name, or its number and size in its nation's era ("3.ª Brigada", "3.ª Cohorte").</summary>
+    public string Name(Era era) => CustomName ?? Formations.CombatUnitName(Number, Echelon.Brigade, era);
     public IEnumerable<Battalion> Battalions => Regiments.SelectMany(r => r.Battalions);
     public int Men => Regiments.Sum(r => r.Men);
 }

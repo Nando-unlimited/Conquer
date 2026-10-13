@@ -173,7 +173,7 @@ public sealed partial class GameController
             var e = mine.FirstOrDefault(m => m.Battalion == b);
             string where = e.Battalion == null ? "en reserva" : e.Exposure < 1 ? "detrás del frente" : "en el frente";
             string fire = e.Battalion == null ? "" : $" · fuego {e.Fire:0.#}";
-            lines.Add($"{Formations.BattalionName(b.Info)}: {b.Strength:0}/{b.Info.Men} hombres · organización {b.OrganisationShare:P0} · " +
+            lines.Add($"{Formations.BattalionName(b.Info, unit.Owner.Era)}: {b.Strength:0}/{b.Info.Men} hombres · organización {b.OrganisationShare:P0} · " +
                       $"experiencia {b.Experience:P0} · {where}{fire}");
         }
         lines.Add(attacking ? "Ataca desde su provincia; entra cuando no quedan defensores." : "Defiende con la ventaja del terreno.");

@@ -1,4 +1,5 @@
 using Conquer.Game.Economy;
+using Conquer.Game.Science;
 
 namespace Conquer.Game.Military;
 
@@ -79,10 +80,10 @@ public sealed class TrainingOrder
         TotalDays = totalDays;
     }
 
-    /// <summary>"Batallón de arqueros", "Brigada (Plantilla II)", "Cuartel general de cuerpo".</summary>
-    public string Name =>
-        Battalion is BattalionType b ? Formations.BattalionName(b)
-        : TemplateName != null ? $"{Formations.CombatName(Echelon.Regiment)} ({TemplateName})"
+    /// <summary>"Batallón de arqueros", "Regimiento (Plantilla II)", "Cuartel general de cuerpo"; Roman names in Roman times.</summary>
+    public string Name(Era era) =>
+        Battalion is BattalionType b ? Formations.BattalionName(b, era)
+        : TemplateName != null ? $"{Formations.CombatName(Echelon.Regiment, era)} ({TemplateName})"
         : $"Cuartel general de {Formations.LevelName(HeadquartersLevel).ToLowerInvariant()}";
 }
 

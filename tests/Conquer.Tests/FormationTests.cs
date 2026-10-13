@@ -1,6 +1,7 @@
 using Conquer.Game.Entities;
 using Conquer.Game.Military;
 using Conquer.Game.Rules;
+using Conquer.Game.Science;
 using Conquer.Game.Simulation;
 using Conquer.Game.World;
 
@@ -27,12 +28,12 @@ public class FormationTests(WorldFixture world)
         var (s, p) = Game();
         var regiment = Regiment(s, p, 5);
         Assert.Equal(Echelon.Regiment, regiment.Size);
-        Assert.EndsWith("Regimiento", regiment.Name);
+        Assert.EndsWith("Manípulo", regiment.Name);
 
         var brigade = Regiment(s, p, 12);
         Assert.Equal(Echelon.Brigade, brigade.Size);
         Assert.Equal([5, 5, 2], brigade.Regiments.Select(r => r.Battalions.Count));
-        Assert.EndsWith("Brigada", brigade.Name);
+        Assert.EndsWith("Cohorte", brigade.Name);
         Assert.Equal(12, brigade.Battalions.Count);
 
         var division = Regiment(s, p, 25);
@@ -73,8 +74,8 @@ public class FormationTests(WorldFixture world)
         // Two regiments make a brigade; each keeps its name inside, and the officer becomes a brigadier.
         Assert.True(s.Incorporate(0, a.Id, b.Id).Ok);
         Assert.Equal(Echelon.Brigade, a.Size);
-        Assert.EndsWith("Brigada", a.Name);
-        Assert.Contains(bName, a.Regiments.Select(r => r.Name));
+        Assert.EndsWith("Cohorte", a.Name);
+        Assert.Contains(bName, a.Regiments.Select(r => r.Name(s.Human.Era)));
         Assert.Equal(OfficerRank.Brigadier, a.Officer!.Rank);
         Assert.Equal(OfficerRank.Brigadier, a.RequiredRank);
 
@@ -172,8 +173,8 @@ public class FormationTests(WorldFixture world)
         var back = loaded.UnitById(division.Id)!;
         Assert.Equal("La Azul", back.Name);
         Assert.Equal(Echelon.Division, back.Size);
-        Assert.Equal(division.Brigades.Select(b => b.Name), back.Brigades.Select(b => b.Name));
-        Assert.Equal(division.Regiments.Select(r => r.Name), back.Regiments.Select(r => r.Name));
+        Assert.Equal(division.Brigades.Select(b => b.Name(Era.Ancient)), back.Brigades.Select(b => b.Name(Era.Ancient)));
+        Assert.Equal(division.Regiments.Select(r => r.Name(Era.Ancient)), back.Regiments.Select(r => r.Name(Era.Ancient)));
         Assert.Equal(25, back.Battalions.Count);
     }
 }

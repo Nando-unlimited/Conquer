@@ -95,7 +95,7 @@ public class MilitaryTests(WorldFixture world)
         var regiment = Assert.Single(s.Units, u => u.IsMilitary && u.OwnerId == 0);
         Assert.Equal(a.Id, regiment.ProvinceId);
         Assert.Equal(info.Men, regiment.Citizens);
-        Assert.Equal("1.er Regimiento", regiment.Name);
+        Assert.Equal("1.er Manípulo", regiment.Name);
     }
 
     [Fact]
@@ -909,15 +909,34 @@ public class MilitaryTests(WorldFixture world)
     [Fact]
     public void CombatUnitsAreNamedByTheirSize()
     {
-        Assert.Equal("3.er Regimiento", Formations.CombatUnitName(3, Echelon.Regiment));
-        Assert.Equal("12.º Regimiento", Formations.CombatUnitName(12, Echelon.Regiment));
-        Assert.Equal("3.ª Brigada", Formations.CombatUnitName(3, Echelon.Brigade));
-        Assert.Equal("3.ª División", Formations.CombatUnitName(3, Echelon.Division));
+        Assert.Equal("3.er Regimiento", Formations.CombatUnitName(3, Echelon.Regiment, Era.Medieval));
+        Assert.Equal("12.º Regimiento", Formations.CombatUnitName(12, Echelon.Regiment, Era.Medieval));
+        Assert.Equal("3.ª Brigada", Formations.CombatUnitName(3, Echelon.Brigade, Era.Modern));
+        Assert.Equal("3.ª División", Formations.CombatUnitName(3, Echelon.Division, Era.Modern));
         Assert.Equal("IV Cuerpo", Formations.HeadquartersName(1, 4));
         Assert.Equal("1.er Ejército", Formations.HeadquartersName(2, 1));
         Assert.Equal("2.º Grupo de ejércitos", Formations.HeadquartersName(3, 2));
-        Assert.Equal("Batallón de arqueros", Formations.BattalionName(BattalionType.RangedInfantry.First()));
-        Assert.Equal("Trirreme", Formations.BattalionName(BattalionType.LineShip.First()));
+        Assert.Equal("Batallón de arqueros", Formations.BattalionName(BattalionType.RangedInfantry.First(), Era.Medieval));
+        Assert.Equal("Trirreme", Formations.BattalionName(BattalionType.LineShip.First(), Era.Classical));
+        Assert.Equal("3 batallones", Formations.BattalionCount(3, Era.Renaissance));
+    }
+
+    [Fact]
+    public void UpToTheClassicalEraUnitsTakeTheirRomanNames()
+    {
+        Assert.Equal("3.er Manípulo", Formations.CombatUnitName(3, Echelon.Regiment, Era.Ancient));
+        Assert.Equal("3.ª Cohorte", Formations.CombatUnitName(3, Echelon.Brigade, Era.Classical));
+        Assert.Equal("10.ª Legión", Formations.CombatUnitName(10, Echelon.Division, Era.Classical));
+        Assert.Equal("Centuria de arqueros", Formations.BattalionName(BattalionType.RangedInfantry.First(), Era.Ancient));
+        Assert.Equal("1 centuria", Formations.BattalionCount(1, Era.Classical));
+        Assert.Equal("2 cohortes", Formations.Count(2, Echelon.Brigade, Era.Ancient));
+
+        // A nation's units change their names when it leaves the Classical era.
+        var (s, a, _) = TwoNations();
+        var unit = s.AddRegiment(0, a.Id, BattalionType.LightInfantry);
+        Assert.EndsWith("Manípulo", unit.Name);
+        s.Human.Learn(Techs.All.First(t => t.Info().Era == Era.Medieval));
+        Assert.EndsWith("Regimiento", unit.Name);
     }
 
     [Fact]

@@ -245,7 +245,7 @@ public sealed class Unit
         UnitType.Settlers => "Colonos",
         UnitType.Fleet => $"{Number}.ª {NavalEchelons.Of(Ships.Count).Name()}",
         UnitType.Headquarters => Formations.HeadquartersName(HeadquartersLevel, Number),
-        _ => Formations.CombatUnitName(Number, Size),
+        _ => Formations.CombatUnitName(Number, Size, Owner.Era),
     };
 
     /// <summary>Citizens in the unit: its settlers or staff, or the men left in a regiment's battalions or a fleet's crews.</summary>

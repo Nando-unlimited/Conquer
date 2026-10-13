@@ -429,7 +429,7 @@ public sealed partial class GameSession
                     : order.Battalion is BattalionType type ? AddTrained(player.Id, id, [type], order.Models)
                     : order.TemplateBattalions.Count > 0 ? AddTrained(player.Id, id, order.TemplateBattalions, order.Models)
                     : AddHeadquarters(player.Id, id, order.HeadquartersLevel);
-                if (player.IsHuman) Notify(player.Id, $"Nueva unidad en {PlaceName(p)}: {unit.Name} ({order.Name.ToLowerInvariant()}).");
+                if (player.IsHuman) Notify(player.Id, $"Nueva unidad en {PlaceName(p)}: {unit.Name} ({order.Name(player.Era).ToLowerInvariant()}).");
             }
         }
     }
@@ -487,7 +487,7 @@ public sealed partial class GameSession
         if (type.First().Naval) return CommandResult.Fail("Los barcos no van en plantillas: se construyen sueltos en los puertos.");
         if (type.First().Flies) return CommandResult.Fail("Los aviones no van en plantillas: forman alas en los aeródromos.");
         if (template.Battalions.Count >= MilitaryRules.MaxBattalionsPerRegiment)
-            return CommandResult.Fail($"Como mucho {Formations.BattalionCount(MilitaryRules.MaxBattalionsPerRegiment)} por regimiento.");
+            return CommandResult.Fail($"Como mucho {Formations.BattalionCount(MilitaryRules.MaxBattalionsPerRegiment, player.Era)} por {Formations.CombatName(Echelon.Regiment, player.Era).ToLowerInvariant()}.");
         var missing = type.First().Requires.Where(t => !player.Techs.Contains(t)).ToList();
         if (missing.Count > 0) return CommandResult.Fail("Requiere " + string.Join(" y ", missing.Select(t => t.Info().Name.ToLowerInvariant())) + ".");
         return CommandResult.Success();
@@ -556,7 +556,7 @@ public sealed partial class GameSession
             player.Manpower -= model.Men;
         }
         p.Training.Add(new TrainingOrder(template, days, models));
-        return CommandResult.Success($"{Formations.CombatName(Echelon.Regiment)} de la {template.Name} en instrucción: {days} días.");
+        return CommandResult.Success($"{Formations.CombatName(Echelon.Regiment, player.Era)} de la {template.Name} en instrucción: {days} días.");
     }
 
     // ------------------------------------------------------------------ organisation
@@ -582,7 +582,7 @@ public sealed partial class GameSession
         if (unit.Size != Echelon.Regiment || other.Size != Echelon.Regiment)
             return CommandResult.Fail("Solo se juntan los batallones de dos regimientos: una brigada o una división se incorpora entera.");
         if (unit.Battalions.Count + other.Battalions.Count > MilitaryRules.MaxBattalionsPerRegiment)
-            return CommandResult.Fail($"Un regimiento lleva como mucho {Formations.BattalionCount(MilitaryRules.MaxBattalionsPerRegiment)}: incorpóralo para formar una brigada.");
+            return CommandResult.Fail($"Un {Formations.CombatName(Echelon.Regiment, unit.Owner.Era).ToLowerInvariant()} lleva como mucho {Formations.BattalionCount(MilitaryRules.MaxBattalionsPerRegiment, unit.Owner.Era)}: incorpóralo para formar una {Formations.CombatName(Echelon.Brigade, unit.Owner.Era).ToLowerInvariant()}.");
         return CommandResult.Success();
     }
 
@@ -728,8 +728,8 @@ public sealed partial class GameSession
     /// regiments. The index of one is what <see cref="Detach"/> takes.
     /// </summary>
     public static IReadOnlyList<(string Name, Echelon Echelon, int Battalions)> PartsOf(Unit unit) =>
-        [.. unit.Brigades.Select(b => (b.Name, Echelon.Brigade, b.Battalions.Count())),
-         .. unit.Regiments.Select(r => (r.Name, Echelon.Regiment, r.Battalions.Count))];
+        [.. unit.Brigades.Select(b => (b.Name(unit.Owner.Era), Echelon.Brigade, b.Battalions.Count())),
+         .. unit.Regiments.Select(r => (r.Name(unit.Owner.Era), Echelon.Regiment, r.Battalions.Count))];
 
     public CommandResult CanDetach(Unit unit)
     {
@@ -788,7 +788,7 @@ public sealed partial class GameSession
         if (indexes.Any(i => i < 0 || i >= all.Count)) return CommandResult.Fail("Tropa no válida.");
         if (indexes.Count >= all.Count) return CommandResult.Fail(unit.IsFleet ? "Debe quedar al menos un barco." : "Debe quedar al menos un batallón.");
         if (unit.IsMilitary && indexes.Count > MilitaryRules.MaxBattalionsPerRegiment)
-            return CommandResult.Fail($"Salen como un regimiento: como mucho {Formations.BattalionCount(MilitaryRules.MaxBattalionsPerRegiment)}.");
+            return CommandResult.Fail($"Salen como un {Formations.CombatName(Echelon.Regiment, unit.Owner.Era).ToLowerInvariant()}: como mucho {Formations.BattalionCount(MilitaryRules.MaxBattalionsPerRegiment, unit.Owner.Era)}.");
         if (unit.AttackingProvinceId.HasValue) return CommandResult.Fail("Está atacando.");
         var leaving = indexes.Select(i => all[i]).ToList();
         if (unit.IsFleet && CargoMen(unit) > unit.Capacity - leaving.Sum(b => b.Info.Capacity)) return CommandResult.Fail("La carga no cabría en el resto de la flota.");
@@ -812,7 +812,7 @@ public sealed partial class GameSession
             split = AddUnit(playerId, UnitType.Regiment, unit.ProvinceId, 0);
             Organise(split, leaving);
         }
-        string what = leaving.Count == 1 ? Formations.BattalionName(leaving[0].Info) : unit.IsFleet ? $"{leaving.Count} barcos" : Formations.BattalionCount(leaving.Count);
+        string what = leaving.Count == 1 ? Formations.BattalionName(leaving[0].Info, unit.Owner.Era) : unit.IsFleet ? $"{leaving.Count} barcos" : Formations.BattalionCount(leaving.Count, unit.Owner.Era);
         return CommandResult.Success($"{what} {(leaving.Count == 1 ? "forma" : "forman")} una unidad nueva: {split.Name}.");
     }
 

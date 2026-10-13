@@ -2,6 +2,11 @@
 
 Todos los cambios del juego, del más reciente al más antiguo. Cada versión es un commit cuyo título es su número.
 
+## [1.130.0] - 2026-10-13
+
+### Añadido
+- **Nombres romanos en la Antigüedad**: hasta la época clásica las unidades llevan sus nombres romanos: centuria (batallón), manípulo (regimiento), cohorte (brigada) y legión (división), como «3.ª Legión» o «Centuria de arqueros». Cuando tu nación llega a la Edad Media pasan a llamarse como ahora; los nombres que les hayas dado no cambian.
+
 ## [1.129.0] - 2026-10-08
 
 ### Añadido

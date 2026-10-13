@@ -2,6 +2,7 @@ using Conquer.Game.Economy;
 using Conquer.Game.Entities;
 using Conquer.Game.Military;
 using Conquer.Game.Rules;
+using Conquer.Game.Science;
 using Conquer.Game.Simulation;
 using Conquer.Game.World;
 
@@ -152,7 +153,7 @@ public sealed partial class GameController
             var info = work.Kind.Info();
             doc.Add(new Label($"{info.Name} a {HubName(work.To)}", Tone.Accent, Bold: true, Height: 18));
             int engineers = Session.EngineersOn(work);
-            doc.Add(new Label($"Quedan {Session.LinksLeft(work)} tramos · {Formations.BattalionCount(engineers)} de ingenieros en la ruta", Tone.Dim, Height: 20));
+            doc.Add(new Label($"Quedan {Session.LinksLeft(work)} tramos · {Formations.BattalionCount(engineers, Human.Era)} de ingenieros en la ruta", Tone.Dim, Height: 20));
             doc.Add(new Button("Cancelar obra", () => Show(Session.CancelRoad(Human.Id, work.Id)),
                 Tooltip: "Se devuelve lo que costaban los tramos sin hacer.", Size: TextSize.Small, Height: 26));
         }
@@ -260,15 +261,15 @@ public sealed partial class GameController
 
         // A regiment's battalions (or a fleet's ships) one after another; a brigade's or division's under each of its parts.
         if (unit.IsFleet || unit.Size == Echelon.Regiment)
-            foreach (var b in unit.Battalions) BattalionRows(doc, b);
+            foreach (var b in unit.Battalions) BattalionRows(doc, b, unit.Owner.Era);
         else
         {
             foreach (var brigade in unit.Brigades)
             {
-                doc.Add(new Label(brigade.Name, Tone.Accent, Bold: true, Height: 20));
-                foreach (var regiment in brigade.Regiments) RegimentRows(doc, regiment, 10);
+                doc.Add(new Label(brigade.Name(unit.Owner.Era), Tone.Accent, Bold: true, Height: 20));
+                foreach (var regiment in brigade.Regiments) RegimentRows(doc, regiment, unit.Owner.Era, 10);
             }
-            foreach (var regiment in unit.Regiments) RegimentRows(doc, regiment, 0);
+            foreach (var regiment in unit.Regiments) RegimentRows(doc, regiment, unit.Owner.Era, 0);
         }
         if (unit.OwnerId != Human.Id || unit.IsAboard) return;
         if (!unit.IsFleet) ParadropButton(doc, unit);
@@ -375,36 +376,41 @@ public sealed partial class GameController
         Battalions.All.SelectMany(t => t.Models()).FirstOrDefault(m => m.SupplyKey == key)?.SupplyName ?? key;
 
     /// <summary>A regiment inside a brigade or division: its name, then its battalions.</summary>
-    private static void RegimentRows(Document doc, Regiment regiment, float indent)
+    private static void RegimentRows(Document doc, Regiment regiment, Era era, float indent)
     {
-        doc.Add(new Label(regiment.Name, Tone.Normal, Bold: true, Height: 20, Indent: indent));
-        foreach (var b in regiment.Battalions) BattalionRows(doc, b, indent + 10);
+        doc.Add(new Label(regiment.Name(era), Tone.Normal, Bold: true, Height: 20, Indent: indent));
+        foreach (var b in regiment.Battalions) BattalionRows(doc, b, era, indent + 10);
     }
 
     /// <summary>A battalion or ship: its name and men, and its strength and organisation bars.</summary>
-    private static void BattalionRows(Document doc, Battalion b, float indent = 0)
+    private static void BattalionRows(Document doc, Battalion b, Era era, float indent = 0)
     {
         string tip = $"{b.Info.Name}: ataque {b.Info.Attack:0.#}, defensa {b.Info.Defense:0.#}, organización {b.Organisation:0}/{b.Info.MaxOrganisation:0}" +
                      $"\n{b.Type.Role().Name()}, {Battalion.ExperienceName(b.Experience).ToLowerInvariant()} ({b.Experience:P0} de experiencia)" +
                      (b.Info.Mounted ? "\nMontada: rápida, pero ataca a la mitad en bosques, pantanos y montañas." : "") +
                      (LineNote(b.Type) is { } note && !b.Info.Naval ? "\n" + note : "") +
                      (b.Info.Capacity > 0 ? $"\nLleva {b.Info.Capacity:N0} hombres." : "");
-        doc.Add(new Row(Formations.BattalionName(b.Info), $"{b.Strength:0}/{b.Info.Men}", Tone.Normal, Tone.Dim, Bold: true, Height: 19, Indent: indent,
+        doc.Add(new Row(Formations.BattalionName(b.Info, era), $"{b.Strength:0}/{b.Info.Men}", Tone.Normal, Tone.Dim, Bold: true, Height: 19, Indent: indent,
             Icon: new BattalionIcon(b.Type), Tooltip: tip));
         doc.Add(new Bar(b.StrengthShare, Tone.Strength, Tone.Track, 4, 1));
         doc.Add(new Bar(b.OrganisationShare, Tone.Organisation, Tone.Track, 4, 7));
     }
 
-    /// <summary>"Regimiento de 3 batallones", "Brigada de 3 regimientos (12 batallones)", "División de 2 brigadas y 1 regimiento (31 batallones)".</summary>
+    /// <summary>
+    /// "Regimiento de 3 batallones", "Brigada de 3 regimientos (12 batallones)", "División de 2 brigadas y 1 regimiento
+    /// (31 batallones)"; in Roman times "Legión de 2 cohortes y 1 manípulo (31 centurias)".
+    /// </summary>
     public static string Composition(Unit unit)
     {
-        int battalions = unit.Battalions.Count;
+        var era = unit.Owner.Era;
+        string battalions = Formations.BattalionCount(unit.Battalions.Count, era);
+        string name = Formations.CombatName(unit.Size, era);
         return unit.Size switch
         {
-            Echelon.Regiment => $"Regimiento de {Formations.BattalionCount(battalions)}",
-            Echelon.Brigade => $"Brigada de {Formations.Count(unit.Regiments.Count, Echelon.Regiment)} ({Formations.BattalionCount(battalions)})",
-            _ => "División de " + string.Join(" y ", new[] { (unit.Brigades.Count, Echelon.Brigade), (unit.Regiments.Count, Echelon.Regiment) }
-                .Where(p => p.Item1 > 0).Select(p => Formations.Count(p.Item1, p.Item2))) + $" ({Formations.BattalionCount(battalions)})",
+            Echelon.Regiment => $"{name} de {battalions}",
+            Echelon.Brigade => $"{name} de {Formations.Count(unit.Regiments.Count, Echelon.Regiment, era)} ({battalions})",
+            _ => $"{name} de " + string.Join(" y ", new[] { (unit.Brigades.Count, Echelon.Brigade), (unit.Regiments.Count, Echelon.Regiment) }
+                .Where(p => p.Item1 > 0).Select(p => Formations.Count(p.Item1, p.Item2, era))) + $" ({battalions})",
         };
     }
 

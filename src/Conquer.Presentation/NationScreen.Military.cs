@@ -25,7 +25,7 @@ public sealed partial class NationScreen
     {
         var mine = Session.Units.Where(u => u.OwnerId == Player.Id && (u.CommandLevel >= 0 || u.IsFleet)).ToList();
         var regiments = mine.Where(u => u.IsMilitary).ToList();
-        string title = $"{TextFormat.Plural(regiments.Count, "unidad de combate", Formations.CombatPlural)} · {Formations.BattalionCount(regiments.Sum(u => u.Battalions.Count))} · {regiments.Sum(u => u.Citizens):N0} hombres · " +
+        string title = $"{TextFormat.Plural(regiments.Count, "unidad de combate", Formations.CombatPlural)} · {Formations.BattalionCount(regiments.Sum(u => u.Battalions.Count), Player.Era)} · {regiments.Sum(u => u.Citizens):N0} hombres · " +
                        $"reclutas {Player.Manpower:N0}/{Session.ManpowerCapacity(Player):N0} · poder militar {Session.MilitaryPower(Player.Id):0} · mantenimiento {Session.Upkeep(Player)[(int)ResourceType.Gold]:0.#} de oro/día" +
                        (Player.ArmyUnpaid ? " (sin pagar)" : "");
 
@@ -99,7 +99,7 @@ public sealed partial class NationScreen
             _selectedTemplateId = template.Id;
         }
 
-        var list = Player.Templates.Select(t => new Button($"{t.Name}  ({Formations.BattalionCount(t.Battalions.Count)})", () => _selectedTemplateId = t.Id,
+        var list = Player.Templates.Select(t => new Button($"{t.Name}  ({Formations.BattalionCount(t.Battalions.Count, Player.Era)})", () => _selectedTemplateId = t.Id,
             Active: t.Id == template.Id, Size: TextSize.Small)).ToList();
         Button[] actions =
         [
@@ -138,7 +138,7 @@ public sealed partial class NationScreen
             {
                 var can = Session.CanAddToTemplate(Player, template, type);
                 var model = GameSession.ModelFor(Player, type);
-                string tip = $"{Formations.BattalionName(model)} ({type.Line().Name.ToLowerInvariant()}, {type.Line().Group.Name().ToLowerInvariant()})"
+                string tip = $"{Formations.BattalionName(model, Player.Era)} ({type.Line().Name.ToLowerInvariant()}, {type.Line().Group.Name().ToLowerInvariant()})"
                              + (GameController.LineNote(type) is { } note ? "\n" + note : "");
                 return new Button("+ " + model.Name, () => Show(Session.AddToTemplate(Player.Id, template.Id, type)), can.Ok,
                     Tooltip: can.Ok ? tip : can.Message, Size: TextSize.Small, Icon: new BattalionIcon(type));
@@ -149,7 +149,7 @@ public sealed partial class NationScreen
 
         // What a unit of this design is like.
         var details = new Document();
-        details.Add(new Heading(Formations.CombatName(Echelon.Regiment), Tone.Accent, Height: 28));
+        details.Add(new Heading(Formations.CombatName(Echelon.Regiment, Player.Era), Tone.Accent, Height: 28));
         details.Add(new Pair("Hombres", $"{template.Men(known):N0}"));
         details.Add(new Pair("Instrucción", $"{GameSession.TrainingDays(Player, template)} días"));
         details.Add(new Pair("Ataque", $"{template.Attack(known):0.#}"));
@@ -186,7 +186,7 @@ public sealed partial class NationScreen
             new("Cancelar", () => TemplateNameDraft = null, Size: TextSize.Small),
         ];
         return new TemplatesPage(list, actions, template.Name,
-            $"{Formations.CombatName(Echelon.Regiment)} de {Formations.BattalionCount(template.Battalions.Count)}",
+            $"{Formations.CombatName(Echelon.Regiment, Player.Era)} de {Formations.BattalionCount(template.Battalions.Count, Player.Era)}",
             free > 0 ? $"{TextFormat.Plural(free, "hueco libre", "huecos libres")} de {MilitaryRules.MaxBattalionsPerRegiment}" : "Sin huecos libres",
             sections, details, rename, renaming);
     }

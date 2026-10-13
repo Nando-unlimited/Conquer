@@ -415,7 +415,7 @@ public sealed partial class GameController
             var known = Human.Techs;
             string tip = $"{template.Name}: {template.Composition(known)}.\n{template.Men(known)} hombres de la provincia. Ataque {template.Attack(known):0.#}, defensa {template.Defense(known):0.#}." +
                          $"\nCoste: {template.Cost(known)}. Equipo: {template.Equipment(known)}. {TextFormat.TrainingDaysText(days, template.TrainingDays(known))}" + (can.Ok ? "" : "\n" + can.Message);
-            doc.Add(new Button($"{template.Name}  ·  {Formations.BattalionCount(template.Battalions.Count)}  ·  {days} d",
+            doc.Add(new Button($"{template.Name}  ·  {Formations.BattalionCount(template.Battalions.Count, Human.Era)}  ·  {days} d",
                 () => Show(Session.TrainTemplate(Human.Id, p.Id, template.Id)), can.Ok, Tooltip: tip, Size: TextSize.Small, Height: 28, Gap: 4));
         }
         doc.Add(new Label(Human.Templates.Count > 4 ? "Más plantillas en la pestaña Plantillas de la nación (N)." : "Diseña plantillas en la pestaña Plantillas de la nación (N).",
@@ -427,7 +427,7 @@ public sealed partial class GameController
             var info = GameSession.TrainedModel(Human, type);
             var can = Session.CanTrain(p, type);
             int days = GameSession.TrainingDays(Human, type);
-            string tip = $"{Formations.BattalionName(info)} ({type.Line().Name.ToLowerInvariant()}, {type.Line().Group.Name().ToLowerInvariant()}): " +
+            string tip = $"{Formations.BattalionName(info, Human.Era)} ({type.Line().Name.ToLowerInvariant()}, {type.Line().Group.Name().ToLowerInvariant()}): " +
                          $"{info.Men} hombres de la provincia. Ataque {info.Attack:0.#}, defensa {info.Defense:0.#}, " +
                          $"organización {info.MaxOrganisation:0}, {info.Speed * GameRules.CitizenSpeedKmh:0.#} km/h." +
                          (info.Mounted ? "\nMontada: ataca a la mitad en bosques, pantanos y montañas." : "") +
@@ -460,7 +460,7 @@ public sealed partial class GameController
         doc.Add(Section("En instrucción"));
         foreach (var order in p.Training)
         {
-            doc.Add(new Row(order.Name, $"{order.DaysLeft} d", Tone.Normal, Tone.Dim, Height: 18));
+            doc.Add(new Row(order.Name(Human.Era), $"{order.DaysLeft} d", Tone.Normal, Tone.Dim, Height: 18));
             doc.Add(new Bar(1 - order.DaysLeft / (double)order.TotalDays, Tone.Accent, Tone.Track, 5, 7));
         }
     }

@@ -155,8 +155,8 @@ public class OfficerTests(WorldFixture world)
         Assert.Equal("Los Tercios", unit.Name);
         // Grown into a brigade, the regiment keeps its name inside it, and the brigade is named for its own number.
         Assert.True(s.Incorporate(0, unit.Id, s.AddRegiment(0, home.Id, BattalionType.LightInfantry).Id).Ok);
-        Assert.EndsWith("Brigada", unit.Name);
-        Assert.Contains("Los Tercios", unit.Regiments.Select(r => r.Name));
+        Assert.EndsWith("Cohorte", unit.Name);
+        Assert.Contains("Los Tercios", unit.Regiments.Select(r => r.Name(s.Human.Era)));
         Assert.True(s.RenameUnit(0, unit.Id, "La Vieja").Ok);
         Assert.True(s.RenameUnit(0, unit.Id, "").Ok);
         Assert.Null(unit.CustomName);

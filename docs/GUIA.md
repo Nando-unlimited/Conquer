@@ -151,22 +151,22 @@ Los batallones que se entrenan en las ciudades, la tropa especializada de la que
 | `Battalion` | Un batallón de una unidad: su línea, su modelo (`Model`; `Info` es su ficha), sus hombres (`Strength`), su organización, ambos como parte de su máximo, y su experiencia (`Experience`, 0 a 1; `ExperienceName`: Novato, Regular, Veterano o Élite). `Modernise(modelo)` le hace adoptar uno más moderno, conservando sus hombres y su parte de organización. |
 
 ### `Military/Formations.cs`
-Los nombres de las formaciones: batallón → regimiento (hasta 5) → brigada (hasta 4 regimientos) → división (hasta 5 brigadas y regimientos y 10.000 hombres), cada una de ellas una sola unidad en el mapa (`Echelon`), → cuerpo → ejército → grupo de ejércitos (cuarteles generales).
+Los nombres de las formaciones: batallón → regimiento (hasta 5) → brigada (hasta 4 regimientos) → división (hasta 5 brigadas y regimientos y 10.000 hombres), cada una de ellas una sola unidad en el mapa (`Echelon`), → cuerpo → ejército → grupo de ejércitos (cuarteles generales). Hasta la época clásica (`RomanNames(era)`) se llaman centuria, manípulo, cohorte y legión.
 
 | Elemento | Qué es |
 | --- | --- |
-| `CombatName(tamaño)`, `CombatPluralOf(tamaño)`, `Count(n, tamaño)`, `CombatPlural`, `CombatEchelon(tamaño)` | «Regimiento», «Brigada» o «División»; sus plurales; «3 regimientos»; las marcas OTAN III, X o XX. |
+| `CombatName(tamaño, era)`, `CombatPluralOf(tamaño, era)`, `Count(n, tamaño, era)`, `CombatPlural`, `CombatEchelon(tamaño)` | «Regimiento», «Brigada» o «División» («Manípulo», «Cohorte» o «Legión» hasta la época clásica); sus plurales; «3 regimientos»; las marcas OTAN III, X o XX. |
 | `LevelName`, `LevelPlural`, `SubordinatesPlural` | Nombre de cada nivel de cuartel general: Cuerpo, Ejército y Grupo de ejércitos. |
-| `BattalionCount`, `BattalionName` | «3 batallones»; «Batallón de arqueros» por su modelo o «Batallón de infantería a distancia» por su línea, o el tipo de barco («Trirreme»). |
+| `BattalionCount(n, era)`, `BattalionName(…, era)`, `BattalionWord(era)`, `BattalionsHeading(era)` | «3 batallones» («3 centurias» hasta la época clásica); «Batallón de arqueros» por su modelo o «Batallón de infantería a distancia» por su línea, o el tipo de barco («Trirreme»). |
 | `Function(batallones)`, `FunctionOf(tipo[, modelo])`, `UnitFunction` | El símbolo OTAN de una unidad: el del papel más común entre sus batallones (infantería, montaña, paracaidistas, caballería, blindados, mecanizada si hay tanques con infantería o caballería, artillería, antiaérea, ingenieros, médicos, aviación, naval). Los carros de guerra tirados por caballos cuentan como caballería. |
-| `CombatUnitName(número, tamaño)`, `HeadquartersName(nivel, número)`, `Roman(n)` | «3.er Regimiento», «3.ª Brigada», «1.ª División» (cada tamaño se numera aparte); «IV Cuerpo», «1.er Ejército», «2.º Grupo de ejércitos». |
+| `CombatUnitName(número, tamaño, era)`, `HeadquartersName(nivel, número)`, `Roman(n)` | «3.er Regimiento», «3.ª Brigada», «1.ª División», «10.ª Legión» (cada tamaño se numera aparte); «IV Cuerpo», «1.er Ejército», «2.º Grupo de ejércitos». |
 | `ShipCount(n)` | «3 barcos». (El nombre de una agrupación naval va por su tamaño: «1.ª Flotilla», «2.ª Escuadra», «1.ª Fuerza».) |
 
 ### `Military/Echelons.cs`
 | Elemento | Qué es |
 | --- | --- |
 | `Echelon` | El tamaño de una unidad de combate: regimiento, brigada o división. |
-| `Regiment`, `Brigade` | Un regimiento (sus batallones) o una brigada (sus regimientos) dentro de una unidad, con su número y su nombre propios (`Name`), que recupera si sale a moverse por su cuenta; `Men`, sus hombres a plantilla completa. Un regimiento suelto lleva en su unidad el número y el nombre de ella. |
+| `Regiment`, `Brigade` | Un regimiento (sus batallones) o una brigada (sus regimientos) dentro de una unidad, con su número y su nombre propios (`Name(era)`, con la era de su nación), que recupera si sale a moverse por su cuenta; `Men`, sus hombres a plantilla completa. Un regimiento suelto lleva en su unidad el número y el nombre de ella. |
 
 ### `Military/Officer.cs`
 Los oficiales al frente de las unidades de combate y, como generales, de los cuarteles generales.
@@ -188,7 +188,7 @@ La cadena de mando, la instrucción y las batallas.
 | Elemento | Qué es |
 | --- | --- |
 | `CommandLevelInfo`, `CommandLevels` | Los tres niveles de cuartel general: cuerpo, ejército y grupo de ejércitos, con su alcance (600 a 2.500 km), 5 subordinados, personal, coste y días. El nivel 0 (`Combat`) es la unidad de combate. Los nombres salen de `Formations`. |
-| `TrainingOrder` | Lo que entrena una provincia (su ciudad o su cuartel): un batallón, una unidad entera de una plantilla (`TemplateName`, `TemplateBattalions`) o un cuartel general, con el modelo de cada batallón (`Models`: el del equipo que se le dio) y los días que le quedan y los que tarda en total (los de su nación al pagarlo); `Name` lo nombra («Batallón de arqueros», «Brigada (Plantilla II)»). |
+| `TrainingOrder` | Lo que entrena una provincia (su ciudad o su cuartel): un batallón, una unidad entera de una plantilla (`TemplateName`, `TemplateBattalions`) o un cuartel general, con el modelo de cada batallón (`Models`: el del equipo que se le dio) y los días que le quedan y los que tarda en total (los de su nación al pagarlo); `Name(era)` lo nombra («Batallón de arqueros», «Regimiento (Plantilla II)», «Centuria de arqueros»). |
 | `Battle` | Una batalla por una provincia: quién ataca, quién defiende, las unidades atacantes (que esperan en sus provincias), cuándo empezó, las bajas de cada bando y, al terminar, quién ganó y cuándo (`AttackersWon`, `EndHours`). `History` guarda cada hora (sin guardarse en la partida). |
 | `BattleHour` | Una hora de batalla: hombres y organización media que le quedan a cada bando y el fuego de cada uno. |
 

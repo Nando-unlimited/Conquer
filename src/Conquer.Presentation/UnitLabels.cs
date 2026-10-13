@@ -9,10 +9,11 @@ public static class UnitLabels
     private static readonly (string Word, string Short)[] Abbreviations =
     [
         ("Grupo de ejércitos", "G. Ej."), ("Regimiento", "Rgto."), ("Brigada", "Brig."), ("División", "Div."), ("Cuerpo", "Cpo."),
+        ("Manípulo", "Man."), ("Cohorte", "Coh."), ("Legión", "Leg."),
         ("Ejército", "Ej."), ("Flotilla", "Flot."), ("Escuadra", "Esc."), ("Fuerza", "F."),
     ];
 
-    /// <summary>"3.er Rgto.", "II Cpo.", "1.ª Esc."; a name of the player's longer than <see cref="MaxShortName"/> is cut ("Los Tercios d.").</summary>
+    /// <summary>"3.er Rgto.", "3.ª Leg.", "II Cpo.", "1.ª Esc."; a name of the player's longer than <see cref="MaxShortName"/> is cut ("Los Tercios d.").</summary>
     public static string Short(string name)
     {
         foreach (var (word, abbreviation) in Abbreviations) name = name.Replace(word, abbreviation);

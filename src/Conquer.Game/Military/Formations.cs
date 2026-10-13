@@ -1,19 +1,31 @@
+using Conquer.Game.Science;
+
 namespace Conquer.Game.Military;
 
 /// <summary>
 /// The formations of an army. Battalions, trained in cities, form regiments (up to 5); regiments form brigades (up
 /// to 4) and brigades and regiments form divisions (up to 5 of them, 10,000 men). Each regiment, brigade or division
 /// goes about the map as one unit (<see cref="Echelon"/>). Above them only headquarters: corps command combat units,
-/// armies command corps and army groups command armies (the HQ levels 1-3).
+/// armies command corps and army groups command armies (the HQ levels 1-3). Up to the Classical era the sizes go by
+/// their Roman names (<see cref="RomanNames"/>): centuria, manípulo, cohorte and legión.
 /// </summary>
 public static class Formations
 {
     /// <param name="Feminine">Spanish gender, for ordinals: "1.ª Brigada", "1.er Regimiento".</param>
     private sealed record Names(string Singular, string Plural, bool Feminine);
 
+    private static readonly Names Battalion = new("Batallón", "batallones", false);
     private static readonly Names Regiment = new("Regimiento", "regimientos", false);
     private static readonly Names Brigade = new("Brigada", "brigadas", true);
     private static readonly Names Division = new("División", "divisiones", true);
+
+    private static readonly Names Century = new("Centuria", "centurias", true);
+    private static readonly Names Maniple = new("Manípulo", "manípulos", false);
+    private static readonly Names Cohort = new("Cohorte", "cohortes", true);
+    private static readonly Names Legion = new("Legión", "legiones", true);
+
+    /// <summary>Whether a nation in this era calls its units by their Roman names.</summary>
+    public static bool RomanNames(Era era) => era <= Era.Classical;
 
     /// <summary>The HQ levels, 1 to 3.</summary>
     private static readonly Names[] Headquarters =
@@ -23,12 +35,14 @@ public static class Formations
         new("Grupo de ejércitos", "grupos de ejércitos", false),
     ];
 
-    private static Names Size(Echelon echelon) => echelon switch
+    private static Names Size(Echelon echelon, Era era) => echelon switch
     {
-        Echelon.Regiment => Regiment,
-        Echelon.Brigade => Brigade,
-        _ => Division,
+        Echelon.Regiment => RomanNames(era) ? Maniple : Regiment,
+        Echelon.Brigade => RomanNames(era) ? Cohort : Brigade,
+        _ => RomanNames(era) ? Legion : Division,
     };
+
+    private static Names BattalionNames(Era era) => RomanNames(era) ? Century : Battalion;
 
     /// <summary>NATO echelon marks over a combat unit: "III" regiment, "X" brigade, "XX" division.</summary>
     public static string CombatEchelon(Echelon echelon) => echelon switch
@@ -82,14 +96,16 @@ public static class Formations
         },
     };
 
-    /// <summary>"Regimiento", "Brigada" or "División".</summary>
-    public static string CombatName(Echelon echelon) => Size(echelon).Singular;
+    /// <summary>"Regimiento", "Brigada" or "División"; "Manípulo", "Cohorte" or "Legión" in Roman times.</summary>
+    public static string CombatName(Echelon echelon, Era era) => Size(echelon, era).Singular;
 
     /// <summary>"regimientos", "brigadas", "divisiones".</summary>
-    public static string CombatPluralOf(Echelon echelon) => Size(echelon).Plural;
+    public static string CombatPluralOf(Echelon echelon, Era era) => Size(echelon, era).Plural;
 
     /// <summary>"1 regimiento", "3 brigadas".</summary>
-    public static string Count(int n, Echelon echelon) => n == 1 ? $"1 {Size(echelon).Singular.ToLowerInvariant()}" : $"{n} {Size(echelon).Plural}";
+    public static string Count(int n, Echelon echelon, Era era) => Count(n, Size(echelon, era));
+
+    private static string Count(int n, Names names) => n == 1 ? $"1 {names.Singular.ToLowerInvariant()}" : $"{n} {names.Plural}";
 
     /// <summary>What combat units are called together, for headings and messages.</summary>
     public const string CombatPlural = "unidades de combate";
@@ -102,20 +118,27 @@ public static class Formations
     /// <summary>The name of what an HQ of this level commands: combat units for a corps, then the level below.</summary>
     public static string SubordinatesPlural(int level) => level == 1 ? CombatPlural : LevelPlural(level - 1);
 
-    /// <summary>"1 batallón", "3 batallones".</summary>
-    public static string BattalionCount(int n) => n == 1 ? "1 batallón" : $"{n} batallones";
+    /// <summary>"Batallón" or, in Roman times, "Centuria".</summary>
+    public static string BattalionWord(Era era) => BattalionNames(era).Singular;
 
-    /// <summary>"Batallón de arqueros"; a ship is just its kind ("Trirreme").</summary>
-    public static string BattalionName(BattalionInfo info) => info.Naval ? info.Name : "Batallón de " + info.Name.ToLowerInvariant();
+    /// <summary>"Batallones" or "Centurias", for headings.</summary>
+    public static string BattalionsHeading(Era era) => char.ToUpperInvariant(BattalionNames(era).Plural[0]) + BattalionNames(era).Plural[1..];
+
+    /// <summary>"1 batallón", "3 batallones"; "3 centurias" in Roman times.</summary>
+    public static string BattalionCount(int n, Era era) => Count(n, BattalionNames(era));
+
+    /// <summary>"Batallón de arqueros" ("Centuria de arqueros" in Roman times); a ship is just its kind ("Trirreme").</summary>
+    public static string BattalionName(BattalionInfo info, Era era) =>
+        info.Naval ? info.Name : $"{BattalionWord(era)} de {info.Name.ToLowerInvariant()}";
 
     /// <summary>"Batallón de infantería ligera", by its line, whatever the model; a ship is its kind.</summary>
-    public static string BattalionName(BattalionType type) =>
-        type.Line().Group == BattalionGroup.Navy ? type.Line().Name : "Batallón de " + type.Line().Name.ToLowerInvariant();
+    public static string BattalionName(BattalionType type, Era era) =>
+        type.Line().Group == BattalionGroup.Navy ? type.Line().Name : $"{BattalionWord(era)} de {type.Line().Name.ToLowerInvariant()}";
 
-    /// <summary>A combat unit's name from its number and size: "3.er Regimiento", "3.ª Brigada", "3.ª División".</summary>
-    public static string CombatUnitName(int number, Echelon echelon)
+    /// <summary>A combat unit's name from its number and size: "3.er Regimiento", "3.ª Brigada"; "3.ª Legión" in Roman times.</summary>
+    public static string CombatUnitName(int number, Echelon echelon, Era era)
     {
-        var names = Size(echelon);
+        var names = Size(echelon, era);
         return $"{number}{Ordinal(number, names.Feminine)} {names.Singular}";
     }
 

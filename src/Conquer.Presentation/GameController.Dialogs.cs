@@ -91,13 +91,13 @@ public sealed partial class GameController
         if (unit.IsMilitary || unit.IsFleet)
         {
             _splitSelection.RemoveWhere(i => i >= unit.Battalions.Count);
-            battalionsTitle = unit.IsFleet ? $"Barcos ({unit.Battalions.Count})" : $"Batallones ({unit.Battalions.Count})";
+            battalionsTitle = unit.IsFleet ? $"Barcos ({unit.Battalions.Count})" : $"{Formations.BattalionsHeading(unit.Owner.Era)} ({unit.Battalions.Count})";
             for (int i = 0; i < unit.Battalions.Count; i++)
             {
                 var b = unit.Battalions[i];
                 int index = i;
                 bool chosen = _splitSelection.Contains(i);
-                battalions.Add(new Button($"{(chosen ? "[x]" : "[  ]")}  {Formations.BattalionName(b.Info)}  ·  {b.Strength:0}/{b.Info.Men}", () =>
+                battalions.Add(new Button($"{(chosen ? "[x]" : "[  ]")}  {Formations.BattalionName(b.Info, unit.Owner.Era)}  ·  {b.Strength:0}/{b.Info.Men}", () =>
                 {
                     if (!_splitSelection.Remove(index)) _splitSelection.Add(index);
                 }, Active: chosen, Tooltip: "Marca los que quieras separar.", Size: TextSize.Small));
@@ -118,7 +118,7 @@ public sealed partial class GameController
             foreach (var other in Session.Units.Where(u => u.IsFleet == unit.IsFleet && (u.IsMilitary || u.IsFleet) && !u.IsAboard
                                                           && u.OwnerId == Human.Id && u.ProvinceId == unit.ProvinceId && u.Id != unit.Id))
             {
-                string size = other.IsFleet ? Formations.ShipCount(other.Battalions.Count) : Formations.BattalionCount(other.Battalions.Count);
+                string size = other.IsFleet ? Formations.ShipCount(other.Battalions.Count) : Formations.BattalionCount(other.Battalions.Count, other.Owner.Era);
                 string officer = other.Officer is { } o ? $" Su oficial, {o.Title}, " + (unit.Officer == null ? "toma el mando." : "vuelve a la reserva.") : "";
                 var canMerge = Session.CanMerge(unit, other);
                 if (unit.IsFleet || canMerge.Ok)
@@ -147,7 +147,7 @@ public sealed partial class GameController
             {
                 int index = i;
                 var (name, size, count) = list[i];
-                parts.Add(new Button($"Separar {name} ({(size == Echelon.Brigade ? "brigada, " : "")}{Formations.BattalionCount(count)})",
+                parts.Add(new Button($"Separar {name} ({(size == Echelon.Brigade ? Formations.CombatName(size, unit.Owner.Era).ToLowerInvariant() + ", " : "")}{Formations.BattalionCount(count, unit.Owner.Era)})",
                     () => Show(Session.Detach(Human.Id, unit.Id, index)), canDetach.Ok,
                     Tooltip: canDetach.Ok ? "Sale como una unidad propia en la misma provincia, sin oficial." : canDetach.Message, Size: TextSize.Small));
             }

@@ -234,7 +234,7 @@ public sealed partial class NationScreen
                                  (settlers.Ok ? "" : "\n" + settlers.Message);
             var warriors = GameSession.ModelFor(Player, BattalionType.LightInfantry);
             var train = Session.CanTrain(p, BattalionType.LightInfantry);
-            string trainTip = $"Entrena {Formations.BattalionName(warriors).ToLowerInvariant()} ({warriors.Men} hombres). Coste: {warriors.Cost}. " +
+            string trainTip = $"Entrena {Formations.BattalionName(warriors, Player.Era).ToLowerInvariant()} ({warriors.Men} hombres). Coste: {warriors.Cost}. " +
                               TextFormat.TrainingDaysText(GameSession.TrainingDays(Player, BattalionType.LightInfantry), warriors.TrainingDays) +
                               (p.Training.Count > 0 ? $"\nEn instrucción: {p.Training.Count}." : "") + (train.Ok ? "" : "\n" + train.Message);
             cells.Add(new ButtonsCell(
@@ -304,14 +304,14 @@ public sealed partial class NationScreen
     /// What the province is building and training: the first job with its days left, a bar with its
     /// progress and how many more there are, with all of them in the tooltip; a dash when nothing.
     /// </summary>
-    private static TextCell Work(Province p)
+    private TextCell Work(Province p)
     {
         var jobs = new List<(string Kind, string Name, int DaysLeft, int TotalDays)>();
         if (p.Constructing is BuildingType building)
             jobs.Add(("Obras", building.Info().Name, p.ConstructionDaysLeft, building.Info().Days));
         else if (p.PlannedCityName != null)
             jobs.Add(("Obras", $"Ciudad de {p.PlannedCityName}", p.ConstructionDaysLeft, GameRules.CityBuildingDays));
-        jobs.AddRange(p.Training.Select(o => ("Instrucción", o.Name, o.DaysLeft, o.TotalDays)));
+        jobs.AddRange(p.Training.Select(o => ("Instrucción", o.Name(Player.Era), o.DaysLeft, o.TotalDays)));
         if (jobs.Count == 0) return new TextCell("-", Tone.Dim);
 
         var first = jobs[0];
