@@ -38,7 +38,7 @@ public class PortraitTests
         Assert.Equal(
             ["teniente-antigua-mujer-ejercito", "division-antigua-mujer-ejercito", "general-antigua-mujer-ejercito",
              "brigadier-antigua-mujer-ejercito", "mariscal-antigua-mujer-ejercito", "coronel-antigua-mujer-ejercito"],
-            Portrait.Of(teniente, Era.Ancient, 0).PhotoGroups);
+            Portrait.Of(teniente, Era.Ancient, 0).PhotoGroups.Take(6));
     }
 
     [Fact]
@@ -49,7 +49,19 @@ public class PortraitTests
         Assert.Equal("coronel-renacimiento-hombre-marina", groups[0]);
         Assert.Equal("mariscal-renacimiento-hombre-marina", groups[5]);
         Assert.Equal("coronel-renacimiento-hombre-ejercito", groups[6]);
-        Assert.Equal(12, groups.Count);
+        Assert.Equal(12 * Enum.GetValues<Era>().Length, groups.Count);
+    }
+
+    [Fact]
+    public void AnEraWithoutPicturesTakesThoseOfTheNearestEra()
+    {
+        var colonel = new Officer(11, "Sancho Haro", [OfficerTrait.Offensive], 1);
+        // The Ancient era has no pictures of its own: after its six groups come the Classical ones.
+        Assert.Equal("coronel-clasica-hombre-ejercito", Portrait.Of(colonel, Era.Ancient, 0).PhotoGroups.ElementAt(6));
+        // The Renaissance is between the Middle Ages and the Industrial era: the earlier first.
+        var renaissance = Portrait.Of(colonel, Era.Renaissance, 0).PhotoGroups.ToList();
+        Assert.Equal("coronel-medieval-hombre-ejercito", renaissance[6]);
+        Assert.Equal("coronel-industrial-hombre-ejercito", renaissance[12]);
     }
 
     [Fact]

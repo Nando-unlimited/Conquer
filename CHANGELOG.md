@@ -2,6 +2,14 @@
 
 Todos los cambios del juego, del más reciente al más antiguo. Cada versión es un commit cuyo título es su número.
 
+## [1.132.0] - 2026-10-13
+
+### Añadido
+- **Retratos pintados de la época antigua**: 17 nuevos, para los seis rangos del ejército y de la marina.
+
+### Cambiado
+- Una época sin retratos pintados toma los de la época más cercana que los tenga (la anterior si hay empate), en lugar del retrato dibujado. Así el Renacimiento usa los medievales.
+
 ## [1.131.0] - 2026-10-13
 
 ### Añadido

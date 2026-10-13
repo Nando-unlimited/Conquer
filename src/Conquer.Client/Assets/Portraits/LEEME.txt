@@ -6,9 +6,10 @@ coronel-renacimiento-hombre-ejercito-03.jpg. El retrato muestra el rango; el jue
 Sexos: hombre, mujer.
 Grupos: ejercito, caballeria (oficiales al mando de caballería), marina, aviacion (solo en la época moderna).
 Rangos: coronel, brigadier, division, teniente, general, mariscal (en las épocas antigua y clásica son centurión, tribuno, legado, pretor, cónsul y dictador, pero los archivos usan los mismos nombres).
-Si falta un rango se usa el más cercano, y a los de caballería, marina y aviación sin retratos de su grupo, los del ejército; las épocas sin imágenes usan el retrato dibujado. Cómo crearlas: docs/RETRATOS.md.
+Si falta un rango se usa el más cercano, y a los de caballería, marina y aviación sin retratos de su grupo, los del ejército; las épocas sin imágenes usan las de la época más cercana (la anterior si hay empate). Cómo crearlas: docs/RETRATOS.md.
 
 Origen y licencia de las imágenes (herramienta y plan con que se hicieron):
 - Clásica, medieval, industrial y moderna (113 retratos, 2026-10-05): herramienta y plan pendientes de anotar.
+- Antigua (17 retratos, 2026-10-13): herramienta y plan pendientes de anotar.
 
 Los originales a tamaño completo están en originales/ (no se compilan ni se suben a git).

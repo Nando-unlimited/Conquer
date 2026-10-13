@@ -9,7 +9,7 @@ siempre el mismo mientras no cambie de rango; al ascender pasa a uno del nuevo r
 
 No hace falta tenerlo todo: si falta su rango, el oficial toma uno del rango más cercano (el inferior si hay empate); un
 oficial de caballería, de marina o de aviación sin retratos de su grupo toma uno del ejército; y si su época no tiene
-ninguno, el retrato dibujado. Se pueden ir añadiendo poco a poco, por ejemplo empezando solo con `coronel` y `general`.
+ninguno, los de la época más cercana que los tenga (la anterior si hay empate); solo sin ningún retrato se dibuja. Se pueden ir añadiendo poco a poco, por ejemplo empezando solo con `coronel` y `general`.
 
 ## Formato y nombres
 

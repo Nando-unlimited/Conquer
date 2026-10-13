@@ -78,7 +78,8 @@ public readonly record struct Portrait(
     /// The groups of painted portraits (Assets/Portraits) this officer may take one of, best first, named
     /// rank-era-sex-arm: "teniente-renacimiento-hombre-ejercito" for a lieutenant general of the army, then those of the
     /// nearest ranks. A cavalry officer looks first among "…-caballeria"; a sailor, an airman or a cavalry officer who has
-    /// none of their own takes one of the army.
+    /// none of their own takes one of the army. An era with no pictures takes those of the nearest era that has them
+    /// (the earlier on a tie): the Ancient era the Classical ones.
     /// <see cref="Pick"/> chooses within the group, so an officer changes face only when promoted into another group.
     /// </summary>
     public IEnumerable<string> PhotoGroups
@@ -90,9 +91,12 @@ public readonly record struct Portrait(
             // The officer's own rank first, then the nearest ones (the lower first on a tie).
             int rank = Rank;
             var ranks = Enumerable.Range(0, RankSlugs.Length).OrderBy(r => Math.Abs(r - rank)).ThenBy(r => r).ToList();
-            foreach (string arm in arms)
-                foreach (int r in ranks)
-                    yield return $"{RankSlugs[r]}-{EraSlug(Era)}-{SexSlug(IsFemale)}-{arm}";
+            var own = Era;
+            var eras = Enum.GetValues<Era>().OrderBy(e => Math.Abs((int)e - (int)own)).ThenBy(e => e);
+            foreach (var era in eras)
+                foreach (string arm in arms)
+                    foreach (int r in ranks)
+                        yield return $"{RankSlugs[r]}-{EraSlug(era)}-{SexSlug(IsFemale)}-{arm}";
         }
     }
 
