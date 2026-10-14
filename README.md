@@ -60,6 +60,8 @@ Se guardan en la carpeta `Partidas`, junto al ejecutable del juego. Si esa carpe
 
 Qué hace cada fichero y cada función: [docs/GUIA.md](docs/GUIA.md).
 
+Cómo funciona el juego por dentro, con sus fórmulas y cifras: [docs/REGLAS.md](docs/REGLAS.md) (también en la partida: F1, pestaña Reglas).
+
 ## Versiones
 
 Cada cambio sube la versión en `src/Conquer.Client/Conquer.Client.csproj` y añade una entrada al principio de

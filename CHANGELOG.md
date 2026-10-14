@@ -2,6 +2,14 @@
 
 Todos los cambios del juego, del más reciente al más antiguo. Cada versión es un commit cuyo título es su número.
 
+## [1.134.0] - 2026-10-14
+
+### Añadido
+- **Manual de reglas**: la ayuda (F1) tiene ahora dos pestañas. Ayuda sigue explicando qué hacer; **Reglas** explica cómo funciona el juego por dentro, con sus fórmulas y cifras: el tiempo, la población y la comida, la moral, la migración, la producción, las ciudades, la ciencia, las instituciones, la cultura, la religión y las rebeliones, las epidemias, el ejército, el combate, el suministro, los asedios, el mar y el aire, la diplomacia, el comercio y la victoria. Las cifras salen de las reglas del juego, así que siempre están al día. El mismo manual está en `docs/REGLAS.md`.
+
+### Corregido
+- La ayuda decía que cada nivel de ciencia se abre al conocer uno de los avances del anterior; hace falta la mitad (al menos uno).
+
 ## [1.133.0] - 2026-10-14
 
 ### Añadido

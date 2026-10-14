@@ -936,6 +936,7 @@ y el teclado en llamadas aquí, así que cambiar de motor (por ejemplo, a Godot)
 ### `TextFormat.cs`
 | Función | Qué hace |
 | --- | --- |
+| `Spanish` | La cultura con la que se escriben los números del juego (1.234,5 y «10 %»), hecha a partir de la invariante para no necesitar ICU. `Program.cs` la pone en marcha al arrancar, y `RulesManual` escribe con ella. |
 | `Compact(valor, decimales)` | Cifra abreviada: 950, 12,3k, 2,9M (con `decimales`, 8,7). |
 | `Plural(n, uno, varios)` | «1 unidad», «3 unidades». |
 | `UpkeepText(costes)` | Mantenimiento diario en palabras: «1,2 oro, 0,4 hierro/día». |
@@ -947,6 +948,9 @@ y el teclado en llamadas aquí, así que cambiar de motor (por ejemplo, a Godot)
 
 ### `HelpTopics.cs`
 **Aquí se escribe la ayuda.** Temas: controles, primeros pasos, población y moral, economía y recursos, ciudades, ciencia, ejército, flotas y mar, diplomacia, mapa y partida. Las cifras salen de `GameRules`, así que siguen los cambios de equilibrio; solo caben caracteres Latin-1 (nada de «…» ni «−»). `Lines(tema)` da el tema ya interpretado; `AllText`, todo el texto para los tests.
+
+### `RulesManual.cs`
+**Aquí se escribe el manual de reglas**: cómo funciona el juego por dentro, con sus fórmulas y cifras (la ayuda dice qué hacer; las reglas, cómo se calcula). Temas: el tiempo, población, moral, migración, producción, ciudades y obras, ciencia, instituciones, cultura y religión, epidemias, ejército, combate, suministro y desgaste, asedios, mar y aire, diplomacia y guerra, comercio, y decisiones y victoria. Las cifras salen de `GameRules` y `MilitaryRules`; se escriben con `TextFormat.Spanish` sea cual sea la cultura del hilo (`All` se construye la primera vez que se pide). Mismo formato y límites que `HelpTopics`. `ToMarkdown()` lo da como documento: es **`docs/REGLAS.md`**, que no se edita a mano; el test `RulesManualTests.TheRulesDocumentIsUpToDate` falla si no coincide, y lo regenera ejecutando los tests con `CONQUER_WRITE_DOCS=1`. **Al cambiar una regla, cambia también su texto aquí.**
 
 ### `Changelog.cs`
 `Changelog.Lines`: `CHANGELOG.md` (incluido en esta librería) ya interpretado, sin el título, los corchetes de las versiones ni las negritas.
@@ -1402,7 +1406,7 @@ Interfaz propia de "modo inmediato": los botones se declaran en cada fotograma y
 `ChangelogView`: muestra el historial (`Changelog`), o con otro título otro texto con el mismo formato (los `Credits`), en un panel con desplazamiento y barra; `Frame` dice si se pulsó «Cerrar» (quien lo abre guarda si está abierto). `Layout` ajusta cada línea al ancho y le da tamaño y color según sea título, sección, viñeta o párrafo.
 
 ### `Screens/HelpView.cs`
-`HelpView`: la ayuda durante la partida (F1, el botón «?» de la barra superior o el menú de pausa; abierta según `GameController.HelpOpen`, y `Frame` dice si se pulsó «Cerrar»). Temas a la izquierda y el texto del elegido a la derecha, con desplazamiento y barra. El texto está en `HelpTopics` (Conquer.Presentation); `Layout` ajusta el tema al ancho.
+`HelpView`: la ayuda durante la partida (F1, el botón «?» de la barra superior o el menú de pausa; abierta según `GameController.HelpOpen`, y `Frame` dice si se pulsó «Cerrar»). Dos pestañas arriba, Ayuda (`HelpTopics`) y Reglas (`RulesManual`), ambos en Conquer.Presentation; temas a la izquierda y el texto del elegido a la derecha, con desplazamiento y barra. `Layout` ajusta el tema al ancho; las secciones «### » van en negrita.
 
 ### `Assets/`
 Fuentes Lato (Light y Regular) y Cinzel, de Google Fonts, con sus licencias `OFL-Lato.txt` y `OFL-Cinzel.txt`.

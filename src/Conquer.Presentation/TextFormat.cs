@@ -6,6 +6,20 @@ namespace Conquer.Presentation;
 /// <summary>Numbers and figures written the way the interface shows them.</summary>
 public static class TextFormat
 {
+    /// <summary>
+    /// Spanish number formatting (1.234,5), which the whole interface uses. Built from the invariant culture instead of
+    /// "es-ES" so the game needs no ICU library (InvariantGlobalization in the client's csproj).
+    /// </summary>
+    public static System.Globalization.CultureInfo Spanish { get; } = CreateSpanish();
+
+    private static System.Globalization.CultureInfo CreateSpanish()
+    {
+        var spanish = (System.Globalization.CultureInfo)System.Globalization.CultureInfo.InvariantCulture.Clone();
+        spanish.NumberFormat.NumberDecimalSeparator = spanish.NumberFormat.PercentDecimalSeparator = ",";
+        spanish.NumberFormat.NumberGroupSeparator = spanish.NumberFormat.PercentGroupSeparator = ".";
+        return System.Globalization.CultureInfo.ReadOnly(spanish);
+    }
+
     /// <summary>Short form for tight spaces: 950, 12,3k, 2,9M; with <paramref name="decimals"/>, small values keep one (8,7).</summary>
     public static string Compact(double value, bool decimals = false)
     {

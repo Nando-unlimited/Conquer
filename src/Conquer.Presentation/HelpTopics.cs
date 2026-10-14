@@ -22,7 +22,7 @@ public static class HelpTopics
             "- Espacio: pausa o reanuda. 1 a 5: velocidad del tiempo.",
             "- W A S D o las flechas: mueven el mapa. + y -: zoom.",
             "- Tab: cambia el modo de mapa. Inicio: centra el mapa en tu capital.",
-            "- N: pantalla de la nación. F1: esta ayuda. Esc: cierra ventanas, quita la selección o abre el menú.",
+            "- N: pantalla de la nación. F1: esta ayuda; la pestaña Reglas, arriba, explica con sus fórmulas y cifras cómo funciona el juego por dentro. Esc: cierra ventanas, quita la selección o abre el menú.",
         ]),
         ("Primeros pasos",
         [
@@ -96,7 +96,7 @@ public static class HelpTopics
             $"- Cada rama tiene una prioridad de 0 a {GameRules.MaxResearchPriority}: la ciencia se reparte en proporción.",
             "- Una rama sin nada elegido cede su parte a las demás; si ninguna investiga, la ciencia se guarda para el siguiente avance que elijas.",
             "## Niveles y eras",
-            "- Cada nivel se abre al conocer uno de los avances del nivel anterior de su rama. Algunos avances piden otros concretos.",
+            "- Cada nivel se abre al conocer la mitad de los avances del nivel anterior de su rama (al menos uno). Algunos avances piden otros concretos.",
             "- Los niveles se agrupan en eras: Antigüedad, Clásica, Medieval, Descubrimientos, Industrial y Moderna. Arriba de la pestaña hay un botón por era.",
             $"- Cada nación vecina que ya conoce un avance te lo abarata un {GameRules.NeighbourResearchDiscount:P0}.",
             "## Instituciones",
