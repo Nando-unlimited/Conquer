@@ -2,6 +2,11 @@
 
 Todos los cambios del juego, del más reciente al más antiguo. Cada versión es un commit cuyo título es su número.
 
+## [1.136.0] - 2026-10-14
+
+### Cambiado
+- **Más migración al principio**: las ciudades empiezan a enviar gente desde el 20 % de su capacidad (antes el 30 %), y una ciudad llena envía el 0,2 % de su gente al día (antes el 0,1 %). La capital reparte más gente por tus provincias en los primeros años y luego se queda en torno a un tercio de su capacidad. En una capital con 15 provincias alrededor, a los 6 años el campo tiene unos 4.900 habitantes en lugar de 3.350.
+
 ## [1.135.0] - 2026-10-14
 
 ### Cambiado

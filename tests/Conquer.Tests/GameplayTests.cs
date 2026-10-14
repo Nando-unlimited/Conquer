@@ -195,7 +195,9 @@ public class GameplayTests(WorldFixture world)
         var (a, b) = GrasslandPair();
         var settlers = s.AddUnit(0, UnitType.Settlers, a.Id, 300);
         Assert.True(s.FoundCity(0, settlers.Id).Ok);
-        a.Population = 60000; // enough for a group of emigrants a day
+        // Full, with one group and a half of emigrants a day: one leaves, the rest waits for the next day.
+        a.Population = 1.5 * GameRules.MigrationGroup / GameRules.DailyEmigrationShare;
+        Assert.True(a.Population >= s.CapacityOf(a));
         var scouts = s.AddRegiment(0, b.Id, BattalionType.Scouts);
         Assert.True(s.Claim(0, scouts.Id).Ok);
 

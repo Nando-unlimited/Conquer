@@ -125,9 +125,9 @@ public static class GameRules
 
     // Migration
     /// <summary>Share of a city's population that may leave for new territories each day once it is full...</summary>
-    public const double DailyEmigrationShare = 0.001;
+    public const double DailyEmigrationShare = 0.002;
     /// <summary>...none below this share of its capacity, and in proportion in between: people leave a city for lack of room.</summary>
-    public const double EmigrationStartFill = 0.3;
+    public const double EmigrationStartFill = 0.2;
 
     /// <summary>
     /// Share of a city's people who leave each day, by how full it is (population over capacity): nothing up to

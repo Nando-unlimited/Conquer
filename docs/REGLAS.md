@@ -80,7 +80,7 @@ Toda migración ocurre dentro de una nación: nadie emigra a otra.
 ### Migración espontánea
 
 - Quién emigra: solo las ciudades no ocupadas con más de 200 habitantes. Las provincias sin ciudad nunca envían gente.
-- Cuántos: depende de lo llena que esté la ciudad (habitantes / capacidad). Hasta el 30 % no se va nadie; desde ahí, cada vez más, hasta el 0,1 % de su gente al día cuando está llena. La gente se va por falta de sitio: una ciudad se queda donde sus nacimientos compensan a los que se van, en torno a un 45 % de su capacidad, en vez de vaciarse.
+- Cuántos: depende de lo llena que esté la ciudad (habitantes / capacidad). Hasta el 20 % no se va nadie; desde ahí, cada vez más, hasta el 0,2 % de su gente al día cuando está llena. La gente se va por falta de sitio: una ciudad baja hasta donde sus nacimientos compensan a los que se van, en torno a un tercio de su capacidad, y ahí se queda en vez de vaciarse.
 - Salen en grupos de 50. Lo que no llega a un grupo se acumula para el día siguiente. Una ciudad nunca baja de 200 por emigrar.
 - Adónde: a las provincias de la nación sin ciudad, sin ocupar y a menos de 60 días de camino de una ciudad. Cada una quiere llenarse hasta el 50 % de su capacidad; su déficit es eso menos sus habitantes y los que ya van hacia ella. Sin déficit, no atrae a nadie.
 - Cada provincia receptora toma su gente de la ciudad más cercana. Cada grupo va a la provincia con más atracción: déficit / lo que quiere llenar / (1 + días de viaje). Así se llenan antes las más vacías y las más cercanas.

@@ -79,7 +79,7 @@ Todas las constantes de equilibrio (por día de juego salvo que se diga otra cos
 | `PeakElevation`, `MinPeakPixels` | La tierra por encima de 5.000 m es cumbres (en los mapas del generador 2); las manchas de menos de 30 píxeles conservan su bioma. |
 | `RiverFertility` | La tierra de un gran río da un 25 % más de comida y de capacidad. |
 | `OvercrowdedFoodShare` | Lo que rinden los trabajadores que superan la capacidad de la tierra. |
-| `DailyEmigrationShare`, `EmigrationStartFill`, `EmigrationShare(llenado)`, `MigrationGroup`, `MinEmigrationCityPopulation` | Parte de una ciudad que emigra cada día según lo llena que está (habitantes / capacidad): nada hasta `EmigrationStartFill` (30 %) y en proporción hasta `DailyEmigrationShare` (0,1 %) llena; así una ciudad se estabiliza en torno al 45 % en vez de vaciarse. En grupos de `MigrationGroup`, y nunca por debajo de `MinEmigrationCityPopulation`. |
+| `DailyEmigrationShare`, `EmigrationStartFill`, `EmigrationShare(llenado)`, `MigrationGroup`, `MinEmigrationCityPopulation` | Parte de una ciudad que emigra cada día según lo llena que está (habitantes / capacidad): nada hasta `EmigrationStartFill` (20 %) y en proporción hasta `DailyEmigrationShare` (0,2 %) llena; así una ciudad baja a un tercio de su capacidad, más o menos, y ahí se estabiliza en vez de vaciarse. En grupos de `MigrationGroup`, y nunca por debajo de `MinEmigrationCityPopulation`. |
 | `SettledPopulation` | Habitantes con los que una provincia se considera asentada. |
 | `MigrationTargetShare` | Las provincias atraen migrantes hasta llenar esta parte de su capacidad. |
 | `MinCityPopulation` | Población mínima que debe quedar en una ciudad al reclutar o migrar. |
