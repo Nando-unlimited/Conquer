@@ -2,6 +2,13 @@
 
 Todos los cambios del juego, del más reciente al más antiguo. Cada versión es un commit cuyo título es su número.
 
+## [1.135.0] - 2026-10-14
+
+### Cambiado
+- **Las ciudades ya no se vacían emigrando**: la gente se va de una ciudad por falta de sitio. Hasta el 30 % de su capacidad no emigra nadie; desde ahí, cada vez más, hasta el 0,1 % al día cuando está llena. Antes una capital perdía un tercio de su gente al año y en tres años se quedaba en un tercio de lo que era; ahora se mantiene en torno a la mitad de su capacidad y envía su crecimiento a tus provincias.
+- **La población crece más deprisa**: el triple que antes. Una provincia casi vacía crece en torno a un 4 % al año y una ciudad el doble, menos a medida que se llenan.
+- **Empiezas con 5.000 colonos** en lugar de 3.000, y con 5.000 de comida (siguen siendo 10 días de reserva).
+
 ## [1.134.0] - 2026-10-14
 
 ### Añadido

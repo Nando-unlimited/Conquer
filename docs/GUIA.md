@@ -55,11 +55,11 @@ Todas las constantes de equilibrio (por día de juego salvo que se diga otra cos
 
 | Elemento | Qué es |
 | --- | --- |
-| `StartingCitizens/Food/Gold/Wood` | Recursos iniciales: 3.000 colonos (para tener pronto con quién formar un ejército), 3.000 de comida, 50 de oro, 100 de madera. |
+| `StartingCitizens/Food/Gold/Wood` | Recursos iniciales: 5.000 colonos (para tener pronto con quién formar un ejército), 5.000 de comida (10 días para ellos), 50 de oro, 100 de madera. |
 | `CitizenSpeedKmh`, `SailingSpeed` | 10 km/h: velocidad de ciudadanos, migrantes y unidades en terreno llano; los barcos van el doble de rápido por el mar. |
 | `FoodPerCitizen` | Comida que come cada ciudadano al día (0,1). |
 | `FoodPerWorker` | Comida que produce cada trabajador en tierra de rendimiento 1 (0,13). |
-| `GrowthRate`, `CityGrowthMultiplier` | Crecimiento diario de la población (0,004 %: un 1,5 % al año con fertilidad normal); las ciudades crecen el doble. |
+| `GrowthRate`, `CityGrowthMultiplier` | Crecimiento diario de la población (0,012 %: un 4,4 % al año con fertilidad normal casi vacía, menos al llenarse); las ciudades crecen el doble. |
 | `BaseBirthsPerProvince`, `FoodSpoilage` | Nacimientos diarios fijos de cada provincia habitada (0,02), además de `GrowthRate` y por su fertilidad, para que un puñado de colonos llegue a aldea; no dependen de la tierra. Parte de la comida almacenada que se estropea cada día (1 %). |
 | `LandCarryingScale`, `EraCapacity(era)` | La tierra alimenta al principio la décima parte de lo que dice su bioma (decenas de millones en todo el mundo); cada era lo multiplica: ×1,5 Clásica, ×2 Medieval, ×3 Descubrimientos, ×5 Industrial y ×8 Moderna. |
 | `StarvationRate` | Población que muere al día si no hay comida. Los avances (Medicina) y el granero de la provincia salvan cada uno su parte: con los dos, muere la cuarta parte. |
@@ -79,7 +79,7 @@ Todas las constantes de equilibrio (por día de juego salvo que se diga otra cos
 | `PeakElevation`, `MinPeakPixels` | La tierra por encima de 5.000 m es cumbres (en los mapas del generador 2); las manchas de menos de 30 píxeles conservan su bioma. |
 | `RiverFertility` | La tierra de un gran río da un 25 % más de comida y de capacidad. |
 | `OvercrowdedFoodShare` | Lo que rinden los trabajadores que superan la capacidad de la tierra. |
-| `DailyEmigrationShare`, `MigrationGroup`, `MinEmigrationCityPopulation` | Parte de una ciudad que emigra cada día, en grupos de cuántas personas sale, y población por debajo de la cual deja de enviar gente. |
+| `DailyEmigrationShare`, `EmigrationStartFill`, `EmigrationShare(llenado)`, `MigrationGroup`, `MinEmigrationCityPopulation` | Parte de una ciudad que emigra cada día según lo llena que está (habitantes / capacidad): nada hasta `EmigrationStartFill` (30 %) y en proporción hasta `DailyEmigrationShare` (0,1 %) llena; así una ciudad se estabiliza en torno al 45 % en vez de vaciarse. En grupos de `MigrationGroup`, y nunca por debajo de `MinEmigrationCityPopulation`. |
 | `SettledPopulation` | Habitantes con los que una provincia se considera asentada. |
 | `MigrationTargetShare` | Las provincias atraen migrantes hasta llenar esta parte de su capacidad. |
 | `MinCityPopulation` | Población mínima que debe quedar en una ciudad al reclutar o migrar. |

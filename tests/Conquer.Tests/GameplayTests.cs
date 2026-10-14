@@ -211,6 +211,24 @@ public class GameplayTests(WorldFixture world)
     }
 
     [Fact]
+    public void OnlyCitiesShortOfRoomSendMigrants()
+    {
+        // Nobody leaves below the starting fill; then more and more, up to the full share at capacity.
+        Assert.Equal(0, GameRules.EmigrationShare(GameRules.EmigrationStartFill));
+        Assert.Equal(GameRules.DailyEmigrationShare / 2, GameRules.EmigrationShare((1 + GameRules.EmigrationStartFill) / 2), 9);
+        Assert.Equal(GameRules.DailyEmigrationShare, GameRules.EmigrationShare(1.5));
+
+        var s = NewSession();
+        var (a, b) = GrasslandPair();
+        Assert.True(s.FoundCity(0, s.AddUnit(0, UnitType.Settlers, a.Id, 300).Id).Ok);
+        Assert.True(s.Claim(0, s.AddRegiment(0, b.Id, BattalionType.Scouts).Id).Ok);
+        a.Population = s.CapacityOf(a) * GameRules.EmigrationStartFill * 0.9;
+        RunHours(s, 24 * 30);
+        Assert.Empty(s.Migrations);
+        Assert.Equal(0, b.Population);
+    }
+
+    [Fact]
     public void ForcedMigrationCostsGoldAndTakesTheTravelTime()
     {
         var s = NewSession();

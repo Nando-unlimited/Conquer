@@ -63,7 +63,7 @@ public static class HelpTopics
             $"- Cada respuesta tiene su precio: comida u oro, gente o moral. Lo que está en juego crece con tu nación. La moral que cambia dura un año.",
             $"- Si no respondes en {GameRules.DecisionDays} días, se elige la primera respuesta. Los rivales también deciden las suyas.",
             "## Migración",
-            $"Las ciudades envían gente a tus provincias poco pobladas, en grupos de {GameRules.MigrationGroup}. Puedes forzar una migración pagando oro, pero los migrantes llegan descontentos.",
+            $"Las ciudades que empiezan a llenarse (desde el {GameRules.EmigrationStartFill:P0} de su capacidad) envían gente a tus provincias poco pobladas, en grupos de {GameRules.MigrationGroup}: cuanto más llenas, más. Puedes forzar una migración pagando oro, pero los migrantes llegan descontentos. Las reglas exactas, en la pestaña Reglas.",
         ]),
         ("Economía y recursos",
         [

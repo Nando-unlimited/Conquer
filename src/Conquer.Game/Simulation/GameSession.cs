@@ -788,7 +788,7 @@ public sealed partial class GameSession
     }
 
     /// <summary>
-    /// Each day, cities send part of their people to the player's provinces that are still thinly
+    /// Each day, cities with little room left (<see cref="GameRules.EmigrationShare"/>) send part of their people to the player's provinces that are still thinly
     /// populated, in groups of <see cref="GameRules.MigrationGroup"/>. Migrants walk at citizen speed and arrive after the real travel time.
     /// </summary>
     private void DailyMigration(Player player)
@@ -826,7 +826,7 @@ public sealed partial class GameSession
         {
             var source = Map.Provinces[sourceId];
             // Emigrants leave in groups (MigrationGroup); what falls short of one carries over to the next day.
-            double quota = _emigrationCarry.GetValueOrDefault(sourceId) + source.Population * GameRules.DailyEmigrationShare;
+            double quota = _emigrationCarry.GetValueOrDefault(sourceId) + source.Population * GameRules.EmigrationShare(source.Population / CapacityOf(source));
             int groups = (int)(Math.Min(quota, source.Population - GameRules.MinEmigrationCityPopulation) / GameRules.MigrationGroup);
             _emigrationCarry[sourceId] = Math.Min(quota - Math.Max(groups, 0) * GameRules.MigrationGroup, GameRules.MigrationGroup);
             // Each group goes to the strongest pull, which weakens as its gap fills.

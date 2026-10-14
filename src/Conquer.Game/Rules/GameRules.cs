@@ -8,9 +8,9 @@ public static class GameRules
 {
     // Starting conditions
     /// <summary>The band each nation starts with, enough to found a capital that can raise an army soon.</summary>
-    public const int StartingCitizens = 3000;
+    public const int StartingCitizens = 5000;
     /// <summary>Ten days of food for the starting band while it looks for a place to settle.</summary>
-    public const double StartingFood = 3000;
+    public const double StartingFood = 5000;
     public const double StartingGold = 50;
     public const double StartingWood = 100;
     /// <summary>Stone every nation starts with, for its first stone buildings.</summary>
@@ -31,8 +31,8 @@ public static class GameRules
     public const double FoodPerCitizen = 0.1;
     /// <summary>Food a worker grows per day on land of yield 1; most farmland feeds more people than work it.</summary>
     public const double FoodPerWorker = 0.13;
-    /// <summary>Daily growth of a fed province (about +1.5 % a year at normal fertility), damped as it fills up.</summary>
-    public const double GrowthRate = 0.00004;
+    /// <summary>Daily growth of a fed province (about +4.4 % a year at normal fertility while nearly empty), damped as it fills up.</summary>
+    public const double GrowthRate = 0.00012;
     /// <summary>
     /// Daily births in every populated province, on top of <see cref="GrowthRate"/>, so a handful of settlers still
     /// grows into a village; it does not grow with the land, or empty land would fill by itself.
@@ -124,8 +124,18 @@ public static class GameRules
     public const int MaxNeighbourDiscounts = 3;
 
     // Migration
-    /// <summary>Share of a city's population that may leave for new territories each day.</summary>
+    /// <summary>Share of a city's population that may leave for new territories each day once it is full...</summary>
     public const double DailyEmigrationShare = 0.001;
+    /// <summary>...none below this share of its capacity, and in proportion in between: people leave a city for lack of room.</summary>
+    public const double EmigrationStartFill = 0.3;
+
+    /// <summary>
+    /// Share of a city's people who leave each day, by how full it is (population over capacity): nothing up to
+    /// <see cref="EmigrationStartFill"/>, rising to <see cref="DailyEmigrationShare"/> when full. So a city settles where
+    /// its births make up for those who leave, instead of emptying itself.
+    /// </summary>
+    public static double EmigrationShare(double fill) =>
+        DailyEmigrationShare * Math.Clamp((fill - EmigrationStartFill) / (1 - EmigrationStartFill), 0, 1);
     /// <summary>Migrants leave a city in groups of this many people.</summary>
     public const int MigrationGroup = 50;
     /// <summary>Cities stop sending migrants below this population.</summary>

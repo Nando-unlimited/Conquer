@@ -28,8 +28,8 @@ Cada provincia alimenta a un número de habitantes según su tierra (bioma, río
 
 Cada día nacen en una provincia habitada:
 
-- (habitantes × 0,004 % + 0,02) × fertilidad × (1 - habitantes / capacidad).
-- En las ciudades la primera parte es ×2. Sin hambre, una provincia a medio llenar crece en torno a un 0,7 % al año, y una ciudad el doble; cuanto más se acerca a su capacidad, más despacio.
+- (habitantes × 0,012 % + 0,02) × fertilidad × (1 - habitantes / capacidad).
+- En las ciudades la primera parte es ×2. Sin hambre y con fertilidad normal, una provincia casi vacía crece en torno a un 4,4 % al año y una a medio llenar, un 2,2 %; una ciudad, el doble. Cuanto más se acerca a su capacidad, más despacio.
 - Por encima de su capacidad, o mientras la nación pasa hambre, no nace nadie.
 - La pequeña base fija hace que unos pocos colonos lleguen a formar un pueblo, pero no llena la tierra vacía por sí sola: eso lo hace la migración.
 
@@ -80,7 +80,8 @@ Toda migración ocurre dentro de una nación: nadie emigra a otra.
 ### Migración espontánea
 
 - Quién emigra: solo las ciudades no ocupadas con más de 200 habitantes. Las provincias sin ciudad nunca envían gente.
-- Cuántos: el 0,1 % de la población de la ciudad al día, en grupos de 50. Lo que no llega a un grupo se acumula para el día siguiente: una ciudad de 10.000 habitantes envía un grupo cada 5 días. Nunca baja de 200 por emigrar.
+- Cuántos: depende de lo llena que esté la ciudad (habitantes / capacidad). Hasta el 30 % no se va nadie; desde ahí, cada vez más, hasta el 0,1 % de su gente al día cuando está llena. La gente se va por falta de sitio: una ciudad se queda donde sus nacimientos compensan a los que se van, en torno a un 45 % de su capacidad, en vez de vaciarse.
+- Salen en grupos de 50. Lo que no llega a un grupo se acumula para el día siguiente. Una ciudad nunca baja de 200 por emigrar.
 - Adónde: a las provincias de la nación sin ciudad, sin ocupar y a menos de 60 días de camino de una ciudad. Cada una quiere llenarse hasta el 50 % de su capacidad; su déficit es eso menos sus habitantes y los que ya van hacia ella. Sin déficit, no atrae a nadie.
 - Cada provincia receptora toma su gente de la ciudad más cercana. Cada grupo va a la provincia con más atracción: déficit / lo que quiere llenar / (1 + días de viaje). Así se llenan antes las más vacías y las más cercanas.
 - Las que tienen menos de 10 habitantes (contando los que van en camino) atraen 10 veces más: la tierra nueva recibe primero a sus primeros pobladores.
@@ -135,7 +136,7 @@ Los rivales del ordenador multiplican su producción y su ciencia según la difi
 - Con colonos, en una provincia libre o tuya. Una ciudad envía colonos con 300 de sus habitantes y 150 Comida, 50 Madera, 20 Oro.
 - Sin colonos: en una provincia tuya con al menos 500 habitantes, por 150 Madera, 50 Oro y 60 días de obras.
 - Nunca en una provincia vecina de otra ciudad (construida o en obras).
-- Empiezas con 3.000 colonos, 3.000 de comida, 100 de madera, 50 de oro y 50 de piedra (según la dificultad).
+- Empiezas con 5.000 colonos, 5.000 de comida, 100 de madera, 50 de oro y 50 de piedra (según la dificultad).
 
 ### Qué cambia una ciudad
 
