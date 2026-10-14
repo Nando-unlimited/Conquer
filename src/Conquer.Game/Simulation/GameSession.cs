@@ -46,15 +46,17 @@ public sealed partial class GameSession
     private readonly Dictionary<int, Unit> _unitsById = [];
     private readonly HashSet<string> _usedCityNames = [];
     private readonly HashSet<string> _usedProvinceNames = [];
-    private readonly Dictionary<int, double> _emigrationCarry = [];
-    private int _nextUnitId, _nextCityId, _nextMigrationId;
+    private int _nextUnitId, _nextCityId;
 
     public WorldMap Map { get; }
     public Pathfinder Pathfinder { get; }
     public List<Player> Players { get; } = [];
     public List<Unit> Units { get; } = [];
     public List<City> Cities { get; } = [];
-    public List<Migration> Migrations { get; } = [];
+    /// <summary>Who moves where: spontaneous and forced migration, and the people on the road.</summary>
+    public MigrationEngine MigrationEngine { get; }
+    /// <summary>Every group of migrants on the road.</summary>
+    public IReadOnlyList<Migration> Migrations => MigrationEngine.InTransit;
     public List<Notification> Notifications { get; } = [];
     public GameDate Date { get; private set; }
 
@@ -69,6 +71,7 @@ public sealed partial class GameSession
     {
         Map = map;
         Pathfinder = new Pathfinder(map, Roads);
+        MigrationEngine = new MigrationEngine(this);
         _seed = seed;
         _random = new Random(seed);
     }
@@ -227,7 +230,7 @@ public sealed partial class GameSession
         return new NationStats(
             settled,
             Units.Where(u => u.OwnerId == player.Id).Sum(u => u.Citizens),
-            Migrations.Where(m => m.OwnerId == player.Id).Sum(m => m.People),
+            MigrationEngine.PeopleOnTheWay(player.Id),
             player.Provinces.Count,
             Cities.Count(c => c.OwnerId == player.Id),
             Units.Count(u => u.OwnerId == player.Id),
@@ -248,7 +251,7 @@ public sealed partial class GameSession
         MoveUnits();
         ResolveBattles();
         ResolveNavalBattles();
-        ArriveMigrations();
+        MigrationEngine.Arrive();
         ArriveShipments();
         AutoScoutUnits();
         VisibleProvinces(HumanPlayerId); // explores what the player sees this hour, however fast time runs
@@ -259,7 +262,7 @@ public sealed partial class GameSession
             foreach (var player in Players) DailyEconomy(player);
             foreach (var player in Players) DailyUnrest(player);
             foreach (var player in Players) DailyFaith(player);
-            foreach (var player in Players) DailyMigration(player);
+            foreach (var player in Players) MigrationEngine.Daily(player);
             foreach (var player in Players) DailyScience(player);
             DailyInstitutions();
             foreach (var player in Players) DailyConstruction(player);
@@ -280,33 +283,6 @@ public sealed partial class GameSession
         }
         if (Date.Hours % 6 == 0)
             foreach (var ai in _ais.Where(a => !Players[a.PlayerId].Eliminated)) ai.Think(dailyDecisions: Date.Hour == 0);
-    }
-
-    private void ArriveMigrations()
-    {
-        for (int i = Migrations.Count - 1; i >= 0; i--)
-        {
-            var m = Migrations[i];
-            if (m.ArriveHours > Date.Hours) continue;
-            Migrations.RemoveAt(i);
-            var target = Map.Provinces[m.ToProvinceId];
-            if (target.OwnerId == m.OwnerId && !target.IsOccupied)
-            {
-                // Settlers of the ruler's culture and faith count as assimilated and converted people.
-                if (HasForeignCulture(target))
-                    target.Assimilation = Math.Min(1, (target.Assimilation * target.Population + m.People) / (target.Population + m.People));
-                if (HasOtherFaith(target))
-                    target.Conversion = Math.Min(1, (target.Conversion * target.Population + m.People) / (target.Population + m.People));
-                Settle(target, m.People, m.Mood);
-                if (m.Forced && m.OwnerId == HumanPlayerId)
-                    Notify(m.OwnerId, $"{m.People} ciudadanos han llegado a su nuevo hogar.");
-            }
-            else if (Players[m.OwnerId].CapitalCityId is int capital && CityById(capital) is { } city)
-            {
-                // The destination was lost on the way; the migrants settle in the capital instead.
-                Settle(Map.Provinces[city.ProvinceId], m.People, m.Mood);
-            }
-        }
     }
 
     // ------------------------------------------------------------------ economy
@@ -333,7 +309,7 @@ public sealed partial class GameSession
 
         double eaters = population
                         + Units.Where(u => u.OwnerId == player.Id).Sum(u => u.Citizens)
-                        + Migrations.Where(m => m.OwnerId == player.Id).Sum(m => m.People)
+                        + MigrationEngine.PeopleOnTheWay(player.Id)
                         + _airUnits.Where(u => u.OwnerId == player.Id).Sum(u => u.Crews);
         // Part of what is stored rots, so a surplus does not pile up for ever.
         double eaten = GameRules.FoodPerCitizen * eaters + Math.Max(0, player.Stockpile[ResourceType.Food]) * GameRules.FoodSpoilage;
@@ -787,65 +763,6 @@ public sealed partial class GameSession
         }
     }
 
-    /// <summary>
-    /// Each day, cities with little room left (<see cref="GameRules.EmigrationShare"/>) send part of their people to the player's provinces that are still thinly
-    /// populated, in groups of <see cref="GameRules.MigrationGroup"/>. Migrants walk at citizen speed and arrive after the real travel time.
-    /// </summary>
-    private void DailyMigration(Player player)
-    {
-        var sources = Cities
-            .Where(c => c.OwnerId == player.Id && !Map.Provinces[c.ProvinceId].IsOccupied
-                        && Map.Provinces[c.ProvinceId].Population > GameRules.MinEmigrationCityPopulation)
-            .Select(c => c.ProvinceId)
-            .ToList();
-        if (sources.Count == 0) return;
-        var unsettled = player.Provinces.Where(id => !Map.Provinces[id].CityId.HasValue).ToHashSet();
-        if (unsettled.Count == 0) return;
-
-        var (hours, nearest) = Pathfinder.FromSources(sources, maxHours: 24 * 60, unsettled);
-        var incoming = Migrations.Where(m => m.OwnerId == player.Id)
-            .GroupBy(m => m.ToProvinceId)
-            .ToDictionary(g => g.Key, g => g.Sum(m => m.People));
-
-        var targetsBySource = new Dictionary<int, List<(int Province, double Pull, double Deficit)>>();
-        foreach (int id in player.Provinces)
-        {
-            var p = Map.Provinces[id];
-            if (p.CityId.HasValue || p.IsOccupied || nearest[id] < 0) continue;
-            double wanted = CapacityOf(p) * GameRules.MigrationTargetShare;
-            double deficit = wanted - p.Population - incoming.GetValueOrDefault(id);
-            if (deficit < 1) continue;
-            // Emptier and closer provinces pull harder, so new land fills from the inside out.
-            double pull = deficit / wanted / (1 + hours[id] / 24);
-            if (p.Population + incoming.GetValueOrDefault(id) < GameRules.SettledPopulation) pull *= 10;
-            if (!targetsBySource.TryGetValue(nearest[id], out var list)) targetsBySource[nearest[id]] = list = [];
-            list.Add((id, pull, deficit));
-        }
-
-        foreach (var (sourceId, targets) in targetsBySource)
-        {
-            var source = Map.Provinces[sourceId];
-            // Emigrants leave in groups (MigrationGroup); what falls short of one carries over to the next day.
-            double quota = _emigrationCarry.GetValueOrDefault(sourceId) + source.Population * GameRules.EmigrationShare(source.Population / CapacityOf(source));
-            int groups = (int)(Math.Min(quota, source.Population - GameRules.MinEmigrationCityPopulation) / GameRules.MigrationGroup);
-            _emigrationCarry[sourceId] = Math.Min(quota - Math.Max(groups, 0) * GameRules.MigrationGroup, GameRules.MigrationGroup);
-            // Each group goes to the strongest pull, which weakens as its gap fills.
-            var open = targets.ToList();
-            for (int g = 0; g < groups && open.Count > 0; g++)
-            {
-                int best = 0;
-                for (int i = 1; i < open.Count; i++) if (open[i].Pull > open[best].Pull) best = i;
-                var (target, pull, deficit) = open[best];
-                int people = GameRules.MigrationGroup;
-                source.Population -= people;
-                long arrive = Date.Hours + Math.Max(1, (long)Math.Ceiling(hours[target]));
-                Migrations.Add(new Migration(_nextMigrationId++, player.Id, sourceId, target, people, Date.Hours, arrive, forced: false, source.Mood));
-                if (deficit <= people) open.RemoveAt(best);
-                else open[best] = (target, pull * (deficit - people) / deficit, deficit - people);
-            }
-        }
-    }
-
     // ------------------------------------------------------------------ commands
 
     public CommandResult CanFoundCity(Unit unit)
@@ -976,35 +893,10 @@ public sealed partial class GameSession
         return CommandResult.Success($"{city.Name} celebra fiestas durante {GameRules.FestivalDays} días.");
     }
 
-    public CommandResult CanForceMigration(int playerId, int fromId, int toId, int people)
-    {
-        var from = Map.Provinces[fromId];
-        var to = Map.Provinces[toId];
-        if (from.OwnerId != playerId || to.OwnerId != playerId) return CommandResult.Fail("Origen y destino deben ser tuyos.");
-        if (from.IsOccupied || to.IsOccupied) return CommandResult.Fail("La provincia está ocupada por el enemigo.");
-        if (fromId == toId) return CommandResult.Fail("Elige otra provincia de destino.");
-        if (people < 1) return CommandResult.Fail("Elige cuántos ciudadanos.");
-        int keep = from.CityId.HasValue ? GameRules.MinCityPopulation : 0;
-        if (from.Population - people < keep) return CommandResult.Fail($"Solo pueden irse {Math.Max(0, (int)from.Population - keep)}.");
-        double cost = GameRules.ForcedMigrationCost(people);
-        if (Players[playerId].Stockpile[ResourceType.Gold] < cost) return CommandResult.Fail($"Cuesta {cost:0} de oro.");
-        return CommandResult.Success();
-    }
+    public CommandResult CanForceMigration(int playerId, int fromId, int toId, int people) => MigrationEngine.CanForce(playerId, fromId, toId, people);
 
-    /// <summary>The player pays gold to send a chosen number of citizens between two of their provinces.</summary>
-    public CommandResult ForceMigration(int playerId, int fromId, int toId, int people)
-    {
-        var check = CanForceMigration(playerId, fromId, toId, people);
-        if (!check.Ok) return check;
-        if (Pathfinder.FindPath(fromId, toId) is not { } route) return CommandResult.Fail("No hay camino por tierra hasta allí.");
-        double hours = route.Hours;
-        Players[playerId].Stockpile[ResourceType.Gold] -= GameRules.ForcedMigrationCost(people);
-        Map.Provinces[fromId].Population -= people;
-        long arrive = Date.Hours + Math.Max(1, (long)Math.Ceiling(hours));
-        double mood = Math.Max(0, Map.Provinces[fromId].Mood - GameRules.ForcedMigrantMoodPenalty);
-        Migrations.Add(new Migration(_nextMigrationId++, playerId, fromId, toId, people, Date.Hours, arrive, forced: true, mood));
-        return CommandResult.Success($"{people} ciudadanos en camino; llegarán en {FormatHours(hours)}.");
-    }
+    /// <summary>The player pays gold to send a chosen number of citizens between two of their provinces (<see cref="MigrationEngine.Force"/>).</summary>
+    public CommandResult ForceMigration(int playerId, int fromId, int toId, int people) => MigrationEngine.Force(playerId, fromId, toId, people);
 
     // ------------------------------------------------------------------ helpers
 
@@ -1053,7 +945,7 @@ public sealed partial class GameSession
     }
 
     /// <summary>Moves people into a province, blending their mood with the residents' by headcount.</summary>
-    private static void Settle(Province p, double people, double mood)
+    internal static void Settle(Province p, double people, double mood)
     {
         double total = p.Population + people;
         if (total <= 0) return;
@@ -1061,7 +953,7 @@ public sealed partial class GameSession
         p.Population = total;
     }
 
-    private void Notify(int playerId, string text) => Notifications.Add(new Notification(Date.Hours, playerId, text));
+    internal void Notify(int playerId, string text) => Notifications.Add(new Notification(Date.Hours, playerId, text));
 
     public static string FormatHours(double hours)
     {

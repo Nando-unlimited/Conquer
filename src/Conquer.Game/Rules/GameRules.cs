@@ -136,14 +136,24 @@ public static class GameRules
     /// </summary>
     public static double EmigrationShare(double fill) =>
         DailyEmigrationShare * Math.Clamp((fill - EmigrationStartFill) / (1 - EmigrationStartFill), 0, 1);
-    /// <summary>Migrants leave a city in groups of this many people.</summary>
-    public const int MigrationGroup = 50;
+    /// <summary>Migrants leave a city in groups of this many people: small enough for every province to get some each year.</summary>
+    public const int MigrationGroup = 25;
     /// <summary>Cities stop sending migrants below this population.</summary>
     public const int MinEmigrationCityPopulation = 200;
     /// <summary>A province counts as settled once this many citizens live there; until then it draws migrants first.</summary>
     public const int SettledPopulation = 10;
-    /// <summary>Settled provinces attract migrants until they reach this share of their capacity.</summary>
+    /// <summary>...this many times harder than it would otherwise.</summary>
+    public const double UnsettledMigrationPull = 10;
+    /// <summary>
+    /// Provinces without a city attract migrants until they reach this share of their capacity, or until they are as
+    /// full as the city that sends them people, if that is fuller.
+    /// </summary>
     public const double MigrationTargetShare = 0.5;
+    /// <summary>
+    /// A province's pull on migrants falls by its travel days over this: ten days away it pulls half as hard. Distance
+    /// counts little, so migrants spread over all the land instead of filling the nearest first.
+    /// </summary>
+    public const double MigrationDistanceDays = 10;
     public const int MinCityPopulation = 100;
     /// <summary>A province needs this many citizens before they can build themselves a city.</summary>
     public const int CityBuildingPopulation = 500;

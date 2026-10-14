@@ -2,6 +2,16 @@
 
 Todos los cambios del juego, del más reciente al más antiguo. Cada versión es un commit cuyo título es su número.
 
+## [1.137.0] - 2026-10-14
+
+### Cambiado
+- **Migración equilibrada**, tras simular 60 años de una nación con una capital, dos ciudades y diez provincias:
+  - Cada provincia toma sus emigrantes de la ciudad más cercana **que esté enviando gente**. Antes, las provincias junto a una ciudad nueva se quedaban sin nadie durante unos 15 años, hasta que esa ciudad empezaba a emigrar.
+  - **La distancia pesa mucho menos**: los emigrantes se reparten por toda tu tierra en vez de llenar primero las provincias más cercanas. Ahora casi todas reciben gente cada año (antes, 4 o 5 de cada 10) y todas pasan del 10 % de su capacidad en unos 12 años en lugar de 17.
+  - **Grupos de 25** en lugar de 50: los mismos emigrantes en el doble de viajes, para que lleguen a más provincias.
+  - **La migración ya no se corta al llegar el campo al 50 %**: sigue mientras las ciudades estén más llenas que las provincias a las que mandan gente, hasta igualarse.
+- La migración tiene su propio motor en el código (`MigrationEngine`).
+
 ## [1.136.0] - 2026-10-14
 
 ### Cambiado

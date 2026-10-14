@@ -81,12 +81,19 @@ Toda migración ocurre dentro de una nación: nadie emigra a otra.
 
 - Quién emigra: solo las ciudades no ocupadas con más de 200 habitantes. Las provincias sin ciudad nunca envían gente.
 - Cuántos: depende de lo llena que esté la ciudad (habitantes / capacidad). Hasta el 20 % no se va nadie; desde ahí, cada vez más, hasta el 0,2 % de su gente al día cuando está llena. La gente se va por falta de sitio: una ciudad baja hasta donde sus nacimientos compensan a los que se van, en torno a un tercio de su capacidad, y ahí se queda en vez de vaciarse.
-- Salen en grupos de 50. Lo que no llega a un grupo se acumula para el día siguiente. Una ciudad nunca baja de 200 por emigrar.
-- Adónde: a las provincias de la nación sin ciudad, sin ocupar y a menos de 60 días de camino de una ciudad. Cada una quiere llenarse hasta el 50 % de su capacidad; su déficit es eso menos sus habitantes y los que ya van hacia ella. Sin déficit, no atrae a nadie.
-- Cada provincia receptora toma su gente de la ciudad más cercana. Cada grupo va a la provincia con más atracción: déficit / lo que quiere llenar / (1 + días de viaje). Así se llenan antes las más vacías y las más cercanas.
+- Salen en grupos de 25. Lo que no llega a un grupo se acumula para el día siguiente. Una ciudad nunca baja de 200 por emigrar.
+- Adónde: a las provincias de la nación sin ciudad, sin ocupar y a menos de 60 días de camino. Cada una toma su gente de la ciudad más cercana que esté enviando gente: una ciudad nueva, que aún no emigra, no deja sin emigrantes a las provincias de su alrededor.
+- Cada provincia quiere llenarse hasta el 50 % de su capacidad, o hasta lo llena que esté la ciudad que le manda gente si está más llena. Su déficit es eso menos sus habitantes y los que ya van hacia ella; sin déficit, no atrae a nadie.
+- Cada grupo va a la provincia con más atracción: déficit / lo que quiere llenar / (1 + días de viaje / 10). La distancia pesa poco (a 10 días se atrae la mitad), así que los emigrantes se reparten por toda la tierra en vez de llenar primero la más cercana.
 - Las que tienen menos de 10 habitantes (contando los que van en camino) atraen 10 veces más: la tierra nueva recibe primero a sus primeros pobladores.
 - Cuando un grupo sale, la atracción de su destino baja en proporción a lo que ha cubierto.
-- Nunca hay migración espontánea de una ciudad a otra, ni hacia provincias por encima de ese límite: eso solo lo consigue la migración forzada o el crecimiento natural.
+- Nunca hay migración espontánea de una ciudad a otra: eso solo lo consigue la migración forzada.
+
+### Cómo evoluciona
+
+- Al principio la capital, la única ciudad llena, da a cada provincia reclamada sus primeros pobladores y luego reparte su crecimiento entre todas.
+- Las ciudades nuevas se suman cuando llegan al 20 % de su capacidad.
+- Cuando el campo pasa del 50 %, la migración se para mientras las ciudades estén menos llenas que él, y vuelve cuando lo adelantan. Solo se detiene del todo cuando ciudades y campo están igual de llenos; desde entonces cada sitio crece por sus nacimientos.
 
 ### Migración forzada
 

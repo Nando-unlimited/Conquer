@@ -80,8 +80,8 @@ Todas las constantes de equilibrio (por día de juego salvo que se diga otra cos
 | `RiverFertility` | La tierra de un gran río da un 25 % más de comida y de capacidad. |
 | `OvercrowdedFoodShare` | Lo que rinden los trabajadores que superan la capacidad de la tierra. |
 | `DailyEmigrationShare`, `EmigrationStartFill`, `EmigrationShare(llenado)`, `MigrationGroup`, `MinEmigrationCityPopulation` | Parte de una ciudad que emigra cada día según lo llena que está (habitantes / capacidad): nada hasta `EmigrationStartFill` (20 %) y en proporción hasta `DailyEmigrationShare` (0,2 %) llena; así una ciudad baja a un tercio de su capacidad, más o menos, y ahí se estabiliza en vez de vaciarse. En grupos de `MigrationGroup`, y nunca por debajo de `MinEmigrationCityPopulation`. |
-| `SettledPopulation` | Habitantes con los que una provincia se considera asentada. |
-| `MigrationTargetShare` | Las provincias atraen migrantes hasta llenar esta parte de su capacidad. |
+| `SettledPopulation`, `UnsettledMigrationPull` | Habitantes con los que una provincia se considera asentada; hasta entonces atrae a los emigrantes `UnsettledMigrationPull` (10) veces más. |
+| `MigrationTargetShare`, `MigrationDistanceDays` | Las provincias sin ciudad atraen migrantes hasta llenar esta parte de su capacidad (50 %), o hasta lo llena que esté su ciudad emisora si está más llena; su atracción baja con los días de viaje / `MigrationDistanceDays` (10: la distancia pesa poco). Ver `MigrationEngine`. |
 | `MinCityPopulation` | Población mínima que debe quedar en una ciudad al reclutar o migrar. |
 | `CityBuildingPopulation`, `CityCost`, `CityBuildingDays`, `MaxCityNameLength` | Para construir una ciudad sin colonos: 500 habitantes en la provincia, 150 de madera y 50 de oro, 60 días; el nombre tiene como mucho 24 letras. |
 | `ForcedMigrationCost(citizens)` | Oro que cuesta una migración forzada (1 por cada 10 ciudadanos). |
@@ -281,7 +281,7 @@ El corazón del juego: una partida en marcha. Es una clase parcial: el ejército
 | `TargetMood(provincia)` | Suma de esos factores, entre 0 y 100. |
 | `Stats(jugador)` | Totales de la nación (`NationStats`): población asentada, en unidades y migrando; provincias, ciudades y unidades; moral y fertilidad medios ponderados por habitantes, habitantes en cada nivel de moral, lo que queda en los yacimientos de sus provincias (`Reserves`) y los nacimientos diarios (`DailyBirths`). |
 | `Step()` | Avanza una hora: mueve unidades, resuelve las batallas en tierra y en el mar, hace llegar migrantes, los exploradores que van solos reclaman y eligen destino; a medianoche economía, migración, ciencia, instituciones, obras y ejército; cada 6 h piensan las IA. |
-| `ArriveMigrations()` | Suma los migrantes que llegan a su destino (si el destino se perdió o está ocupado, van a la capital), mezclando su moral. |
+| `MigrationEngine`, `Migrations` | El motor de migración (`Simulation/MigrationEngine.cs`) y la gente en camino (`MigrationEngine.InTransit`). `Step` llama a `MigrationEngine.Arrive()` cada hora y a `MigrationEngine.Daily(jugador)` a medianoche. |
 | `DailyEconomy(jugador)` | Las provincias ocupadas no producen ni comen para su dueño. Producción del día (comida, madera, oro, yacimientos) multiplicada por la moral, los avances y los edificios de cada provincia; los yacimientos sacan de su bolsa hasta agotarla (`Extract`), solo los de recursos que el jugador conoce; sin impuestos en provincias descontentas; consumo de comida, hambre, días de reserva de comida, moral y fertilidad, y crecimiento de la población (proporcional a la fertilidad). Resta el mantenimiento del ejército (`Upkeep`); si no llega, anota `ArmyUnpaid` y avisa al jugador. |
 | `AddYields(...)`, `ProvinceOutput(provincia)` | Lo que trabaja la gente de una provincia en un día, recurso a recurso (comida, madera, impuestos y yacimientos, estos a través de una función que los saca de su bolsa) / lo que la provincia da a su dueño cada día, con el límite de sus bolsas y el multiplicador de la dificultad; nada si está vacía u ocupada. `DailyEconomy` usa el primero (con `Extract`) y la tabla de provincias de la nación, el segundo. |
 | `Extract(provincia, recurso, cantidad)` | Saca de la bolsa de un yacimiento lo que se pide o lo que queda, y avisa al jugador cuando se agota. |
@@ -302,14 +302,13 @@ El corazón del juego: una partida en marcha. Es una clase parcial: el ejército
 | `IsCitySite(jugador, provincia)` / `CanBuildCity(...)` / `BuildCity(jugador, provincia, nombre)` | ¿Pueden sus habitantes levantar una ciudad (es tuya, sin ciudad ni otra obra, ninguna ciudad hecha o en obras al lado, al menos 500 habitantes)? / lo mismo y además puedes pagarla / paga y empieza la obra, que ocupa la provincia como un edificio (`PlannedCityName`). |
 | `CheckCityName(nombre)`, `SuggestCityName()` | El nombre no puede estar vacío, pasar de 24 letras ni repetir el de otra ciudad (hecha o en obras) / propone uno libre para el jugador. |
 | `PlaceName(provincia)` | Cómo llamar a un lugar en los mensajes: su ciudad si la tiene, si no la provincia. |
-| `DailyMigration(jugador)` | Cada ciudad no ocupada envía parte de su gente a las provincias propias poco pobladas; primero las vacías y las cercanas. Guarda las fracciones de persona para el día siguiente. |
 | `CanFoundCity(unidad)` / `FoundCity(jugador, unidad, nombre)` | Comprueba / funda una ciudad con colonos: reclama la provincia, crea la ciudad con ese nombre (o uno al azar) y los colonos pasan a ser su población. `AddCity` la crea, la hace capital si es la primera y avisa. |
 | `CanClaim(unidad)` / `Claim(...)` | Comprueba / reclama con una unidad militar que lleve exploradores la provincia libre en la que está (y avisa del nombre que recibe). |
 | `SetOwner(...)`, `NameProvince(provincia)` | Cambia el dueño de una provincia; la primera nación que la reclama le pone nombre (`ProvinceNames.Next`, sin repetir), que se queda aunque cambie de manos. |
 | `CanRecruitSettlers(ciudad)` / `RecruitSettlers(...)` | Comprueba / envía colonos desde una ciudad, pagando recursos y habitantes. |
 | `Disband(...)` | La unidad se disuelve: sus ciudadanos pasan a vivir en la provincia (propia) donde está; una flota en puerto desembarca antes lo que lleva. |
 | `CanHoldFestival(ciudad)` / `HoldFestival(...)` | Comprueba / paga unas fiestas que suben la moral de la ciudad durante 30 días (una a la vez). |
-| `CanForceMigration(...)` / `ForceMigration(...)` | Comprueba / envía un número elegido de ciudadanos entre dos provincias propias pagando oro; viajan con la moral de su origen menos 20. |
+| `CanForceMigration(...)` / `ForceMigration(...)` | Comprueban / envían un número elegido de ciudadanos entre dos provincias propias pagando oro (en `MigrationEngine.CanForce`/`Force`). |
 | `Settle(provincia, personas, moral)` | Añade gente a una provincia mezclando su moral con la de los residentes según cuántos son (migrantes, colonos al fundar, unidades que se asientan). |
 | `SetOwner(provincia, jugador)` | Cambia el dueño (y el controlador) de una provincia y avisa al cliente (`OwnershipChanged`). Si cambia de dueño, la asimilación y la rebelión vuelven a cero; la tierra vacía toma la cultura del nuevo dueño y la gente conserva la suya. |
 | `AddUnit`, `RemoveUnit` | Crean y quitan unidades (`AddUnit` también se usa en los tests); al quitar una, sus subordinados pierden el cuartel, sale de las batallas y su oficial vuelve a la reserva (salvo si la destruyeron). |
@@ -318,6 +317,21 @@ El corazón del juego: una partida en marcha. Es una clase parcial: el ejército
 | `PickStartProvinces(n)` | Elige posiciones iniciales fértiles, lo más separadas posible y en masas de tierra de al menos 200 provincias. |
 | `LandmassSizes()` | Tamaño (en provincias) de la masa de tierra conectada de cada provincia. |
 
+
+### `Simulation/MigrationEngine.cs`
+**El motor de migración**: quién deja cada ciudad, adónde va y qué pasa al llegar. Lo crea `GameSession` (`MigrationEngine`), que lo llama desde su reloj y delega en él sus comandos de migración forzada. Guarda su estado: los grupos en camino (`InTransit`), lo que le falta a cada ciudad para su siguiente grupo (`Carry`) y el id del siguiente (`NextId`), que se guardan con la partida. Las cifras se equilibraron simulando 60 años de una nación con una capital, dos ciudades y diez provincias: los emigrantes llegan a casi todas las provincias cada año y la migración dura hasta que el campo está tan lleno como sus ciudades.
+
+| Función | Qué hace |
+| --- | --- |
+| `Fill(provincia)` | Lo llena que está: habitantes / capacidad. |
+| `IsEmigrating(ciudad)` | Si envía gente: no ocupada, más de `MinEmigrationCityPopulation` habitantes y `GameRules.EmigrationShare(llenado)` mayor que cero (desde el 20 % de su capacidad). |
+| `Wanted(capacidad, llenado de su ciudad)` | Hasta dónde quiere llenarse una provincia sin ciudad: el 50 % de su capacidad o lo llena que esté su ciudad emisora, lo mayor. |
+| `Pull(déficit, deseado, horas, sin poblar)` | Su atracción: déficit / deseado / (1 + días de viaje / `MigrationDistanceDays`), ×`UnsettledMigrationPull` si aún no está asentada. |
+| `Daily(jugador)` | La migración del día: cada provincia sin ciudad toma su gente de la ciudad más cercana que esté emigrando; cada ciudad saca su cuota en grupos de `MigrationGroup` y cada grupo va a la provincia que más atrae, cuya atracción baja con lo que cubre. |
+| `Arrive()` | Cada hora, los grupos que llegan se asientan (moral mezclada; cuentan como asimilados y convertidos); si el destino se perdió, en la capital. |
+| `CanForce(...)` / `Force(...)` | La migración forzada: el jugador paga oro por mover gente entre dos provincias suyas; llegan con 20 de moral menos. |
+| `PeopleOnTheWay(jugador)`, `ComingTo(provincia)` | La gente de una nación en camino (come por el camino) y la que va hacia una provincia. |
+| `Add(grupo)`, `Forget(jugador)` | Pone un grupo en camino tal cual (al cargar una partida o en los tests); una nación que cae se lleva a su gente en camino. |
 ### `Simulation/GameSession.Military.cs`
 El ejército dentro de la partida.
 

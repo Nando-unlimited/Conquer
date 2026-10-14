@@ -208,7 +208,7 @@ public sealed partial class GameSession
         _reparations.RemoveAll(r => r.PayerId == playerId || r.ReceiverId == playerId);
         _trades.RemoveAll(t => t.Involves(playerId));
         foreach (var unit in Units.Where(u => u.OwnerId == playerId).ToList()) RemoveUnit(unit, officerSurvives: false);
-        Migrations.RemoveAll(m => m.OwnerId == playerId);
+        MigrationEngine.Forget(playerId);
         foreach (var r in Resources.All) player.Stockpile[r] = 0;
         player.CapitalCityId = null;
         // Occupied land of others it still held goes back to its owners.

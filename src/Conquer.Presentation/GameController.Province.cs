@@ -24,7 +24,7 @@ public sealed partial class GameController
     }
 
     /// <summary>People on their way to settle in a province, forced or not; they count in its population once they arrive.</summary>
-    public int IncomingMigrants(int provinceId) => Session.Migrations.Where(m => m.ToProvinceId == provinceId).Sum(m => m.People);
+    public int IncomingMigrants(int provinceId) => Session.MigrationEngine.ComingTo(provinceId);
 
     public bool IsBuildingKnown(BuildingType type) => type.Info().RequiresTech is not Tech tech || Human.Techs.Contains(tech);
 

@@ -74,11 +74,11 @@ public sealed partial class GameSession
         Outcome = Outcome,
         Notifications = [.. Notifications],
         Ais = _ais.Select(ai => ai.ToSave()).ToList(),
-        EmigrationCarry = new Dictionary<int, double>(_emigrationCarry),
+        EmigrationCarry = new Dictionary<int, double>(MigrationEngine.Carry),
         UnitNumbers = _unitNumbers.Select(n => new UnitNumberSave(n.Key.Player, n.Key.Level, n.Value)).ToList(),
         NextUnitId = _nextUnitId,
         NextCityId = _nextCityId,
-        NextMigrationId = _nextMigrationId,
+        NextMigrationId = MigrationEngine.NextId,
         NextTemplateId = _nextTemplateId,
         NextOfficerId = _nextOfficerId,
         InstitutionBirths = _institutionBirths.OrderBy(b => b.Key).Select(b => new InstitutionBirthSave(b.Key, b.Value.ProvinceId, b.Value.Hours)).ToList(),
@@ -338,7 +338,7 @@ public sealed partial class GameSession
             session._shipments.Add(new Shipment { OwnerId = s.OwnerId, UnitId = s.UnitId, Men = s.Men, Pieces = new(s.Pieces), Ammo = s.Ammo, ArriveHours = s.ArriveHours,
                 SeaRoute = s.SeaRoute ?? [], Convoys = s.Convoys });
         foreach (var m in save.Migrations)
-            session.Migrations.Add(new Migration(m.Id, m.OwnerId, m.From, m.To, m.People, m.DepartHours, m.ArriveHours, m.Forced, m.Mood));
+            session.MigrationEngine.Add(new Migration(m.Id, m.OwnerId, m.From, m.To, m.People, m.DepartHours, m.ArriveHours, m.Forced, m.Mood));
         foreach (var b in save.Battles)
         {
             var battle = new Battle(b.ProvinceId, b.AttackerId, b.DefenderId, b.StartHours)
@@ -370,7 +370,7 @@ public sealed partial class GameSession
         session.LoadObjectives(save);
         session.Outcome = save.Outcome;
         session.Notifications.AddRange(save.Notifications);
-        foreach (var (province, carry) in save.EmigrationCarry) session._emigrationCarry[province] = carry;
+        foreach (var (province, carry) in save.EmigrationCarry) session.MigrationEngine.Carry[province] = carry;
         foreach (var n in save.UnitNumbers)
         {
             var key = (n.PlayerId, n.Level > 0 ? Level(n.Level) : n.Level);
@@ -387,7 +387,7 @@ public sealed partial class GameSession
             unit.CommanderId = null;
         session._nextUnitId = save.NextUnitId;
         session._nextCityId = save.NextCityId;
-        session._nextMigrationId = save.NextMigrationId;
+        session.MigrationEngine.NextId = save.NextMigrationId;
         session._nextTemplateId = save.NextTemplateId;
 
         foreach (var a in save.Ais)

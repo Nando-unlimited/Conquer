@@ -245,7 +245,7 @@ public class ControllerTests(WorldFixture world)
         game.Camera.Screen = new System.Numerics.Vector2(1600, 900);
         var from = _map.Provinces.First(p => p.IsClaimable && p.Neighbors.Any(n => _map.Provinces[n].IsClaimable));
         int to = from.Neighbors.First(n => _map.Provinces[n].IsClaimable);
-        var migrations = game.Session.Migrations;
+        var migrations = game.Session.MigrationEngine;
         migrations.Add(new Migration(900, game.Human.Id, from.Id, to, 50, 0, 100, forced: false, mood: 50));
         migrations.Add(new Migration(901, game.Human.Id, from.Id, to, 50, 0, 100, forced: false, mood: 50));
         migrations.Add(new Migration(902, game.Human.Id, from.Id, to, 30, 0, 100, forced: true, mood: 50));
