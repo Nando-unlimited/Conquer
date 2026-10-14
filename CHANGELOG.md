@@ -2,6 +2,11 @@
 
 Todos los cambios del juego, del más reciente al más antiguo. Cada versión es un commit cuyo título es su número.
 
+## [1.133.0] - 2026-10-14
+
+### Añadido
+- **Migraciones en el mapa de población**: en el modo Población, flechas animadas muestran a tus emigrantes en camino, desde la provincia de la que salen hasta la de destino. Los grupos que hacen el mismo camino forman una sola flecha, más ancha cuantos más son, con su número encima si hay sitio. Azules las que se mueven solas y ámbar las forzadas; las de ida y vuelta entre dos provincias se curvan cada una hacia un lado para no taparse.
+
 ## [1.132.0] - 2026-10-13
 
 ### Añadido

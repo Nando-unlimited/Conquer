@@ -5,10 +5,11 @@ using Conquer.Presentation;
 
 namespace Conquer.Client.Screens;
 
-/// <summary>Draws the markers on the map (<see cref="GameController.Markers"/>): cities, nation names, unit counters and battles.</summary>
+/// <summary>Draws the markers on the map (<see cref="GameController.Markers"/>): cities, nation names, unit counters, battles and migrations.</summary>
 public sealed partial class GameScreen
 {
     private static readonly Rgba MoveColor = new(0xFF62B83E);
+    private static readonly Rgba MigrantColor = new(0xFF5AB4E0), ForcedMigrantColor = new(0xFFE09A3C);
     private static readonly Rgba TownSmoke = new(0xFFC0C0C0), SootSmoke = new(0xFF595959);
     private static readonly Rgba BurstFire = new(0xFFFFBF4D), BurstFlash = new(0xFFFFFFD9);
 
@@ -17,6 +18,7 @@ public sealed partial class GameScreen
         Motion.Time = (float)(_game.Now % 3600);
         var markers = _game.Markers();
         foreach (var province in markers.Provinces) DrawProvinceName(province);
+        foreach (var flow in markers.Migrations) DrawMigration(flow);
         foreach (var city in markers.Cities) DrawCity(city);
         foreach (var deposit in markers.Deposits) DrawDeposits(deposit);
         foreach (var label in markers.Nations) DrawNationName(label);
@@ -32,6 +34,28 @@ public sealed partial class GameScreen
         float w = Ui.Font.Measure(label.Name, FontSize.Small);
         var at = label.Screen - new Vector2(w / 2, 8);
         OutlinedText(at.X, at.Y, label.Name, new Rgba(0xFFF0E8D8), label.Alpha);
+    }
+
+    /// <summary>
+    /// Migrants on the road: a gently bent arrow (to its right, so the people going each way between two provinces
+    /// don't overlap) from the province they left to where they go, stopping short of both centres so the cities show;
+    /// blue for those who move on their own, amber for forced ones. Their number goes over the middle.
+    /// </summary>
+    private void DrawMigration(MigrationFlow flow)
+    {
+        var line = flow.To - flow.From;
+        float length = line.Length();
+        if (length < 24) return;
+        var dir = line / length;
+        var from = flow.From + dir * 10;
+        var to = flow.To - dir * 12;
+        var middle = (from + to) / 2 + new Vector2(-dir.Y, dir.X) * (length * 0.12f);
+        PathArrow.Draw(Batch, [from, middle, to], flow.Forced ? ForcedMigrantColor : MigrantColor, _game.Now, flow.Width, 0.9f);
+        if (flow.Label is { } label)
+        {
+            float w = Ui.Font.Measure(label, FontSize.Small);
+            OutlinedText(middle.X - w / 2, middle.Y - 8 - flow.Width, label, new Rgba(0xFFF0E8D8), 1);
+        }
     }
 
     /// <summary>Small text on the map with a dark outline all round, so the thin letters read over light ground too.</summary>

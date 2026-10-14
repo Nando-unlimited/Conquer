@@ -243,7 +243,7 @@ public static class HelpTopics
         [
             "Los botones de abajo (o Tab) cambian el modo de mapa:",
             "- Terreno y Político: el mundo y quién es dueño de cada provincia.",
-            "- Población, Moral y Fertilidad: el estado de cada provincia habitada.",
+            "- Población, Moral y Fertilidad: el estado de cada provincia habitada. En Población, unas flechas muestran a tus emigrantes en camino, de dónde salen y adónde van: más anchas cuantos más son, azules las que se mueven solas y ámbar las forzadas.",
             "- Recursos: los yacimientos que conoces, con un filtro por recurso. De cerca, cada provincia muestra los iconos de todos sus yacimientos; de lejos, el color del principal.",
             "- Instituciones: por dónde se han extendido.",
             "- Cultura: de qué nación es la gente de cada provincia. Si el color no es el de la franja de su frontera, la gente es extranjera.",

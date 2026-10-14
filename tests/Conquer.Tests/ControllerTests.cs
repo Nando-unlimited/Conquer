@@ -239,6 +239,34 @@ public class ControllerTests(WorldFixture world)
     }
 
     [Fact]
+    public void ThePopulationMapDrawsTheMigrantsOnTheRoad()
+    {
+        var game = NewGame();
+        game.Camera.Screen = new System.Numerics.Vector2(1600, 900);
+        var from = _map.Provinces.First(p => p.IsClaimable && p.Neighbors.Any(n => _map.Provinces[n].IsClaimable));
+        int to = from.Neighbors.First(n => _map.Provinces[n].IsClaimable);
+        var migrations = game.Session.Migrations;
+        migrations.Add(new Migration(900, game.Human.Id, from.Id, to, 50, 0, 100, forced: false, mood: 50));
+        migrations.Add(new Migration(901, game.Human.Id, from.Id, to, 50, 0, 100, forced: false, mood: 50));
+        migrations.Add(new Migration(902, game.Human.Id, from.Id, to, 30, 0, 100, forced: true, mood: 50));
+        migrations.Add(new Migration(903, 1, from.Id, to, 50, 0, 100, forced: false, mood: 50)); // a rival's
+        game.Camera.LookAt(game.Center(from.Id), 4);
+
+        game.Mode = MapMode.Political;
+        Assert.Empty(game.Markers().Migrations);
+
+        // The groups between the same two provinces make one arrow; forced ones go apart, and other nations' are not shown.
+        game.Mode = MapMode.Population;
+        var flows = game.Markers().Migrations;
+        Assert.Equal(2, flows.Count);
+        var free = Assert.Single(flows, f => !f.Forced);
+        Assert.Equal(100, free.People);
+        Assert.Equal(game.Camera.MapToScreen(game.Center(from.Id)), free.From);
+        Assert.Equal(30, Assert.Single(flows, f => f.Forced).People);
+        Assert.True(free.Width > flows.Single(f => f.Forced).Width);
+    }
+
+    [Fact]
     public void TheResourcesMapShowsEveryDepositOfExploredProvincesCloseIn()
     {
         var game = NewGame();

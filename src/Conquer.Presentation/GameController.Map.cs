@@ -52,9 +52,16 @@ public sealed record UnitCounter(int UnitId, Vector2 Screen, float Scale, uint C
 /// <summary>Crossed swords over a battle; <see cref="Battle"/> is null at sea. The tooltip is worked out only when hovered.</summary>
 public sealed record BattleMarker(int ProvinceId, Battle? Battle, Vector2 Screen, Func<string> Tooltip);
 
+/// <summary>
+/// In the population mode, the people of the player's nation on the road from one province to another: an arrow from
+/// <see cref="From"/> to <see cref="To"/>, both screen points, wider the more they are (<see cref="Width"/>). Forced
+/// migrations go apart from those that move on their own. <see cref="Label"/> is how many they are, when there is room.
+/// </summary>
+public sealed record MigrationFlow(Vector2 From, Vector2 To, int People, bool Forced, float Width, string? Label);
+
 /// <summary>Everything drawn on the map over the provinces, in screen positions, already left out when off screen.</summary>
 public sealed record MapMarkers(IReadOnlyList<CityMarker> Cities, IReadOnlyList<NationLabel> Nations, IReadOnlyList<UnitCounter> Units, IReadOnlyList<BattleMarker> Battles,
-    IReadOnlyList<DepositMarker> Deposits, IReadOnlyList<ProvinceLabel> Provinces);
+    IReadOnlyList<DepositMarker> Deposits, IReadOnlyList<ProvinceLabel> Provinces, IReadOnlyList<MigrationFlow> Migrations);
 
 /// <summary>
 /// In the resources mode, close enough in: the icons of a province's deposits in a row, <see cref="Size"/> pixels each,
@@ -77,7 +84,7 @@ public sealed partial class GameController
     public MapMarkers Markers()
     {
         _ = ExploredProvinces; // brings what the player has explored up to date before hiding the rest
-        return new(Cities(), NationLabels(), Counters(), Battles(), Deposits(), ProvinceLabels());
+        return new(Cities(), NationLabels(), Counters(), Battles(), Deposits(), ProvinceLabels(), Migrations());
     }
 
     /// <summary>
@@ -102,6 +109,33 @@ public sealed partial class GameController
             marks.Add(new DepositMarker(p.Id, s, size, found));
         }
         return marks;
+    }
+
+    /// <summary>Below this many pixels long, a migration arrow goes without its number.</summary>
+    private const float MigrationLabelLength = 80;
+
+    /// <summary>
+    /// In the population mode, the player's migrants on the road, one arrow for each pair of provinces (the groups
+    /// between them added up), across the date line the short way. None in the other modes.
+    /// </summary>
+    private List<MigrationFlow> Migrations()
+    {
+        var flows = new List<MigrationFlow>();
+        if (Mode != MapMode.Population) return flows;
+        foreach (var route in Session.Migrations.Where(m => m.OwnerId == Human.Id).GroupBy(m => (m.FromProvinceId, m.ToProvinceId, m.Forced)))
+        {
+            var (fromId, toId, forced) = route.Key;
+            var from = Center(fromId);
+            var to = Center(toId);
+            to.X -= Map.Width * MathF.Round((to.X - from.X) / Map.Width);
+            var a = Camera.MapToScreen(from);
+            var b = a + (to - from) * Camera.Zoom;
+            if (!OnScreen(a) && !OnScreen(b) && !OnScreen((a + b) / 2)) continue;
+            int people = route.Sum(m => m.People);
+            float width = Math.Clamp(3 + 1.5f * MathF.Log2(people / (float)GameRules.MigrationGroup), 3, 10);
+            flows.Add(new MigrationFlow(a, b, people, forced, width, Vector2.Distance(a, b) >= MigrationLabelLength ? $"{people:N0}" : null));
+        }
+        return flows;
     }
 
     /// <summary>From this zoom on, the provinces show their names, fading in until <see cref="ProvinceNamesFullZoom"/>.</summary>
