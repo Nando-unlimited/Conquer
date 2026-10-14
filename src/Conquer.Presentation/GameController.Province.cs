@@ -183,8 +183,8 @@ public sealed partial class GameController
                 doc.Add(new Info("Moral", $"{p.Mood:0} · {GameRules.MoodName(p.Mood)}", Ink.Mood(p.Mood, Tone.Normal), MoodTooltip(p)));
                 doc.Add(new Info("Fertilidad", $"{p.Fertility:P0}", p.Fertility < 0.75 ? Tone.Bad : p.Fertility >= 1.15 ? Tone.Good : Tone.Normal,
                     "Nacimientos respecto a lo normal. Sube con la moral alta, cae con el hambre y cambia despacio.\n" +
-                    $"Tiende a {Session.TargetFertility(p, owner, owner.IsStarving):P0}."));
-                doc.Add(new Info("Nacimientos", $"+{Session.DailyBirths(p, owner.IsStarving):0.##} al día", owner.IsStarving ? Tone.Bad : Tone.Normal));
+                    $"Tiende a {Session.TargetFertility(p, owner, owner.Hunger):P0}."));
+                doc.Add(new Info("Nacimientos", $"+{Session.DailyBirths(p, owner.Hunger):0.##} al día", owner.IsStarving ? Tone.Bad : Tone.Normal));
                 AddCultureAndRevolt(doc, p);
             }
         }

@@ -33,7 +33,7 @@ public sealed partial class GameSession
             [.. p.Researching.OfType<Tech>()], [.. p.Institutions.Order()], [.. p.OfficerReserve.Select(ToSave)], p.Eliminated, p.Manpower, p.ReligionId,
             [.. p.Explored.Order()], new(p.Equipment.Where(e => e.Value > 0)), [.. p.LastDayFlows.Select(f => f.ToArray())],
             [.. p.ShipOrders.Select(o => new ShipOrderSave(o.Id, o.Type, o.Model, o.PreferredPortId, o.PortId, o.DaysDone, o.WaitingForCrew, o.Convoys))], p.Convoys,
-            [.. p.Contacts.Order()])).ToList(),
+            [.. p.Contacts.Order()], p.Hunger)).ToList(),
         // Provinces nobody has touched keep their generated state, so only the rest are stored.
         Provinces = Map.Provinces.Where(Changed).Select(p => new ProvinceSave(
             p.Id, p.OwnerId, p.ControllerId, p.Population, p.CityId, p.Mood, p.Fertility, [.. p.Reserves],
@@ -218,7 +218,8 @@ public sealed partial class GameSession
             foreach (var o in s.ShipOrders ?? [])
                 player.ShipOrders.Add(new ShipOrder { Id = o.Id, Type = o.Type, Model = o.Model, PreferredPortId = o.PreferredPortId, PortId = o.PortId, DaysDone = o.DaysDone, WaitingForCrew = o.WaitingForCrew, Convoys = o.Convoys });
             player.Convoys = s.Convoys ?? -1;
-            player.IsStarving = s.IsStarving;
+            // Saves from before hunger was a share only said whether the nation starved.
+            player.Hunger = s.Hunger ?? (s.IsStarving ? 1 : 0);
             player.FoodReserveDays = s.FoodReserveDays;
             foreach (var tech in s.Techs) player.Learn(tech);
             // Saves from before the branches have no priorities and leave the default ones.

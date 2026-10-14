@@ -23,8 +23,8 @@ public sealed partial class GameController
     {
         var alerts = new List<Alert>();
         if (Human.IsStarving)
-            alerts.Add(new Alert("Hambre", Tone.Bad,
-                "Se ha acabado la comida: la gente muere de hambre y la moral se hunde. Construye granjas, deja de reclutar o licencia tropas.",
+            alerts.Add(new Alert($"Hambre: {Human.Hunger:P0}", Tone.Bad,
+                $"Falta comida: ayer no llegó para el {Human.Hunger:P0} de la gente. Muere de hambre una parte proporcional y la moral se hunde. Construye granjas, deja de reclutar o licencia tropas.",
                 () => OpenNation(NationTab.Summary)));
         else if (Human.LastDayNet[(int)Game.Economy.ResourceType.Food] < 0 && Human.FoodReserveDays < GameRules.FoodReserveFullDays)
             alerts.Add(new Alert($"Comida: {Human.FoodReserveDays:0} días", Tone.Accent,

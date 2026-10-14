@@ -202,7 +202,7 @@ public sealed record PlayerSave(
     int[]? ResearchPriorities = null, List<Tech>? CurrentResearch = null, List<Institution>? Institutions = null,
     List<OfficerSave>? OfficerReserve = null, bool Eliminated = false, double? Manpower = null, int? ReligionId = null,
     List<int>? Explored = null, Dictionary<string, double>? Equipment = null, double[][]? LastDayFlows = null, List<ShipOrderSave>? ShipOrders = null,
-    double? Convoys = null, List<int>? Contacts = null);
+    double? Convoys = null, List<int>? Contacts = null, double? Hunger = null);
 
 /// <summary>A ship in the nation's construction queue.</summary>
 public sealed record ShipOrderSave(int Id, BattalionType Type, int Model, int? PreferredPortId, int? PortId, double DaysDone, bool WaitingForCrew, bool Convoys = false);

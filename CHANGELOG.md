@@ -2,6 +2,11 @@
 
 Todos los cambios del juego, del más reciente al más antiguo. Cada versión es un commit cuyo título es su número.
 
+## [1.139.0] - 2026-10-14
+
+### Cambiado
+- **El hambre es proporcional a la comida que falta**: si un día no llega la comida para el 10 % de la gente, el hambre es del 10 %. Mueren el 1 % × el hambre (antes, el 1 % en cuanto faltaba algo), los nacimientos bajan en la misma proporción, la moral recibe -40 × el hambre y la fertilidad baja poco a poco. Una escasez pequeña ya no es una catástrofe y avisa antes de serlo. La alerta dice cuánta hambre hay.
+
 ## [1.138.0] - 2026-10-14
 
 ### Corregido

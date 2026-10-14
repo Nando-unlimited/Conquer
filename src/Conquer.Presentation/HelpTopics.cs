@@ -36,7 +36,7 @@ public static class HelpTopics
             "- Construye granjas y aserraderos, y una ciudad nueva donde haya 500 habitantes.",
             "- Envía colonos desde una ciudad para fundar otras más lejos.",
             "## Consejo",
-            "Vigila la comida en la barra superior: si se acaba, la gente muere de hambre y la moral se hunde.",
+            "Vigila la comida en la barra superior: si no llega para todos, muere de hambre la parte de la gente a la que le falta y la moral se hunde.",
         ]),
         ("Población y moral",
         [
@@ -44,7 +44,7 @@ public static class HelpTopics
             $"La comida almacenada se estropea: cada día se pierde el {GameRules.FoodSpoilage:P0} de lo guardado.",
             "## Moral",
             $"- Sube con la ciudad (+{GameRules.CityMood:0}), la capital (+{GameRules.CapitalMood:0}), las reservas de comida, las fiestas (+{GameRules.FestivalMood:0} durante {GameRules.FestivalDays} días), templos, anfiteatros y avances.",
-            $"- Baja con la distancia a la capital (hasta -{GameRules.MaxDistanceMoodPenalty:0}), el hacinamiento, el hambre ({GameRules.StarvingMood:0}), la ocupación enemiga, la cultura extranjera y otra fe.",
+            $"- Baja con la distancia a la capital (hasta -{GameRules.MaxDistanceMoodPenalty:0}), el hacinamiento, el hambre (hasta {GameRules.StarvingMood:0}, según la comida que falte), la ocupación enemiga, la cultura extranjera y otra fe.",
             $"- Por debajo de {GameRules.UnrestMood:0} la provincia está descontenta y no paga impuestos. Una moral alta hace trabajar más.",
             "## Cultura y rebelión",
             $"- La gente conserva la cultura de la nación que la pobló. Bajo otro dueño pierde hasta {GameRules.ForeignCultureMood:0} de moral, menos a medida que se asimila (unos {GameRules.AssimilationYears:0} años, menos con moral alta; los migrantes de tus otras provincias ayudan).",

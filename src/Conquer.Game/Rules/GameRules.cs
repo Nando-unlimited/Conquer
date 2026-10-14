@@ -40,6 +40,7 @@ public static class GameRules
     public const double BaseBirthsPerProvince = 0.02;
     /// <summary>Share of the stored food that spoils each day, so stores settle at about 100 days of surplus.</summary>
     public const double FoodSpoilage = 0.01;
+    /// <summary>Share of the people who die each day with nothing to eat; in proportion to the share of food missing.</summary>
     public const double StarvationRate = 0.01;
     /// <summary>A city feeds this many times the citizens of the surrounding land.</summary>
     public const double CityCapacityMultiplier = 2.5;
@@ -175,6 +176,7 @@ public static class GameRules
     public const double MaxDistanceMoodPenalty = 20;
     /// <summary>Penalty once a province holds twice what its land feeds (proportionally less below that).</summary>
     public const double MaxOvercrowdingMoodPenalty = 20;
+    /// <summary>Mood with nothing to eat; in proportion to the share of food missing.</summary>
     public const double StarvingMood = -40;
     /// <summary>Forced migrants arrive this much unhappier than the province they were taken from.</summary>
     public const double ForcedMigrantMoodPenalty = 20;
@@ -361,7 +363,7 @@ public static class GameRules
 
     // Fertility (birth-rate multiplier, 1 = normal). It follows mood and food, more slowly than mood.
     public const double FertilityChangePerDay = 0.03;
-    /// <summary>Share of normal fertility left while the nation starves.</summary>
+    /// <summary>Share of normal fertility left with nothing to eat; in proportion to the share of food missing.</summary>
     public const double StarvingFertility = 0.2;
 
     public static double FestivalCost(double population) =>
@@ -370,8 +372,8 @@ public static class GameRules
     /// <summary>Output multiplier of a province's workers: 0.75 when furious, 1 at mood 50, 1.25 when delighted.</summary>
     public static double MoodProductivity(double mood) => 0.75 + mood / 200;
 
-    /// <summary>Fertility a province tends to: 0.5 at mood 0, 1 at mood 50, 1.5 at mood 100; hunger cuts it.</summary>
-    public static double TargetFertility(double mood, bool starving) => (0.5 + mood / 100) * (starving ? StarvingFertility : 1);
+    /// <summary>Fertility a province tends to: 0.5 at mood 0, 1 at mood 50, 1.5 at mood 100; cut by the share of food missing (<paramref name="hunger"/>, 0 to 1).</summary>
+    public static double TargetFertility(double mood, double hunger) => (0.5 + mood / 100) * (1 - (1 - StarvingFertility) * hunger);
 
     /// <summary>Mood levels from worst to best, as <see cref="MoodLevel"/> numbers them.</summary>
     public static readonly string[] MoodNames = ["Descontento", "Inquieto", "Tranquilo", "Contento"];

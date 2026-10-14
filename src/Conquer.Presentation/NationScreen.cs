@@ -331,7 +331,7 @@ public sealed partial class NationScreen
             Tooltip: populated ? $"Tiende a {Session.TargetMood(p):0}.\n" + string.Join("\n", Session.MoodFactors(p).Select(f => $"{f.Points:+0;-0;0}  {f.Reason}")) : null);
         yield return new TextCell(populated ? $"{p.Fertility:P0}" : "-",
             !populated ? Tone.Dim : p.Fertility < 0.75 ? Tone.Bad : p.Fertility >= 1.15 ? Tone.Good : Tone.Normal,
-            Tooltip: populated ? $"Nacimientos: +{Session.DailyBirths(p, Player.IsStarving):0.##} al día." : null);
+            Tooltip: populated ? $"Nacimientos: +{Session.DailyBirths(p, Player.Hunger):0.##} al día." : null);
     }
 
     private ButtonsCell ViewButton(int provinceId) =>

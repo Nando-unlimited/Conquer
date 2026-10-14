@@ -323,8 +323,31 @@ public class GameplayTests(WorldFixture world)
         RunHours(s, 24 * 30);
         Assert.True(s.Human.IsStarving);
         Assert.Contains(s.MoodFactors(a), f => f.Reason == "Hambre");
-        Assert.True(a.Mood < GameRules.UnrestMood, $"mood {a.Mood}");
+        Assert.True(a.Mood < GameRules.StartingMood, $"mood {a.Mood}");
         Assert.True(a.Fertility < 1, $"fertility {a.Fertility}");
+    }
+
+    [Fact]
+    public void HungerGoesWithTheShareOfFoodMissing()
+    {
+        // Half the food missing: half the unhappiness, half the births, and fertility halfway down.
+        Assert.Equal(1 - (1 - GameRules.StarvingFertility) / 2, GameRules.TargetFertility(50, 0.5), 9);
+        var s = NewSession();
+        var (a, b) = GrasslandPair();
+        s.FoundCity(0, s.AddUnit(0, UnitType.Settlers, a.Id, 300).Id);
+        a.Population = s.CapacityOf(a) / 2;
+        Assert.Equal(s.DailyBirths(a, hunger: 0) / 2, s.DailyBirths(a, hunger: 0.5), 9);
+        s.Human.Hunger = 0.25;
+        Assert.Equal(GameRules.StarvingMood / 4, s.MoodFactors(a).Single(f => f.Reason == "Hambre").Points, 9);
+
+        // A nation whose harvest feeds part of its people: only those who went without die.
+        s.Human.Hunger = 0;
+        s.Human.Stockpile[ResourceType.Food] = 0;
+        a.Population = 10 * s.CapacityOf(a); // the land feeds some of them, not all
+        RunHours(s, 24);
+        double hunger = s.Human.Hunger;
+        Assert.InRange(hunger, 0.01, 0.99);
+        Assert.Equal(0, s.Human.Stockpile[ResourceType.Food]);
     }
 
     [Fact]
@@ -382,15 +405,15 @@ public class GameplayTests(WorldFixture world)
         b.Population = 20;
 
         b.Fertility = 1;
-        double normal = s.DailyBirths(b, starving: false);
+        double normal = s.DailyBirths(b, hunger: 0);
         b.Fertility = 1.5;
-        double fertile = s.DailyBirths(b, starving: false);
+        double fertile = s.DailyBirths(b, hunger: 0);
 
         // A thinly populated countryside still grows by its land, beyond its few citizens' own share.
         Assert.True(normal > 20 * GameRules.GrowthRate, $"births {normal}");
         Assert.Equal(1.5 * normal, fertile, 6);
-        Assert.Equal(0, s.DailyBirths(b, starving: true));
-        Assert.Equal(s.DailyBirths(a, starving: false), s.Stats(s.Human).DailyBirths, 6);
+        Assert.Equal(0, s.DailyBirths(b, hunger: 1));
+        Assert.Equal(s.DailyBirths(a, hunger: 0), s.Stats(s.Human).DailyBirths, 6);
     }
 
     [Fact]
@@ -575,7 +598,7 @@ public class GameplayTests(WorldFixture world)
         s.Claim(0, s.AddRegiment(0, b.Id, BattalionType.Scouts).Id);
         b.Population = 10;
         // Births in a village do not depend on how much land it has: a handful of people grow slowly.
-        Assert.InRange(s.DailyBirths(b, starving: false), 0, (10 * GameRules.GrowthRate + GameRules.BaseBirthsPerProvince) * b.Fertility);
+        Assert.InRange(s.DailyBirths(b, hunger: 0), 0, (10 * GameRules.GrowthRate + GameRules.BaseBirthsPerProvince) * b.Fertility);
     }
 
     [Fact]

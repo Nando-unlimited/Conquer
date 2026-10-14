@@ -580,10 +580,10 @@ public class ControllerTests(WorldFixture world)
         Assert.True(game.Nation.Visible);
         Assert.Equal(NationTab.Science, game.Nation.Tab);
 
-        game.Human.IsStarving = true;
+        game.Human.Hunger = 1;
         var hunger = Assert.IsType<Alert>(AlertStarting(game, "Hambre"));
         Assert.Equal(Tone.Bad, hunger.Tone);
-        Assert.Same(hunger.Text, game.Alerts()[0].Text); // the most urgent first
+        Assert.Equal(hunger.Text, game.Alerts()[0].Text); // the most urgent first
     }
 
     [Fact]

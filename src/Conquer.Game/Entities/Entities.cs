@@ -29,7 +29,10 @@ public sealed class Player
 
     /// <summary>Notes a day's gain (positive) or expense (negative) of a resource under its flow.</summary>
     public void Record(ResourceFlow flow, ResourceType resource, double amount) => LastDayFlows[(int)flow][(int)resource] += amount;
-    public bool IsStarving { get; set; }
+    /// <summary>Share of the last day's food that was missing, 0 to 1: the deaths, the lost births and fertility and the unhappiness of hunger go with it.</summary>
+    public double Hunger { get; set; }
+    /// <summary>Whether any food was missing the last day.</summary>
+    public bool IsStarving => Hunger > 0;
     /// <summary>The last day's upkeep could not be paid in full; worked out again every day.</summary>
     public bool ArmyUnpaid { get; set; }
     /// <summary>Days the food stockpile would last at the last day's consumption.</summary>

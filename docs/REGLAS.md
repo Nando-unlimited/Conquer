@@ -30,12 +30,12 @@ Cada día nacen en una provincia habitada:
 
 - (habitantes × 0,012 % + 0,02) × fertilidad × (1 - habitantes / capacidad).
 - En las ciudades la primera parte es ×2. Sin hambre y con fertilidad normal, una provincia casi vacía crece en torno a un 4,4 % al año y una a medio llenar, un 2,2 %; una ciudad, el doble. Cuanto más se acerca a su capacidad, más despacio.
-- Por encima de su capacidad, o mientras la nación pasa hambre, no nace nadie.
+- Por encima de su capacidad no nace nadie, y con hambre nacen menos (ver Hambre).
 - La pequeña base fija hace que unos pocos colonos lleguen a formar un pueblo, pero no llena la tierra vacía por sí sola: eso lo hace la migración.
 
 ### Fertilidad
 
-- Multiplica los nacimientos (1 es lo normal). Tiende a 0,5 + moral / 100 (de 0,5 con moral 0 a 1,5 con moral 100), más lo que den los avances y edificios; con hambre, al 20 % de eso.
+- Multiplica los nacimientos (1 es lo normal). Tiende a 0,5 + moral / 100 (de 0,5 con moral 0 a 1,5 con moral 100), más lo que den los avances y edificios; sin nada que comer, al 20 % de eso, y en proporción con el hambre.
 - Cada día recorre un 3 % de la distancia a ese objetivo: va más despacio que la moral.
 
 ### Comida
@@ -47,7 +47,8 @@ Cada día nacen en una provincia habitada:
 
 ### Hambre
 
-- Si el almacén de comida se vacía, la nación pasa hambre: muere el 1 % de la gente de cada provincia al día (menos con los avances y los graneros que la protegen), no nace nadie, la moral recibe -40 y la fertilidad cae.
+- Si el almacén de comida no llega para lo que se come en el día, la nación pasa hambre en la proporción de lo que falta: si falta el 10 % de la comida, el hambre es del 10 %.
+- Cada día muere el 1 % de la gente de cada provincia × el hambre (menos con los avances y los graneros que la protegen); los nacimientos bajan en la misma proporción, la moral recibe -40 × el hambre y la fertilidad tiende a bajar hacia el 20 %. Así la escasez avisa antes de volverse una catástrofe.
 - Las provincias ocupadas por el enemigo ni producen ni comen para su dueño.
 
 ## Moral
@@ -62,7 +63,7 @@ Cada provincia tiene una moral de 0 a 100. Cada día recorre un 10 % de la dista
 - Reservas de comida: hasta +10 cuando lo almacenado da para 30 días (proporcional por debajo).
 - Fiestas: +20 durante 30 días; cuestan 2 de oro por cada 100 habitantes (mínimo 10).
 - Hacinamiento: por encima de la capacidad, hasta -20 cuando hay el doble de gente de la que alimenta la tierra.
-- Hambre: -40. Ocupación enemiga: -30. Epidemia: -15.
+- Hambre: -40 × la parte de la comida que falta. Ocupación enemiga: -30. Epidemia: -15.
 - Cultura extranjera: hasta -25, menos a medida que se asimila. Otra fe: -10 hasta convertirse.
 - Avances, edificios (templos, anfiteatros...) y decisiones: lo que diga cada uno.
 

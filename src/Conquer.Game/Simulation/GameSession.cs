@@ -195,7 +195,7 @@ public sealed partial class GameSession
         double capacity = CapacityOf(p);
         if (p.Population > capacity)
             factors.Add(("Hacinamiento", -GameRules.MaxOvercrowdingMoodPenalty * Math.Min(1, p.Population / capacity - 1)));
-        if (owner.IsStarving) factors.Add(("Hambre", GameRules.StarvingMood));
+        if (owner.IsStarving) factors.Add(("Hambre", GameRules.StarvingMood * owner.Hunger));
         if (p.IsOccupied) factors.Add(("Ocupada por el enemigo", MilitaryRules.OccupiedMood));
         if (HasForeignCulture(p)) factors.Add(($"Cultura de {Players[p.CultureId].Name}", ForeignCultureMood(p)));
         if (HasOtherFaith(p)) factors.Add(($"Fe: {ReligionName(p.ReligionId)}", -GameRules.OtherFaithMood));
@@ -225,7 +225,7 @@ public sealed partial class GameSession
             mood += p.Population * p.Mood;
             fertility += p.Population * p.Fertility;
             byMood[GameRules.MoodLevel(p.Mood)] += p.Population;
-            births += DailyBirths(p, player.IsStarving);
+            births += DailyBirths(p, player.Hunger);
         }
         return new NationStats(
             settled,
@@ -329,31 +329,24 @@ public sealed partial class GameSession
             Notify(player.Id, "No hay con qué pagar al ejército: las tropas pierden organización y desertan. Licencia unidades o consigue más oro.");
         player.ArmyUnpaid = unpaid;
 
-        bool starving = player.Stockpile[ResourceType.Food] < 0;
-        if (starving)
-        {
-            player.Stockpile[ResourceType.Food] = 0;
-            if (!player.IsStarving && player.IsHuman)
-                Notify(player.Id, "¡Se acabó la comida! La población empieza a morir de hambre.");
-        }
-        player.IsStarving = starving;
+        // What the store could not cover is the day's hunger: the share of the food that was missing.
         double dailyFood = GameRules.FoodPerCitizen * eaters;
+        double missing = Math.Max(0, -player.Stockpile[ResourceType.Food]);
+        double hunger = dailyFood > 0 ? Math.Min(1, missing / dailyFood) : 0;
+        if (missing > 0) player.Stockpile[ResourceType.Food] = 0;
+        if (hunger > 0 && !player.IsStarving && player.IsHuman)
+            Notify(player.Id, $"¡Falta comida! Hoy no ha llegado para el {hunger:P0} de la gente: empieza a morir de hambre.");
+        player.Hunger = hunger;
         player.FoodReserveDays = dailyFood > 0 ? player.Stockpile[ResourceType.Food] / dailyFood : 0;
 
         foreach (int id in player.Provinces)
         {
             var p = Map.Provinces[id];
             if (p.Population <= 0) continue;
-            UpdateMoodAndFertility(p, player, starving);
-            if (starving)
-            {
-                // The nation's advances and the province's granary each spare their share of those who would die.
-                p.Population *= 1 - GameRules.StarvationRate * (1 - player.Bonuses.FamineSurvival) * (1 - p.BuildingBonuses.FamineSurvival);
-            }
-            else
-            {
-                p.Population += DailyBirths(p, starving: false);
-            }
+            UpdateMoodAndFertility(p, player, hunger);
+            // As many die as went without; the nation's advances and the province's granary each spare their share.
+            p.Population *= 1 - GameRules.StarvationRate * hunger * (1 - player.Bonuses.FamineSurvival) * (1 - p.BuildingBonuses.FamineSurvival);
+            p.Population += DailyBirths(p, hunger);
         }
     }
 
@@ -395,19 +388,19 @@ public sealed partial class GameSession
 
     /// <summary>
     /// Citizens born in a populated province each day: a share of its people plus a small base,
-    /// both scaled by the province's own fertility and damped as it fills up. Nobody is born while the nation starves.
+    /// both scaled by the province's own fertility and damped as it fills up; fewer by the share of the nation going hungry (<paramref name="hunger"/>).
     /// </summary>
-    public double DailyBirths(Province p, bool starving)
+    public double DailyBirths(Province p, double hunger)
     {
         double capacity = CapacityOf(p);
-        if (starving || p.Population <= 0 || p.Population >= capacity) return 0;
+        if (hunger >= 1 || p.Population <= 0 || p.Population >= capacity) return 0;
         double perCitizen = GameRules.GrowthRate * (p.CityId.HasValue ? GameRules.CityGrowthMultiplier : 1);
-        return (p.Population * perCitizen + GameRules.BaseBirthsPerProvince) * p.Fertility * (1 - p.Population / capacity);
+        return (p.Population * perCitizen + GameRules.BaseBirthsPerProvince) * p.Fertility * (1 - p.Population / capacity) * (1 - hunger);
     }
 
-    /// <summary>Fertility a populated province tends to, with its owner's advances.</summary>
-    public double TargetFertility(Province p, Player owner, bool starving) =>
-        GameRules.TargetFertility(p.Mood, starving) * (1 + owner.Bonuses.Fertility + p.BuildingBonuses.Fertility);
+    /// <summary>Fertility a populated province tends to, with its owner's advances and its hunger.</summary>
+    public double TargetFertility(Province p, Player owner, double hunger) =>
+        GameRules.TargetFertility(p.Mood, hunger) * (1 + owner.Bonuses.Fertility + p.BuildingBonuses.Fertility);
 
     // ------------------------------------------------------------------ science
 
@@ -748,11 +741,11 @@ public sealed partial class GameSession
     }
 
     /// <summary>Mood closes part of the gap to its target each day; fertility follows mood and food, more slowly.</summary>
-    private void UpdateMoodAndFertility(Province p, Player owner, bool starving)
+    private void UpdateMoodAndFertility(Province p, Player owner, double hunger)
     {
         double before = p.Mood;
         p.Mood += (TargetMood(p) - p.Mood) * GameRules.MoodChangePerDay;
-        p.Fertility += (TargetFertility(p, owner, starving) - p.Fertility) * GameRules.FertilityChangePerDay;
+        p.Fertility += (TargetFertility(p, owner, hunger) - p.Fertility) * GameRules.FertilityChangePerDay;
 
         if (p.OwnerId == HumanPlayerId && CityIn(p) is { } city)
         {
