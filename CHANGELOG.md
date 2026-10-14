@@ -2,6 +2,11 @@
 
 Todos los cambios del juego, del más reciente al más antiguo. Cada versión es un commit cuyo título es su número.
 
+## [1.140.0] - 2026-10-14
+
+### Añadido
+- **Por qué crece una provincia**: en su panel, «Nacimientos» dice también el ritmo al año, y su ayuda hace la cuenta factor a factor: gente × fertilidad × sitio libre × comida, y lo que más la frena (que está casi llena, el hambre, la fertilidad baja o que tiene muy poca gente). Una línea nueva, «Llena», dice en cuántos años llegaría al 90 % de su capacidad solo con sus nacimientos, o que ya está llena o no crece.
+
 ## [1.139.0] - 2026-10-14
 
 ### Cambiado

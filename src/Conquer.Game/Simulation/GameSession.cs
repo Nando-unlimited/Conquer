@@ -31,6 +31,17 @@ public sealed record NationStats(
     public double Total => Settled + InUnits + Migrating;
 }
 
+/// <summary>What a province's births are made of (see <see cref="GameSession.BirthsOf"/>); their product is <see cref="Births"/>.</summary>
+/// <param name="People">Its people at the growth rate, plus the small base every populated province has.</param>
+/// <param name="Fertility">Its fertility (1 normal).</param>
+/// <param name="Room">Share of its capacity still free: births slow as it fills, and stop when full.</param>
+/// <param name="Fed">Share of the nation that ate that day: hunger takes the rest.</param>
+/// <param name="Capacity">The people its land feeds.</param>
+public readonly record struct BirthFactors(double People, double Fertility, double Room, double Fed, double Capacity)
+{
+    public double Births => People * Fertility * Room * Fed;
+}
+
 /// <summary>
 /// One running game. Time advances in fixed one-hour steps through <see cref="Step"/>; the economy
 /// and migration run once per in-game day, at midnight. Player 0 is the human.
@@ -390,12 +401,40 @@ public sealed partial class GameSession
     /// Citizens born in a populated province each day: a share of its people plus a small base,
     /// both scaled by the province's own fertility and damped as it fills up; fewer by the share of the nation going hungry (<paramref name="hunger"/>).
     /// </summary>
-    public double DailyBirths(Province p, double hunger)
+    public double DailyBirths(Province p, double hunger) => BirthsOf(p, hunger).Births;
+
+    /// <summary>
+    /// The day's births of a province and what they come from: <see cref="BirthFactors.People"/> (its people at the
+    /// growth rate, plus the small base) times its fertility, its free room and the share of the nation that eats.
+    /// </summary>
+    public BirthFactors BirthsOf(Province p, double hunger)
     {
         double capacity = CapacityOf(p);
-        if (hunger >= 1 || p.Population <= 0 || p.Population >= capacity) return 0;
         double perCitizen = GameRules.GrowthRate * (p.CityId.HasValue ? GameRules.CityGrowthMultiplier : 1);
-        return (p.Population * perCitizen + GameRules.BaseBirthsPerProvince) * p.Fertility * (1 - p.Population / capacity) * (1 - hunger);
+        double people = p.Population > 0 ? p.Population * perCitizen + GameRules.BaseBirthsPerProvince : 0;
+        double room = capacity > 0 ? Math.Clamp(1 - p.Population / capacity, 0, 1) : 0;
+        double fed = Math.Clamp(1 - hunger, 0, 1);
+        return new BirthFactors(people, p.Fertility, room, fed, capacity);
+    }
+
+    /// <summary>
+    /// Years a province would take to reach <paramref name="share"/> of its capacity by its own births, at today's
+    /// fertility and hunger; 0 if it already has, null if it never would (nobody is born, or not within 500 years).
+    /// </summary>
+    public double? YearsToFill(Province p, double hunger, double share = 0.9)
+    {
+        var now = BirthsOf(p, hunger);
+        double target = now.Capacity * share, people = p.Population;
+        if (people >= target) return 0;
+        if (now.Births <= 0) return null;
+        double perCitizen = GameRules.GrowthRate * (p.CityId.HasValue ? GameRules.CityGrowthMultiplier : 1);
+        for (int days = 0; days < 500 * 365; days += 30)
+        {
+            double births = (people * perCitizen + GameRules.BaseBirthsPerProvince) * now.Fertility * (1 - people / now.Capacity) * now.Fed;
+            people += 30 * births;
+            if (people >= target) return (days + 30) / 365.0;
+        }
+        return null;
     }
 
     /// <summary>Fertility a populated province tends to, with its owner's advances and its hunger.</summary>

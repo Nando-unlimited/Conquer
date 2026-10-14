@@ -540,6 +540,32 @@ public class ControllerTests(WorldFixture world)
     }
 
     /// <summary>A game with its capital founded from the starting settlers.</summary>
+    [Fact]
+    public void AProvincePanelSaysWhyItGrowsAndWhenItWillBeFull()
+    {
+        var (game, capital) = WithCapital();
+        var s = game.Session;
+        game.SelectProvince(capital.Id);
+        Info Line(string label) => game.SidePanel()!.Elements.OfType<Info>().Single(i => i.Label == label);
+
+        // Births multiplied out factor by factor; room to grow, so it will fill in some years.
+        var births = Line("Nacimientos");
+        Assert.Contains("fertilidad", births.Tooltip);
+        Assert.Contains("sitio libre", births.Tooltip);
+        Assert.Equal(s.DailyBirths(capital, 0), s.BirthsOf(capital, 0).Births, 9);
+        Assert.StartsWith("en ", Line("Llena").Value);
+
+        // Full: nobody is born, and the panel says what it would take.
+        capital.Population = s.CapacityOf(capital);
+        Assert.Equal("sí", Line("Llena").Value);
+        Assert.Contains("casi llena", Line("Nacimientos").Tooltip);
+
+        // Nothing to eat: it does not grow.
+        capital.Population = s.CapacityOf(capital) / 2;
+        s.Human.Hunger = 1;
+        Assert.Equal("no crece", Line("Llena").Value);
+    }
+
     private (GameController Game, Province Capital) WithCapital()
     {
         var game = NewGame();

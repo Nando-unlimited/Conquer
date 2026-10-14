@@ -38,6 +38,39 @@ public sealed partial class GameController
         return text;
     }
 
+    /// <summary>The day's births of a province multiplied out factor by factor, and what holds them back the most.</summary>
+    public static string BirthsTooltip(Province p, BirthFactors b)
+    {
+        double rate = GameRules.GrowthRate * (p.CityId.HasValue ? GameRules.CityGrowthMultiplier : 1);
+        string text = "Nacen cada día:\n" +
+                      $"  {b.People:0.##}  habitantes × {rate:P3} + {GameRules.BaseBirthsPerProvince:0.##}\n" +
+                      $"× {b.Fertility:0.00}  fertilidad\n" +
+                      $"× {b.Room:P0}  sitio libre ({p.Population:N0} de {b.Capacity:N0})\n" +
+                      $"× {b.Fed:P0}  comida\n" +
+                      $"= +{b.Births:0.##} al día";
+        string? brake = b.Room < 0.05 ? "está casi llena. Solo crecerá si su tierra alimenta a más gente: con la era, los avances de agricultura o un acueducto."
+            : b.Fed < 1 ? "el hambre."
+            : b.Fertility < 0.8 ? "la fertilidad baja. Sube con la moral."
+            : p.Population < 100 ? "tiene muy poca gente: crece sobre todo con los emigrantes de tus ciudades."
+            : null;
+        return brake == null ? text : text + $"\nLo que más la frena: {brake}";
+    }
+
+    /// <summary>How long the province will take to fill (90 % of its capacity) by its own births, or why it will not.</summary>
+    private Info GrowthLine(Province p, Player owner, BirthFactors births)
+    {
+        const double Share = 0.9;
+        string fill = $"Está al {p.Population / births.Capacity:P0} de su capacidad.";
+        return Session.YearsToFill(p, owner.Hunger, Share) switch
+        {
+            0 => new Info("Llena", "sí", Tone.Dim, $"{fill} Apenas nace nadie: solo crecerá si su tierra alimenta a más gente."),
+            null => new Info("Llena", "no crece", Tone.Bad, $"{fill} Al ritmo de hoy no se llenará."),
+            double years => new Info("Llena", years < 1 ? "en menos de un año" : $"en unos {years:0} años", Tone.Normal,
+                $"{fill} Cuánto tardaría en llegar al {Share:P0} solo con sus nacimientos, a la fertilidad y la comida de hoy." +
+                (p.CityId.HasValue ? "" : " Los emigrantes de tus ciudades la llenan antes.")),
+        };
+    }
+
     private static Heading Section(string text, float height = 26) => new(text, Tone.Normal, Height: height);
 
     /// <summary>The people's faith, and how far they have come toward their ruler's if it is another.</summary>
@@ -184,7 +217,10 @@ public sealed partial class GameController
                 doc.Add(new Info("Fertilidad", $"{p.Fertility:P0}", p.Fertility < 0.75 ? Tone.Bad : p.Fertility >= 1.15 ? Tone.Good : Tone.Normal,
                     "Nacimientos respecto a lo normal. Sube con la moral alta, cae con el hambre y cambia despacio.\n" +
                     $"Tiende a {Session.TargetFertility(p, owner, owner.Hunger):P0}."));
-                doc.Add(new Info("Nacimientos", $"+{Session.DailyBirths(p, owner.Hunger):0.##} al día", owner.IsStarving ? Tone.Bad : Tone.Normal));
+                var births = Session.BirthsOf(p, owner.Hunger);
+                doc.Add(new Info("Nacimientos", $"+{births.Births:0.##} al día · {births.Births * 365 / p.Population:P1} al año",
+                    owner.IsStarving || births.Births <= 0 ? Tone.Bad : Tone.Normal, BirthsTooltip(p, births)));
+                doc.Add(GrowthLine(p, owner, births));
                 AddCultureAndRevolt(doc, p);
             }
         }
