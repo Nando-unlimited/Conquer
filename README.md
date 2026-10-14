@@ -56,6 +56,7 @@ Se guardan en la carpeta `Partidas`, junto al ejecutable del juego. Si esa carpe
 | `src/Conquer.Presentation` | Lo que ve y hace el jugador, sin motor gráfico: el estado de la partida en pantalla, el contenido de paneles, ventanas, pantallas y menús como datos, los marcadores del mapa y las órdenes de sus botones. |
 | `src/Conquer.Client` | Ventana, renderizado del mapa por shader, interfaz propia (Silk.NET + OpenGL). Solo dibuja; cambiar de motor no toca los otros dos. |
 | `tools/Conquer.EarthData` | Genera `src/Conquer.Game/Assets/earth.gz` (mapa de la Tierra real) a partir de datos públicos. |
+| `tools/Conquer.Bench` | Banco de pruebas de la población: simula años de una nación y escribe cómo crece y migra la gente (ver la GUIA). |
 | `tests/Conquer.Tests` | Pruebas de la generación del mundo y de las reglas. |
 
 Qué hace cada fichero y cada función: [docs/GUIA.md](docs/GUIA.md).

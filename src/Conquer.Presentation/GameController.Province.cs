@@ -39,9 +39,9 @@ public sealed partial class GameController
     }
 
     /// <summary>The day's births of a province multiplied out factor by factor, and what holds them back the most.</summary>
-    public static string BirthsTooltip(Province p, BirthFactors b)
+    public string BirthsTooltip(Province p, BirthFactors b)
     {
-        double rate = GameRules.GrowthRate * (p.CityId.HasValue ? GameRules.CityGrowthMultiplier : 1);
+        double rate = Session.GrowthPerCitizen(p);
         string text = "Nacen cada día:\n" +
                       $"  {b.People:0.##}  habitantes × {rate:P3} + {GameRules.BaseBirthsPerProvince:0.##}\n" +
                       $"× {b.Fertility:0.00}  fertilidad\n" +

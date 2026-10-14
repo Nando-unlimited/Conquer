@@ -1,5 +1,6 @@
 using Conquer.Game.Military;
 using Conquer.Game.Rules;
+using Conquer.Game.Science;
 using Conquer.Game.Simulation;
 using Conquer.Game.World;
 
@@ -75,6 +76,52 @@ public class MigrationEngineTests(WorldFixture world)
         Assert.Equal(far.Id, migration.FromProvinceId);
         Assert.Equal(middle.Id, migration.ToProvinceId);
         Assert.Equal(GameRules.MigrationGroup, migration.People);
+    }
+
+    [Fact]
+    public void IndustryBringsABoomBigCitiesAndAnExodusFromTheCountryside()
+    {
+        Assert.True(GameRules.EraGrowth(Era.Industrial) > GameRules.EraGrowth(Era.Renaissance));
+        Assert.True(GameRules.EraGrowth(Era.Modern) < GameRules.EraGrowth(Era.Industrial));
+        Assert.Equal(GameRules.CityCapacityMultiplier, GameRules.CityCapacity(Era.Renaissance));
+        Assert.True(GameRules.CityCapacity(Era.Modern) > GameRules.CityCapacity(Era.Industrial));
+        // The countryside leaves from the same fill as cities do, and a city wants to be a gap fuller than it, up to a ceiling.
+        Assert.Equal(0, GameRules.UrbanizationShareOf(GameRules.EmigrationStartFill));
+        Assert.Equal(GameRules.UrbanizationShare, GameRules.UrbanizationShareOf(1));
+        Assert.Equal(1000 * (0.4 + GameRules.UrbanizationGap), MigrationEngine.UrbanWanted(1000, 0.4), 9);
+        Assert.Equal(1000 * GameRules.UrbanizationCityFill, MigrationEngine.UrbanWanted(1000, 0.9), 9);
+    }
+
+    private static void Industrialise(GameSession s)
+    {
+        foreach (var tech in Techs.All.Where(t => t.Info().Era <= Era.Industrial)) s.Human.Learn(tech);
+        Assert.Equal(Era.Industrial, s.Human.Era);
+    }
+
+    [Fact]
+    public void InAnIndustrialNationTheCountrysideMovesToTheCities()
+    {
+        var s = NewSession();
+        var (city, province, _) = Row();
+        FoundCity(s, city, 0.5);
+        Claim(s, province, 0);
+        Industrialise(s);
+        city.Population = 0.5 * s.CapacityOf(city);
+        province.Population = 0.8 * s.CapacityOf(province);
+        for (int day = 0; day < 60 && s.Migrations.Count == 0; day++) RunHours(s, 24);
+        var migration = Assert.Single(s.Migrations);
+        Assert.Equal(province.Id, migration.FromProvinceId);
+        Assert.Equal(city.Id, migration.ToProvinceId);
+
+        // A full city sends nobody to its empty countryside any more.
+        var full = NewSession();
+        FoundCity(full, city, 0.9);
+        Claim(full, province, 0);
+        Industrialise(full);
+        city.Population = 0.9 * full.CapacityOf(city);
+        province.Population = 0.1 * full.CapacityOf(province);
+        RunHours(full, 24 * 30);
+        Assert.Equal(0, full.MigrationEngine.NextId);
     }
 
     [Fact]

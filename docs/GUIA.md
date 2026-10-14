@@ -17,6 +17,7 @@ La solución (`Conquer.sln`) tiene cinco proyectos:
 | `src/Conquer.Presentation` | Librería | Lo que ve y hace el jugador sin depender de ningún motor gráfico: cámara, modos de mapa, reloj de juego, mensajes, textos (ayuda, historial, cifras) y partidas guardadas. Usa `Conquer.Game`. |
 | `src/Conquer.Client` | Ejecutable (`Conquer.exe`) | Ventana, dibujo del mapa por shader, interfaz propia, menús. Usa `Conquer.Game` y `Conquer.Presentation`; es lo único que cambiaría al pasar a otro motor (Godot). |
 | `tools/Conquer.EarthData` | Herramienta de consola | Genera el mapa de la Tierra real (`earth.gz`) a partir de datos públicos. Solo se usa para regenerar ese fichero. |
+| `tools/Conquer.Bench` | Herramienta de consola | Banco de pruebas de la población: simula años de una nación (capital, ciudades y provincias vacías) con el juego de verdad y escribe cómo crece y migra la gente. Se usa para equilibrar esas reglas. |
 | `tests/Conquer.Tests` | Tests (xUnit) | Pruebas de la generación del mundo, de las reglas y de la versión. |
 
 Motor: propio. Silk.NET da la ventana, la entrada y OpenGL 3.3; StbTrueTypeSharp convierte la fuente en
@@ -59,11 +60,12 @@ Todas las constantes de equilibrio (por día de juego salvo que se diga otra cos
 | `CitizenSpeedKmh`, `SailingSpeed` | 10 km/h: velocidad de ciudadanos, migrantes y unidades en terreno llano; los barcos van el doble de rápido por el mar. |
 | `FoodPerCitizen` | Comida que come cada ciudadano al día (0,1). |
 | `FoodPerWorker` | Comida que produce cada trabajador en tierra de rendimiento 1 (0,13). |
-| `GrowthRate`, `CityGrowthMultiplier` | Crecimiento diario de la población (0,012 %: un 4,4 % al año con fertilidad normal casi vacía, menos al llenarse); las ciudades crecen el doble. |
+| `GrowthRate`, `CityGrowthMultiplier`, `EraGrowth(era)` | Crecimiento diario de la población (0,012 %: un 4,4 % al año con fertilidad normal casi vacía, menos al llenarse); las ciudades crecen el doble. `EraGrowth` es la transición demográfica: ×1 hasta el Renacimiento, ×2 en la era Industrial y ×0,5 en la Moderna (`GameSession.GrowthPerCitizen` lo junta todo). |
 | `BaseBirthsPerProvince`, `FoodSpoilage` | Nacimientos diarios fijos de cada provincia habitada (0,02), además de `GrowthRate` y por su fertilidad, para que un puñado de colonos llegue a aldea; no dependen de la tierra. Parte de la comida almacenada que se estropea cada día (1 %). |
 | `LandCarryingScale`, `EraCapacity(era)` | La tierra alimenta al principio la décima parte de lo que dice su bioma (decenas de millones en todo el mundo); cada era lo multiplica: ×1,5 Clásica, ×2 Medieval, ×3 Descubrimientos, ×5 Industrial y ×8 Moderna. |
 | `StarvationRate` | Población que muere al día sin nada que comer (1 %), por el hambre (`Player.Hunger`, la parte de la comida que faltó: con un 10 % de hambre muere el 0,1 %). Los avances (Medicina) y el granero de la provincia salvan cada uno su parte: con los dos, muere la cuarta parte. Los nacimientos bajan en la misma proporción y la moral recibe `StarvingMood` × el hambre. |
-| `CityCapacityMultiplier` | Una ciudad alimenta 2,5 veces más gente que la tierra sola. |
+| `CityCapacityMultiplier`, `CityCapacity(era)` | Una ciudad alimenta 2,5 veces más gente que la tierra sola hasta el Renacimiento; 4 veces en la era Industrial y 6 en la Moderna. |
+| `UrbanizationEra`, `UrbanizationShare`, `UrbanizationShareOf(llenado)`, `UrbanizationGap`, `UrbanizationCityFill` | Desde la era Industrial el campo se muda a las ciudades: cada provincia sin ciudad envía a su ciudad más cercana hasta el 0,05 % de su gente al día (desde el 20 % de llenado, en proporción), mientras la ciudad no esté 30 puntos más llena que ella ni pase del 95 %. Ver `MigrationEngine`. |
 | `TaxGoldPerCitizen` | Oro por habitante y día. |
 | `DepositFullWorkers` | Habitantes necesarios para que un yacimiento rinda al máximo. |
 | `DepositSizeMultiplier` | Multiplica el tamaño de todas las bolsas de recurso al empezar la partida (1; la dificultad ajusta el tamaño de cada bolsa al generar el mapa, con `DifficultyInfo.DepositSize`). |
@@ -330,6 +332,7 @@ El corazón del juego: una partida en marcha. Es una clase parcial: el ejército
 | `Wanted(capacidad, llenado de su ciudad)` | Hasta dónde quiere llenarse una provincia sin ciudad: el 50 % de su capacidad o lo llena que esté su ciudad emisora, lo mayor. |
 | `Pull(déficit, deseado, horas, sin poblar)` | Su atracción: déficit / deseado / (1 + días de viaje / `MigrationDistanceDays`), ×`UnsettledMigrationPull` si aún no está asentada. |
 | `Daily(jugador)` | La migración del día: cada provincia sin ciudad toma su gente de la ciudad más cercana que esté emigrando; cada ciudad saca su cuota en grupos de `MigrationGroup` y cada grupo va a la provincia que más atrae, cuya atracción baja con lo que cubre. |
+| `Urbanize(jugador)`, `UrbanWanted(capacidad, llenado del campo)` | La migración del día en una nación de la era Industrial o posterior: cada provincia sin ciudad manda su cuota (`UrbanizationShareOf`) a su ciudad más cercana mientras esta la quiera (hasta 30 puntos más llena que la provincia, 95 % como mucho). Las ciudades ya no envían gente al campo. |
 | `Arrive()` | Cada hora, los grupos que llegan se asientan (moral mezclada; cuentan como asimilados y convertidos); si el destino se perdió, en la capital. |
 | `CanForce(...)` / `Force(...)` | La migración forzada: el jugador paga oro por mover gente entre dos provincias suyas; llegan con 20 de moral menos. |
 | `PeopleOnTheWay(jugador)`, `ComingTo(provincia)` | La gente de una nación en camino (come por el camino) y la que va hacia una provincia. |
@@ -1441,6 +1444,21 @@ las costas, lagos y glaciares de Natural Earth.
 | `Rasterize`, `FillPolygon` | Convierten los polígonos GeoJSON en máscaras de píxeles. |
 
 Uso: ver el README.
+
+## 6. `tools/Conquer.Bench/Program.cs`
+Banco de pruebas de la población y la migración. Genera el mapa aleatorio de semilla 42, funda una capital con los
+colonos iniciales, unas ciudades y unas provincias vacías alrededor (en anillos de tierra libre), sin rivales, y
+simula año a año con `GameSession.Step`, como en una partida. Cada pocos años escribe la población de la nación y su
+crecimiento, el llenado de cada ciudad y del campo, cuántos emigran y hacia cuántas provincias; al final, un resumen
+(destinos al año, cuándo pasan todas las provincias del 10 % y del 25 %, cuándo se para la migración).
+
+Opciones: `--years`, `--cities`, `--provinces`, `--capital`, `--city` (habitantes iniciales), `--eras E:A,...` (la
+nación entra en la era E en el año A, conociendo todos los avances hasta ella) y `--every`. Para comparar una regla,
+se cambia en `GameRules` y se vuelve a ejecutar. Se usa en Release: unos 4 s por año simulado; para comparar variantes, se pueden lanzar varias a la vez.
+
+```
+dotnet run -c Release --project tools/Conquer.Bench -- --years 160 --eras Classical:30,Medieval:60,Industrial:120
+```
 
 ---
 

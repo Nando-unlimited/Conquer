@@ -168,7 +168,7 @@ public sealed partial class GameSession
 
     /// <summary>Citizens a province's land can feed, including the bonus of a city and its owner's age and advances.</summary>
     public double CapacityOf(Province p) =>
-        p.Capacity * (p.CityId.HasValue ? GameRules.CityCapacityMultiplier : 1) * (1 + BonusesOf(p).Capacity)
+        p.Capacity * (p.CityId.HasValue ? GameRules.CityCapacity(p.OwnerId >= 0 ? Players[p.OwnerId].Era : Era.Ancient) : 1) * (1 + BonusesOf(p).Capacity)
         * (p.OwnerId >= 0 ? GameRules.EraCapacity(Players[p.OwnerId].Era) : 1);
 
     /// <summary>What improves a province: its owner's advances plus its own buildings.</summary>
@@ -403,6 +403,10 @@ public sealed partial class GameSession
     /// </summary>
     public double DailyBirths(Province p, double hunger) => BirthsOf(p, hunger).Births;
 
+    /// <summary>Share of its people a fed province of normal fertility with room to spare would add in a day: by its owner's age, twice as fast in a city.</summary>
+    public double GrowthPerCitizen(Province p) =>
+        GameRules.GrowthRate * (p.OwnerId >= 0 ? GameRules.EraGrowth(Players[p.OwnerId].Era) : 1) * (p.CityId.HasValue ? GameRules.CityGrowthMultiplier : 1);
+
     /// <summary>
     /// The day's births of a province and what they come from: <see cref="BirthFactors.People"/> (its people at the
     /// growth rate, plus the small base) times its fertility, its free room and the share of the nation that eats.
@@ -410,7 +414,7 @@ public sealed partial class GameSession
     public BirthFactors BirthsOf(Province p, double hunger)
     {
         double capacity = CapacityOf(p);
-        double perCitizen = GameRules.GrowthRate * (p.CityId.HasValue ? GameRules.CityGrowthMultiplier : 1);
+        double perCitizen = GrowthPerCitizen(p);
         double people = p.Population > 0 ? p.Population * perCitizen + GameRules.BaseBirthsPerProvince : 0;
         double room = capacity > 0 ? Math.Clamp(1 - p.Population / capacity, 0, 1) : 0;
         double fed = Math.Clamp(1 - hunger, 0, 1);
@@ -427,7 +431,7 @@ public sealed partial class GameSession
         double target = now.Capacity * share, people = p.Population;
         if (people >= target) return 0;
         if (now.Births <= 0) return null;
-        double perCitizen = GameRules.GrowthRate * (p.CityId.HasValue ? GameRules.CityGrowthMultiplier : 1);
+        double perCitizen = GrowthPerCitizen(p);
         for (int days = 0; days < 500 * 365; days += 30)
         {
             double births = (people * perCitizen + GameRules.BaseBirthsPerProvince) * now.Fertility * (1 - people / now.Capacity) * now.Fed;

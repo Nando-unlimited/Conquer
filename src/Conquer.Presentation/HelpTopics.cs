@@ -40,7 +40,7 @@ public static class HelpTopics
         ]),
         ("Población y moral",
         [
-            "Cada provincia tiene habitantes, moral (0 a 100) y fertilidad. Cada una tiene sus propios nacimientos según su fertilidad, sus habitantes y la tierra que tiene, mientras haya comida y sitio; las ciudades crecen el doble de rápido. La población crece despacio (unos pocos por ciento al año), y cada era la tierra alimenta a más gente: el doble en la Medieval, ocho veces más en la Moderna.",
+            "Cada provincia tiene habitantes, moral (0 a 100) y fertilidad. Cada una tiene sus propios nacimientos según su fertilidad, sus habitantes y la tierra que tiene, mientras haya comida y sitio; las ciudades crecen el doble de rápido. La población crece despacio (unos pocos por ciento al año), y cada era la tierra alimenta a más gente: el doble en la Medieval, ocho veces más en la Moderna. En la era Industrial la población crece el doble de rápido y en la Moderna la mitad.",
             $"La comida almacenada se estropea: cada día se pierde el {GameRules.FoodSpoilage:P0} de lo guardado.",
             "## Moral",
             $"- Sube con la ciudad (+{GameRules.CityMood:0}), la capital (+{GameRules.CapitalMood:0}), las reservas de comida, las fiestas (+{GameRules.FestivalMood:0} durante {GameRules.FestivalDays} días), templos, anfiteatros y avances.",
@@ -63,7 +63,7 @@ public static class HelpTopics
             $"- Cada respuesta tiene su precio: comida u oro, gente o moral. Lo que está en juego crece con tu nación. La moral que cambia dura un año.",
             $"- Si no respondes en {GameRules.DecisionDays} días, se elige la primera respuesta. Los rivales también deciden las suyas.",
             "## Migración",
-            $"Las ciudades que empiezan a llenarse (desde el {GameRules.EmigrationStartFill:P0} de su capacidad) envían gente a tus provincias sin ciudad, en grupos de {GameRules.MigrationGroup}: cuanto más llenas, más. Los emigrantes se reparten por toda tu tierra, primero a las provincias vacías, y siguen llegando mientras tus ciudades estén más llenas que el campo. Puedes forzar una migración pagando oro, pero los migrantes llegan descontentos. Las reglas exactas, en la pestaña Reglas.",
+            $"Las ciudades que empiezan a llenarse (desde el {GameRules.EmigrationStartFill:P0} de su capacidad) envían gente a tus provincias sin ciudad, en grupos de {GameRules.MigrationGroup}: cuanto más llenas, más. Los emigrantes se reparten por toda tu tierra, primero a las provincias vacías, y siguen llegando mientras tus ciudades estén más llenas que el campo. Puedes forzar una migración pagando oro, pero los migrantes llegan descontentos. Desde la era Industrial es al revés: el campo se muda a las ciudades, que la industria hace mucho mayores. Las reglas exactas, en la pestaña Reglas.",
         ]),
         ("Economía y recursos",
         [

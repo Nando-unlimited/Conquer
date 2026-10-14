@@ -44,6 +44,17 @@ public static class GameRules
     public const double StarvationRate = 0.01;
     /// <summary>A city feeds this many times the citizens of the surrounding land.</summary>
     public const double CityCapacityMultiplier = 2.5;
+
+    /// <summary>
+    /// How many times the people of its land a city feeds in each age: <see cref="CityCapacityMultiplier"/> until
+    /// industry, which builds cities that hold far more (and draw the countryside into them, see <see cref="UrbanizationEra"/>).
+    /// </summary>
+    public static double CityCapacity(Era era) => era switch
+    {
+        Era.Industrial => 4,
+        Era.Modern => 6,
+        _ => CityCapacityMultiplier,
+    };
     /// <summary>
     /// Scales the citizens per km² each biome feeds at the start of history, so the whole world holds tens of millions
     /// and not hundreds; each age then raises it (<see cref="EraCapacity"/>).
@@ -60,6 +71,34 @@ public static class GameRules
         Era.Industrial => 5,
         _ => 8,
     };
+
+    /// <summary>
+    /// How many times faster than in the Ancient age people are born in each age: the demographic transition. Until
+    /// the Industrial age as many die as are born, so the land fills at the same pace; medicine and hygiene then bring
+    /// a boom, and in the Modern age families have fewer children.
+    /// </summary>
+    public static double EraGrowth(Era era) => era switch
+    {
+        Era.Industrial => 2,
+        Era.Modern => 0.5,
+        _ => 1,
+    };
+
+    /// <summary>From this age on people leave the countryside for the cities (and no longer the other way round).</summary>
+    public const Era UrbanizationEra = Era.Industrial;
+    /// <summary>
+    /// In that age a province without a city sends this share of its people to its nearest city each day when full
+    /// (none below <see cref="EmigrationStartFill"/>, and in proportion in between)...
+    /// </summary>
+    public const double UrbanizationShare = 0.0005;
+    /// <summary>...as long as the city is not this much fuller than the province...</summary>
+    public const double UrbanizationGap = 0.3;
+    /// <summary>...nor this full.</summary>
+    public const double UrbanizationCityFill = 0.95;
+
+    /// <summary>Share of its people a province without a city sends to its city each day in an industrial nation, by how full it is.</summary>
+    public static double UrbanizationShareOf(double fill) =>
+        UrbanizationShare * Math.Clamp((fill - EmigrationStartFill) / (1 - EmigrationStartFill), 0, 1);
 
     /// <summary>Cities grow this many times faster than the countryside.</summary>
     public const double CityGrowthMultiplier = 2;

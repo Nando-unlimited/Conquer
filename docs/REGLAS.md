@@ -20,7 +20,7 @@ Salvo que se diga otra cosa, las cifras de este manual son por día.
 
 Cada provincia alimenta a un número de habitantes según su tierra (bioma, ríos y superficie): su capacidad. Se multiplica por:
 
-- Ciudad: ×2,5.
+- Ciudad: ×2,5 hasta el Renacimiento; la industria hace ciudades mucho mayores: ×4 en la era Industrial y ×6 en la Moderna.
 - Era de su dueño: ×1 en la Antigua, ×1,5 en la Clásica, ×2 en la Medieval, ×3 en el Renacimiento, ×5 en la Industrial y ×8 en la Moderna.
 - Avances y edificios que la aumentan.
 
@@ -30,6 +30,7 @@ Cada día nacen en una provincia habitada:
 
 - (habitantes × 0,012 % + 0,02) × fertilidad × (1 - habitantes / capacidad).
 - En las ciudades la primera parte es ×2. Sin hambre y con fertilidad normal, una provincia casi vacía crece en torno a un 4,4 % al año y una a medio llenar, un 2,2 %; una ciudad, el doble. Cuanto más se acerca a su capacidad, más despacio.
+- Transición demográfica: hasta el Renacimiento nacen y mueren muchos, y el ritmo es el de arriba; en la era Industrial la medicina y la higiene lo multiplican por 2, y en la Moderna las familias tienen menos hijos: ×0,5.
 - Por encima de su capacidad no nace nadie, y con hambre nacen menos (ver Hambre).
 - La pequeña base fija hace que unos pocos colonos lleguen a formar un pueblo, pero no llena la tierra vacía por sí sola: eso lo hace la migración.
 
@@ -94,7 +95,13 @@ Toda migración ocurre dentro de una nación: nadie emigra a otra.
 
 - Al principio la capital, la única ciudad llena, da a cada provincia reclamada sus primeros pobladores y luego reparte su crecimiento entre todas.
 - Las ciudades nuevas se suman cuando llegan al 20 % de su capacidad.
-- Cuando el campo pasa del 50 %, la migración se para mientras las ciudades estén menos llenas que él, y vuelve cuando lo adelantan. Solo se detiene del todo cuando ciudades y campo están igual de llenos; desde entonces cada sitio crece por sus nacimientos.
+- Cuando el campo pasa del 50 %, la migración se para mientras las ciudades estén menos llenas que él, y vuelve cuando lo adelantan. Solo se detiene del todo cuando ciudades y campo están igual de llenos, o al llegar la era Industrial, en la que se invierte (ver Urbanización).
+
+### Urbanización
+
+- Desde la era Industrial la migración cambia de sentido: el campo se vacía hacia las ciudades, que la industria ha hecho mucho mayores. Las ciudades ya no mandan gente al campo.
+- Cada provincia sin ciudad con más de 200 habitantes envía a su ciudad más cercana hasta el 0,05 % de su gente al día cuando está llena; nada por debajo del 20 %, y en proporción entre medias.
+- Una ciudad los acoge mientras no esté 30 puntos más llena que la provincia que los manda, ni pase del 95 %. Así el campo se vacía poco a poco y las ciudades acaban con la mayor parte de la gente: en el banco de pruebas, en torno al 70 % al llegar la era Moderna.
 
 ### Migración forzada
 
@@ -148,10 +155,10 @@ Los rivales del ordenador multiplican su producción y su ciencia según la difi
 
 ### Qué cambia una ciudad
 
-- Capacidad ×2,5 y crecimiento ×2.
+- Capacidad ×2,5 (×4 en la era Industrial y ×6 en la Moderna) y crecimiento ×2.
 - Moral +10 (+15 más la capital).
 - Produce ciencia, envía emigrantes y colonos, y permite los mejores edificios.
-- Deja de recibir emigrantes: desde entonces crece por sus nacimientos.
+- Deja de recibir emigrantes: desde entonces crece por sus nacimientos, hasta la era Industrial, en la que es el campo el que se muda a ella.
 
 ### Edificios
 

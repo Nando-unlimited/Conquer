@@ -13,6 +13,8 @@ namespace Conquer.Game.Simulation;
 /// (<see cref="GameRules.EmigrationShare"/>) in groups of <see cref="GameRules.MigrationGroup"/>. Each province without a
 /// city takes them from the nearest city that is sending people, as long as it is emptier than <see cref="Wanted"/>;
 /// each group goes to the one that pulls hardest (<see cref="Pull"/>): the emptiest, and among them the nearest.</item>
+/// <item>From the industrial age (<see cref="GameRules.UrbanizationEra"/>) the flow turns round: the countryside empties
+/// into the cities (<see cref="Urbanize"/>).</item>
 /// <item>The player may also force a migration, for gold (<see cref="Force"/>).</item>
 /// <item>Migrants walk at citizen speed; on arrival (<see cref="Arrive"/>) they settle and bring their mood, culture and faith.</item>
 /// </list>
@@ -77,9 +79,14 @@ public sealed class MigrationEngine
 
     // ------------------------------------------------------------------ every day
 
-    /// <summary>A day of a nation's spontaneous migration (see the class summary).</summary>
+    /// <summary>A day of a nation's spontaneous migration (see the class summary), or of its urbanization from the industrial age.</summary>
     internal void Daily(Player player)
     {
+        if (player.Era >= GameRules.UrbanizationEra)
+        {
+            Urbanize(player);
+            return;
+        }
         var sources = player.Provinces.Select(id => Map.Provinces[id]).Where(IsEmigrating).Select(p => p.Id).ToList();
         if (sources.Count == 0) return;
         var unsettled = player.Provinces.Where(id => !Map.Provinces[id].CityId.HasValue).ToHashSet();
@@ -123,6 +130,51 @@ public sealed class MigrationEngine
                 _inTransit.Add(new Migration(NextId++, player.Id, sourceId, target, people, _session.Date.Hours, arrive, forced: false, source.Mood));
                 if (deficit <= people) open.RemoveAt(best);
                 else open[best] = (target, pull * (deficit - people) / deficit, deficit - people);
+            }
+        }
+    }
+
+    /// <summary>
+    /// The people a city wants to hold in an industrial nation, given how full the province that sends them is: up to
+    /// <see cref="GameRules.UrbanizationGap"/> fuller than it, and never more than <see cref="GameRules.UrbanizationCityFill"/>.
+    /// </summary>
+    public static double UrbanWanted(double cityCapacity, double sourceFill) =>
+        cityCapacity * Math.Min(GameRules.UrbanizationCityFill, sourceFill + GameRules.UrbanizationGap);
+
+    /// <summary>
+    /// Industrial urbanization: the countryside empties into the cities, which industry has made far bigger
+    /// (<see cref="GameRules.CityCapacity"/>). Each province without a city sends its share of emigrants
+    /// (<see cref="GameRules.UrbanizationShareOf"/>, by how full it is) to its nearest city while that city wants
+    /// them (<see cref="UrbanWanted"/>). Cities no longer send people to the countryside.
+    /// </summary>
+    private void Urbanize(Player player)
+    {
+        var cities = player.Provinces.Where(id => Map.Provinces[id].CityId.HasValue && !Map.Provinces[id].IsOccupied).ToList();
+        var countryside = player.Provinces.Select(id => Map.Provinces[id])
+            .Where(p => !p.CityId.HasValue && !p.IsOccupied && p.Population > GameRules.MinEmigrationCityPopulation && GameRules.UrbanizationShareOf(Fill(p)) > 0)
+            .Select(p => p.Id).ToHashSet();
+        if (cities.Count == 0 || countryside.Count == 0) return;
+
+        var (hours, nearest) = _session.Pathfinder.FromSources(cities, maxHours: 24 * 60, countryside);
+        var coming = cities.ToDictionary(id => id, id => (double)ComingTo(id));
+        foreach (int id in player.Provinces)
+        {
+            if (!countryside.Contains(id) || nearest[id] < 0) continue;
+            var source = Map.Provinces[id];
+            int city = nearest[id];
+            double quota = Carry.GetValueOrDefault(id) + source.Population * GameRules.UrbanizationShareOf(Fill(source));
+            int groups = (int)(Math.Min(quota, source.Population - GameRules.MinEmigrationCityPopulation) / GameRules.MigrationGroup);
+            Carry[id] = Math.Min(quota - Math.Max(groups, 0) * GameRules.MigrationGroup, GameRules.MigrationGroup);
+            var town = Map.Provinces[city];
+            double room = UrbanWanted(_session.CapacityOf(town), Fill(source)) - town.Population - coming[city];
+            for (int g = 0; g < groups && room >= GameRules.MigrationGroup; g++)
+            {
+                int people = GameRules.MigrationGroup;
+                source.Population -= people;
+                room -= people;
+                coming[city] += people;
+                long arrive = _session.Date.Hours + Math.Max(1, (long)Math.Ceiling(hours[id]));
+                _inTransit.Add(new Migration(NextId++, player.Id, id, city, people, _session.Date.Hours, arrive, forced: false, source.Mood));
             }
         }
     }

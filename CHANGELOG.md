@@ -2,6 +2,13 @@
 
 Todos los cambios del juego, del más reciente al más antiguo. Cada versión es un commit cuyo título es su número.
 
+## [1.141.0] - 2026-10-14
+
+### Añadido
+- **Transición demográfica**: hasta el Renacimiento la población crece al ritmo de siempre; en la era Industrial, con la medicina y la higiene, el doble, y en la Moderna, la mitad.
+- **Urbanización**: la industria hace ciudades mucho mayores (alimentan a 4 veces la gente de su tierra en la era Industrial y 6 en la Moderna, en lugar de 2,5) y, desde la era Industrial, la migración cambia de sentido: el campo se muda poco a poco a sus ciudades más cercanas, que ya no mandan gente al campo. En el banco de pruebas, la gente de las ciudades pasa del 42 % al 72 % al final de la partida.
+- **Banco de pruebas de la población** (`tools/Conquer.Bench`): simula años de una nación y escribe cómo crece y migra la gente, para equilibrar estas reglas con datos.
+
 ## [1.140.0] - 2026-10-14
 
 ### Añadido
