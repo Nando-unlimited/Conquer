@@ -37,6 +37,22 @@ public class EraTests(WorldFixture world)
         foreach (var tech in Techs.All.Where(t => t.Info().Era < era)) player.Learn(tech);
     }
 
+    [Fact]
+    public void ANationIsInTheAgeOfItsMostBackwardBranch()
+    {
+        var (s, capital) = WithCapital();
+        double ancient = s.CapacityOf(capital);
+        // A branch pushed into the Middle Ages alone does not bring the nation there, nor feed more people.
+        foreach (var tech in Techs.InBranch(TechBranch.Military).Where(t => t.Info().Era <= Era.Medieval)) s.Human.Learn(tech);
+        Assert.Equal(Era.Ancient, s.Human.Era);
+        Assert.Equal(ancient, s.CapacityOf(capital));
+        // With a classical advance in each of the other two branches, the whole nation is classical.
+        foreach (var branch in new[] { TechBranch.Economy, TechBranch.Society })
+            s.Human.Learn(Techs.InBranch(branch).First(t => t.Info().Era == Era.Classical));
+        Assert.Equal(Era.Classical, s.Human.Era);
+        Assert.Equal(ancient * GameRules.EraCapacity(Era.Classical), s.CapacityOf(capital), 6);
+    }
+
     [Theory]
     [InlineData(Era.Classical)]
     [InlineData(Era.Medieval)]

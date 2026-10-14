@@ -179,7 +179,7 @@ Los rivales del ordenador multiplican su producción y su ciencia según la difi
 ### Niveles y eras
 
 - Cada rama tiene niveles. El siguiente se abre al conocer la mitad (redondeando hacia arriba, al menos uno) de los avances del nivel anterior. Algunos avances piden además otros concretos.
-- La era de tu nación es la del avance más moderno que conoces. Cambia la capacidad de la tierra, los nombres de tus tropas y oficiales, los retratos y la música.
+- La era de tu nación es la de su rama más atrasada: la más moderna en la que conoces avances de las tres ramas. Adelantar mucho una sola rama no te lleva a una era nueva. La era cambia la capacidad de la tierra, los nombres de tus tropas y oficiales, los retratos y la música.
 
 ## Instituciones
 

@@ -104,14 +104,17 @@ public sealed class Player
     /// <summary>Institutions the nation has adopted.</summary>
     public HashSet<Institution> Institutions { get; } = [];
 
-    /// <summary>The latest age of any advance it knows.</summary>
+    /// <summary>
+    /// The age of its most backward branch: the latest age in which it knows advances of all three. So pushing one
+    /// branch far ahead does not bring the whole nation into a new age (and its land feeding more people).
+    /// </summary>
     public Era Era { get; private set; } = Era.Ancient;
 
     public void Learn(Tech tech)
     {
         if (!Techs.Add(tech)) return;
         Bonuses += tech.Info().Effects;
-        if (tech.Info().Era > Era) Era = tech.Info().Era;
+        Era = Science.Techs.Branches.Min(b => Techs.Where(t => t.Info().Branch == b).Select(t => t.Info().Era).DefaultIfEmpty(Era.Ancient).Max());
         KnownResources.UnionWith(tech.Info().Reveals);
     }
 

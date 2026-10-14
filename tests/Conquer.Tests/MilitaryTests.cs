@@ -935,7 +935,7 @@ public class MilitaryTests(WorldFixture world)
         var (s, a, _) = TwoNations();
         var unit = s.AddRegiment(0, a.Id, BattalionType.LightInfantry);
         Assert.EndsWith("Manípulo", unit.Name);
-        s.Human.Learn(Techs.All.First(t => t.Info().Era == Era.Medieval));
+        foreach (var branch in Techs.Branches) s.Human.Learn(Techs.InBranch(branch).First(t => t.Info().Era == Era.Medieval));
         Assert.EndsWith("Regimiento", unit.Name);
     }
 

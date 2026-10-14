@@ -2,6 +2,11 @@
 
 Todos los cambios del juego, del más reciente al más antiguo. Cada versión es un commit cuyo título es su número.
 
+## [1.138.0] - 2026-10-14
+
+### Corregido
+- **La era de tu nación es la de su rama más atrasada**: la más moderna en la que conoces avances de las tres ramas (Economía, Sociedad y Militar). Antes bastaba con un solo avance de cualquier rama: llevando solo la rama Militar hasta la Edad Media, la tierra de toda la nación pasaba a alimentar al doble de gente. La era sigue decidiendo cuánta gente alimenta la tierra, los nombres de tropas y oficiales, los retratos y la música.
+
 ## [1.137.0] - 2026-10-14
 
 ### Cambiado

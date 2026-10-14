@@ -560,8 +560,8 @@ public class GameplayTests(WorldFixture world)
         double ancient = s.CapacityOf(a);
         Assert.Equal(a.Capacity * GameRules.CityCapacityMultiplier, ancient, 6);
 
-        var medieval = Techs.All.First(t => t.Info().Era == Era.Medieval && t.Info().Effects.Capacity == 0);
-        s.Human.Learn(medieval);
+        foreach (var branch in Techs.Branches)
+            s.Human.Learn(Techs.InBranch(branch).First(t => t.Info().Era == Era.Medieval && t.Info().Effects.Capacity == 0));
         Assert.Equal(Era.Medieval, s.Human.Era);
         Assert.Equal(ancient * GameRules.EraCapacity(Era.Medieval), s.CapacityOf(a), 6);
     }
